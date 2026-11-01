@@ -406,6 +406,7 @@ export class TojiFighter extends Fighter {
   dodgeSliceLine(lineData = {}) {
     if (!this.isSkillEnabled(CONFIG.toji?.enableHeavenlyRestriction, true)) return false;
     if (this.hp <= 0 || this.isChainedByMakima) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
     if (this.ultimateActive) return true; // Invulnerable in full arsenal ultimate
 
     const domainDodgeChance = CONFIG.toji?.domainDodgeChance ?? 0.95;

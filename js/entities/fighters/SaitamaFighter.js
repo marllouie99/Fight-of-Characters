@@ -575,6 +575,7 @@ export class SaitamaFighter extends Fighter {
    */
   executeDodgeTeleport(attacker, isProjectile = false) {
     if (this.hp <= 0 || this.isChainedByMakima) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     // DISABLE DODGING COMPLETELY INSIDE GOJO'S DOMAIN (Unlimited Void)
     if (this._isInsideGojoDomain()) {
@@ -630,6 +631,13 @@ export class SaitamaFighter extends Fighter {
     }
 
     const isCounterCharging = Boolean(this._counterPunchTimer && this._counterPunchTimer > 0);
+
+    // Dodge is fully DISABLED while winding up the Serious Skill Counter punch:
+    // Saitama commits to the counter and takes incoming hits (no MISS, no damage negation, no teleport).
+    if (isCounterCharging) {
+      return false;
+    }
+
     const isFlurryActive = Boolean(this.isFlurrying);
     const isStationaryDodge = isCounterCharging || isFlurryActive;
     const isPostCounterRecovery = Boolean(this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0);
@@ -660,9 +668,9 @@ export class SaitamaFighter extends Fighter {
     const startAngle = this.gunAngle || this.angle || 0;
 
     if (isStationaryDodge) {
-      // During Serious Skill Counter charging state or Consecutive Normal Punches:
+      // During Consecutive Normal Punches (counter wind-up exits early above):
       // Dodge mechanic is ENABLED (negates damage, shows "MISS!", plays SFX/grunt, spawns impact flash),
-      // but teleportation / sidestep is DISABLED (Saitama stays in place executing his skill/counter punch).
+      // but teleportation / sidestep is DISABLED (Saitama stays in place executing his flurry).
       
       const savedTimeStop = this.timeStopTimer;
       this.hitStunTimer = 0;
@@ -917,8 +925,13 @@ export class SaitamaFighter extends Fighter {
   dodgeSliceLine(lineData = {}) {
     const cfg = (CONFIG && CONFIG.saitama) ? CONFIG.saitama : {};
     if (!this.isSkillEnabled(cfg.enableDodge, true)) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     if (this._isInsideGojoDomain() || this.isChainedByMakima || this.hp <= 0) return false;
+
+    // Dodge is fully DISABLED while winding up the Serious Skill Counter punch (Saitama commits and takes the slash)
+    if (this._counterPunchTimer && this._counterPunchTimer > 0) return false;
+
     const isGlobalHitPausing = isGlobalHitPauseActive(state, this);
     if (isGlobalHitPausing) return false;
 
@@ -1036,6 +1049,7 @@ export class SaitamaFighter extends Fighter {
   dodgeBeam(beamData = {}) {
     const cfg = (CONFIG && CONFIG.saitama) ? CONFIG.saitama : {};
     if (!this.isSkillEnabled(cfg.enableDodge, true)) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     if (this._isInsideGojoDomain() || this.isChainedByMakima || this.hp <= 0 || this.isFrozenByInfinity || this.isTargetOfAmbush) {
       return false;
@@ -1185,6 +1199,7 @@ export class SaitamaFighter extends Fighter {
   dodgePurple(purpleData = {}) {
     const cfg = (CONFIG && CONFIG.saitama) ? CONFIG.saitama : {};
     if (!this.isSkillEnabled(cfg.enableDodge, true)) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     if (this._isInsideGojoDomain() || this.isChainedByMakima || this.hp <= 0 || this.isFrozenByInfinity || this.isTargetOfAmbush) {
       return false;
@@ -2329,6 +2344,7 @@ export class SaitamaFighter extends Fighter {
    * Triggers dodge sidestep as projectiles approach near-miss radius
    */
   onProjectileApproach(projectile, attacker) {
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return;
     if (this._isInsideGojoDomain() || this.isChainedByMakima) return;
     if (this._counterPunchTimer && this._counterPunchTimer > 0) return; // Sidestep disabled while charging Serious Skill Counter
     if (this.isFlurrying) return; // Sidestep disabled while performing Consecutive Normal Punches
@@ -2699,6 +2715,13 @@ export class SaitamaFighter extends Fighter {
     if ((isFrozen || this.isTargetOfAmbush || isGlobalHitPausingFighter || isBeingPulled || isInsideGojoDomain) && !this.isCountering) {
       this.interruptAttacks();
       return; // MANDATORY: Stop update execution so fighter is completely frozen/paused/pulled!
+    }
+
+    // Pac-Man Frightened Ghost State Guard:
+    // While transformed, the enemy cannot cast any skills, skill cooldowns are paused,
+    // all abilities and dodging are disabled, and all they can do is move until the duration expires!
+    if (this._handlePacmanGhostState ? this._handlePacmanGhostState(arena, opponent) : (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0)) {
+      return;
     }
 
     // While Serious Skill Counter is active and NOT inside Gojo domain, maintain clean stasis and push/drag immunity and cancel any active drag/pull states

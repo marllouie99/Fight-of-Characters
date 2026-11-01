@@ -885,18 +885,18 @@ let _escanorCruelSunSpriteLoading = false;
  * Anchored precisely on the core solar sphere center across all 6 frames.
  */
 export const ESCANOR_CRUEL_SUN_FRAMES = [
-  // Frame 0: Initial solar ignition & rising crown flame (BBox: 420x420, Center: 250, 280, Anchor: 169, 169)
-  { sx: 81, sy: 111, sw: 420, sh: 420, cx: 250, cy: 280, anchorX: 169, anchorY: 169 },
-  // Frame 1: Expanding curved solar prominences (BBox: 501x424, Center: 765, 280, Anchor: 250, 173)
-  { sx: 515, sy: 107, sw: 501, sh: 424, cx: 765, cy: 280, anchorX: 250, anchorY: 173 },
-  // Frame 2: Rotating clockwise solar flares (BBox: 501x451, Center: 1276, 280, Anchor: 250, 200)
-  { sx: 1026, sy: 80, sw: 501, sh: 451, cx: 1276, cy: 280, anchorX: 250, anchorY: 200 },
-  // Frame 3: Swirling spiral prominence loop (BBox: 457x493, Center: 250, 780, Anchor: 206, 250)
-  { sx: 44, sy: 530, sw: 457, sh: 493, cx: 250, cy: 780, anchorX: 206, anchorY: 250 },
-  // Frame 4: Roaring plasma vortex (BBox: 501x493, Center: 765, 780, Anchor: 250, 250)
-  { sx: 515, sy: 530, sw: 501, sh: 493, cx: 765, cy: 780, anchorX: 250, anchorY: 250 },
-  // Frame 5: Peak thermonuclear vortex (BBox: 501x493, Center: 1276, 780, Anchor: 250, 250)
-  { sx: 1026, sy: 530, sw: 501, sh: 493, cx: 1276, cy: 780, anchorX: 250, anchorY: 250 }
+  // Frame 0: Initial solar ignition & rising crown flame (Cell 0: [0..511, 0..511], Center: 250, 280)
+  { sx: 70, sy: 100, sw: 380, sh: 370, cx: 250, cy: 280, anchorX: 180, anchorY: 180 },
+  // Frame 1: Expanding curved solar prominences (Cell 1: [512..1023, 0..511], Center: 765, 280)
+  { sx: 565, sy: 95, sw: 425, sh: 410, cx: 765, cy: 280, anchorX: 200, anchorY: 185 },
+  // Frame 2: Rotating clockwise solar flares (Cell 2: [1024..1535, 0..511], Center: 1276, 280)
+  { sx: 1050, sy: 75, sw: 430, sh: 430, cx: 1276, cy: 280, anchorX: 226, anchorY: 205 },
+  // Frame 3: Swirling spiral prominence loop (Cell 3: [0..511, 512..1023], Center: 250, 780)
+  { sx: 35, sy: 540, sw: 430, sh: 435, cx: 250, cy: 780, anchorX: 215, anchorY: 240 },
+  // Frame 4: Roaring plasma vortex (Cell 4: [512..1023, 512..1023], Center: 765, 780)
+  { sx: 550, sy: 555, sw: 430, sh: 430, cx: 765, cy: 780, anchorX: 215, anchorY: 225 },
+  // Frame 5: Peak thermonuclear vortex (Cell 5: [1024..1535, 512..1023], Center: 1276, 780)
+  { sx: 1060, sy: 550, sw: 420, sh: 440, cx: 1276, cy: 780, anchorX: 216, anchorY: 230 }
 ];
 
 const BASE_CRUEL_SUN_RADIUS = 158.0;
@@ -1452,9 +1452,10 @@ export function drawPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, n
     const frameIdx = Math.floor(currentNow / (1000 / fps)) % frames18.length;
     const frameImg = frames18[frameIdx];
 
-    // In the 512x512 frame, the central solar core radius is 100px and outer corona reaches 145px.
+    // In the 512x512 frame, the central solar core radius is 100px and outer corona reaches 142px.
     // drawSize = (radius / 100) * 512 = radius * 5.12 maps the star core cleanly to `radius`.
     const drawSize = radius * 5.12;
+    const maxCoronaR = drawSize * (142 / 512);
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
@@ -1468,19 +1469,36 @@ export function drawPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, n
       const bloomScale = 1.08;
       const bloomAlpha = (isTheOne ? 0.32 : 0.22) * alpha;
       ctx.globalAlpha = bloomAlpha;
+
+      // Circular clip path strictly prevents rectangular box artifact leaks (Rule 31)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, maxCoronaR * bloomScale, 0, Math.PI * 2);
+      ctx.clip();
       ctx.drawImage(frameImg, -drawSize * bloomScale / 2, -drawSize * bloomScale / 2, drawSize * bloomScale, drawSize * bloomScale);
+      ctx.restore();
 
       // Tight inner bloom core
       const innerBloomScale = 1.03;
       const innerBloomAlpha = (isTheOne ? 0.40 : 0.28) * alpha;
       ctx.globalAlpha = innerBloomAlpha;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, maxCoronaR * innerBloomScale, 0, Math.PI * 2);
+      ctx.clip();
       ctx.drawImage(frameImg, -drawSize * innerBloomScale / 2, -drawSize * innerBloomScale / 2, drawSize * innerBloomScale, drawSize * innerBloomScale);
+      ctx.restore();
+
       ctx.restore();
     }
 
     // ── TIER 2: CRISP FOREGROUND SOLAR STAR PASS ──
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.arc(0, 0, maxCoronaR, 0, Math.PI * 2);
+    ctx.clip();
     ctx.drawImage(frameImg, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
     ctx.restore();
 
@@ -1515,6 +1533,8 @@ export function drawPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, n
     ctx.translate(snapCx, snapCy);
     ctx.globalAlpha = Math.max(0, Math.min(1.0, alpha));
 
+    const maxSpriteR = Math.max(drawW, drawH) * 0.58;
+
     // ── TIER 1 (BACK LAYER): ADDITIVE SOLAR CORONA BLOOM (Aura glowing around the sides/perimeter) ──
     if (showCorona) {
       ctx.save();
@@ -1528,11 +1548,16 @@ export function drawPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, n
         const ox = Math.cos(ang) * outerRadius;
         const oy = Math.sin(ang) * outerRadius;
         ctx.globalAlpha = outerAlpha;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, maxSpriteR + outerRadius, 0, Math.PI * 2);
+        ctx.clip();
         ctx.drawImage(
           spriteImg,
           frame.sx, frame.sy, frame.sw, frame.sh,
           drawX + ox, drawY + oy, drawW, drawH
         );
+        ctx.restore();
       }
 
       // Tight Solar Flare Rim (4 diagonal samples @ radius * 0.08)
@@ -1543,11 +1568,16 @@ export function drawPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, n
         const ox = Math.cos(ang) * innerRadius;
         const oy = Math.sin(ang) * innerRadius;
         ctx.globalAlpha = innerAlpha;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, maxSpriteR + innerRadius, 0, Math.PI * 2);
+        ctx.clip();
         ctx.drawImage(
           spriteImg,
           frame.sx, frame.sy, frame.sw, frame.sh,
           drawX + ox, drawY + oy, drawW, drawH
         );
+        ctx.restore();
       }
       ctx.restore();
     }
@@ -1556,6 +1586,9 @@ export function drawPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, n
     // Drawn on top of the bloom aura so the sun core stays 100% crisp and detailed while glowing around the sides
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.arc(0, 0, maxSpriteR, 0, Math.PI * 2);
+    ctx.clip();
     ctx.drawImage(
       spriteImg,
       frame.sx, frame.sy, frame.sw, frame.sh,
@@ -1683,6 +1716,7 @@ export function drawPixelCruelSunExplosion(ctx, cx, cy, radius, progressOrFrame 
     ctx.globalAlpha = Math.max(0, Math.min(1.0, alpha));
 
     // ── TIER 1 (BACK LAYER): ADDITIVE SOLAR EXPLOSION CORONA BLOOM (Aura glowing around the sides of fragments) ──
+    const blastMaxR = Math.max(drawW, drawH) * 0.58;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const bloomScale = frameIdx < 3 ? 1.0 : Math.max(0, 1.0 - (frameIdx - 3) / 3);
@@ -1696,11 +1730,16 @@ export function drawPixelCruelSunExplosion(ctx, cx, cy, radius, progressOrFrame 
         const ox = Math.cos(ang) * outerRadius;
         const oy = Math.sin(ang) * outerRadius;
         ctx.globalAlpha = outerAlpha;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, blastMaxR + outerRadius, 0, Math.PI * 2);
+        ctx.clip();
         ctx.drawImage(
           spriteImg,
           frame.sx, frame.sy, frame.sw, frame.sh,
           drawX + ox, drawY + oy, drawW, drawH
         );
+        ctx.restore();
       }
     }
 
@@ -1713,11 +1752,16 @@ export function drawPixelCruelSunExplosion(ctx, cx, cy, radius, progressOrFrame 
         const ox = Math.cos(ang) * innerRadius;
         const oy = Math.sin(ang) * innerRadius;
         ctx.globalAlpha = innerAlpha;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, blastMaxR + innerRadius, 0, Math.PI * 2);
+        ctx.clip();
         ctx.drawImage(
           spriteImg,
           frame.sx, frame.sy, frame.sw, frame.sh,
           drawX + ox, drawY + oy, drawW, drawH
         );
+        ctx.restore();
       }
     }
     ctx.restore();
@@ -1726,6 +1770,9 @@ export function drawPixelCruelSunExplosion(ctx, cx, cy, radius, progressOrFrame 
     // Drawn on top of the bloom aura so fragments, fissures, and ash stay 100% crisp and distinct
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.arc(0, 0, blastMaxR, 0, Math.PI * 2);
+    ctx.clip();
     ctx.drawImage(
       spriteImg,
       frame.sx, frame.sy, frame.sw, frame.sh,
@@ -2165,7 +2212,14 @@ export function drawCruelSunHitImpacts(ctx) {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(-flashSize, -P / 2, flashSize * 2, P);
         ctx.fillRect(-P / 2, -flashSize, P, flashSize * 2);
-        ctx.fillRect(-flashSize / 2, -flashSize / 2, flashSize, flashSize);
+        // Rule 31 compliant: diamond optical flare instead of square fillRect
+        ctx.beginPath();
+        ctx.moveTo(0, -flashSize * 0.5);
+        ctx.lineTo(flashSize * 0.5, 0);
+        ctx.lineTo(0, flashSize * 0.5);
+        ctx.lineTo(-flashSize * 0.5, 0);
+        ctx.closePath();
+        ctx.fill();
       }
     }
 
@@ -2264,5 +2318,292 @@ export function drawCruelSunExplosions(ctx) {
 export function clearCruelSunExplosions() {
   for (let i = 0; i < _cruelSunExplosionPool.length; i++) {
     _cruelSunExplosionPool[i].active = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RHITTA SOLAR SLASH CUT IMPACT (Spatial Cleave Scar on Struck Enemy)
+// Ultra-smooth, buttery anime slash cut line slicing across the enemy's body upon axe impact.
+// Adheres strictly to Rule 11 (Zero shadowBlur), Rule 25 (Decay before freeze),
+// Rule 2.4 (Stack integrity), and Rule 24/31 (Clean manga outline separation).
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MAX_RHITTA_SLASH_CUTS = 16;
+const _rhittaSlashCutPool = [];
+let _rhittaSlashCutCounter = 0;
+
+for (let i = 0; i < MAX_RHITTA_SLASH_CUTS; i++) {
+  _rhittaSlashCutPool.push({
+    active: false,
+    target: null,
+    x: 0,
+    y: 0,
+    angle: 0,
+    length: 100,
+    thickness: 14,
+    isTheOne: false,
+    frame: 0,
+    maxFrames: 36,
+    particles: Array.from({ length: 10 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, size: 2.8, color: '#FFFFFF', life: 0, maxLife: 18 }))
+  });
+}
+
+/**
+ * Spawns an authentic anime Solar Slash Cut / Spatial Cleave Scar right in the dead center of the struck enemy model.
+ * Automatically tracks the enemy body if a target entity is provided so the cut stays centered even during knockback.
+ * @param {object|number} targetOrX Struck enemy target entity (with x, y, z, r) OR target center X
+ * @param {number} [yOrAngle=0] Target center Y OR incoming chop direction angle
+ * @param {number|boolean} [hitAngleOrIsTheOne=0] Incoming chop direction angle OR isTheOne boolean
+ * @param {boolean|number} [isTheOneOrRadius=false] Whether Escanor is in "THE ONE" form OR targetRadius
+ * @param {number} [targetRadius=25] Target entity radius to calibrate cut length
+ */
+export function spawnRhittaSlashCutImpact(targetOrX, yOrAngle = 0, hitAngleOrIsTheOne = 0, isTheOneOrRadius = false, targetRadius = 25) {
+  let cut = _rhittaSlashCutPool.find(c => !c.active);
+  if (!cut) {
+    cut = _rhittaSlashCutPool[0];
+  }
+  cut.active = true;
+
+  let x = 0;
+  let y = 0;
+  let hitAngle = 0;
+  let isTheOne = false;
+  let r = 25;
+
+  if (typeof targetOrX === 'object' && targetOrX !== null) {
+    // Passed an entity target object (Fighter, Boss, Illusion)
+    cut.target = targetOrX;
+    x = targetOrX.x;
+    y = targetOrX.y - (targetOrX.z || 0);
+    hitAngle = typeof yOrAngle === 'number' ? yOrAngle : 0;
+    isTheOne = Boolean(hitAngleOrIsTheOne);
+    r = typeof isTheOneOrRadius === 'number' ? isTheOneOrRadius : (targetOrX.r || 25);
+  } else {
+    // Passed direct world coordinates (x, y)
+    cut.target = null;
+    x = Number(targetOrX) || 0;
+    y = Number(yOrAngle) || 0;
+    hitAngle = typeof hitAngleOrIsTheOne === 'number' ? hitAngleOrIsTheOne : 0;
+    isTheOne = Boolean(isTheOneOrRadius);
+    r = typeof targetRadius === 'number' ? targetRadius : 25;
+  }
+
+  cut.x = x;
+  cut.y = y;
+
+  // Slices diagonally across the exact center of the enemy model (~35° diagonal slant across the chest)
+  // Alternate diagonal slash direction between successive hits to form anime cross cleaves
+  const slantSign = (_rhittaSlashCutCounter++ % 2 === 0) ? 1 : -1;
+  cut.angle = hitAngle + Math.PI * 0.5 + slantSign * 0.38;
+
+  const scale = isTheOne ? 1.45 : 1.25;
+  // Calibrate length so it cleanly covers the enemy diameter and extends symmetrically on both sides
+  cut.length = Math.max(80, r * 3.4) * scale;
+  cut.thickness = (isTheOne ? 16.0 : 12.0) * scale;
+  cut.isTheOne = Boolean(isTheOne);
+  cut.frame = 0;
+  cut.maxFrames = isTheOne ? 44 : 36;
+
+  for (let i = 0; i < cut.particles.length; i++) {
+    const p = cut.particles[i];
+    p.x = (Math.random() - 0.5) * cut.length * 0.4;
+    p.y = 0;
+    const spd = 3.0 + Math.random() * 6.0;
+    const pAng = cut.angle + (Math.random() - 0.5) * Math.PI * 0.6;
+    p.vx = Math.cos(pAng) * spd;
+    p.vy = Math.sin(pAng) * spd;
+    p.size = (i % 2 === 0) ? 3.0 : 2.0;
+    p.color = (i % 3 === 0) ? '#FFFFFF' : (isTheOne ? '#FEF08A' : '#F59E0B');
+    p.life = 0;
+    p.maxLife = 12 + Math.floor(Math.random() * 8);
+  }
+}
+
+/**
+ * Updates all active Rhitta slash cut impacts.
+ */
+export function updateRhittaSlashCutImpacts() {
+  for (let i = 0; i < _rhittaSlashCutPool.length; i++) {
+    const cut = _rhittaSlashCutPool[i];
+    if (!cut.active) continue;
+    cut.frame++;
+    if (cut.frame >= cut.maxFrames) {
+      cut.active = false;
+      cut.target = null;
+      continue;
+    }
+
+    // Keep locked right in the center of the enemy model even as enemy moves or gets knocked back
+    if (cut.target && !cut.target.dead && !cut.target.isDead) {
+      cut.x = cut.target.x;
+      cut.y = cut.target.y - (cut.target.z || 0);
+    }
+
+    for (let j = 0; j < cut.particles.length; j++) {
+      const p = cut.particles[j];
+      p.life++;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.91;
+      p.vy *= 0.91;
+    }
+  }
+}
+
+/**
+ * Draws all active Rhitta slash cut impacts right in the dead center of target enemy models.
+ * Features:
+ * 1. 100% Symmetrical extension centered at (0, 0)
+ * 2. Outer crisp manga ink outline (#0E0F14) for high-contrast separation
+ * 3. Radiant solar amber / crimson flare edges (#F59E0B / #DC2626)
+ * 4. Holy molten gold double-tapered blade cut fill (#FEF08A)
+ * 5. Blinding supersonic white-hot center spine line (#FFFFFF) passing straight through the model center
+ * 6. Central 4-point solar diamond glint anchored at (0, 0)
+ * 7. Dynamic micro-sparks spraying off the cut
+ * @param {CanvasRenderingContext2D} ctx
+ */
+export function drawRhittaSlashCutImpacts(ctx) {
+  if (!ctx) return;
+
+  for (let i = 0; i < _rhittaSlashCutPool.length; i++) {
+    const cut = _rhittaSlashCutPool[i];
+    if (!cut.active) continue;
+
+    const progress = cut.frame / cut.maxFrames;
+    // Holds full solid opacity during hit-pause stasis (first 55%), then dissolves with smooth power ease
+    let alpha = 1.0;
+    if (progress > 0.55) {
+      alpha = Math.max(0, Math.pow((1.0 - progress) / 0.45, 1.8));
+    }
+    if (alpha <= 0.01) continue;
+
+    // Dynamically track the enemy model center if attached
+    let curX = cut.x;
+    let curY = cut.y;
+    if (cut.target && !cut.target.dead && !cut.target.isDead) {
+      curX = cut.target.x;
+      curY = cut.target.y - (cut.target.z || 0);
+    }
+
+    // Subtle micro-tremor latch jitter during initial hit-pause
+    if (progress < 0.35) {
+      const jitter = Math.sin(cut.frame * 2.0) * 0.8;
+      curX += jitter;
+      curY += jitter;
+    }
+
+    const isTheOne = cut.isTheOne;
+    const halfL = cut.length * 0.5;
+
+    // ── 1. HYPERSONIC SYMMETRICAL SWEEP EXTENSION ──
+    // Expands symmetrically outward from the exact center (0, 0) of the enemy model!
+    const extRatio = Math.min(1.0, 0.75 + (cut.frame / 2.0) * 0.25);
+    const curHalfL = halfL * extRatio;
+
+    ctx.save();
+    ctx.translate(curX, curY);
+    ctx.rotate(cut.angle);
+
+    const maxThick = cut.thickness * (0.80 + alpha * 0.20);
+
+    // ── LAYER 1: OUTER CRISP MANGA INK BORDER (#0E0F14) ──
+    const inkThick = maxThick + 4.5;
+    ctx.fillStyle = '#0E0F14';
+    ctx.globalAlpha = Math.min(1.0, alpha * 0.95);
+    ctx.beginPath();
+    ctx.moveTo(-curHalfL - 3, 0);
+    ctx.quadraticCurveTo(0, -inkThick, curHalfL + 3, 0);
+    ctx.quadraticCurveTo(0, inkThick, -curHalfL - 3, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // ── LAYER 2: SOLAR AMBER / CRIMSON RADIANT RIM ──
+    ctx.fillStyle = isTheOne ? '#DC2626' : '#F59E0B';
+    ctx.globalAlpha = Math.min(1.0, alpha * 0.95);
+    ctx.beginPath();
+    ctx.moveTo(-curHalfL, 0);
+    ctx.quadraticCurveTo(0, -maxThick, curHalfL, 0);
+    ctx.quadraticCurveTo(0, maxThick, -curHalfL, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // ── LAYER 3: INNER MOLTEN GOLD CORE FILL ──
+    const goldThick = maxThick * 0.58;
+    ctx.fillStyle = isTheOne ? '#FEF08A' : '#FDE047';
+    ctx.globalAlpha = Math.min(1.0, alpha * 1.0);
+    ctx.beginPath();
+    ctx.moveTo(-curHalfL * 0.92, 0);
+    ctx.quadraticCurveTo(0, -goldThick, curHalfL * 0.92, 0);
+    ctx.quadraticCurveTo(0, goldThick, -curHalfL * 0.92, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // ── LAYER 4: WHITE-HOT SUPERSONIC SPINE LINE (Straight Through Exact Center) ──
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = Math.max(2.2, (isTheOne ? 4.8 : 3.4) * alpha);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = Math.min(1.0, alpha * 1.0);
+    ctx.beginPath();
+    ctx.moveTo(-curHalfL * 0.88, 0);
+    ctx.lineTo(curHalfL * 0.88, 0);
+    ctx.stroke();
+
+    // ── LAYER 5: CENTER SOLAR DIAMOND GLINT (Right in Center of Enemy Model: 0, 0) ──
+    if (cut.frame < 12) {
+      const flashP = cut.frame / 12;
+      const flashAlpha = Math.sin((1.0 - flashP) * Math.PI * 0.5) * alpha;
+      const flashLen = maxThick * 1.3 + (1.0 - flashP) * 12;
+      const flashW = 2.4;
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.globalAlpha = flashAlpha;
+      for (let g = 0; g < 4; g++) {
+        const ga = (g * Math.PI) / 2;
+        ctx.save();
+        ctx.rotate(ga);
+        ctx.beginPath();
+        ctx.moveTo(0, -flashW * 0.5);
+        ctx.lineTo(flashLen, 0);
+        ctx.lineTo(0, flashW * 0.5);
+        ctx.lineTo(-flashW * 0.5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ── LAYER 6: FLYING SOLAR EMBERS / DIAMOND SPARKS ──
+    for (let j = 0; j < cut.particles.length; j++) {
+      const p = cut.particles[j];
+      if (p.life >= p.maxLife) continue;
+      const pProgress = p.life / p.maxLife;
+      const pAlpha = (1.0 - pProgress) * alpha;
+      if (pAlpha <= 0.01) continue;
+
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = pAlpha;
+      ctx.beginPath();
+      // Sharp diamond needle spark
+      const sz = p.size * (1.0 - pProgress * 0.35);
+      ctx.moveTo(p.x, p.y - sz);
+      ctx.lineTo(p.x + sz * 0.45, p.y);
+      ctx.lineTo(p.x, p.y + sz);
+      ctx.lineTo(p.x - sz * 0.45, p.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Clears all active Rhitta slash cut impacts.
+ */
+export function clearRhittaSlashCutImpacts() {
+  for (let i = 0; i < _rhittaSlashCutPool.length; i++) {
+    _rhittaSlashCutPool[i].active = false;
+    _rhittaSlashCutPool[i].target = null;
   }
 }

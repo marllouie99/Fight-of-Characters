@@ -9144,6 +9144,8 @@ async function main() {
 
       // 2. Move enemy within the configured close-range radius -> Gojo enters Melee Mode
       enemy.x = 260; // dist = 60px
+      const savedInfinityToggle = CONFIG.gojo?.enableInfinity;
+      if (CONFIG.gojo) CONFIG.gojo.enableInfinity = true;
       gojo.infinityActive = true;
       if (!gojo.hasActiveInfinity()) {
         throw new Error('Expected Gojo Infinity to be active before checking close-range melee activation');

@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────
 // Saitama — The Caped Baldy Config
 // ─────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ export const saitamaConfig = {
 
   // Passive: Caped Baldy Reflexes (Dodge Teleport)
   enableDodge: true,             // Master toggle for Passive: Caped Baldy Reflexes
-  dodgeChance: 0.70,             // Probability (0-1) of successfully dodging incoming attacks
+  dodgeChance: 0.90,             // Probability (0-1) of successfully dodging incoming attacks
   domainDodgeChance: 0.85,       // Probability (0-1) of dodging spatial slice lines in Domain Expansions (e.g. Malevolent Shrine)
   beamDodgeChance: 1.0,          // Probability (0-1) of dodging lethal super-beams (Nameless Destroyer, Pure Love Beam)
   purpleDodgeChance: 1.0,        // Probability (0-1) of dodging Hollow Purple orbs & suction fields

@@ -586,6 +586,8 @@ if (localStorage.getItem('hudHideStats') !== null) {
 
 if (localStorage.getItem('hudHideOverheadHp') !== null) {
   CONFIG.hudHideOverheadHp = localStorage.getItem('hudHideOverheadHp') === 'true';
+} else if (localStorage.getItem('hudHideHpOverlay') !== null) {
+  CONFIG.hudHideOverheadHp = localStorage.getItem('hudHideHpOverlay') === 'true';
 }
 
 if (localStorage.getItem('hudLayoutStyle') !== null) {
@@ -658,6 +660,11 @@ export function syncHudButtons() {
   const overheadHpBtn = document.getElementById('btn-hud-overheadhp');
   if (overheadHpBtn) {
     overheadHpBtn.innerText = CONFIG.hudHideOverheadHp ? 'HIDE' : 'SHOW';
+  }
+
+  const graphicsHpOverlayBtn = document.getElementById('btn-graphics-hpoverlay');
+  if (graphicsHpOverlayBtn) {
+    graphicsHpOverlayBtn.innerText = CONFIG.hudHideOverheadHp ? 'HIDE' : 'SHOW';
   }
 }
 
@@ -1211,9 +1218,10 @@ export function executeTacticalAction(action) {
     CONFIG.hudShowFighterDescription = !CONFIG.hudShowFighterDescription;
     localStorage.setItem('hudShowFighterDescription', CONFIG.hudShowFighterDescription);
     syncHudButtons();
-  } else if (action === 'toggle-hud-overheadhp') {
+  } else if (action === 'toggle-hud-overheadhp' || action === 'toggle-hp-overlay' || action === 'toggle-overheadhp') {
     CONFIG.hudHideOverheadHp = !CONFIG.hudHideOverheadHp;
     localStorage.setItem('hudHideOverheadHp', CONFIG.hudHideOverheadHp);
+    localStorage.setItem('hudHideHpOverlay', CONFIG.hudHideOverheadHp);
     syncHudButtons();
   } else if (action === 'toggle-darkskills') {
     if (CONFIG.hudHideSkillBars || CONFIG.hudSkillBarsMode === 'none' || CONFIG.darkModeShowHudSkillBars === -1) {
@@ -1418,6 +1426,11 @@ document.getElementById('btn-hud-displaymode')?.addEventListener('click', (e) =>
 });
 
 document.getElementById('btn-hud-overheadhp')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  executeTacticalAction('toggle-hud-overheadhp');
+});
+
+document.getElementById('btn-graphics-hpoverlay')?.addEventListener('click', (e) => {
   e.stopPropagation();
   executeTacticalAction('toggle-hud-overheadhp');
 });

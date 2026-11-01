@@ -1004,6 +1004,7 @@ export function drawMahitoDomainDimScreen() {
 let currentTojiUltimateOpacity = 0;
 let currentNanamiOvertimeOpacity = 0;
 let currentGenosUltimateOpacity = 0;
+let currentEscanorUltimateOpacity = 0;
 let currentSaitamaSeriousPunchOpacity = 0;
 let currentHollowMaskOpacity = 0;
 let flyHeads = [];
@@ -1016,6 +1017,37 @@ let nanamiOvertimeOverlayImg = null;
 let nanamiOvertimeOverlayImgLoading = false;
 let genosUltimateOverlayImg = null;
 let genosUltimateOverlayImgLoading = false;
+let escanorUltimateOverlayImg = null;
+let escanorUltimateOverlayImgLoading = false;
+
+export function loadEscanorUltimateOverlayImage() {
+  if (escanorUltimateOverlayImg || escanorUltimateOverlayImgLoading) return;
+  escanorUltimateOverlayImgLoading = true;
+  escanorUltimateOverlayImg = new Image();
+  escanorUltimateOverlayImg.onload = () => {
+    escanorUltimateOverlayImgLoading = false;
+  };
+  escanorUltimateOverlayImg.onerror = (e) => {
+    console.error("Failed to load Escanor ultimate overlay image at Assets/model/escanor/escanor_ultimate_arena_overlay.png:", e);
+    escanorUltimateOverlayImgLoading = false;
+    escanorUltimateOverlayImg = null;
+  };
+  escanorUltimateOverlayImg.src = 'Assets/model/escanor/escanor_ultimate_arena_overlay.png';
+}
+
+export function getEscanorUltimateOverlayImage() {
+  if (escanorUltimateOverlayImg && escanorUltimateOverlayImg.complete && escanorUltimateOverlayImg.naturalWidth > 0) {
+    return escanorUltimateOverlayImg;
+  }
+  if (!escanorUltimateOverlayImgLoading && typeof Image !== 'undefined') {
+    loadEscanorUltimateOverlayImage();
+  }
+  return escanorUltimateOverlayImg;
+}
+
+export function resetEscanorUltimateDimOpacity() {
+  currentEscanorUltimateOpacity = 0;
+}
 
 export function loadGenosUltimateOverlayImage() {
   if (genosUltimateOverlayImg || genosUltimateOverlayImgLoading) return;
@@ -1628,6 +1660,177 @@ export function drawGenosUltimateArenaOverlay() {
   ctx.restore(); // Restores fullscreen save
 
   state.globalDimEdgeColor = `rgba(5, 1, 0, ${(opacity * 0.98).toFixed(3)})`;
+}
+
+/**
+ * Draws Escanor's "THE ONE" Ultimate Arena Overlay.
+ * Renders Assets/model/escanor/escanor_ultimate_arena_overlay.png inside the arena with smooth fade transitions,
+ * custom zoom & offset tuning, edge vignette, radiant solar dark dim screen, and divine backlighting.
+ */
+export function drawEscanorUltimateArenaOverlay() {
+  if (typeof state !== 'undefined' && state.disableDimEffects) {
+    currentEscanorUltimateOpacity = 0;
+    return;
+  }
+  if (typeof CONFIG !== 'undefined' && CONFIG.escanor?.theOneOverlayEnabled === false) {
+    currentEscanorUltimateOpacity = 0;
+    return;
+  }
+  const { ctx, canvas, arena } = state;
+  if (!ctx || !canvas || !arena) return;
+
+  const escanor = state.fighters?.find(f =>
+    f && (f.characterId === 'escanor' || f.type === 'escanor' || f._def?.id === 'escanor') &&
+    !f.isDead && f.hp > 0 &&
+    (f.isTheOneActive || (f.theOneTimer && f.theOneTimer > 0))
+  );
+
+  if (!escanorUltimateOverlayImg && !escanorUltimateOverlayImgLoading) {
+    loadEscanorUltimateOverlayImage();
+  }
+
+  let targetOpacity = 0;
+  if (escanor) {
+    const baseDim = (typeof CONFIG !== 'undefined' && CONFIG.escanor?.theOneDimOpacity !== undefined) ? CONFIG.escanor.theOneDimOpacity : 0.92;
+    targetOpacity = baseDim;
+  }
+
+  // Smooth fade in / out matching standard dim transition speeds
+  if (targetOpacity > currentEscanorUltimateOpacity) {
+    currentEscanorUltimateOpacity += (targetOpacity - currentEscanorUltimateOpacity) * 0.08;
+  } else {
+    currentEscanorUltimateOpacity += (targetOpacity - currentEscanorUltimateOpacity) * 0.06;
+  }
+
+  if (currentEscanorUltimateOpacity < 0.01) {
+    currentEscanorUltimateOpacity = 0;
+    return;
+  }
+
+  const opacity = currentEscanorUltimateOpacity;
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // 1. Deep Abyssal Dark Solar / Amber-Gold Linear Gradient Across Full Screen
+  const linearGrad = createSafeLinearGradient(ctx, 0, 0, 0, h);
+  if (linearGrad) {
+    linearGrad.addColorStop(0.0, `rgba(6, 2, 0, ${(opacity * 0.98).toFixed(3)})`);      // Pitch black-solar void top
+    linearGrad.addColorStop(0.2, `rgba(28, 12, 1, ${(opacity * 0.94).toFixed(3)})`);     // Dark obsidian amber
+    linearGrad.addColorStop(0.5, `rgba(65, 24, 2, ${(opacity * 0.90).toFixed(3)})`);     // Radiant solar flare mid
+    linearGrad.addColorStop(0.8, `rgba(26, 10, 1, ${(opacity * 0.95).toFixed(3)})`);     // Deep amber shadow blend
+    linearGrad.addColorStop(1.0, `rgba(5, 2, 0, ${(opacity * 0.98).toFixed(3)})`);      // Pitch black-solar void bottom
+    ctx.fillStyle = linearGrad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // 2. High-contrast solar gold / divine pride radial gradient centered on Escanor
+  const screenPos = escanor ? worldToScreen(escanor.x, escanor.y - (escanor.z || 0)) : { x: w / 2, y: h / 2 };
+  const cx = (screenPos && Number.isFinite(screenPos.x)) ? screenPos.x : w / 2;
+  const cy = (screenPos && Number.isFinite(screenPos.y)) ? screenPos.y : h / 2;
+  const maxDim = Math.max(w, h) * 0.92;
+
+  const grad = createSafeRadialGradient(ctx, cx, cy, 0, cx, cy, maxDim);
+  if (grad) {
+    grad.addColorStop(0.00, `rgba(251, 191, 36, ${(opacity * 0.50).toFixed(3)})`);      // Radiant divine gold core (#FBBF24)
+    grad.addColorStop(0.12, `rgba(245, 158, 11, ${(opacity * 0.42).toFixed(3)})`);      // Solar amber flare halo (#F59E0B)
+    grad.addColorStop(0.28, `rgba(220, 38, 38, ${(opacity * 0.32).toFixed(3)})`);       // High noon crimson heat (#DC2626)
+    grad.addColorStop(0.50, `rgba(120, 28, 4, ${(opacity * 0.22).toFixed(3)})`);        // Deep burnt ochre shadow
+    grad.addColorStop(0.75, `rgba(40, 10, 1, ${(opacity * 0.12).toFixed(3)})`);         // Abyssal thermal transition
+    grad.addColorStop(1.00, 'rgba(0, 0, 0, 0)');                                        // Outer edge blend
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // 3. Dark Outer Edge Screen Vignette
+  const cornerGrad = createSafeRadialGradient(ctx, w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.85);
+  if (cornerGrad) {
+    cornerGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
+    cornerGrad.addColorStop(0.5, `rgba(8, 3, 0, ${(opacity * 0.35).toFixed(3)})`);
+    cornerGrad.addColorStop(1.0, `rgba(4, 1, 0, ${(opacity * 0.85).toFixed(3)})`);
+    ctx.fillStyle = cornerGrad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // 4. Subtle Radiant Solar Warmth inside Arena (Feathered Radial Falloff, Zero Rectangular Seams)
+  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
+  const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
+  const arenaScreenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
+  const arenaW = (arena.width || 800) * zoom;
+  const arenaH = (arena.height || 600) * zoom;
+  const wallW = (arena.wallWidth || 4) * zoom;
+
+  const arenaInnerHeat = createSafeRadialGradient(ctx, arenaScreenCenter.x, arenaScreenCenter.y, 0, arenaScreenCenter.x, arenaScreenCenter.y, Math.max(arenaW, arenaH) * 0.55);
+  if (arenaInnerHeat) {
+    arenaInnerHeat.addColorStop(0.00, `rgba(251, 191, 36, ${(opacity * 0.16).toFixed(3)})`);
+    arenaInnerHeat.addColorStop(0.50, `rgba(245, 158, 11, ${(opacity * 0.08).toFixed(3)})`);
+    arenaInnerHeat.addColorStop(1.00, 'rgba(0, 0, 0, 0)'); // Feathered edge dissipates to transparent
+    ctx.fillStyle = arenaInnerHeat;
+    ctx.beginPath();
+    ctx.arc(arenaScreenCenter.x, arenaScreenCenter.y, Math.max(arenaW, arenaH) * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 5. Draw Escanor Ultimate Overlay Artwork (Assets/model/escanor/escanor_ultimate_arena_overlay.png) inside Arena
+  // Pure unclipped alpha blit — NO fillRect dark boxes or sharp destination-out cutouts (Rule 31)
+  const img = getEscanorUltimateOverlayImage();
+  const baseOverlayAlpha = (typeof CONFIG !== 'undefined' && CONFIG.escanor?.theOneOverlayOpacity !== undefined) ? CONFIG.escanor.theOneOverlayOpacity : 0.90;
+  const overlayZoom = (typeof CONFIG !== 'undefined' && CONFIG.escanor?.theOneOverlayZoom !== undefined) ? CONFIG.escanor.theOneOverlayZoom : 0.88;
+  const custom = (typeof state !== 'undefined' && state.skinCustomizations?.escanor_ultimate_overlay) || {};
+  const effectiveZoom = custom.zoom ?? overlayZoom;
+  const offX = (custom.offsetX ?? ((typeof CONFIG !== 'undefined' && CONFIG.escanor?.theOneOverlayOffsetX !== undefined) ? CONFIG.escanor.theOneOverlayOffsetX : 0)) * zoom;
+  const offY = (custom.offsetY ?? ((typeof CONFIG !== 'undefined' && CONFIG.escanor?.theOneOverlayOffsetY !== undefined) ? CONFIG.escanor.theOneOverlayOffsetY : 0)) * zoom;
+
+  if (img && (img.complete || img.width > 0) && img.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    const innerW = arenaW - wallW * 2;
+    const innerH = arenaH - wallW * 2;
+
+    // Aspect-preserving "contain" fit: the 4:3 Lion's Sin crest (transparent PNG) must never be
+    // stretched into the square vertical arena (450×450) or the widescreen horizontal arena.
+    const fitScale = Math.min(innerW / img.naturalWidth, innerH / img.naturalHeight);
+    const drawW = img.naturalWidth * fitScale * effectiveZoom;
+    const drawH = img.naturalHeight * fitScale * effectiveZoom;
+
+    const drawX = arenaScreenCenter.x - drawW / 2 + offX;
+    const drawY = arenaScreenCenter.y - drawH / 2 + offY;
+
+    ctx.globalAlpha = opacity * baseOverlayAlpha;
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    ctx.restore();
+  }
+
+  // 6. Ethereal Divine Solar Backlight / Spotlight for Escanor
+  if (escanor) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const escanorZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+    const escanorScreen = worldToScreen(escanor.x, escanor.y - (escanor.z || 0));
+    const spotR = (escanor.r || 32) * 5.0 * escanorZoom;
+    const spotGrad = createSafeRadialGradient(ctx, escanorScreen.x, escanorScreen.y, 6 * escanorZoom, escanorScreen.x, escanorScreen.y, spotR);
+    if (spotGrad) {
+      spotGrad.addColorStop(0,    'rgba(255, 240, 160, 0.85)'); // Brilliant Pure Solar Core
+      spotGrad.addColorStop(0.30, 'rgba(245, 158, 11, 0.50)');  // Divine Sunshine Radiance
+      spotGrad.addColorStop(0.65, 'rgba(220, 38, 38, 0.22)');
+      spotGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = spotGrad;
+      ctx.beginPath();
+      ctx.arc(escanorScreen.x, escanorScreen.y, spotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // 7. Exclude Gojo's Limitless Infinity Barrier from full-screen dimming
+  excludeGojoInfinityFromDim(ctx);
+
+  ctx.restore(); // Restores fullscreen save
+
+  state.globalDimEdgeColor = `rgba(6, 2, 0, ${(opacity * 0.98).toFixed(3)})`;
 }
 
 /**

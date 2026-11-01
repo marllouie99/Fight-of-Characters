@@ -3751,7 +3751,7 @@ function updateHealthHud() {
     };
   };
 
-  const buildCard = ({ title, scoreText, fillColor, fillRatio, metaLabel, metaValue, members = null, extraClass = '', borderColor = null, wins = 0, fighterColor = null, shakeTimer = 0, isWinner = false, description = '', kills = [], maxBullets = 5, targetFighter = null, titleAlign = 'left', singleColumn = false, customHeaderHTML = '', hideHealthBar = false, skillsOnly = false }) => {
+  const buildCard = ({ title, scoreText, fillColor, fillRatio, metaLabel, metaValue, members = null, extraClass = '', borderColor = null, wins = 0, fighterColor = null, shakeTimer = 0, isWinner = false, description = '', kills = [], maxBullets = 5, targetFighter = null, titleAlign = 'left', singleColumn = false, customHeaderHTML = '', hideHealthBar = false, skillsOnly = false, hideDescription = false }) => {
     const safeRatio = Number.isFinite(fillRatio) ? Math.max(0, Math.min(1, fillRatio)) : 0;
     const winnerStyle = '';
     const isTactical = isTacticalMatch(state) || (targetFighter && isTacticalFighter(targetFighter)) || (members && members.some(m => isTacticalFighter(m)));
@@ -3945,7 +3945,7 @@ function updateHealthHud() {
       const isDummy = targetFighter && (targetFighter.characterId === 'dummy' || targetFighter.type === 'dummy');
       // skillsOnly (1v2 bottom strip) always renders skill bars and never the long
       // description/stat block, so the three columns stay compact and evenly aligned.
-      const showDescription = (CONFIG.hudShowFighterDescription || isDummy) && !skillsOnly;
+      const showDescription = (CONFIG.hudShowFighterDescription || isDummy) && !hideDescription && !skillsOnly;
       const hasMinion = Boolean(targetFighter && targetFighter.mahoragaSummonActive && targetFighter.mahoragaMinion && targetFighter.mahoragaMinion.hp > 0 && !targetFighter.mahoragaMinion.isDead);
       const skillsGridStyle = singleColumn ? 'grid-template-columns: 1fr;' : '';
       const infoGridStyle = CONFIG.hudLayoutStyle === 'classic'
@@ -4156,6 +4156,11 @@ function updateHealthHud() {
         const hpBarText = bossCardEl ? (bossCardEl.querySelector('.boss-bar__text') || bossCardEl.querySelector('.health-card__bar-text')) : null;
         const bossCardName = bossCardEl ? bossCardEl.querySelector('.boss-card__name') : null;
         const bossCardSubname = bossCardEl ? bossCardEl.querySelector('.boss-card__subname') : null;
+        // bottomHpBar mirrors the single bar (sync code is a no-op when they are equal)
+        const bottomHpBar = hpBar;
+        const bottomHpBarFill = hpBarFill;
+        const bottomHpBarGhost = hpBarGhost;
+        const bottomHpBarText = hpBarText;
         const bossProfileCanvas = bossCardEl ? bossCardEl.querySelector('.hud-top-profile__canvas') : null;
         const bossGradeCanvas = bossCardEl ? bossCardEl.querySelector('.hud-top-profile__grade-canvas') : null;
         let bossGradeCtx = null;
@@ -4298,6 +4303,11 @@ function updateHealthHud() {
         });
 
         const chCardName = cardElement.querySelector('.challenger-name');
+        // bottomHpBar mirrors the single bar (sync code is a no-op when they are equal)
+        const bottomHpBar = hpBar;
+        const bottomHpBarFill = hpBarFill;
+        const bottomHpBarGhost = hpBarGhost;
+        const bottomHpBarText = hpBarText;
 
         _hudCache.fighters.set(chFighter, {
           cardElement,
@@ -4555,6 +4565,8 @@ function updateHealthHud() {
         const ffaJustify = ffaAlign === 'left' ? 'flex-start' : (ffaAlign === 'right' ? 'flex-end' : 'center');
         const fGrade = getFighterGrade(fighter);
         const fGradeMeta = getGradeMeta(fGrade);
+        // 1v2 also embeds the fighter name inside each bottom card so CLASSIC HUD renders
+        // it in-card; buildCard still gates it on the classic skin (arcade keeps it off).
         const fighterHeaderHTML = ((isSideHud && mainFighters.length > 2) || isFfaVertical) ? `
           <div class="health-card__member-header" style="margin-bottom: 4px; display: flex; align-items: center; justify-content: ${ffaJustify}; gap: 6px;">
             ${ffaAlign === 'right' ? `<span class="hud-grade-badge" data-grade="${fGrade}" style="background: ${fGradeMeta.color}; color: #050609;">${fGrade}</span>` : ''}
@@ -4581,10 +4593,14 @@ function updateHealthHud() {
           maxBullets: maxBulletsCount,
           targetFighter: fighter,
           titleAlign: ffaAlign,
-          singleColumn: isSingleColumnMode,
+          // 1v2 (compact layout): each fighter's skill boxes and stats stack in a single column so the
+          // solo card (left column) and the duo's stacked cards (right column) stay readable.
+          singleColumn: isSingleColumnMode || isRegular1v2,
           customHeaderHTML: fighterHeaderHTML,
-          hideHealthBar: isDuelTopHud,
-          skillsOnly: isRegular1v2
+          hideHealthBar: isDuelTopHud || isRegular1v2,
+          skillsOnly: isRegular1v2,
+          // The long description block stays off for compact 1v2 cards on both skins.
+          hideDescription: isRegular1v2
         });
 
         const tempDiv = document.createElement('div');
@@ -4618,6 +4634,10 @@ function updateHealthHud() {
         let hpBarFill = cardElement.querySelector('.health-card__fill:not(.health-card__minion-fill)');
         let hpBarGhost = cardElement.querySelector('.health-card__ghost:not(.health-card__minion-ghost)');
         let hpBarText = cardElement.querySelector('.health-card__bar-text:not(.health-card__minion-bar-text)');
+        const bottomHpBar = hpBar;
+        const bottomHpBarFill = hpBarFill;
+        const bottomHpBarGhost = hpBarGhost;
+        const bottomHpBarText = hpBarText;
         let winBullets = Array.from(cardElement.querySelectorAll('.health-card__win-bullet'));
         let topPlayerEl = null;
         let topNameEl = null;
@@ -4699,6 +4719,14 @@ function updateHealthHud() {
           hpBarFill,
           hpBarGhost,
           hpBarText,
+          bottomHpBar,
+          bottomHpBarFill,
+          bottomHpBarGhost,
+          bottomHpBarText,
+          lastBottomHpPct: -1,
+          lastBottomBarColor: '',
+          lastBottomHpText: '',
+          bottomGhostTracker: null,
           topPlayerEl,
           topNameEl,
           topProfileEl,
@@ -5043,8 +5071,11 @@ function updateHealthHud() {
       const cachedCard = _hudCache.fighters.get(fighter);
       if (!cachedCard) return;
 
-      if (fighter._lastHealAmount && fighter._lastHealAmount > 0 && cachedCard.hpBar) {
-        triggerHudHealBubble(cachedCard.hpBar, fighter._lastHealAmount);
+      if (fighter._lastHealAmount && fighter._lastHealAmount > 0) {
+        if (cachedCard.hpBar) triggerHudHealBubble(cachedCard.hpBar, fighter._lastHealAmount);
+        if (cachedCard.bottomHpBar && cachedCard.bottomHpBar !== cachedCard.hpBar) {
+          triggerHudHealBubble(cachedCard.bottomHpBar, fighter._lastHealAmount);
+        }
         fighter._lastHealAmount = 0;
       }
 
@@ -5128,6 +5159,40 @@ function updateHealthHud() {
         if (cachedCard.lastHpText !== metaValue) {
           cachedCard.hpBarText.textContent = metaValue;
           cachedCard.lastHpText = metaValue;
+        }
+      }
+
+      // Sync Bottom Card Health Bar in multi-card/1v2 layouts where both top and bottom cards exist
+      if (cachedCard.bottomHpBar && cachedCard.bottomHpBar !== cachedCard.hpBar) {
+        if (cachedCard.bottomHpBarFill) {
+          if (cachedCard.lastBottomHpPct !== percent) {
+            cachedCard.bottomHpBarFill.style.width = `${percent}%`;
+            cachedCard.lastBottomHpPct = percent;
+          }
+          if (cachedCard.lastBottomBarColor !== barColor) {
+            cachedCard.bottomHpBarFill.style.background = barColor;
+            cachedCard.lastBottomBarColor = barColor;
+          }
+          cachedCard.bottomHpBarFill.style.boxShadow = isCj ? '' : (glow.boxShadow || '');
+          cachedCard.bottomHpBarFill.style.filter = glow.filter || '';
+          cachedCard.bottomHpBarFill.className = glow.className || 'health-card__fill';
+        }
+
+        if (cachedCard.bottomHpBarGhost) {
+          if (!cachedCard.bottomGhostTracker) cachedCard.bottomGhostTracker = {};
+          updateHealthBarGhost(cachedCard.bottomHpBarGhost, percent, cachedCard.bottomGhostTracker, isSans);
+        }
+
+        const cjBarClass = isCj ? ' hud-bar-cj' : '';
+        const sansBarClass = isSans ? ' hud-bar-sans-stamina' : '';
+        cachedCard.bottomHpBar.className = `health-card__bar${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+        const shakeTimer = fighter._healthBarShakeTimer || 0;
+        const shakeAmount = shakeTimer > 0 ? Math.sin((12 - shakeTimer) * 0.75) * 3 : 0;
+        cachedCard.bottomHpBar.style.transform = shakeTimer > 0 ? `translateX(${shakeAmount}px)` : '';
+
+        if (cachedCard.bottomHpBarText && cachedCard.lastBottomHpText !== metaValue) {
+          cachedCard.bottomHpBarText.textContent = metaValue;
+          cachedCard.lastBottomHpText = metaValue;
         }
       }
 
@@ -5388,7 +5453,7 @@ function updateHealthHud() {
         if (cachedCard.skillsContainer && (skills.length !== cachedCard.skillBars.size || skills.some(s => !cachedCard.skillBars.has(s.id)) || cachedCard.lastHasMinion !== hasMinion)) {
           const isRight = (cachedCard.cardElement.classList.contains('align-right') || cachedCard.cardElement.parentElement?.id === 'hud-top-right' || cachedCard.cardElement.parentElement?.id === 'hud-bottom-right');
           const align = isRight ? 'right' : 'left';
-          const isSingleCol = isSingleColumnMode || (is1v2 && index === 0);
+          const isSingleCol = isSingleColumnMode || (is1v2 && index === 0) || (CONFIG.hudLayoutStyle === 'classic' && isRegular1v2);
           cachedCard.skillsContainer.innerHTML = generateFighterSkillsHTML(fighter, align, isSingleCol, s => !s.id.startsWith('mahoraga_'));
           if (cachedCard.minionSkillsContainer) {
             cachedCard.minionSkillsContainer.innerHTML = hasMinion ? generateFighterSkillsHTML(fighter, align, isSingleCol, s => s.id.startsWith('mahoraga_')) : '';
@@ -5470,7 +5535,7 @@ function updateHealthHud() {
 
       // 5. Additional Info (stats) — only write to DOM if text changed
       if (cachedCard.infoContainer) {
-        const isSingleCol = isSingleColumnMode || (is1v2 && index === 0);
+        const isSingleCol = isSingleColumnMode || is1v2 || isRegular1v2;
         const ownerInfoHTML = generateFighterInfoHTML(fighter, isSingleCol, false);
         if (cachedCard.lastInfoHTML !== ownerInfoHTML) {
           cachedCard.infoContainer.innerHTML = ownerInfoHTML;

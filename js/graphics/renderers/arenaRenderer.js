@@ -1603,8 +1603,10 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   // In Boss Battle and 1v1 Duel modes, fighter names and healthbars are rendered in DOM (#hudTopContainer).
   // Skip canvas names to prevent duplicate clashing behind the Top HUD — except when the player's preferred
   // HUD layout is 'classic', which uses this canvas name strip above the arena wall plus HP inside the cards.
+  // 1v2 behaves the same way: the arcade skin draws names in the DOM duel top HUD, while the classic skin
+  // hides that DOM row and relies on this canvas strip (solo name left of "vs", duo names stacked right).
   const isClassicHudLayout = CONFIG.hudLayoutStyle === 'classic';
-  if (is1v2 || (isDuel1v1 && !isClassicHudLayout)) {
+  if ((is1v2 && !isClassicHudLayout) || (isDuel1v1 && !isClassicHudLayout)) {
     ctx.restore();
     return;
   }
@@ -1866,7 +1868,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
     const hasStackedTeam = team0.length > 1 || team1.length > 1;
     const nameFontSize = hasStackedTeam ? 44 : 60;
     const customFighterFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
-    const customVsFont = `700 ${hasStackedTeam ? 22 : 24}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
+    const customVsFont = `700 ${hasStackedTeam ? 30 : 32}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
 
     let wTeam0 = 0;
     team0Data.forEach(td => {
@@ -1959,7 +1961,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       //    NAME (P2)   NAME (P3)
       const nameFontSize = 26;
       const customFighterFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
-      const customVsFont = `700 18px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
+      const customVsFont = `700 24px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
 
       const bottomY = arena.y - 12;
       const topY = bottomY - 50;

@@ -12,7 +12,7 @@ import {
   drawFlames, drawDeathEffects, drawBlackHoleEffects, drawBloodEffects, drawDroppedMagazines, drawIllusions, 
   drawIllusionDeathEffects, drawIllusionSpawnEffects, drawBerserkerRageEffects, 
   drawSparkEffects, drawPurpleDimScreen, drawRedDimScreen, drawGojoDomainDimScreen, drawRubbickDomainDimScreen, drawSukunaDomainDimScreen, drawYutaDomainDimScreen, drawMahitoDomainDimScreen, drawStormDimScreen, drawFurnaceDimScreen, 
-  drawRikaSummonDimScreen, drawCjBaguvixDimScreen, drawMahitoDomainOverlay, drawTojiUltimateOverlay, drawNanamiOvertimeArenaOverlay, drawGenosUltimateArenaOverlay, drawMahoragaAdaptationDimScreen, drawMahoragaWheelArenaOverlay, drawMahoragaLevel8DimScreen,
+  drawRikaSummonDimScreen, drawCjBaguvixDimScreen, drawMahitoDomainOverlay, drawTojiUltimateOverlay, drawNanamiOvertimeArenaOverlay, drawGenosUltimateArenaOverlay, drawEscanorUltimateArenaOverlay, drawMahoragaAdaptationDimScreen, drawMahoragaWheelArenaOverlay, drawMahoragaLevel8DimScreen,
   drawAllCronosSpheres, drawThermobaricExplosions, drawThinIceBreakerDimScreen,
   drawGenosSpeedLines, drawMahoragaSpeedLines, drawNanamiSpeedLines, drawSaitamaSpeedLines, drawIchigoBankaiSpeedLines, drawTojiSpeedLines, drawSaitamaSeriousPunchDimScreen, drawGenosSelfDestructDimScreen,
   drawTodoTakadaDimScreen, drawTodoTakadaIdolScreenOverlay, isTodoTakadaOverlayActive, drawNanamiRatioCritDimScreen, drawBankaiImpactDimScreen,
@@ -28,6 +28,7 @@ import { drawBlackFlashEffects } from '../graphics/particles/blackFlashEffect.js
 import { drawLightningEffects } from '../graphics/particles/lightningEffects.js';
 import { drawGetsugaImpactEffects, updateGetsugaImpactEffects } from '../graphics/particles/getsugaImpactEffect.js';
 import { drawTojiImpactEffects, updateTojiImpactEffects } from '../graphics/particles/tojiImpactEffect.js';
+import { drawRhittaSlashCutImpacts, updateRhittaSlashCutImpacts } from '../graphics/weapons/escanorWeaponGraphics.js';
 import { renderYutaSukunaDomainClashRift } from '../entities/fighters/yuta/yutaDomainVisuals.js';
 import { drawFightBanner } from '../graphics/renderers/PokeBallSummonRenderer.js';
 import { beginForegroundFxPass, flushForegroundFxPass, endForegroundFxPass } from '../graphics/renderers/foregroundFxPass.js';
@@ -314,6 +315,7 @@ export function renderGame() {
           drawTojiUltimateOverlay();
           drawNanamiOvertimeArenaOverlay(); // 2D Nanami Overtime (Jigai) golden arena overlay & dark background
           drawGenosUltimateArenaOverlay(); // 2D Genos Spiral Incineration Cannon arena overlay & volcanic dark background
+          drawEscanorUltimateArenaOverlay(); // 2D Escanor "THE ONE" arena overlay & radiant solar dark background
           drawSaitamaSeriousPunchDimScreen();
           drawGenosSelfDestructDimScreen(); // Smooth dim on charge + cyan starburst on explosion
           drawBankaiImpactDimScreen(); // Short black-crimson radial dim on Ichigo Bankai lightning impact
@@ -501,6 +503,8 @@ export function renderGame() {
         drawGetsugaImpactEffects(state.ctx); // Draw Bleach Getsuga Tensho spatial cleave impact effects
         updateTojiImpactEffects();
         drawTojiImpactEffects(state.ctx); // Draw Toji Split Soul Katana spatial soul cleave impact effects
+        updateRhittaSlashCutImpacts();
+        drawRhittaSlashCutImpacts(state.ctx); // Draw Escanor Rhitta Holy Solar Slash Cut impacts on target bodies
 
         // Nanami 7:3 Ratio Ruler & Blood Rupture overlay renders ON TOP of all fighters & entities
         if (!state.disableDimEffects) {

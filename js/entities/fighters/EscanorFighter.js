@@ -16,8 +16,8 @@ import { Fighter, applyDamageToTarget } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { MODE_SETTINGS, MODE_HP_MULTIPLIER } from '../../core/modeConfig.js';
-import { drawEscanorSkin, _getEscanorChopAnimationState } from '../../graphics/fighters/escanorSkin.js';
-import { drawCruelSunOrb, drawPrideFlareShockwave, drawDivineSwordEscanorBlade, drawRhittaSlashArc, spawnCruelSunHitImpact, updateCruelSunHitImpacts, drawCruelSunHitImpacts, clearCruelSunHitImpacts, spawnCruelSunExplosion, updateCruelSunExplosions, drawCruelSunExplosions, clearCruelSunExplosions } from '../../graphics/weapons/escanorWeaponGraphics.js';
+import { drawEscanorSkin, _getEscanorChopAnimationState, _drawEscanorTheOneLevelUpVFX, _drawEscanorTheOneWindupVFX } from '../../graphics/fighters/escanorSkin.js';
+import { drawCruelSunOrb, drawPrideFlareShockwave, drawDivineSwordEscanorBlade, drawRhittaSlashArc, spawnCruelSunHitImpact, updateCruelSunHitImpacts, drawCruelSunHitImpacts, clearCruelSunHitImpacts, spawnCruelSunExplosion, updateCruelSunExplosions, drawCruelSunExplosions, clearCruelSunExplosions, spawnRhittaSlashCutImpact, clearRhittaSlashCutImpacts } from '../../graphics/weapons/escanorWeaponGraphics.js';
 import { spawnSparks, spawnImpactFlash } from '../../graphics/particles/sparkEffect.js';
 import { spawnBloodEffect } from '../../graphics/particles/bloodEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -54,15 +54,18 @@ function _getEscanorBladeWorldSegment(fighter, strikeP) {
   const overheadHandY = -r * 0.42;
   const strikeEndHandX = r * 1.15;
   const strikeEndHandY = r * 0.42;
-  // Free right hand stays grounded at lower-right flank (Rule 20)
-  const localBackHandX = r * 0.82;
-  const localBackHandY = r * 0.38;
+  const overheadBackHandX = r * 0.50;
+  const overheadBackHandY = r * 0.12;
+  const strikeEndBackHandX = r * 1.05;
+  const strikeEndBackHandY = r * 0.05;
 
   const clampedP = Math.max(0, Math.min(1.0, strikeP));
   const ease = 1 - Math.pow(1 - clampedP, 3);
   const localAxeAngle = overheadAngle + (strikeEndAngle - overheadAngle) * ease;
   const localHandX = overheadHandX + ease * (strikeEndHandX - overheadHandX);
   const localHandY = overheadHandY + ease * (strikeEndHandY - overheadHandY);
+  const localBackHandX = overheadBackHandX + ease * (strikeEndBackHandX - overheadBackHandX);
+  const localBackHandY = overheadBackHandY + ease * (strikeEndBackHandY - overheadBackHandY);
 
   const aimAngle = (fighter.chopCastAngle !== undefined)
     ? fighter.chopCastAngle
@@ -244,8 +247,17 @@ export class EscanorFighter extends Fighter {
 
     // Ultimate: "THE ONE" — Divine Sword Escanor (天地無双)
     this.theOneCooldownMax = cfg.theOneCooldown || 1560;
-    this.theOneCooldown = this.theOneCooldownMax;
+    this.theOneCooldown = 0; // Starts at 0 so taking enough damage awakens "THE ONE"
+    this.theOneDamageTaken = 0;
+    this.theOneCurrentRadiusBonus = 0;
     this.isTheOneActive = false;
+    this.isTheOneWindup = false;
+    this.theOneWindupTimer = 0;
+    this.theOneWindupMax = cfg.theOneWindupFrames || 36;
+    this.theOneLevelUpVFXTimer = 0;
+    this.theOneLevelUpVFXMax = cfg.theOneLevelUpVFXDuration || 36;
+    this.theOneLevelUpVFXOriginX = 0;
+    this.theOneLevelUpVFXOriginY = 0;
     this.theOneTimer = 0;
     this.theOneMaxTimer = cfg.theOneDuration || 480;
     this.theOneFinisherUsed = false;
@@ -307,6 +319,15 @@ export class EscanorFighter extends Fighter {
   reset() {
     super.reset();
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
+    const baseHp = cfg.hp || this._def?.hp || 390;
+    const modeFixed = (typeof MODE_BASE_HP !== 'undefined' && typeof state !== 'undefined' && state?.mode) ? MODE_BASE_HP[state.mode] : null;
+    if (modeFixed) {
+      this.maxHp = modeFixed;
+    } else {
+      const modeMult = (typeof MODE_HP_MULTIPLIER !== 'undefined' && typeof state !== 'undefined' && state?.mode) ? (MODE_HP_MULTIPLIER[state.mode] || 1) : 1;
+      this.maxHp = Math.round(baseHp * modeMult);
+    }
+    this.hp = this.maxHp;
     this._lastMoveAngle = undefined;
     this.baseDefense = cfg.defense ?? 0.20;
     this.defense = this.baseDefense;
@@ -341,8 +362,15 @@ export class EscanorFighter extends Fighter {
     this.chopHitPauseTarget = null;
     this.prideStacks = 0;
     this.prideChargeTimer = 0;
+    this.theOneCooldown = 0;
+    this.theOneDamageTaken = 0;
+    this.theOneCurrentRadiusBonus = 0;
     this.isTheOneActive = false;
+    this.isTheOneWindup = false;
+    this.theOneWindupTimer = 0;
+    this.theOneLevelUpVFXTimer = 0;
     this.theOneFinisherUsed = false;
+    this.r = this.baseRadius || 32;
     this.isChannelingCruelSun = false;
     this._cruelSunSnapSfxPlayed = false;
     this.cruelSunChargeTimer = 0;
@@ -352,6 +380,7 @@ export class EscanorFighter extends Fighter {
     this.cruelSunMaxRecoveryTimer = 0;
     this.cruelSunReleaseAngle = 0;
     this.activeCruelSuns = [];
+    clearRhittaSlashCutImpacts();
     this.immuneToCC = true;
     this.slashOriginX = undefined;
     this.slashOriginY = undefined;
@@ -386,6 +415,7 @@ export class EscanorFighter extends Fighter {
    * Prevents basic attacks while Cruel Sun is active/flying (just like Gojo firing Hollow Purple).
    */
   canPerformBasicAttack() {
+    if (this.isTheOneWindup) return false;
     if (this.isCruelSunActive()) return false;
     if (this.isChannelingCruelSun || this.isChannelingDivineSword || (this.slashSwingTimer > 0) || (this.chopHitPauseTimer > 0)) return false;
     return super.canPerformBasicAttack ? super.canPerformBasicAttack() : true;
@@ -394,9 +424,12 @@ export class EscanorFighter extends Fighter {
   /**
    * Aim Validation Guard:
    * Allows smooth auto-aim tracking while lifting/holding Divine Axe Rhitta (isLiftingWeapon),
-   * but strictly locks aim during the downward chop strike, impact hit-pause, Cruel Sun channeling, in-flight, and post-throw breather recovery.
+   * but strictly locks aim during the downward chop strike, impact hit-pause, Cruel Sun channeling, in-flight, post-throw breather recovery, and The One windup.
    */
   canAim() {
+    if (this.isTheOneWindup) {
+      return false;
+    }
     if (this.isChannelingCruelSun || (this.cruelSunChargeTimer && this.cruelSunChargeTimer > 0)) {
       return true;
     }
@@ -418,8 +451,14 @@ export class EscanorFighter extends Fighter {
    * - Downward strike & recovery: locks strictly to the committed chopCastAngle.
    * - Cruel Sun channeling: dynamically tracks target with pointing hand while body faces player (angle 0).
    * - Cruel Sun 3s post-throw recovery: locks strictly to release direction before resuming free aim.
+   * - The One windup: strictly faces forward (angle 0).
    */
   aim(target) {
+    if (this.isTheOneWindup) {
+      this.gunAngle = 0;
+      this.angle = 0;
+      return false;
+    }
     if (this.isChannelingCruelSun || (this.cruelSunChargeTimer && this.cruelSunChargeTimer > 0)) {
       this.gunAngle = 0;
       this.angle = 0;
@@ -699,6 +738,7 @@ export class EscanorFighter extends Fighter {
 
     const recFrames = (typeof this.chopRecoveryFrames === 'number') ? this.chopRecoveryFrames : (CONFIG.escanor?.chopRecoveryFrames || 28);
     const isStationaryState = Boolean(
+      this.isTheOneWindup ||
       this.isChannelingCruelSun ||
       (this.cruelSunRecoveryTimer && this.cruelSunRecoveryTimer > 0) ||
       (this.chopHitPauseTimer && this.chopHitPauseTimer > 0) ||
@@ -792,6 +832,7 @@ export class EscanorFighter extends Fighter {
 
     const recFrames = (typeof this.chopRecoveryFrames === 'number') ? this.chopRecoveryFrames : (CONFIG.escanor?.chopRecoveryFrames || 28);
     const isStationaryState = Boolean(
+      this.isTheOneWindup ||
       this.isChannelingCruelSun ||
       (this.cruelSunRecoveryTimer && this.cruelSunRecoveryTimer > 0) ||
       (this.chopHitPauseTimer && this.chopHitPauseTimer > 0) ||
@@ -802,6 +843,21 @@ export class EscanorFighter extends Fighter {
       this.vy = prevVy;
       this.knockbackVx = 0;
       this.knockbackVy = 0;
+    }
+
+    // Accumulate damage taken to awaken "THE ONE" (Took enough damage trigger)
+    const damageDealt = (typeof res === 'number' && res > 0) ? res : finalAmount;
+    if (damageDealt > 0 && !this.isTheOneActive && !this.isTheOneWindup && !this.dead && !this.isDead && this.hp > 0) {
+      this.theOneDamageTaken = (this.theOneDamageTaken || 0) + damageDealt;
+
+      const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
+      const threshold = cfg.theOneDamageThreshold ?? 140;
+      const hpThresh = cfg.theOneHpThreshold ?? 0.50;
+      const tookEnoughDamage = this.theOneDamageTaken >= threshold || (this.hp <= this.maxHp * hpThresh);
+
+      if (tookEnoughDamage && this.isSkillEnabled(cfg.enableTheOne, true) && (this.theOneCooldown || 0) <= 0 && !this.isTheOneActive && !this.isTheOneWindup) {
+        this._activateTheOne();
+      }
     }
 
     return res;
@@ -852,6 +908,11 @@ export class EscanorFighter extends Fighter {
   update(opponent, ownerIndex, arena) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
 
+    // 0. Update transient visual effects before freeze guard (Rule 25)
+    if (this.theOneLevelUpVFXTimer > 0) {
+      this.theOneLevelUpVFXTimer--;
+    }
+
     // Clear all stun, paralyze, electric stun, and hit-pause timers
     this.hitStunTimer = 0;
     this.paralyzeTimer = 0;
@@ -866,9 +927,25 @@ export class EscanorFighter extends Fighter {
     // 1. Rule 1 Freeze / TimeStop Guard
     const isFrozen = this._handleTimeStop();
     if (isFrozen || this.isTargetOfAmbush) {
-      if (!this.isSkillPreservedInStasis() && !this.isChannelingCruelSun && !this.isChannelingDivineSword && !this.cruelSunCharging && !this.isLiftingWeapon() && (this.slashSwingTimer || 0) <= 0) {
+      if (!this.isSkillPreservedInStasis() && !this.isTheOneWindup && !this.isChannelingCruelSun && !this.isChannelingDivineSword && !this.cruelSunCharging && !this.isLiftingWeapon() && (this.slashSwingTimer || 0) <= 0) {
         this.interruptAttacks();
       }
+      return;
+    }
+
+    // ── "THE ONE" Awakening Windup Animation & Cinematic Stasis ──
+    if (this.isTheOneWindup) {
+      this.theOneWindupTimer--;
+      this.vx = 0;
+      this.vy = 0;
+      this.gunAngle = 0;
+      this.angle = 0;
+
+      if (this.theOneWindupTimer <= 0) {
+        this._completeTheOneAwakening();
+      }
+
+      this.applyMovementPhysics(0);
       return;
     }
 
@@ -1014,6 +1091,7 @@ export class EscanorFighter extends Fighter {
         if (this.theOneTimer <= 0) {
           this.isTheOneActive = false;
           this.theOneCooldown = this.theOneCooldownMax;
+          this.theOneDamageTaken = 0;
         }
       }
 
@@ -1055,6 +1133,7 @@ export class EscanorFighter extends Fighter {
         if (this.theOneTimer <= 0) {
           this.isTheOneActive = false;
           this.theOneCooldown = this.theOneCooldownMax;
+          this.theOneDamageTaken = 0;
         }
       }
 
@@ -1101,11 +1180,21 @@ export class EscanorFighter extends Fighter {
       }
     }
 
-    // Dynamically scale physical body radius as Escanor grows with Solar Pride & "THE ONE"
-    const sizeGrowth = this.isTheOneActive
-      ? (cfg.theOneRadiusBonus ?? 4)
-      : ((this.prideStacks || 0) * (cfg.prideRadiusBonusPerStack ?? 1.0));
-    this.r = (this.baseRadius || 32) + sizeGrowth;
+    // Dynamically calculate target physical body radius as Escanor grows with Solar Pride & "THE ONE"
+    const baseR = this.baseRadius || cfg.radius || 32;
+    const prideGrowth = (this.prideStacks || 0) * (cfg.prideRadiusBonusPerStack ?? 1.0);
+    const targetTheOneBonus = this.isTheOneActive ? (cfg.theOneRadiusBonus ?? 10) : 0;
+    const growSpeed = (typeof cfg.theOneSizeGrowSpeed === 'number') ? cfg.theOneSizeGrowSpeed : 0.08;
+
+    if (this.theOneCurrentRadiusBonus === undefined) this.theOneCurrentRadiusBonus = 0;
+    if (Math.abs(this.theOneCurrentRadiusBonus - targetTheOneBonus) > 0.04) {
+      this.theOneCurrentRadiusBonus += (targetTheOneBonus - this.theOneCurrentRadiusBonus) * growSpeed;
+    } else {
+      this.theOneCurrentRadiusBonus = targetTheOneBonus;
+    }
+
+    // Set physical body radius (smoothly increases his size during "THE ONE" and smoothly restores upon expiry)
+    this.r = baseR + (this.isTheOneActive ? this.theOneCurrentRadiusBonus : (prideGrowth + this.theOneCurrentRadiusBonus));
 
     // Cleaver / Axe Swing Timer & Downward Chop Hit Delivery
     if (this.slashSwingTimer > 0) {
@@ -1196,6 +1285,7 @@ export class EscanorFighter extends Fighter {
       if (this.theOneTimer <= 0) {
         this.isTheOneActive = false;
         this.theOneCooldown = this.theOneCooldownMax;
+        this.theOneDamageTaken = 0;
       }
     }
 
@@ -1231,9 +1321,12 @@ export class EscanorFighter extends Fighter {
 
     const dist = Math.hypot(target.x - this.x, target.y - this.y);
 
-    // 1. Try Ultimate: "THE ONE" (Toggle: enableTheOne)
+    // 1. Try Ultimate: "THE ONE" (Toggle: enableTheOne) — triggers when Escanor took enough damage
     const isLiftingWeapon = this.isLiftingWeapon() || (this.slashSwingTimer > 0) || (this.chopHitPauseTimer && this.chopHitPauseTimer > 0);
-    if (this.isSkillEnabled(cfg.enableTheOne, true) && this.theOneCooldown <= 0 && !this.isTheOneActive && !this.isCruelSunActive() && !isLiftingWeapon && (dist < 180 || this.hp < this.maxHp * 0.65)) {
+    const theOneThreshold = cfg.theOneDamageThreshold ?? 140;
+    const theOneHpThreshold = cfg.theOneHpThreshold ?? 0.50;
+    const tookEnoughDamage = (this.theOneDamageTaken || 0) >= theOneThreshold || (this.hp > 0 && this.hp <= this.maxHp * theOneHpThreshold);
+    if (this.isSkillEnabled(cfg.enableTheOne, true) && (this.theOneCooldown || 0) <= 0 && !this.isTheOneActive && !this.isTheOneWindup && !this.isCruelSunActive() && !isLiftingWeapon && tookEnoughDamage) {
       this._activateTheOne();
       return;
     }
@@ -1450,8 +1543,14 @@ export class EscanorFighter extends Fighter {
       // Initial contact effects at the exact point of blade impact
       const contactX = hit.contactX;
       const contactY = hit.contactY;
-      spawnImpactFlash(contactX, contactY, '#F59E0B', 55);
+      spawnImpactFlash(contactX, contactY, 40, '#F59E0B');
       spawnSparks(contactX, contactY, '#F59E0B', 14);
+
+      // Spawn Holy Solar Slash Cut / Spatial Cleave Scar line directly across struck enemy body center
+      if (this.isSkillEnabled(cfg.enableRhittaSlashCutImpact, true)) {
+        const cutAngle = (this.chopCastAngle !== undefined) ? this.chopCastAngle : ((this.gunAngle !== undefined && !Number.isNaN(this.gunAngle)) ? this.gunAngle : (this.angle || 0));
+        spawnRhittaSlashCutImpact(tgt, cutAngle, Boolean(this.isTheOneActive), tgt.r || 25);
+      }
 
       // Freeze target in time-stop stasis for cinematic hit-pause
       if (typeof tgt.applyTimeStop === 'function') {
@@ -2319,21 +2418,58 @@ export class EscanorFighter extends Fighter {
 
   /**
    * Ultimate: "THE ONE" (天上天下唯我独尊)
+   * Starts dramatic transformation windup sequence with invincible solar poise.
    */
   _activateTheOne() {
-    if (this.isLiftingWeapon() || (this.slashSwingTimer > 0) || (this.chopHitPauseTimer && this.chopHitPauseTimer > 0)) return;
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
     if (!this.isSkillEnabled(cfg.enableTheOne, true)) return;
+    if (this.isTheOneWindup || this.isTheOneActive) return;
+
+    this.slashSwingTimer = 0;
+    this.chopHitPauseTimer = 0;
+    this.isChannelingCruelSun = false;
+    this.cruelSunChargeTimer = 0;
+    this.vx = 0;
+    this.vy = 0;
+
+    this.isTheOneWindup = true;
+    this.theOneWindupMax = cfg.theOneWindupFrames || 36;
+    this.theOneWindupTimer = this.theOneWindupMax;
+
+    spawnImpactFlash(this.x, this.y, '#FEF08A', 80);
+    spawnSparks(this.x, this.y, '#F59E0B', 20);
+
+    try {
+      const windupSnd = cfg.sounds?.weaponLift || 'Assets/Sound Effects/SkillEffects/Escanor-weapon-lift.mp3';
+      const windupVol = cfg.soundVolumes?.weaponLift !== undefined ? cfg.soundVolumes.weaponLift : 0.8;
+      audioSystem.playSFX(windupSnd, windupVol);
+    } catch (e) {}
+  }
+
+  /**
+   * Completes "THE ONE" transformation windup: awakens invincible High Noon form and triggers the Level Up VFX.
+   */
+  _completeTheOneAwakening() {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
+    this.isTheOneWindup = false;
+    this.theOneWindupTimer = 0;
     this.isTheOneActive = true;
     this.theOneTimer = this.theOneMaxTimer;
     this.theOneFinisherUsed = false;
+    this.theOneDamageTaken = 0; // Reset damage accumulation for next awakening cycle
     this.prideStacks = this.prideMaxStacks; // Max pride stacks
 
-    spawnFloatingText(this.x, this.y - 45, 'THE ONE — HIGH NOON!', '#FEF08A');
-    triggerGlobalScreenShake(16, 24);
+    // Trigger 12-Frame Level Up evolving VFX animation (Assets/model/escanor/The_One_Level_Up/)
+    this.theOneLevelUpVFXTimer = cfg.theOneLevelUpVFXDuration || 36;
+    this.theOneLevelUpVFXMax = this.theOneLevelUpVFXTimer;
+    this.theOneLevelUpVFXOriginX = this.x;
+    this.theOneLevelUpVFXOriginY = this.y;
 
-    spawnImpactFlash(this.x, this.y, '#FEF08A', 120);
-    spawnSparks(this.x, this.y, '#F59E0B', 32);
+    spawnFloatingText(this.x, this.y - 45, 'THE ONE — HIGH NOON!', '#FEF08A');
+    triggerGlobalScreenShake(20, 28);
+
+    spawnImpactFlash(this.x, this.y, '#FEF08A', 140);
+    spawnSparks(this.x, this.y, '#F59E0B', 36);
 
     try {
       const theOneSnd = cfg.sounds?.theOne || 'Assets/Sound Effects/Attacks/laserbeam.mp3';
@@ -2413,9 +2549,14 @@ export class EscanorFighter extends Fighter {
           tgt.knockbackVx = Math.cos(angleToTarget) * kb;
           tgt.knockbackVy = Math.sin(angleToTarget) * kb;
 
-          spawnImpactFlash(tgt.x, tgt.y, '#FFFFFF', 60);
+          spawnImpactFlash(tgt.x, tgt.y, 45, '#FFFFFF');
           spawnSparks(tgt.x, tgt.y, '#FEF08A', 24);
           spawnBloodEffect(tgt.x, tgt.y, 14);
+
+          // Spawn Holy Solar Slash Cut / Spatial Cleave Scar line directly across struck enemy body center
+          if (this.isSkillEnabled(cfg.enableRhittaSlashCutImpact, true)) {
+            spawnRhittaSlashCutImpact(tgt, aimAngle, true, tgt.r || 25);
+          }
         }
       }
     }
@@ -2451,6 +2592,9 @@ export class EscanorFighter extends Fighter {
       return;
     }
     super.interruptAttacks(forceCancelAll);
+    this.isTheOneWindup = false;
+    this.theOneWindupTimer = 0;
+    this.theOneLevelUpVFXTimer = 0;
     this.isChannelingCruelSun = false;
     this.cruelSunChargeTimer = 0;
     this.cruelSunCastAngle = undefined;
@@ -2500,6 +2644,8 @@ export class EscanorFighter extends Fighter {
   }
 
   draw(ctx) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
+
     // 1. Draw Active Cruel Sun Orbs & Collision Hit Impacts & Explosions
     for (const sun of this.activeCruelSuns) {
       drawCruelSunOrb(ctx, sun.x, sun.y, sun.r, Date.now(), sun);
@@ -2527,7 +2673,8 @@ export class EscanorFighter extends Fighter {
       (typeof this.areAttackEffectsSuppressed === 'function' && this.areAttackEffectsSuppressed())
     );
 
-    if (!isPodiumPreview && !isSuppressed) {
+    // 4. Draw Active Rhitta Slash Arc in World Space (Hidden per user request; enableRhittaSlashArc toggle)
+    if (!isPodiumPreview && !isSuppressed && this.isSkillEnabled(cfg.enableRhittaSlashArc, false)) {
       const chopState = _getEscanorChopAnimationState(this);
       if (chopState.isSwinging && (chopState.phase === 'strike' || chopState.phase === 'hitPause' || chopState.phase === 'recovery')) {
         const slashX = (this.slashOriginX !== undefined) ? this.slashOriginX : this.x;
@@ -2543,8 +2690,26 @@ export class EscanorFighter extends Fighter {
       }
     }
 
+    // 4.5. The One Level Up evolving VFX (Back Layer: Light Column & Floor Supernova)
+    if (this.theOneLevelUpVFXTimer > 0) {
+      const prog = 1.0 - (this.theOneLevelUpVFXTimer / (this.theOneLevelUpVFXMax || 36));
+      _drawEscanorTheOneLevelUpVFX(ctx, this.theOneLevelUpVFXOriginX, this.theOneLevelUpVFXOriginY, this.r || 32, prog, Date.now(), this, 1.0, 'back');
+    }
+
+    // 4.6. The One Windup converging particles VFX
+    if (this.isTheOneWindup && this.theOneWindupTimer > 0) {
+      const prog = 1.0 - (this.theOneWindupTimer / (this.theOneWindupMax || 36));
+      _drawEscanorTheOneWindupVFX(ctx, this.x, this.y, this.r || 32, prog, Date.now(), this);
+    }
+
     // 5. Draw Escanor Main Skin Model
     drawEscanorSkin(ctx, this);
+
+    // 5.5. The One Level Up evolving VFX (Front Layer: Ascending Evolution Rings & Diamond Sparkles)
+    if (this.theOneLevelUpVFXTimer > 0) {
+      const prog = 1.0 - (this.theOneLevelUpVFXTimer / (this.theOneLevelUpVFXMax || 36));
+      _drawEscanorTheOneLevelUpVFX(ctx, this.theOneLevelUpVFXOriginX, this.theOneLevelUpVFXOriginY, this.r || 32, prog, Date.now(), this, 1.0, 'front');
+    }
 
     // Rule 21 Mandatory Overhead Health & Status
     this.drawHealth(ctx);

@@ -45,6 +45,8 @@ export const pacmanConfig = {
   chompDamagePercent: 0.20, // 30% damage on contact
   chompSpeedMultiplier: 1.25, // 25% movement speed boost while chasing enemies
   chompAttackCooldown: 45, // Delay between consecutive chomps (~0.75s)
+  chompFrontalArc: Math.PI * 0.75, // Frontal bite cone (~135° arc, ±67.5° half-arc matching open mouth wedge)
+  chompWhiffCooldown: 30, // Delay before re-chomping after the target dodges/evades the bite (e.g. Saitama/Sans teleport dodge, also while ghosted)
   chompKnockback: 14, // Outward knockback impulse delivered to bitten enemies
   chompHitStun: 24, // Hit stun frames on target bitten by Pac-Man
 

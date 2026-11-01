@@ -57,6 +57,7 @@ export class PacmanFighter extends Fighter {
     this.chompModeTimer = 0;
     this.chompDamagePercent = cfg.chompDamagePercent ?? 0.30;
     this.chompSpeedMultiplier = cfg.chompSpeedMultiplier ?? 1.25;
+    this.chompFrontalArc = cfg.chompFrontalArc ?? (Math.PI * 0.75);
     this.chompAttackCooldown = 0;
     this.chompKnockback = cfg.chompKnockback ?? 14;
     this.chompHitStun = cfg.chompHitStun ?? 24;
@@ -154,6 +155,7 @@ export class PacmanFighter extends Fighter {
     this.chompModeDuration = cfg.chompModeDuration ?? 360;
     this.chompModeTimer = 0;
     this.chompAttackCooldown = 0;
+    this.chompFrontalArc = cfg.chompFrontalArc ?? (Math.PI * 0.75);
     this._mouthAnimTicks = 0;
     this._wakaSoundDebounce = 0;
     this._wakaSoundToggle = false;
@@ -515,9 +517,38 @@ export class PacmanFighter extends Fighter {
   }
 
   /**
+   * Evaluates whether a target enemy is positioned within Pac-Man's front mouth angle cone.
+   * Ensures Pac-Man only bites/swallows enemies facing his open mouth aperture (~135° cone).
+   * @param {Object} target - Target opponent
+   * @returns {boolean} True if enemy is in the front mouth angle, false if behind or to the sides.
+   */
+  isEnemyInFrontAngle(target) {
+    if (!target) return false;
+    const contactDist = Math.hypot(target.x - this.x, target.y - this.y);
+    if (contactDist <= 1.0) return true; // Direct center overlap / identical position
+
+    const currentSpeed = Math.hypot(this.vx || 0, this.vy || 0);
+    const facingAngle = (currentSpeed > 0.2)
+      ? Math.atan2(this.vy, this.vx)
+      : ((this.gunAngle !== undefined) ? this.gunAngle : (this.angle !== undefined ? this.angle : 0));
+
+    const angleToTarget = Math.atan2(target.y - this.y, target.x - this.x);
+    let angleDiff = angleToTarget - facingAngle;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : pacmanConfig;
+    const arc = (this.chompFrontalArc !== undefined ? this.chompFrontalArc : (cfg.chompFrontalArc !== undefined ? cfg.chompFrontalArc : (Math.PI * 0.75)));
+    const halfArc = arc * 0.5;
+
+    return Math.abs(angleDiff) <= halfArc;
+  }
+
+  /**
    * The ONLY offensive mechanic of Pac-Man:
    * Executes a devastating 30% damage chomp attack upon contacting the enemy during Chomp Mode.
    * If the enemy is in a ghost state, Pac-Man swallows them into his belly until Chomp Mode expires!
+   * MANDATORY: Pac-Man will ONLY eat the enemy if they are positioned in his front angle!
    */
   _executeChompAttack(opponent) {
     if (!opponent || opponent.hp <= 0 || !this.isChompModeActive) return false;
@@ -529,6 +560,11 @@ export class PacmanFighter extends Fighter {
 
     if (contactDist > hitReach) return false;
 
+    // Frontal Angle Guard: Pac-Man can ONLY eat / chomp the enemy in front angle!
+    if (!this.isEnemyInFrontAngle(opponent)) {
+      return false;
+    }
+
     // If opponent is currently in a frightened ghost state, swallow them into Pac-Man's belly!
     const isGhosted = Boolean(opponent.isPacmanGhost && (opponent.pacmanGhostTimer || 0) > 0);
     if (isGhosted) {
@@ -539,11 +575,9 @@ export class PacmanFighter extends Fighter {
     const targetMaxHp = opponent.maxHp || 1000;
     const dmg = Math.max(1, Math.round(targetMaxHp * this.chompDamagePercent));
 
-    // 2. Deliver damage
-    if (typeof opponent.takeDamage === 'function') {
-      opponent.takeDamage(dmg, this, { isChomp: true, isMelee: true });
-    } else {
-      opponent.hp = Math.max(0, opponent.hp - dmg);
+    // 2. Deliver damage (target may dodge/evade the bite, e.g. Saitama/Sans teleport dodge)
+    if (!this._deliverChompDamage(opponent, dmg)) {
+      return this._onChompEvaded();
     }
 
     // 3. Audio & Haptic Feedback
@@ -591,6 +625,31 @@ export class PacmanFighter extends Fighter {
   }
 
   /**
+   * Delivers chomp damage through the target's own takeDamage pipeline so dodge/evade mechanics apply.
+   * Dodging fighters signal an evade by returning `false` (Saitama, base evade filter) or `0` (Sans).
+   * @returns {boolean} True if the bite landed, false if the target dodged/evaded it.
+   */
+  _deliverChompDamage(opponent, dmg) {
+    if (typeof opponent.takeDamage !== 'function') {
+      opponent.hp = Math.max(0, opponent.hp - dmg);
+      return true;
+    }
+    const result = opponent.takeDamage(dmg, this, { isChomp: true, isMelee: true });
+    return !(result === false || result === 0);
+  }
+
+  /**
+   * Handles a whiffed chomp (target dodged): no swallow, knockback or hit stun — just a short re-bite delay.
+   * @returns {boolean} Always false (no hit landed).
+   */
+  _onChompEvaded() {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : pacmanConfig;
+    this.chompAttackCooldown = cfg.chompWhiffCooldown ?? 30;
+    this._mouthAnimTicks += 10;
+    return false;
+  }
+
+  /**
    * Swallows a ghosted enemy into Pac-Man's belly.
    * Inflicts 30% Max HP chomp damage, conceals the enemy inside Pac-Man,
    * and holds them until Super Chomp Mode expires.
@@ -604,9 +663,9 @@ export class PacmanFighter extends Fighter {
     const targetMaxHp = opponent.maxHp || 1000;
     const dmg = Math.max(1, Math.round(targetMaxHp * this.chompDamagePercent));
 
-    // 2. Deliver damage
+    // 2. Deliver damage (ghosted enemies cannot dodge: damage is delivered directly with bypass flags)
     if (typeof opponent.takeDamage === 'function') {
-      opponent.takeDamage(dmg, this, { isChomp: true, isMelee: true });
+      opponent.takeDamage(dmg, this, { isChomp: true, isMelee: true, bypassDodge: true, undodgeable: true, bypassEvade: true });
     } else {
       opponent.hp = Math.max(0, opponent.hp - dmg);
     }

@@ -195,7 +195,7 @@ export const yutaConfig = {
   pureLoveBeamChannelTurnRate: 0.030,      // Turn rate during beam charge/channeling (smooth tracking, reduced slightly for heavier feel)
   pureLoveBeamDuration: 450,               // Frames the beam stays active (3 seconds)
   pureLoveBeamActiveDuration: 350,         // Alias matching pureLoveBeamDuration for skill and HUD consistency
-  pureLoveBeamDamagePerTick: 7,           // Rapid multi-hit damage
+  pureLoveBeamDamagePerTick: 12,           // Rapid multi-hit damage
   pureLoveBeamWidth: 250,                  // Massive beam size: the sprite renders exactly this many px wide (1:1) and the hitbox scales off it
   pureLoveBeamLength: 2500,                // Screen spanning length
   pureLoveBeamKnockback: 2,                // Outward shove per tick (only for targets immune to beam suction)

@@ -8,7 +8,7 @@ export const denjiConfig = {
     skin: 'Assets/model/denji/denji-devilform-model-skin.png',
   },
   name: 'Denji',
-  displayName: 'Denji',
+  displayName: 'Chainsaw Man',
   grade: 'SS',                 // Fighter Grade: 'B' | 'A' | 'S' | 'SS' (cosmetic — see js/configs/gradeConfig.js)
   bossTitle: 'Chainsaw Man',
   title: 'Chainsaw Man',

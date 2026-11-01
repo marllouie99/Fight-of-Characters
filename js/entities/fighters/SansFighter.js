@@ -293,7 +293,8 @@ export class SansFighter extends Fighter {
    * Overrides applyTimeStop to allow Sans to teleport-dodge Naoya's freeze mechanic.
    */
   applyTimeStop(frames, opts = {}) {
-    const isNaoyaFreeze = Boolean(opts && (opts.isFrameStasis || opts.isNaoya || opts.attacker?.characterId === 'naoya' || opts.attacker?.type === 'naoya'));
+    const isGhost = Boolean(this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0);
+    const isNaoyaFreeze = !isGhost && Boolean(opts && (opts.isFrameStasis || opts.isNaoya || opts.attacker?.characterId === 'naoya' || opts.attacker?.type === 'naoya'));
     if (isNaoyaFreeze) {
       const dodged = this.dodgeFrameStasis({ attacker: opts.attacker || null, duration: frames, isUltimate: opts.isUltimate });
       if (dodged) return;
@@ -526,6 +527,7 @@ export class SansFighter extends Fighter {
   dodgeSliceLine(lineData = {}) {
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
     if (!cfg.enableTeleportDodge) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
     if (isFrozen || this.hp <= 0) return false;
@@ -626,6 +628,7 @@ export class SansFighter extends Fighter {
   dodgeBeam(beamData = {}) {
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
     if (!cfg.enableTeleportDodge) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
     if (isFrozen || this.hp <= 0) return false;
@@ -737,6 +740,7 @@ export class SansFighter extends Fighter {
   dodgePurple(purpleData = {}) {
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
     if (!cfg.enableTeleportDodge) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
     const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
     if (isFrozen || this.hp <= 0) return false;
@@ -845,6 +849,7 @@ export class SansFighter extends Fighter {
    * @returns {boolean} True if successfully dodged (caller must skip applying the freeze).
    */
   dodgeFrameStasis(stasisData = {}) {
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
     const attacker = stasisData.attacker || null;
     if (this._naoyaFreezeGraceTimer > 0) {
       this.isFrameFrozen = false;
@@ -909,6 +914,7 @@ export class SansFighter extends Fighter {
    */
   _canPayTeleportDodge(cfg, attackDamage = 10) {
     if (!cfg.enableTeleportDodge || this.hp <= 0) return false;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
     const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
     if (isFrozen) return false;
 
@@ -989,7 +995,8 @@ export class SansFighter extends Fighter {
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
 
     // Check if dodge is valid: dodge enabled, stamina available, off cooldown (or zero cooldown), roll passed
-    const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
+    const isGhost = Boolean(this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0);
+    const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima || isGhost;
     const isDomainSlash = Boolean(options.isSukunaDomainSliceLine || options.isDomainSlash);
     const dodgeChance = isDomainSlash ? ((cfg.domainDodgeChance !== undefined) ? cfg.domainDodgeChance : 1.0) : ((cfg.dodgeChance !== undefined) ? cfg.dodgeChance : 1.0);
     const rollsDodge = (dodgeChance >= 1.0 || Math.random() < dodgeChance);
@@ -1001,7 +1008,7 @@ export class SansFighter extends Fighter {
     const staminaCost = this._calculateDodgeStaminaCost(incomingDmg, isSukunaDomainActive);
     const hasStamina = (this.stamina >= staminaCost);
     const cooldownReady = (this.dodgeCooldown <= 0) || (cfg.dodgeCooldown === 0);
-    const canDodge = cfg.enableTeleportDodge && !isFrozen && hasStamina && cooldownReady && rollsDodge;
+    const canDodge = !isGhost && cfg.enableTeleportDodge && !isFrozen && hasStamina && cooldownReady && rollsDodge;
 
     const proj = options.projectile;
     const currentFrame = (typeof state !== 'undefined' && state.frameCount !== undefined) ? state.frameCount : ((Date.now() / 16.6) | 0);
@@ -1028,12 +1035,12 @@ export class SansFighter extends Fighter {
       ))
     );
 
-    if (isAlreadyDodgedVolley && (!options.bypassDodge || isDomainSlash)) {
+    if (!isGhost && isAlreadyDodgedVolley && (!options.bypassDodge || isDomainSlash)) {
       // Free dodge! Sans already executed the teleport dodge maneuver for this shotgun blast / volley.
       return 0;
     }
 
-    if (canDodge && (!options.bypassDodge || isDomainSlash)) {
+    if (!isGhost && canDodge && (!options.bypassDodge || isDomainSlash)) {
       this.stamina -= staminaCost;
       this.staminaRegenDelayTimer = (cfg.dodgeStaminaRegenDelay !== undefined) ? cfg.dodgeStaminaRegenDelay : 50;
       this.dodgeCooldown = (cfg.dodgeCooldown !== undefined) ? cfg.dodgeCooldown : 0;
@@ -2071,6 +2078,13 @@ export class SansFighter extends Fighter {
       this._updateGasterBlasters(opponent);
       this._updateBones();
       this._updateKarma();
+      return;
+    }
+
+    // Pac-Man Frightened Ghost State Guard:
+    // While transformed, the enemy cannot cast any skills, skill cooldowns are paused,
+    // all abilities and dodging are disabled, and all they can do is move until the duration expires!
+    if (this._handlePacmanGhostState ? this._handlePacmanGhostState(arena, opponent) : (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0)) {
       return;
     }
 

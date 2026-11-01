@@ -38,7 +38,7 @@ export const gojoConfig = {
   desc: 'Uses Blue to pull and Reversal Red to repel. Hollow Purple pierces everything, and Unlimited Void stuns all enemies.',
 
   // ── 1. Limitless Infinity Passive Barrier ──
-  enableInfinity: true,                    // Master toggle for Limitless Infinity barrier
+  enableInfinity: 0,                    // Master toggle for Limitless Infinity barrier
   infinityCooldown: 100,                   // Recharge cooldown in frames before Infinity barrier reactivates after blocking
   infinityActiveDuration: 100,              // Frames Infinity continues to block multiple attacks after first impact
   infinityOnlyActiveInRangedMode: true,     // Infinity barrier is ONLY active in Ranged Mode; disabled in Melee Mode

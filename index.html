@@ -942,6 +942,24 @@
                     </div>
                   </div>
 
+                  <!-- HP Overlay (In-Game Overhead Floating Numbers) -->
+                  <div class="tactical-card system-card" data-action="toggle-hud-overheadhp" id="card-graphics-hpoverlay">
+                    <div class="card-left-emblem">
+                      <svg class="pixel-icon" viewBox="0 0 16 16" width="20" height="20" fill="none" shape-rendering="crispEdges">
+                        <path d="M4 3h8v2H4V3z M6 6h4v2H6V6z M7 9h2v4H7V9z" fill="#ffffff"/>
+                      </svg>
+                    </div>
+                    <div class="card-content">
+                      <div class="card-title-row">
+                        <div style="text-align: left;">
+                          <span class="card-title">HP OVERLAY</span>
+                          <div style="font-size: 8px; color: #ffd1dc; font-family: monospace; margin-top: 2px;">IN-GAME OVERHEAD HEALTH NUMBERS</div>
+                        </div>
+                        <button id="btn-graphics-hpoverlay" class="tactical-chip-btn">SHOW</button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="tactical-card system-card" data-action="toggle-aspect-scaling">
                     <div class="card-left-emblem">
                       <svg class="pixel-icon" viewBox="0 0 16 16" width="20" height="20" fill="none" shape-rendering="crispEdges">
@@ -1064,8 +1082,8 @@
                     </div>
                   </div>
 
-                  <!-- 6. Overhead Floating HP Numbers -->
-                  <div class="tactical-card system-card" data-action="toggle-hud-overheadhp">
+                  <!-- 6. HP Overlay (In-Game Overhead Floating Numbers) -->
+                  <div class="tactical-card system-card" data-action="toggle-hud-overheadhp" id="card-hud-hpoverlay">
                     <div class="card-left-emblem">
                       <svg class="pixel-icon" viewBox="0 0 16 16" width="20" height="20" fill="none" shape-rendering="crispEdges">
                         <path d="M4 3h8v2H4V3z M6 6h4v2H6V6z M7 9h2v4H7V9z" fill="#ffffff"/>
@@ -1073,7 +1091,10 @@
                     </div>
                     <div class="card-content">
                       <div class="card-title-row">
-                        <span class="card-title">OVERHEAD HP NUMBERS</span>
+                        <div style="text-align: left;">
+                          <span class="card-title">HP OVERLAY</span>
+                          <div style="font-size: 8px; color: #ffd1dc; font-family: monospace; margin-top: 2px;">IN-GAME OVERHEAD HEALTH NUMBERS</div>
+                        </div>
                         <button id="btn-hud-overheadhp" class="tactical-chip-btn">SHOW</button>
                       </div>
                     </div>

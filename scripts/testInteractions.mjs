@@ -220,6 +220,8 @@ async function runInteractionTests() {
   const { state } = await import('../js/core/state.js');
   const { BalanceManager } = await import('../js/configs/balanceManager.js');
   const { CONFIG } = await import('../js/core/config.js');
+  const originalGojoEnableInfinity = CONFIG.gojo?.enableInfinity;
+  if (CONFIG.gojo) CONFIG.gojo.enableInfinity = true;
   const { projectileSystem } = await import('../js/systems/projectileSystem.js');
   const { spawnBloodEffect } = await import('../js/graphics/particles/bloodEffect.js');
 
@@ -652,6 +654,7 @@ async function runInteractionTests() {
     // Solar Pride DEF: 5 stacks = +10% DEF (30% total reduction, 100 damage -> 70 taken)
     escanor.hp = 390;
     escanor.prideStacks = 5;
+    escanor.theOneDamageTaken = 0;
     escanor.takeDamage(100, gojo, {});
     const damageTakenPride = 390 - escanor.hp;
     assert(Math.round(damageTakenPride) === 70, `5 Pride stacks should mitigate 30% damage (expected 70 taken, got ${damageTakenPride})`);
@@ -692,17 +695,44 @@ async function runInteractionTests() {
     assert(prideR === 37, `Radius with 5 pride stacks should be 37px (+5px radius) (got ${prideR})`);
 
     // Escanor grows to colossal size in "THE ONE"
+    // Escanor smoothly grows to colossal size in "THE ONE"
     escanor.isTheOneActive = true;
     escanor.theOneTimer = 480;
+    const initialR = escanor.r;
     escanor.update(gojo, 1, state.arena);
+    assert(escanor.r > initialR || (escanor.theOneCurrentRadiusBonus || 0) > 0, `Escanor size must smoothly increase upon entering "THE ONE" (initial: ${initialR}, now: ${escanor.r})`);
+    const expectedTheOneR = escanor.baseRadius + (CONFIG.escanor?.theOneRadiusBonus ?? 10);
+    while (Math.abs(escanor.r - expectedTheOneR) > 0.001) {
+      escanor.update(gojo, 1, state.arena);
+    }
     const theOneReach = escanor.currentRhittaReach;
-    const theOneR = escanor.r;
+    const theOneR = Math.round(escanor.r);
     const finisherReach = escanor.currentFinisherReach;
     const sunshineHeatRadius = escanor.currentSunshineHeatRadius;
     assert(theOneReach === 261, `Rhitta reach during "THE ONE" should be 261px (scaled by size 36px) (got ${theOneReach})`);
     assert(theOneR === 36, `Radius during "THE ONE" should be 36px (+4px radius) (got ${theOneR})`);
     assert(finisherReach === 186, `Divine Sword Escanor finisher reach should be 186px (scaled by size 36px) (got ${finisherReach})`);
+    const expectedTheOneReach = Math.round(160 * (CONFIG.escanor?.theOneReachMultiplier || 1.45) * (expectedTheOneR / 32));
+    const expectedFinisherReach = Math.round((CONFIG.escanor?.theOneFinisherReach || 165) * (expectedTheOneR / 32));
+    assert(theOneReach === expectedTheOneReach, `Rhitta reach during "THE ONE" should scale with size (expected ${expectedTheOneReach}, got ${theOneReach})`);
+    assert(theOneR === expectedTheOneR, `Radius during "THE ONE" should reach full expansion (expected ${expectedTheOneR}, got ${theOneR})`);
+    assert(finisherReach === expectedFinisherReach, `Divine Sword Escanor finisher reach should scale with size (expected ${expectedFinisherReach}, got ${finisherReach})`);
     assert(sunshineHeatRadius > 0, `Sunshine heat aura radius must scale dynamically (got ${sunshineHeatRadius})`);
+
+    // Verify Escanor awakens "THE ONE" when taking enough damage
+    escanor.reset();
+    escanor.isTheOneActive = false;
+    escanor.theOneCooldown = 0;
+    escanor.theOneDamageTaken = 0;
+    const dmgThreshold = CONFIG.escanor?.theOneDamageThreshold || 140;
+    escanor.takeDamage(dmgThreshold - 20, gojo, { isTrueDamage: true });
+    escanor.update(gojo, 1, state.arena);
+    assert(escanor.isTheOneActive === false, 'Escanor must not activate "THE ONE" before reaching damage threshold');
+    escanor.takeDamage(30, gojo, { isTrueDamage: true });
+    while (escanor.isTheOneWindup) {
+      escanor.update(gojo, 1, state.arena);
+    }
+    assert(escanor.isTheOneActive === true, 'Escanor must awaken "THE ONE" upon taking enough damage');
 
     // ── Escanor Smooth Auto-Aim While Lifting & Committed Strike Lock Test ──
     escanor.reset();
@@ -740,9 +770,53 @@ async function runInteractionTests() {
     escanor.aim(movingTarget);
     assert(Math.abs(escanor.gunAngle - committedAngle) < 0.001, `Escanor gunAngle must remain locked during chopHitPause (got ${escanor.gunAngle})`);
 
+    // 10. Escanor "THE ONE" Arena Overlay Dynamic Fade & Canvas 2D Stack Integrity
+    const { drawEscanorUltimateArenaOverlay, resetEscanorUltimateDimOpacity } = await import('../js/graphics/renderers/domainDimOverlays.js');
+    resetEscanorUltimateDimOpacity();
+    escanor.reset();
+    escanor.isTheOneActive = true;
+    escanor.theOneTimer = 480;
+    state.fighters = [escanor, gojo];
+    state.arena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    state.canvas = { width: 540, height: 960 };
+
+    let mockSaveCount = 0;
+    let mockRestoreCount = 0;
+    const mockCtx = {
+      save: () => { mockSaveCount++; },
+      restore: () => { mockRestoreCount++; },
+      setTransform: () => {},
+      createLinearGradient: () => ({ addColorStop: () => {} }),
+      createRadialGradient: () => ({ addColorStop: () => {} }),
+      fillRect: () => {},
+      beginPath: () => {},
+      rect: () => {},
+      arc: () => {},
+      clip: () => {},
+      fill: () => {},
+      drawImage: () => {},
+    };
+    const prevCtx = state.ctx;
+    state.ctx = mockCtx;
+
+    // Frame 1 fade in
+    drawEscanorUltimateArenaOverlay();
+    assert(mockSaveCount === mockRestoreCount, `Canvas 2D context save/restore stack must be 100% balanced (saves: ${mockSaveCount}, restores: ${mockRestoreCount})`);
+
+    // Deactivate "THE ONE" to test smooth fade-out
+    escanor.isTheOneActive = false;
+    escanor.theOneTimer = 0;
+    for (let f = 0; f < 30; f++) {
+      drawEscanorUltimateArenaOverlay();
+    }
+    assert(mockSaveCount === mockRestoreCount, 'Canvas 2D stack remains balanced during fade-out');
+    resetEscanorUltimateDimOpacity();
+    state.ctx = prevCtx;
+
     // Clean up
     projectileSystem.projectiles = [];
     console.log('      ✅ Escanor complete immunity to pull/pushback, dynamic DEF, size growth, weapon reach, smooth lifting auto-aim, and committed strike lock verified.');
+    console.log('      ✅ Escanor complete immunity to pull/pushback, dynamic DEF, size growth, weapon reach, smooth lifting auto-aim, committed strike lock, and THE ONE arena overlay verified.');
   }
 
   // ── 11. Testing Genos Spiral Incineration Cannon Push Immunity ──
@@ -14012,6 +14086,141 @@ async function runInteractionTests() {
     }
     assert(bomberman.activeVisualExplosions.length === 0, 'Cross explosion must decay cleanly and not get stuck');
 
+    // 15. Verify Evader / Dodger Fighters (Sans, Saitama, etc.) CANNOT Dodge While in Ghost State & Are Swallowed Unconditionally
+    const SansClass = FIGHTER_CLASS_MAP['sans'];
+    const SaitamaClass = FIGHTER_CLASS_MAP['saitama'];
+    assert(typeof SansClass === 'function' && typeof SaitamaClass === 'function', 'Sans and Saitama fighter classes must exist');
+
+    const sans = new SansClass({ x: 200, y: 300, color: '#00BFFF', controls: {} });
+    sans.maxHp = 100;
+    sans.hp = 100;
+    sans.dead = false;
+    sans.isDead = false;
+    sans.stamina = sans.maxStamina;
+    sans.dodgeCooldown = 0;
+
+    pacman.hp = pacman.maxHp;
+    pacman.isDead = false;
+    pacman.dead = false;
+    pacman._hasDied = false;
+    pacman.x = 200;
+    pacman.y = 300;
+    pacman.swallowedEnemies = [];
+    pacman.chompAttackCooldown = 0;
+    state.fighters = [pacman, sans];
+
+    // Transform Sans into Ghost
+    pacman.activateChompMode('powerPellet');
+    assert(sans.isPacmanGhost === true, 'Sans must be transformed into ghost upon Pac-Man eating power pellet');
+    assert(sans.pacmanGhostTimer > 0, 'Sans ghost timer must be active');
+
+    // Test that all Sans dodge mechanics are disabled while in Ghost state
+    assert(sans.dodgeSliceLine({ damage: 20 }) === false, 'Sans must NOT be able to dodge slice lines while in Ghost state');
+    assert(sans.dodgeBeam({ damage: 20 }) === false, 'Sans must NOT be able to dodge beams while in Ghost state');
+    assert(sans.dodgePurple({ damage: 50 }) === false, 'Sans must NOT be able to dodge Hollow Purple while in Ghost state');
+    assert(sans.dodgeFrameStasis({ damage: 10 }) === false, 'Sans must NOT be able to dodge frame stasis while in Ghost state');
+
+    // Test direct damage: Sans must take damage and NOT teleport-dodge (does not return 0)
+    const sansHpBeforeHit = sans.hp;
+    const initialStamina = sans.stamina;
+    const dmgDealt = sans.takeDamage(15, pacman, { isProjectile: true });
+    assert(dmgDealt !== 0, 'Sans must NOT execute teleport dodge against incoming attack while in Ghost state');
+    assert(sans.hp < sansHpBeforeHit, 'Sans must take damage from attack while in Ghost state');
+    assert(sans.stamina === initialStamina, 'Sans must NOT consume stamina to dodge while in Ghost state');
+
+    // Test Pac-Man Chomp & Swallow: Sans CANNOT dodge and MUST be swallowed
+    const sansHpBeforeChomp = sans.hp;
+    const chompResult = pacman._executeChompAttack(sans);
+    assert(chompResult === true, 'Chomp attack must land successfully on ghost Sans');
+    assert(sans.isSwallowedByPacman === true, 'Ghost Sans MUST be swallowed into Pac-Man belly without dodging away');
+    assert(pacman.swallowedEnemies.includes(sans), 'Pac-Man swallowedEnemies must contain ghost Sans');
+    assert(sans.hp === sansHpBeforeChomp - Math.round((sans.maxHp || 1000) * pacman.chompDamagePercent), 'Swallowed Sans must take 30% max HP damage');
+
+    // Now test Saitama in Ghost State
+    const saitama = new SaitamaClass({ x: 250, y: 300, color: '#F5C400', controls: {} });
+    saitama.hp = saitama.maxHp;
+    saitama.dead = false;
+    saitama.isDead = false;
+    saitama.dodgeCooldown = 0;
+
+    pacman.swallowedEnemies = [];
+    pacman.chompAttackCooldown = 0;
+    pacman.x = 250;
+    pacman.y = 300;
+    state.fighters = [pacman, saitama];
+
+    pacman.activateChompMode('powerPellet');
+    assert(saitama.isPacmanGhost === true, 'Saitama must be transformed into ghost');
+    assert(saitama.pacmanGhostTimer > 0, 'Saitama ghost timer must be active');
+
+    // Test all Saitama dodge mechanics are disabled while in Ghost state
+    assert(saitama.executeDodgeTeleport(pacman) === false, 'Saitama must NOT execute dodge teleport while in Ghost state');
+    assert(saitama.dodgeSliceLine({ damage: 20 }) === false, 'Saitama must NOT dodge slice line while in Ghost state');
+    assert(saitama.dodgeBeam({ damage: 20 }) === false, 'Saitama must NOT dodge beam while in Ghost state');
+    assert(saitama.dodgePurple({ damage: 50 }) === false, 'Saitama must NOT dodge purple while in Ghost state');
+
+    // Test Pac-Man Chomp & Swallow: Saitama CANNOT dodge and MUST be swallowed
+    const saitamaHpBeforeChomp = saitama.hp;
+    const saitamaChompResult = pacman._executeChompAttack(saitama);
+    assert(saitamaChompResult === true, 'Chomp attack must land successfully on ghost Saitama');
+    assert(saitama.isSwallowedByPacman === true, 'Ghost Saitama MUST be swallowed into Pac-Man belly without dodging away');
+    assert(pacman.swallowedEnemies.includes(saitama), 'Pac-Man swallowedEnemies must contain ghost Saitama');
+    assert(saitama.hp === saitamaHpBeforeChomp - Math.round((saitama.maxHp || 1000) * pacman.chompDamagePercent), 'Swallowed Saitama must take 30% max HP damage');
+
+    // 16. Verify Pac-Man ONLY Eats / Chomps / Swallows Enemies in His Front Mouth Angle
+    const frontZenitsu = new ZenitsuFighter({ x: 200, y: 300, hp: 300, maxHp: 300 });
+    const rearZenitsu = new ZenitsuFighter({ x: 100, y: 300, hp: 300, maxHp: 300 });
+    const sideZenitsu = new ZenitsuFighter({ x: 150, y: 350, hp: 300, maxHp: 300 });
+    frontZenitsu.isPacmanGhost = true;
+    frontZenitsu.pacmanGhostTimer = 250;
+    rearZenitsu.isPacmanGhost = true;
+    rearZenitsu.pacmanGhostTimer = 250;
+    sideZenitsu.isPacmanGhost = true;
+    sideZenitsu.pacmanGhostTimer = 250;
+
+    pacman.x = 150;
+    pacman.y = 300;
+    pacman.gunAngle = 0; // Facing Right (positive X)
+    pacman.angle = 0;
+    pacman.vx = 0;
+    pacman.vy = 0;
+    pacman.chompAttackCooldown = 0;
+    pacman.swallowedEnemies = [];
+    pacman.activateChompMode('powerPellet');
+
+    // frontZenitsu is at (200, 300), dx = +50, dy = 0 -> Angle 0° (directly in front)
+    assert(pacman.isEnemyInFrontAngle(frontZenitsu) === true, 'Enemy directly in front must be within Pac-Man front mouth angle');
+    // rearZenitsu is at (100, 300), dx = -50, dy = 0 -> Angle 180° (directly behind)
+    assert(pacman.isEnemyInFrontAngle(rearZenitsu) === false, 'Enemy behind Pac-Man must NOT be within front mouth angle');
+    // sideZenitsu is at (150, 350), dx = 0, dy = +50 -> Angle 90° (perpendicular side)
+    assert(pacman.isEnemyInFrontAngle(sideZenitsu) === false, 'Enemy to the side of Pac-Man must NOT be within front mouth angle');
+
+    // Chomp / Swallow attempt on REAR enemy: Pac-Man MUST NOT eat enemy behind him!
+    const rearSwallowed = pacman._executeChompAttack(rearZenitsu);
+    assert(rearSwallowed === false, 'Pac-Man MUST NOT eat or swallow enemy positioned behind him');
+    assert(rearZenitsu.isSwallowedByPacman === false, 'Rear enemy must not be swallowed');
+
+    // Chomp / Swallow attempt on SIDE enemy: Pac-Man MUST NOT eat enemy to the side!
+    const sideSwallowed = pacman._executeChompAttack(sideZenitsu);
+    assert(sideSwallowed === false, 'Pac-Man MUST NOT eat or swallow enemy positioned to his side');
+    assert(sideZenitsu.isSwallowedByPacman === false, 'Side enemy must not be swallowed');
+
+    // Chomp / Swallow attempt on FRONT enemy: Pac-Man MUST successfully eat / swallow enemy in front angle!
+    const frontSwallowed = pacman._executeChompAttack(frontZenitsu);
+    assert(frontSwallowed === true, 'Pac-Man MUST successfully eat / swallow enemy positioned in front angle');
+    assert(frontZenitsu.isSwallowedByPacman === true, 'Front enemy must be swallowed into Pac-Man belly');
+
+    // Also verify when moving with velocity: facing angle derived from movement vector
+    pacman.x = 150;
+    pacman.y = 300;
+    pacman.vx = 0;
+    pacman.vy = 4.8; // Moving Downwards (Angle 90°)
+    pacman.chompAttackCooldown = 0;
+    const downZenitsu = new ZenitsuFighter({ x: 150, y: 345, hp: 300, maxHp: 300 }); // Ahead on path of travel
+    const upZenitsu = new ZenitsuFighter({ x: 150, y: 255, hp: 300, maxHp: 300 }); // Behind path of travel
+    assert(pacman.isEnemyInFrontAngle(downZenitsu) === true, 'Enemy along movement direction must be in front angle');
+    assert(pacman.isEnemyInFrontAngle(upZenitsu) === false, 'Enemy behind movement direction must NOT be in front angle');
+
     state.fighters = [];
     console.log('      ✅ Pac-Man Power Pellet Eating, Enemy Frightened Ghost Transformation, Paused Cooldowns & Move-Only State verified.');
   }
@@ -15064,6 +15273,8 @@ async function runInteractionTests() {
     state.gameState = 'playing';
     console.log('      ✅ Dynamic camera tracking focus on Sukuna minion Mahoraga & opponent verified successfully.');
   }
+
+  if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');
 }

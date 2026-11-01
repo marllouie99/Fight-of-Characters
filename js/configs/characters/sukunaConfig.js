@@ -19,8 +19,8 @@ export const sukunaConfig = {
     moveSpeed: 5.8,
     r: 25,
     radius: 25,
-    color: '#0f0000ff', // Dark Crimson
-    themeColor: '#0f0000ff',
+    color: '#b70202ff', // Dark Crimson
+    themeColor: '#b70202ff',
     startX: 300,
     startY: 250,
     startVx: 1.2,
@@ -140,7 +140,7 @@ export const sukunaConfig = {
     enableMahoragaSummon: 1,       // MASTER TOGGLE for the Mahoraga summon skill
     mahoragaSummonOncePerMatch: true, // Strict limit: Sukuna can only summon Mahoraga once per match/round
     mahoragaSummonCooldown: 2500,     // Frames before Mahoraga can be summoned (~41.6s)
-    mahoragaSummonInitialCooldown: 2500, // Immediate opening summon (0.25s after match start) so it triggers every match
+    mahoragaSummonInitialCooldown: 1000, // Immediate opening summon (0.25s after match start) so it triggers every match
     // NOTE: the summon has NO duration — Mahoraga stays in the arena until he is slain or Sukuna dies.
     mahoragaSummonMaxActive: 1,       // Maximum simultaneous Mahoraga minions
     // The minion inherits ALL of Mahoraga's fighter attributes 1:1 (see CONFIG.mahoraga):

@@ -17,6 +17,7 @@ export const escanorConfig = {
     cruelSunLegacy: 'Assets/model/escanor/Escanor-Cruel Sun-Pixel Art Sprite Sheet.png',
     sunExplosion: 'Assets/model/escanor/Escanor-Sun-Explosion-Sprite-Sheet.png',
     attackEffect: 'Assets/model/Attack-Effects/Attack-Effect-1.png',
+    ultimateArenaOverlay: 'Assets/model/escanor/escanor_ultimate_arena_overlay.png',
   },
 
   name: 'Escanor',
@@ -54,7 +55,7 @@ export const escanorConfig = {
   // ──────────────────────────────────────────
   // Passive 1: Grace "Sunshine" & Thermal Updraft
   // ──────────────────────────────────────────
-  enableSunshine: false,            // Master toggle for Passive 1: Grace "Sunshine" heat aura & Thermal Updraft
+  enableSunshine: 1,            // Master toggle for Passive 1: Grace "Sunshine" heat aura & Thermal Updraft
   sunshineHeatRadius: 100,
   sunshineHeatDps: 3,
   thermalUpdraftSlow: 0.15,
@@ -81,6 +82,8 @@ export const escanorConfig = {
   // Basic Attack: Divine Axe Rhitta — Telegraphed Overhead Chop Strike (Missable)
   // ──────────────────────────────────────────
   enableRhittaChop: true,           // Master toggle for Basic Attack: Divine Axe Rhitta Overhead Chop
+  enableRhittaSlashArc: false,      // Attack effect on Escanor (slash arc around weapon) hidden per user instruction
+  enableRhittaSlashCutImpact: true, // Visceral Holy Solar Slash Cut / Spatial Cleave Scar line appearing on struck enemy upon hit
   rhittaArcAngle: Math.PI * 1.15, // ~207 degrees (matches visual 208° slash sweep)
   rhittaReach: 160,             // Baseline reach in pixels at 0 pride stacks (matches weapon model & slash arc length)
   theOneReachMultiplier: 1.45,  // +45% weapon attack reach (232px reach) during "THE ONE"
@@ -89,10 +92,10 @@ export const escanorConfig = {
   chopLiftHoldFrames: 200,         // EXACT number of frames Escanor stays poised in high overhead lift stance before striking down (~1.67s)
   chopStrikeFrames: 10,            // Frames for the explosive downward chop stroke (~0.40s) with heavy follow-through
   chopRecoveryFrames: 10,          // Frames to recover back to resting pose & wipe slash arc (~0.47s)
-  chopHitPauseFrames: 10,          // Cinematic hit-pause frame freeze upon axe impact (~0.43s)
+  chopHitPauseFrames: 3,          // Cinematic hit-pause frame freeze upon axe impact (~0.43s)
   chopHitTremorIntensity: 1.5,     // Micro-tremor amplitude (px) during mid-chop hit-pause for visceral blade resistance
-  chopBladeRadius: 24,             // Half-width radius of Rhitta's crescent blade collision capsule (eliminates phantom hits)
-  chopFrontalArcLimit: 1.54,       // Max angular offset from aim angle (rad, ~77°) to register forward cleave hit
+  chopBladeRadius: 50,             // Half-width radius of Rhitta's crescent blade collision capsule (eliminates phantom hits)
+  chopFrontalArcLimit: 2.04,       // Max angular offset from aim angle (rad, ~77°) to register forward cleave hit
   chopLungeSpeed: 4.5,             // Physical forward step momentum speed during the downward chop strike
   basicImpactShake: 10.0,           // Concussive arena shake on initial weapon contact
   basicImpactShakeDuration: 12,
@@ -119,7 +122,7 @@ export const escanorConfig = {
   // Skill 1: Cruel Sun (無慈悲な太陽)
   // ──────────────────────────────────────────
   enableCruelSun: 1,            // Master toggle for Skill 1: Cruel Sun (無慈悲な太陽)
-  cruelSunCooldown: 100,       // Cooldown in frames (preserved user tuning)
+  cruelSunCooldown: 2000,       // Cooldown in frames (preserved user tuning)
   cruelSunCastWindupFrames: 200, // Two-phase activation windup (Finger Point -> Expanding Sun)
   cruelSunPointFrames: 14,     // Frames to raise arm and extend index finger upward
   cruelSunExpandFrames: 36,    // Frames for the solar sphere to swell to full size
@@ -134,13 +137,13 @@ export const escanorConfig = {
   cruelSunPullRadius: 150,     // Radius of solar convection/gravitational suction (150px)
   cruelSunPullForce: 18.0,     // Force carrying and dragging enemies along with the sun
   cruelSunSlowMultiplier: 0.10,// Heavy convective slow on caught enemies (20% move speed)
-  cruelSunDamage: 100,         // Direct explosion damage upon final detonation
+  cruelSunDamage: 300,         // Direct explosion damage upon final detonation
   cruelSunAoeRadius: 160,      // Massive blast epicenter radius
   cruelSunAoeDamage: 100,       // Outer AOE explosion damage
   cruelSunKnockback: 28.0,     // Heavy outward explosive knockback
   cruelSunParalyzeDuration: 60,// Paralyze debuff duration in frames (1.0s) applied on collision with Cruel Sun
   cruelSunWallStunDuration: 60,// 1.0s stun (60 frames) upon wall collision while dragged
-  cruelSunBurnDps: 6,          // Lingering burn DPS
+  cruelSunBurnDps: 12,          // Lingering burn DPS
   cruelSunBurnDurationSec: 4,  // Lingering burn duration
   cruelSunRecoilForce: 8.0,    // Opposite-direction recoil impulse on Escanor after throwing the sun
 
@@ -157,13 +160,24 @@ export const escanorConfig = {
   // ──────────────────────────────────────────
   // Ultimate: "THE ONE" — Divine Sword Escanor (天地無双)
   // ──────────────────────────────────────────
-  enableTheOne: false,              // Master toggle for Ultimate: "THE ONE" — Divine Sword Escanor (天地無双)
-  theOneCooldown: 1560,        // 26.0s
-  theOneDuration: 480,         // 8.0s
+  enableTheOne: true,               // Master toggle for Ultimate: "THE ONE" — Divine Sword Escanor (天地無双)
+  theOneDamageThreshold: 140,       // Cumulative damage taken to awaken "THE ONE" (Took enough damage trigger)
+  theOneHpThreshold: 0.50,          // Emergency trigger when HP drops below 50%
+  theOneCooldown: 1560,             // 26.0s (cooldown between "THE ONE" activations)
+  theOneDuration: 480,              // 8.0s (480 frames)
+  theOneRadiusBonus: 4,            // Colossal radius expansion during "THE ONE" (grows smoothly from 32 -> 42)
+  theOneSizeGrowSpeed: 0.08,        // Smooth interpolation speed per frame for size expansion / deflation
   theOneDamageMultiplier: 1.45,
   theOneFinisherDamage: 115,
-  theOneFinisherReach: 165,    // Expanded from 120 -> 165 to reflect his colossal giant reach during THE ONE
+  theOneFinisherReach: 165,         // Expanded from 120 -> 165 to reflect his colossal giant reach during THE ONE
   theOneFinisherKnockback: 42.0,
+  theOneOverlayEnabled: true,       // Master toggle for Arena Overlay when "THE ONE" is active
+  theOneOverlayOpacity: 0.90,       // Maximum opacity for the arena overlay during "THE ONE"
+  theOneOverlayZoom: 0.88,          // Visual zoom scale factor for the arena overlay image (calibrated framing)
+  theOneDimOpacity: 0.92,           // Fullscreen atmospheric solar amber dim opacity
+  theOneWindupFrames: 36,           // Dramatic transformation windup before "THE ONE" awakens (~0.60s)
+  theOneLevelUpVFXDuration: 36,     // Duration of Level Up trigger VFX animation frames (~0.60s)
+  theOneLevelUpVFXScale: 1.15,      // Visual scale factor for the Level Up evolving VFX
 
   // ──────────────────────────────────────────
   // AUDIO CONFIGURATION & SOUND VOLUMES

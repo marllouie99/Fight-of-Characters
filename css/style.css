@@ -2648,7 +2648,7 @@ body.hud-layout-classic .health-card__info > div {
   grid-template-rows: auto auto !important;
   column-gap: 14px !important;
   /* Clear breathing room between the two teammates stacked in the right column */
-  row-gap: 20px !important;
+  row-gap: 12px !important;
   align-items: start !important;
   box-sizing: border-box !important;
   width: 100% !important;
@@ -2676,15 +2676,26 @@ body.hud-layout-classic .health-card__info > div {
   grid-row: 2 !important;
 }
 
-/* Skills only: nothing else may push the strip taller than the arena footer */
-.health-hud.one-vs-two-hud .health-card .health-card__bar,
+/* 1v2 Compact Health Card Elements: Hide lengthy fighter description and default title so cards remain compact */
 .health-hud.one-vs-two-hud .health-card .health-card__desc,
-.health-hud.one-vs-two-hud .health-card .health-card__info,
-.health-hud.one-vs-two-hud .health-card .health-card__wins,
-.health-hud.one-vs-two-hud .health-card .health-card__title,
+.health-hud.one-vs-two-hud .health-card .health-card__title {
+  display: none !important;
+}
+
 .health-hud.one-vs-two-hud .health-card .health-card__header-row,
 .health-hud.one-vs-two-hud .health-card .health-card__member-header {
-  display: none !important;
+  display: flex !important;
+  margin-bottom: 3px !important;
+}
+
+.health-hud.one-vs-two-hud .health-card .health-card__bar {
+  display: block !important;
+  margin: 3px 0 5px 0 !important;
+}
+
+.health-hud.one-vs-two-hud .health-card .health-card__info {
+  display: grid !important;
+  margin-top: 4px !important;
 }
 
 .challenger-card {

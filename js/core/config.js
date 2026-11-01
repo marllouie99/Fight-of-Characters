@@ -222,6 +222,7 @@ export const CONFIG = {
   hudHideSkillBars: false,      // Toggle to completely hide all HUD skill progress bars with zero exceptions
   hudHideStats: false,          // Toggle to completely hide all fighter HUD stats lines
   hudHideOverheadHp: false,      // Toggle to hide overhead canvas health numbers and bars on fighters
+  hudHideHpOverlay: false,       // Toggle to hide in-game overhead HP overlay (alias of hudHideOverheadHp)
   enableFighterInkOutline: true, // Global manga-style ink outline around live in-arena fighters
   fighterInkOutlineWidth: 2.2,   // Ink outline stroke width (2.2px cleanly frames 2.0px pixel body borders, weapons & tendrils)
   fighterInkOutlineColor: '#050609', // Dark ink outline stroke color (matches Top HUD frame badge standard #050609)
@@ -283,7 +284,7 @@ export const CONFIG = {
   lightCanvasBgColor: '#f4f4f4ff',
   lightArenaOuterBgColor: '#fcfcfcff',
   lightArenaInnerBgColor: '#fbfcfdff',
-  darkArenaOuterBgColor: '#ffffffff',  // Dark mode arena outer background color (defaults to #000000)
+  darkArenaOuterBgColor: '#000000ff',  // Dark mode arena outer background color (defaults to #000000)
   darkArenaInnerBgColor: '#000000',  // Dark mode arena inner background color (defaults to #000000)
   hudTextColor: '#131313ff',         // Font color for all HUD text (title, stats, description)
   hudTitleFontSize: 22,              // Font size for fighter name in HUD (px)

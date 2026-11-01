@@ -168,6 +168,525 @@ export function _drawEscanorMustache(ctx, r, facingLeft = false) {
 }
 
 /**
+ * Draws the hardcoded procedural Canvas 2D Level Up evolving VFX animation when Escanor triggers "THE ONE".
+ * Faithfully recreates the visual essence of the Level Up / Evolution reference:
+ * - Ground supernova radial wash & 8-point diamond starburst flare
+ * - Rule 26 compliant concentric water-ripple shockwaves (zero radial spoke cobwebs)
+ * - Skyward vertical ascension light column with supersonic vertical needle streaks & feathered edges (Rule 31)
+ * - Ascending evolution rings wrapping around Escanor's body (split back/front arcs)
+ * - Rising 4-point diamond sparkles & golden embers
+ * Adheres strictly to Rule 11 (Zero shadowBlur), Rule 25 (Decay before time-stop), Rule 26 (Clean shockwaves), and Rule 31 (Anti-box).
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x World X position
+ * @param {number} y World Y position
+ * @param {number} r Fighter radius
+ * @param {number} progress 0.0 to 1.0 (elapsed / totalDuration)
+ * @param {number} now Timestamp
+ * @param {object} fighter Escanor fighter entity
+ * @param {number} [alpha=1.0] Master opacity
+ * @param {'all'|'back'|'front'} [layer='all'] Layer separation for 3D body wrapping
+ */
+export function _drawEscanorTheOneLevelUpVFX(ctx, x, y, r, progress = 0, now = Date.now(), fighter = null, alpha = 1.0, layer = 'all') {
+  const prog = Math.max(0, Math.min(1.0, progress));
+  if (alpha <= 0 || prog >= 1.0) return false;
+
+  // Dynamic life-cycle envelope:
+  // Attack / Pop-in: 0.00 -> 0.12 (explosive skyward thrust)
+  // Sustain: 0.12 -> 0.65 (maximum blazing glory)
+  // Release / Dissolve: 0.65 -> 1.00 (smooth upward dissipate)
+  let lifeAlpha = 1.0;
+  if (prog < 0.12) {
+    lifeAlpha = Math.min(1.0, prog / 0.12);
+  } else if (prog > 0.65) {
+    lifeAlpha = Math.max(0, (1.0 - prog) / 0.35);
+  }
+  const masterAlpha = Math.max(0, Math.min(1.0, alpha * lifeAlpha));
+  if (masterAlpha <= 0.005) return false;
+
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
+  const scale = (cfg.theOneLevelUpVFXScale || 1.15) * (r / 32);
+
+  const groundY = y + r * 0.65;
+  const colBaseW = r * 2.5 * scale;
+  const colTopW = r * 3.4 * scale;
+  const colH = 650 * scale;
+  const topY = groundY - colH;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // BACK LAYER (Rendered behind Escanor's body)
+  // ═══════════════════════════════════════════════════════════════════
+  if (layer === 'back' || layer === 'all') {
+    ctx.save();
+
+    // ── 1. GROUND SUPERNOVA RADIAL WASH & FLOOR GLARE ──
+    const blastProg = Math.min(1.0, prog * 1.5);
+    const blastR = r * (2.0 + Math.pow(blastProg, 0.45) * 2.8) * scale;
+    const blastAlpha = Math.max(0, 1.0 - Math.pow(prog, 1.2)) * masterAlpha;
+
+    if (blastR > 2 && blastAlpha > 0.01) {
+      ctx.save();
+      ctx.translate(x, groundY);
+      ctx.scale(1.0, 0.30); // Floor foreshortened disc
+
+      const floorGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, blastR);
+      floorGrad.addColorStop(0.00, `rgba(255, 255, 255, ${0.90 * blastAlpha})`);
+      floorGrad.addColorStop(0.25, `rgba(254, 240, 138, ${0.70 * blastAlpha})`);
+      floorGrad.addColorStop(0.60, `rgba(245, 158, 11, ${0.30 * blastAlpha})`);
+      floorGrad.addColorStop(1.00, 'rgba(245, 158, 11, 0.0)');
+
+      ctx.fillStyle = floorGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, blastR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ── 2. GROUND 8-POINT DIAMOND STARBURST FLARE ──
+    if (blastAlpha > 0.05) {
+      const starR = blastR * 1.35;
+      const starThick = r * 0.35 * (1.0 - prog * 0.6) * scale;
+      const numPoints = 8;
+      ctx.save();
+      ctx.translate(x, groundY);
+      ctx.scale(1.0, 0.30);
+      ctx.rotate(now * 0.0015);
+
+      for (let pIdx = 0; pIdx < numPoints; pIdx++) {
+        const pAngle = (pIdx * Math.PI * 2) / numPoints;
+        const isCardinal = pIdx % 2 === 0;
+        const armLen = isCardinal ? starR : starR * 0.65;
+        const armW = isCardinal ? starThick : starThick * 0.60;
+
+        ctx.save();
+        ctx.rotate(pAngle);
+        ctx.beginPath();
+        ctx.moveTo(-armW * 0.5, 0);
+        ctx.lineTo(0, -armW * 0.3);
+        ctx.lineTo(armLen, 0);
+        ctx.lineTo(0, armW * 0.3);
+        ctx.lineTo(-armW * 0.5, 0);
+        ctx.closePath();
+
+        ctx.fillStyle = isCardinal
+          ? `rgba(255, 255, 255, ${0.80 * blastAlpha})`
+          : `rgba(254, 240, 138, ${0.55 * blastAlpha})`;
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // ── 3. RULE 26 COMPLIANT CONCENTRIC SHOCKWAVE EXPANSION RINGS ──
+    // Sequential water-ripple staggering: t0 = 0.00, t1 = 0.14, t2 = 0.28
+    const shockOffsets = [0.00, 0.14, 0.28];
+    const maxShockR = r * 4.2 * scale;
+
+    for (let sIdx = 0; sIdx < shockOffsets.length; sIdx++) {
+      const tOffset = shockOffsets[sIdx];
+      const localP = (prog - tOffset) / (1.0 - tOffset);
+      if (localP <= 0 || localP >= 1.0) continue;
+
+      const waveR = maxShockR * Math.pow(localP, 0.65);
+      const popIn = Math.min(1.0, localP / 0.10);
+      const fadeOut = Math.pow(1.0 - localP, 1.25);
+      const waveAlpha = popIn * fadeOut * masterAlpha;
+      if (waveAlpha <= 0.01) continue;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(x, groundY, waveR, waveR * 0.28, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(245, 158, 11, ${0.65 * waveAlpha})`;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      // Sharp white-hot inner leading edge
+      ctx.beginPath();
+      ctx.ellipse(x, groundY, waveR * 0.98, waveR * 0.98 * 0.28, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(254, 240, 138, ${0.85 * waveAlpha})`;
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── 4. SKYWARD ASCENSION LIGHT COLUMN (The Celestial Pillar) ──
+    // Multi-stop horizontal gradient with supersonic white center spear & feathered edges (Rule 31)
+    ctx.save();
+    const beamPulse = 1.0 + Math.sin(now * 0.012) * 0.05;
+    const curBaseW = colBaseW * beamPulse;
+    const curTopW = colTopW * beamPulse;
+
+    // Linear gradient across column width
+    const colGrad = ctx.createLinearGradient(x - curTopW * 0.5, 0, x + curTopW * 0.5, 0);
+    colGrad.addColorStop(0.00, 'rgba(245, 158, 11, 0.0)');
+    colGrad.addColorStop(0.18, `rgba(245, 158, 11, ${0.30 * masterAlpha})`);
+    colGrad.addColorStop(0.38, `rgba(254, 240, 138, ${0.65 * masterAlpha})`);
+    colGrad.addColorStop(0.50, `rgba(255, 255, 255, ${0.95 * masterAlpha})`); // Supersonic pure white core
+    colGrad.addColorStop(0.62, `rgba(254, 240, 138, ${0.65 * masterAlpha})`);
+    colGrad.addColorStop(0.82, `rgba(245, 158, 11, ${0.30 * masterAlpha})`);
+    colGrad.addColorStop(1.00, 'rgba(245, 158, 11, 0.0)');
+
+    // Vertical trapezoid geometry with feathered apex
+    ctx.beginPath();
+    ctx.moveTo(x - curBaseW * 0.5, groundY);
+    ctx.lineTo(x - curTopW * 0.5, topY + 40);
+    // Apex crown spears
+    ctx.lineTo(x - curTopW * 0.25, topY);
+    ctx.lineTo(x, topY - 25); // Center spear tip
+    ctx.lineTo(x + curTopW * 0.25, topY);
+    ctx.lineTo(x + curTopW * 0.5, topY + 40);
+    ctx.lineTo(x + curBaseW * 0.5, groundY);
+    ctx.closePath();
+
+    ctx.fillStyle = colGrad;
+    ctx.fill();
+
+    // ── 5. INTERNAL SUPERSONIC VERTICAL SPEED STREAKS ──
+    // 16 4-point filled needle polygons rushing upward through the beam (Rule 16)
+    const numStreaks = 16;
+    for (let sIdx = 0; sIdx < numStreaks; sIdx++) {
+      const seed = ((sIdx * 7919 + 42) % 10000) / 10000;
+      const seedX = ((sIdx * 6271 + 99) % 10000) / 10000;
+      const streakW = (seedX - 0.5) * curBaseW * 0.85;
+      const streakX = x + streakW;
+      const streakSpeed = 22 + seed * 16;
+      const travelProg = ((now * streakSpeed * 0.04 + seed * colH) % colH);
+      const streakY = groundY - travelProg;
+      const needleH = (28 + seed * 42) * scale;
+      const needleW = (1.5 + seed * 1.5) * scale;
+
+      const streakAlpha = Math.sin(Math.max(0, Math.min(1.0, travelProg / colH)) * Math.PI) * masterAlpha * 0.75;
+      if (streakAlpha <= 0.01) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(streakX, streakY - needleH * 0.5); // Sharp leading tip
+      ctx.lineTo(streakX + needleW * 0.5, streakY);
+      ctx.lineTo(streakX, streakY + needleH * 0.5); // Trailing tip
+      ctx.lineTo(streakX - needleW * 0.5, streakY);
+      ctx.closePath();
+
+      ctx.fillStyle = sIdx % 2 === 0
+        ? `rgba(255, 255, 255, ${streakAlpha})`
+        : `rgba(254, 240, 138, ${streakAlpha * 0.9})`;
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // ── 6. ASCENDING EVOLUTION RINGS — BACK ARC (π to 2π) ──
+    // Staggered golden elliptical rings ascending along the pillar behind the body
+    const ringOffsets = [0.04, 0.18, 0.32, 0.46];
+    for (let rIdx = 0; rIdx < ringOffsets.length; rIdx++) {
+      const rOffset = ringOffsets[rIdx];
+      const ringP = (prog - rOffset) / 0.48;
+      if (ringP < 0 || ringP > 1.0) continue;
+
+      const ringY = groundY - Math.pow(ringP, 0.78) * (r * 4.6 * scale);
+      const ringRx = r * (1.25 + ringP * 1.15) * scale;
+      const ringRy = ringRx * 0.28;
+      const ringAlpha = Math.sin(ringP * Math.PI) * masterAlpha * 0.85;
+      if (ringAlpha <= 0.01) continue;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(x, ringY, ringRx, ringRy, 0, Math.PI, Math.PI * 2);
+      ctx.strokeStyle = `rgba(245, 158, 11, ${0.55 * ringAlpha})`;
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(x, ringY, ringRx, ringRy, 0, Math.PI * 1.25, Math.PI * 1.75);
+      ctx.strokeStyle = `rgba(254, 240, 138, ${0.75 * ringAlpha})`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FRONT LAYER (Rendered in front of Escanor's body for 3D depth)
+  // ═══════════════════════════════════════════════════════════════════
+  if (layer === 'front' || layer === 'all') {
+    ctx.save();
+
+    // ── 7. ASCENDING EVOLUTION RINGS — FRONT ARC (0 to π) ──
+    const ringOffsets = [0.04, 0.18, 0.32, 0.46];
+    for (let rIdx = 0; rIdx < ringOffsets.length; rIdx++) {
+      const rOffset = ringOffsets[rIdx];
+      const ringP = (prog - rOffset) / 0.48;
+      if (ringP < 0 || ringP > 1.0) continue;
+
+      const ringY = groundY - Math.pow(ringP, 0.78) * (r * 4.6 * scale);
+      const ringRx = r * (1.25 + ringP * 1.15) * scale;
+      const ringRy = ringRx * 0.28;
+      const ringAlpha = Math.sin(ringP * Math.PI) * masterAlpha * 0.90;
+      if (ringAlpha <= 0.01) continue;
+
+      ctx.save();
+      // Outer amber glow band
+      ctx.beginPath();
+      ctx.ellipse(x, ringY, ringRx, ringRy, 0, 0, Math.PI);
+      ctx.strokeStyle = `rgba(245, 158, 11, ${0.75 * ringAlpha})`;
+      ctx.lineWidth = 3.0;
+      ctx.stroke();
+
+      // Inner brilliant gold line
+      ctx.beginPath();
+      ctx.ellipse(x, ringY, ringRx, ringRy, 0, 0, Math.PI);
+      ctx.strokeStyle = `rgba(254, 240, 138, ${0.95 * ringAlpha})`;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // White-hot center apex highlight on lower rim
+      ctx.beginPath();
+      ctx.ellipse(x, ringY, ringRx, ringRy, 0, Math.PI * 0.35, Math.PI * 0.65);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.95 * ringAlpha})`;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── 8. RISING 4-POINT DIAMOND SPARKLES & SOLAR EMBERS ──
+    // 24 radiant diamond sparkles rushing skyward with gentle lateral sway
+    const numSparkles = 24;
+    for (let dIdx = 0; dIdx < numSparkles; dIdx++) {
+      const seed = ((dIdx * 8191 + 77) % 10000) / 10000;
+      const seedX = ((dIdx * 5381 + 31) % 10000) / 10000;
+      const speed = 0.0016 + seed * 0.0014;
+      const cycle = (now * speed + seed) % 1.0; // 0.0 (ground) -> 1.0 (sky)
+
+      const py = groundY - cycle * (520 * scale);
+      const sway = Math.sin(now * 0.006 + dIdx * 1.5) * (10 + seed * 12);
+      const px = x + (seedX - 0.5) * (colBaseW * 1.25) + sway;
+
+      const sparkleAlpha = Math.sin(cycle * Math.PI) * masterAlpha * (0.65 + seed * 0.35);
+      if (sparkleAlpha <= 0.01) continue;
+
+      const size = (3.0 + seed * 3.5) * scale * (cycle < 0.6 ? 1.0 : (1.0 - (cycle - 0.6) / 0.4));
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.lineTo(size * 0.38, 0);
+      ctx.lineTo(0, size);
+      ctx.lineTo(-size * 0.38, 0);
+      ctx.closePath();
+
+      ctx.fillStyle = dIdx % 3 === 0
+        ? `rgba(255, 255, 255, ${sparkleAlpha})`
+        : (dIdx % 3 === 1 ? `rgba(254, 240, 138, ${sparkleAlpha})` : `rgba(245, 158, 11, ${sparkleAlpha})`);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  return true;
+}
+
+/**
+ * Draws the hardcoded procedural Canvas 2D Windup VFX during "THE ONE" transformation windup.
+ * Converging solar energy vortex and ground magic glyphs:
+ * - Concentric ground solar rings with rotating glyph notches under Escanor's feet
+ * - 28 golden/white solar motes with directional speed streaks accelerating inward into Escanor's core
+ * - Rising energy needles (updraft wisps)
+ * - Pulsing critical-mass core solar charge
+ * Adheres strictly to Rule 11 (Zero shadowBlur), Rule 25 (Decay before time-stop), Rule 26 (Clean shockwaves), and Rule 31 (Anti-box).
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x World X position
+ * @param {number} y World Y position
+ * @param {number} r Fighter radius
+ * @param {number} progress 0.0 to 1.0
+ * @param {number} now Timestamp
+ * @param {object} fighter Escanor fighter entity
+ * @param {number} [alpha=1.0] Master opacity
+ */
+export function _drawEscanorTheOneWindupVFX(ctx, x, y, r, progress = 0, now = Date.now(), fighter = null, alpha = 1.0) {
+  const prog = Math.max(0, Math.min(1.0, progress));
+  if (alpha <= 0 || prog >= 1.0) return false;
+
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
+  const scale = (cfg.theOneLevelUpVFXScale || 1.15) * (r / 32);
+
+  const groundY = y + r * 0.70;
+  const coreY = y - r * 0.05;
+  const windupAlpha = Math.max(0, Math.min(1.0, alpha * (0.4 + prog * 0.6)));
+
+  ctx.save();
+
+  // ── 1. GROUND SOLAR GLYPH RINGS & WARM FLOOR WASH ──
+  const groundRx = r * 1.85 * (0.85 + prog * 0.20) * scale;
+  const groundRy = groundRx * 0.32;
+
+  // Floor radial wash
+  ctx.save();
+  ctx.translate(x, groundY);
+  ctx.scale(1.0, 0.32);
+  const floorGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, groundRx * 1.15);
+  floorGrad.addColorStop(0.00, `rgba(254, 240, 138, ${0.40 * windupAlpha})`);
+  floorGrad.addColorStop(0.45, `rgba(245, 158, 11, ${0.20 * windupAlpha})`);
+  floorGrad.addColorStop(1.00, 'rgba(245, 158, 11, 0.0)');
+  ctx.fillStyle = floorGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, groundRx * 1.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Outer concentric solar ring
+  ctx.beginPath();
+  ctx.ellipse(x, groundY, groundRx, groundRy, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(245, 158, 11, ${0.70 * windupAlpha})`;
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // Inner concentric ring
+  const innerRx = groundRx * 0.62;
+  const innerRy = innerRx * 0.32;
+  ctx.beginPath();
+  ctx.ellipse(x, groundY, innerRx, innerRy, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(254, 240, 138, ${0.85 * windupAlpha})`;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Rotating solar glyph notches on outer ring (12 standalone radial tick dashes)
+  const numNotches = 12;
+  const rotAngle = now * 0.0025;
+  ctx.save();
+  ctx.translate(x, groundY);
+  for (let n = 0; n < numNotches; n++) {
+    const notchA = rotAngle + (n * Math.PI * 2) / numNotches;
+    const nx = Math.cos(notchA) * groundRx;
+    const ny = Math.sin(notchA) * groundRy;
+    const tickLen = 4.0 * scale;
+
+    ctx.beginPath();
+    ctx.moveTo(nx, ny);
+    ctx.lineTo(nx + Math.cos(notchA) * tickLen, ny + Math.sin(notchA) * (tickLen * 0.32));
+    ctx.strokeStyle = `rgba(254, 240, 138, ${0.80 * windupAlpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── 2. CONVERGING SOLAR ENERGY VORTEX MOTES ──
+  // 28 glowing particles accelerating inward into Escanor's chest/core with speed streaks
+  const numMotes = 28;
+  for (let m = 0; m < numMotes; m++) {
+    const seed = ((m * 7919 + 1337) % 10000) / 10000;
+    const seed2 = ((m * 6271 + 997) % 10000) / 10000;
+    const baseAngle = (m / numMotes) * Math.PI * 2 + seed * 0.4;
+    const distStart = r * (3.0 + seed * 1.5) * scale;
+
+    // Cyclical inward streaming flow towards center
+    const flowTime = ((now * 0.0028 + seed) % 1.0);
+    const inwardRatio = Math.pow(1.0 - flowTime, 1.7);
+    const curDist = distStart * inwardRatio;
+    const curAngle = baseAngle + (1.0 - flowTime) * (1.8 + seed2 * 1.2);
+
+    const px = x + Math.cos(curAngle) * curDist;
+    const py = coreY + Math.sin(curAngle) * (curDist * 0.65);
+
+    const moteAlpha = Math.sin(flowTime * Math.PI) * windupAlpha * (0.65 + prog * 0.35);
+    if (moteAlpha <= 0.01) continue;
+
+    // Directional speed streak trailing outward opposite to velocity
+    const streakLen = (10 + (1.0 - flowTime) * 18) * (0.6 + prog * 0.6) * scale;
+    const tailX = px + Math.cos(curAngle + 0.35) * streakLen;
+    const tailY = py + Math.sin(curAngle + 0.35) * (streakLen * 0.65);
+
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(tailX, tailY);
+    ctx.strokeStyle = m % 2 === 0
+      ? `rgba(254, 240, 138, ${moteAlpha * 0.85})`
+      : `rgba(245, 158, 11, ${moteAlpha * 0.70})`;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Bright head dot
+    const headSize = (1.5 + seed * 1.2) * scale;
+    ctx.fillStyle = m % 2 === 0 ? `rgba(255, 255, 255, ${moteAlpha})` : `rgba(254, 240, 138, ${moteAlpha})`;
+    ctx.beginPath();
+    ctx.arc(px, py, headSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── 3. RISING ENERGY NEEDLES (Floor Updraft Wisps) ──
+  const numWisps = 12;
+  for (let w = 0; w < numWisps; w++) {
+    const seed = ((w * 5437 + 55) % 10000) / 10000;
+    const wispX = x + (seed - 0.5) * (groundRx * 1.4);
+    const wispSpeed = 0.004 + seed * 0.003;
+    const wispCycle = (now * wispSpeed + seed) % 1.0;
+    const wispY = groundY - wispCycle * (r * 1.8 * scale);
+    const wispLen = (12 + seed * 16) * scale;
+
+    const wispAlpha = Math.sin(wispCycle * Math.PI) * windupAlpha * 0.65;
+    if (wispAlpha <= 0.01) continue;
+
+    ctx.beginPath();
+    ctx.moveTo(wispX, wispY - wispLen * 0.5);
+    ctx.lineTo(wispX + 1.2, wispY);
+    ctx.lineTo(wispX, wispY + wispLen * 0.5);
+    ctx.lineTo(wispX - 1.2, wispY);
+    ctx.closePath();
+
+    ctx.fillStyle = `rgba(254, 240, 138, ${wispAlpha})`;
+    ctx.fill();
+  }
+
+  // ── 4. PULSING CRITICAL-MASS CORE SOLAR CHARGE ──
+  // Expanding radiant core at Escanor's chest pulsing with rising frequency as windup peaks
+  const pulseFreq = 0.012 + prog * 0.024;
+  const corePulse = Math.sin(now * pulseFreq) * (2.0 + prog * 3.0);
+  const coreRadius = (r * (0.22 + prog * 0.45) + corePulse) * scale;
+
+  if (coreRadius > 1) {
+    const coreGrad = ctx.createRadialGradient(x, coreY, 0, x, coreY, coreRadius);
+    coreGrad.addColorStop(0.00, `rgba(255, 255, 255, ${0.95 * windupAlpha})`);
+    coreGrad.addColorStop(0.35, `rgba(254, 240, 138, ${0.75 * windupAlpha})`);
+    coreGrad.addColorStop(0.70, `rgba(245, 158, 11, ${0.35 * windupAlpha})`);
+    coreGrad.addColorStop(1.00, 'rgba(245, 158, 11, 0.0)');
+
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(x, coreY, coreRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Critical-mass 4-point solar diamond glint when progress > 0.65
+    if (prog > 0.65) {
+      const glintProg = (prog - 0.65) / 0.35;
+      const glintLen = (coreRadius * 2.2 + Math.sin(now * 0.03) * 6) * scale;
+      const glintW = (2.5 + glintProg * 2.0) * scale;
+      const glintAlpha = Math.min(1.0, glintProg * 1.5) * windupAlpha;
+
+      for (let g = 0; g < 4; g++) {
+        const glintAngle = (g * Math.PI) / 2;
+        ctx.save();
+        ctx.translate(x, coreY);
+        ctx.rotate(glintAngle);
+        ctx.beginPath();
+        ctx.moveTo(0, -glintW * 0.5);
+        ctx.lineTo(glintLen, 0);
+        ctx.lineTo(0, glintW * 0.5);
+        ctx.lineTo(-glintW * 0.5, 0);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${glintAlpha * 0.85})`;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
+  ctx.restore();
+  return true;
+}
+
+/**
  * Main Skin Renderer for Escanor (Pixel Art Edition)
  */
 export function drawEscanorSkin(ctx, fighter) {
@@ -187,7 +706,8 @@ export function drawEscanorSkin(ctx, fighter) {
   // When casting Cruel Sun or holding the post-throw follow-through stance, Escanor faces directly towards the player/camera (angle 0)
   const isChannelingSun = Boolean(fighter.isChannelingCruelSun);
   const isPostThrowRecovery = Boolean(fighter.cruelSunRecoveryTimer && fighter.cruelSunRecoveryTimer > 0);
-  const isFacingPlayer = isPodiumPreview || isChannelingSun || isPostThrowRecovery;
+  const isTheOneWindup = Boolean(fighter.isTheOneWindup);
+  const isFacingPlayer = isPodiumPreview || isChannelingSun || isPostThrowRecovery || isTheOneWindup;
   const angle = isFacingPlayer ? 0 : (fighter.gunAngle || 0);
   ctx.rotate(angle);
 
@@ -196,7 +716,7 @@ export function drawEscanorSkin(ctx, fighter) {
     ? ((fighter.cruelSunCastAngle !== undefined) ? fighter.cruelSunCastAngle : (fighter.cruelSunReleaseAngle || 0))
     : angle;
 
-  const facingLeft = !isPodiumPreview && Math.abs(enemyAngle) > Math.PI / 2;
+  const facingLeft = !isPodiumPreview && !isTheOneWindup && Math.abs(enemyAngle) > Math.PI / 2;
   if (facingLeft) {
     if (isFacingPlayer) {
       ctx.scale(-1, 1); // Flip horizontally when facing player upright
@@ -237,10 +757,19 @@ export function drawEscanorSkin(ctx, fighter) {
     if (currentFrame === 3) {
       _drawEscanorRetroExhaleMotes(ctx, r, now);
     }
+  } else if (!isPodiumPreview && !isSuppressed && isTheOneWindup) {
+    // ── "THE ONE" Awakening Windup Animation & Cinematic Vibration ──
+    const windupMax = fighter.theOneWindupMax || 36;
+    const windupProg = Math.max(0, Math.min(1.0, 1.0 - ((fighter.theOneWindupTimer || 0) / windupMax)));
+    const tremorAmp = windupProg > 0.4 ? 1.5 : 0.8;
+    const tremorX = (Math.sin(now * 0.08) > 0 ? 1 : -1) * tremorAmp;
+    const tremorY = (Math.cos(now * 0.09) > 0 ? 1 : -1) * tremorAmp;
+    ctx.translate(tremorX, tremorY + 2); // braced downward crouch
   }
 
   // 4. LAYER 1: MAIN BODY (Toji Reference Standard Rule 24 Offscreen Canvas Cache)
-  drawEscanorPixelBody(ctx, r, fighter.isTheOneActive);
+  const isDivineBody = Boolean(fighter.isTheOneActive || (isTheOneWindup && (fighter.theOneWindupTimer || 0) < 18));
+  drawEscanorPixelBody(ctx, r, isDivineBody);
 
   // 5. LAYER 2: MUSTACHE ASSET OVERLAY (Assets/model/escanor/Escanor-mustache.png)
   _drawEscanorMustache(ctx, r, facingLeft);
@@ -330,7 +859,8 @@ function _drawEscanorSolarAura(ctx, r, fighter, now = Date.now()) {
   const currentNow = (typeof now === 'number' && !Number.isNaN(now)) ? now : Date.now();
   const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
   const isTheOne = Boolean(fighter.isTheOneActive);
-  if (cfg.enableSunshine === false && !isTheOne) return;
+  const isWindup = Boolean(fighter.isTheOneWindup);
+  if (cfg.enableSunshine === false && !isTheOne && !isWindup) return;
   const prideStacks = fighter.prideStacks || 0;
   const prideRatio = prideStacks / 5.0; // 0.0 to 1.0
 
@@ -518,6 +1048,23 @@ function _drawEscanorSolarAura(ctx, r, fighter, now = Date.now()) {
       ctx.fillRect(Math.round(totalHeatR * 0.95), -1, 3, 3);
     }
     ctx.restore();
+  }
+
+  // ── 6. "THE ONE" AWAKENING CONVERGING SOLAR ENERGY MOTES ──
+  if (isWindup) {
+    const windupMax = fighter.theOneWindupMax || 36;
+    const windupProg = Math.max(0, Math.min(1.0, 1.0 - ((fighter.theOneWindupTimer || 0) / windupMax)));
+    const numConverging = 20;
+    for (let c = 0; c < numConverging; c++) {
+      const cAngle = (c / numConverging) * Math.PI * 2 + now * 0.004;
+      const distCycle = (1.0 - ((now * 0.003 + c * 0.12) % 1.0));
+      const dist = r * 0.35 + distCycle * (totalHeatR * 0.85);
+      const px = Math.cos(cAngle) * dist;
+      const py = Math.sin(cAngle) * dist;
+      const moteAlpha = Math.sin(distCycle * Math.PI) * (0.35 + windupProg * 0.55);
+      ctx.fillStyle = (c % 2 === 0) ? `rgba(254, 240, 138, ${moteAlpha.toFixed(3)})` : `rgba(255, 255, 255, ${moteAlpha.toFixed(3)})`;
+      ctx.fillRect(Math.round(px - 1), Math.round(py - 1), 3, 3);
+    }
   }
 
   ctx.restore();
@@ -882,6 +1429,132 @@ function _drawEscanorPointingGauntlet(ctx, cx, cy, radius, isTheOne = false, poi
 }
 
 /**
+ * Escanor Dynamic Muscular Arm Linkage & Physical Force Drive (Rule 30)
+ * Renders thick, heavy Holy Knight golden armor plate vambrace, couter (elbow cop),
+ * and royal blue pauldron under-armor connecting shoulder to hand.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} shoulderX Shoulder anchor X
+ * @param {number} shoulderY Shoulder anchor Y
+ * @param {number} handX Hand anchor X
+ * @param {number} handY Hand anchor Y
+ * @param {number} handRadius Canonical hand radius
+ * @param {number} r Central body radius
+ * @param {boolean} isLeftArm True if left arm (main axe wielder), false if right arm
+ * @param {boolean} isTheOne True if High Noon "The One" form is active
+ */
+function _drawEscanorMuscularArm(ctx, shoulderX, shoulderY, handX, handY, handRadius, r, isLeftArm = false, isTheOne = false) {
+  const dx = handX - shoulderX;
+  const dy = handY - shoulderY;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 2.0) return;
+
+  const nx = -dy / dist;
+  const ny = dx / dist;
+  const mx = shoulderX + dx * 0.50;
+  const my = shoulderY + dy * 0.50;
+
+  // Maximum arm extension before complete lock
+  const armReach = r * 1.55;
+  const flexRatio = Math.max(0, Math.min(1.0, 1.0 - (dist / armReach)));
+  const bendAmount = Math.min(r * 0.46, r * 0.42 * Math.sin(flexRatio * Math.PI * 0.75));
+
+  // Determine natural outward elbow flare
+  const dot = nx * mx + ny * my;
+  const outNx = (dot >= 0) ? nx : -nx;
+  const outNy = (dot >= 0) ? ny : -ny;
+  const flareX = isLeftArm ? -1.0 : 1.0;
+  const flareY = isLeftArm ? -0.25 : 0.35;
+  const dirX = outNx * 0.60 + flareX * 0.40;
+  const dirY = outNy * 0.60 + flareY * 0.40;
+  const dirLen = Math.hypot(dirX, dirY) || 1.0;
+
+  const elbowX = mx + (dirX / dirLen) * bendAmount;
+  const elbowY = my + (dirY / dirLen) * bendAmount;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const armThickness = Math.max(5.5, handRadius * 1.45);
+  const vambraceWidth = Math.max(4.8, handRadius * 1.25);
+  const outlineColor = isTheOne ? '#78350F' : '#0E0F14';
+
+  // 1. Manga ink outer border (Upper Arm + Forearm)
+  ctx.beginPath();
+  ctx.moveTo(shoulderX, shoulderY);
+  ctx.lineTo(elbowX, elbowY);
+  ctx.lineTo(handX, handY);
+  ctx.lineWidth = armThickness + 3.2;
+  ctx.strokeStyle = outlineColor;
+  ctx.stroke();
+
+  // 2. Upper Arm: Royal Blue Pauldron Sleeve & Under-Armor
+  ctx.beginPath();
+  ctx.moveTo(shoulderX, shoulderY);
+  ctx.lineTo(elbowX, elbowY);
+  ctx.lineWidth = armThickness;
+  ctx.strokeStyle = isTheOne ? '#FEF08A' : '#1D4ED8';
+  ctx.stroke();
+
+  // 2b. Upper Arm Inner Highlight
+  ctx.beginPath();
+  ctx.moveTo(shoulderX + (elbowX - shoulderX) * 0.2, shoulderY + (elbowY - shoulderY) * 0.2);
+  ctx.lineTo(elbowX, elbowY);
+  ctx.lineWidth = armThickness * 0.42;
+  ctx.strokeStyle = isTheOne ? '#FFFFFF' : '#3B82F6';
+  ctx.stroke();
+
+  // 3. Forearm: Holy Knight Golden Plate Vambrace (Elbow -> Hand)
+  ctx.beginPath();
+  ctx.moveTo(elbowX, elbowY);
+  ctx.lineTo(handX, handY);
+  ctx.lineWidth = vambraceWidth;
+  ctx.strokeStyle = isTheOne ? '#FEF08A' : '#FDC236';
+  ctx.stroke();
+
+  // 3b. Vambrace Amber Shadow on Flexion Underside
+  ctx.beginPath();
+  ctx.moveTo(elbowX + (handX - elbowX) * 0.2, elbowY + (handY - elbowY) * 0.2);
+  ctx.lineTo(handX, handY);
+  ctx.lineWidth = vambraceWidth * 0.45;
+  ctx.strokeStyle = isTheOne ? '#B45309' : '#D97706';
+  ctx.stroke();
+
+  // 3c. Vambrace Polished Gold Ridge Specular Sheen
+  ctx.beginPath();
+  ctx.moveTo(elbowX, elbowY);
+  ctx.lineTo(handX - (handX - elbowX) * 0.15, handY - (handY - elbowY) * 0.15);
+  ctx.lineWidth = vambraceWidth * 0.24;
+  ctx.strokeStyle = isTheOne ? '#FFFFFF' : '#FFF795';
+  ctx.stroke();
+
+  // 4. Golden Couter (Elbow Cop Plate)
+  ctx.beginPath();
+  ctx.arc(elbowX, elbowY, handRadius * 0.65, 0, Math.PI * 2);
+  ctx.fillStyle = isTheOne ? '#FEF08A' : '#FDC236';
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = outlineColor;
+  ctx.stroke();
+
+  // Couter Knuckle Ridge Specular Pixel
+  ctx.fillStyle = isTheOne ? '#FFFFFF' : '#FFF795';
+  ctx.fillRect(snap(elbowX - P / 2), snap(elbowY - P / 2), P, P);
+
+  // 5. Shoulder Pauldron Anchor Rim
+  ctx.beginPath();
+  ctx.arc(shoulderX, shoulderY, handRadius * 0.70, 0, Math.PI * 2);
+  ctx.fillStyle = isTheOne ? '#FEF08A' : '#2563EB';
+  ctx.fill();
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = outlineColor;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
  * Computes exact frame-by-frame state for Escanor's Divine Axe Rhitta Chop.
  * Directly honors chopLiftFrames, chopLiftHoldFrames, chopStrikeFrames, chopRecoveryFrames.
  */
@@ -914,8 +1587,8 @@ export function _getEscanorChopAnimationState(fighter) {
   const strikeEndAngle = 1.05; // ~60° forward-down cleave follow-through angle
   const strikeEndHandX = r * 1.15; // Front hand lunges forward with full body momentum
   const strikeEndHandY = r * 0.42;
-  const strikeEndBackHandX = r * 1.35; // Back hand extends forward in two-handed grip
-  const strikeEndBackHandY = -r * 0.05;
+  const strikeEndBackHandX = r * 1.05; // Back hand extends forward in two-handed grip
+  const strikeEndBackHandY = r * 0.05;
 
   // Cinematic Hit-Pause Impact Freeze: Axe locked in exact collision pose while shockwave / sparks hold
   if (fighter.chopHitPauseTimer && fighter.chopHitPauseTimer > 0) {
@@ -927,6 +1600,8 @@ export function _getEscanorChopAnimationState(fighter) {
     const axeAngle = (typeof fighter.chopHitAxeAngle === 'number') ? fighter.chopHitAxeAngle : strikeEndAngle;
     const handX = (typeof fighter.chopHitHandX === 'number') ? fighter.chopHitHandX : strikeEndHandX;
     const handY = (typeof fighter.chopHitHandY === 'number') ? fighter.chopHitHandY : strikeEndHandY;
+    const backHandX = (typeof fighter.chopHitBackHandX === 'number') ? fighter.chopHitBackHandX : strikeEndBackHandX;
+    const backHandY = (typeof fighter.chopHitBackHandY === 'number') ? fighter.chopHitBackHandY : strikeEndBackHandY;
 
     // High-frequency kinetic micro-tremor during hit-pause (simulating massive weapon friction biting into enemy)
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.escanor) ? CONFIG.escanor : {};
@@ -939,8 +1614,8 @@ export function _getEscanorChopAnimationState(fighter) {
       axeAngle: axeAngle + tremor * 0.02,
       handX: handX + tremor * 0.4,
       handY: handY + tremor * 0.8,
-      backHandX: idleBackHandX,
-      backHandY: idleBackHandY,
+      backHandX: backHandX + tremor * 0.3,
+      backHandY: backHandY + tremor * 0.5,
       strikeP: hitP,
       pauseP,
       recP: 0,
@@ -958,10 +1633,12 @@ export function _getEscanorChopAnimationState(fighter) {
   const elapsed = Math.max(0, totalFrames - fighter.slashSwingTimer);
 
   // Frame 2: Lift stance (hand at upper-left, weapon shaft pointing up-left over back shoulder)
-  // Escanor is a 1-handed battle axe wielder: Free right hand stays grounded at lower-right flank!
+  // Dynamic 2-handed athletic leverage: right hand draws back in power tension coil
   const overheadAngle = -2.45; // ~-140° pointing up-left
   const overheadHandX = -r * 0.48; // Shifted to left side
   const overheadHandY = -r * 0.42; // Upper area
+  const overheadBackHandX = r * 0.50; // Dynamic right arm coiled tightly near chest/ribs in power tension
+  const overheadBackHandY = r * 0.12;
 
   let axeAngle = idleAxeAngle;
   let handX = idleHandX;
@@ -974,7 +1651,6 @@ export function _getEscanorChopAnimationState(fighter) {
 
   if (elapsed < liftFrames) {
     // 1. LIFT: Raise weapon up from Frame 1 resting pose to Frame 2 overhead stance
-    // Free right hand remains stationary at lower-right flank (Rule 20)
     phase = 'lift';
     const p = Math.min(1.0, elapsed / Math.max(1, liftFrames));
     // Smooth sine ease-in-out: starts slow (heavy weapon), flows through, decelerates at top
@@ -982,8 +1658,8 @@ export function _getEscanorChopAnimationState(fighter) {
     axeAngle = idleAxeAngle + (overheadAngle - idleAxeAngle) * ease;
     handX = idleHandX + ease * (overheadHandX - idleHandX);
     handY = idleHandY + ease * (overheadHandY - idleHandY);
-    backHandX = idleBackHandX;
-    backHandY = idleBackHandY;
+    backHandX = idleBackHandX + ease * (overheadBackHandX - idleBackHandX);
+    backHandY = idleBackHandY + ease * (overheadBackHandY - idleBackHandY);
   } else if (elapsed < liftFrames + holdFrames) {
     // 2. POISED OVERHEAD HOLD: STAYS POISED IN HIGH OVERHEAD CHOP POSITION FOR EXACT chopLiftHoldFrames!
     phase = 'hold';
@@ -992,8 +1668,8 @@ export function _getEscanorChopAnimationState(fighter) {
     axeAngle = overheadAngle + tensionTremor;
     handX = overheadHandX;
     handY = overheadHandY + Math.sin(holdElapsed * 0.3) * 0.8;
-    backHandX = idleBackHandX;
-    backHandY = idleBackHandY;
+    backHandX = overheadBackHandX;
+    backHandY = overheadBackHandY + Math.sin(holdElapsed * 0.3 + 1.0) * 0.6;
   } else if (elapsed < liftFrames + holdFrames + strikeFrames) {
     // 3. EXPLOSIVE DOWNWARD CHOP STRIKE: Snaps from overheadAngle down to strikeEndAngle
     phase = 'strike';
@@ -1003,8 +1679,8 @@ export function _getEscanorChopAnimationState(fighter) {
     axeAngle = overheadAngle + (strikeEndAngle - overheadAngle) * ease;
     handX = overheadHandX + ease * (strikeEndHandX - overheadHandX);
     handY = overheadHandY + ease * (strikeEndHandY - overheadHandY);
-    backHandX = idleBackHandX;
-    backHandY = idleBackHandY;
+    backHandX = overheadBackHandX + ease * (strikeEndBackHandX - overheadBackHandX);
+    backHandY = overheadBackHandY + ease * (strikeEndBackHandY - overheadBackHandY);
   } else {
     // 4. RECOVERY (BREATHER): Divine Axe Rhitta STAYS completely planted in the downward chop slam pose!
     // NO lift-up animation during recovery — stays grounded in follow-through pose while taking a breather!
@@ -1015,8 +1691,8 @@ export function _getEscanorChopAnimationState(fighter) {
     axeAngle = strikeEndAngle;
     handX = strikeEndHandX;
     handY = strikeEndHandY;
-    backHandX = idleBackHandX;
-    backHandY = idleBackHandY;
+    backHandX = strikeEndBackHandX;
+    backHandY = strikeEndBackHandY;
   }
 
   return { isSwinging: true, phase, axeAngle, handX, handY, backHandX, backHandY, strikeP, pauseP: 0, recP, hitConnected: Boolean(fighter._chopHitConnected) };
@@ -1035,6 +1711,35 @@ function _drawEscanorBackHand(ctx, fighter, r, chopState, isPunching, punchPhase
 function _drawEscanorFrontHand(ctx, fighter, r, chopState, isPunching, punchPhase, now = Date.now(), facingLeft = false) {
   const currentNow = (typeof now === 'number' && !Number.isNaN(now)) ? now : Date.now();
   const handR = Math.max(r * 0.30, getHandSize(7.0));
+
+  // "THE ONE" Awakening Windup Pose: Dual clenched front fists at flanks with tensed muscular arms
+  if (fighter.isTheOneWindup) {
+    const leftFistX = snap(-r * 0.58);
+    const leftFistY = snap(r * 0.28);
+    const rightFistX = snap(r * 0.58);
+    const rightFistY = snap(r * 0.28);
+
+    const shoulderLX = -r * 0.58;
+    const shoulderLY = r * 0.32;
+    const shoulderRX = r * 0.58;
+    const shoulderRY = r * 0.32;
+
+    _drawEscanorMuscularArm(ctx, shoulderLX, shoulderLY, leftFistX, leftFistY, handR, r, true, true);
+    _drawEscanorMuscularArm(ctx, shoulderRX, shoulderRY, rightFistX, rightFistY, handR, r, false, true);
+
+    if (!fighter.hideWeapon) {
+      drawDivineAxeRhitta(ctx, leftFistX, leftFistY, 0.14, r, {
+        isSwinging: false,
+        isTheOne: true,
+        prideStacks: 2,
+        heatLevel: 1.5
+      });
+    }
+
+    _drawEscanorGoldenGauntlet(ctx, leftFistX, leftFistY, handR, true);
+    _drawEscanorGoldenGauntlet(ctx, rightFistX, rightFistY, handR, true);
+    return;
+  }
 
   // Cruel Sun Activation, Aim & Smooth Post-Throw Hand Hide Pose:
   // 1. Left Hand firmly grips Divine Axe Rhitta on the front lower-left (-X, +Y)
@@ -1161,6 +1866,16 @@ function _drawEscanorFrontHand(ctx, fighter, r, chopState, isPunching, punchPhas
       }
     }
 
+    const shoulderLX = -r * 0.58;
+    const shoulderLY = r * 0.32;
+    const shoulderRX = r * 0.58;
+    const shoulderRY = r * 0.32;
+
+    _drawEscanorMuscularArm(ctx, shoulderLX, shoulderLY, leftHandX, leftHandY, handR, r, true, fighter.isTheOneActive);
+    if (handAlpha > 0.001) {
+      _drawEscanorMuscularArm(ctx, shoulderRX, shoulderRY, rightHandX, rightHandY, handR, r, false, fighter.isTheOneActive);
+    }
+
     drawDivineAxeRhitta(ctx, leftHandX, leftHandY, axeAngle, r, {
       isSwinging: false,
       isTheOne: fighter.isTheOneActive,
@@ -1175,6 +1890,11 @@ function _drawEscanorFrontHand(ctx, fighter, r, chopState, isPunching, punchPhas
     return;
   }
 
+  const shoulderLX = -r * 0.58;
+  const shoulderLY = r * 0.32;
+  const shoulderRX = r * 0.58;
+  const shoulderRY = r * 0.32;
+
   let handX = chopState.handX;
   let handY = chopState.handY;
   let axeAngle = chopState.axeAngle;
@@ -1183,6 +1903,10 @@ function _drawEscanorFrontHand(ctx, fighter, r, chopState, isPunching, punchPhas
     handX = chopState.handX;
     handY = chopState.handY;
     axeAngle = chopState.axeAngle;
+
+    // Rule 30 Dynamic Muscular Arm Linkages & Bodily Force Drive
+    _drawEscanorMuscularArm(ctx, shoulderLX, shoulderLY, handX, handY, handR, r, true, fighter.isTheOneActive);
+    _drawEscanorMuscularArm(ctx, shoulderRX, shoulderRY, chopState.backHandX, chopState.backHandY, handR, r, false, fighter.isTheOneActive);
   } else if (isPunching) {
     const punchExt = Math.sin(punchPhase * Math.PI) * (r * 0.50);
     handX = -r * 0.82;
@@ -1190,6 +1914,9 @@ function _drawEscanorFrontHand(ctx, fighter, r, chopState, isPunching, punchPhas
     const rightPunchX = r * 0.82 + punchExt;
     const rightPunchY = r * 0.38 - punchExt * 0.25;
     axeAngle = 0.14;
+
+    // Dynamic punch arm linkage
+    _drawEscanorMuscularArm(ctx, shoulderRX, shoulderRY, rightPunchX, rightPunchY, handR, r, false, fighter.isTheOneActive);
 
     if (!fighter.hideWeapon) {
       drawDivineAxeRhitta(ctx, handX, handY, axeAngle, r, {
@@ -1228,7 +1955,7 @@ function _drawEscanorFrontHand(ctx, fighter, r, chopState, isPunching, punchPhas
   _drawEscanorGoldenGauntlet(ctx, handX, handY, handR, fighter.isTheOneActive);
 
   // Right Golden Gauntlet: driving/guiding during swing or resting symmetrically at (+r * 0.82, +r * 0.38) (Rule 20)
-  if (chopState.isSwinging) {
+  if (chopState.isSwinging && chopState.backHandX !== undefined) {
     _drawEscanorGoldenGauntlet(ctx, chopState.backHandX, chopState.backHandY, handR, fighter.isTheOneActive);
   } else {
     _drawEscanorGoldenGauntlet(ctx, r * 0.82, r * 0.38, handR, fighter.isTheOneActive);

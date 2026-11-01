@@ -73,10 +73,10 @@ export const ashConfig = {
   // ──────────────────────────────────────────
   // Pokémon Aces Deployment Toggles (Enable / Disable Specific Pokémon Summons)
   // ──────────────────────────────────────────
-  enablePikachu: 0,
+  enablePikachu: 1,
   enableCharizard: 1,
-  enableGreninja: 0,
-  enableLucario: 0,
+  enableGreninja: 1,
+  enableLucario: 1,
 
   // ──────────────────────────────────────────
   // Match Victory & Celebration Settings
@@ -280,9 +280,9 @@ export const ashConfig = {
       themeColor: '#3B82F6',
       secondaryColor: '#EC4899',
       hp: 165,
-      radius: 30,
+      radius: 35,
       speed: 6.8,
-      scale: 2.50,
+      scale: 3.00,
       cryKey: 'cryGreninja',
 
       // ── Dedicated Skills Configuration ──
@@ -339,9 +339,9 @@ export const ashConfig = {
       themeColor: '#06B6D4',
       secondaryColor: '#1E40AF',
       hp: 190,
-      radius: 30,
+      radius: 35,
       speed: 5.8,
-      scale: 1.55,
+      scale: 3.00,
       cryKey: 'cryLucario',
 
       // ── Dedicated Skills Configuration ──
