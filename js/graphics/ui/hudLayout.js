@@ -44,6 +44,7 @@ function setSafeStyle(el, prop, val, priority) {
 export function syncHudPosition() {
   _lastTopHudStyle = '';
   _lastBottomHudStyle = '';
+  _lastSideHudStyle = '';
   if (!_cachedGameBox) _cachedGameBox = document.querySelector('.game-box');
   if (!_cachedPixiView) _cachedPixiView = _cachedGameBox?.querySelector('canvas') || document.getElementById('arena');
   if (!_cachedGameBox || !_cachedPixiView) return;
@@ -257,11 +258,12 @@ export function initHudSync() {
 }
 
 let _lastTopHudStyle = '';
+let _lastBottomHudStyle = '';
+let _lastSideHudStyle = '';
 
 /**
- * Dynamically ensures the Top HUD Container (#hudTopContainer)
- * remains strictly screen-locked in viewport space with ZERO camera tracking drift or arena tethering,
- * matching updateBottomHudCameraTracking standard.
+ * Dynamically anchors the Top HUD Container (#hudTopContainer)
+ * to the arena's top wall when zooming or panning.
  */
 export function updateTopHudCameraTracking(topContainer) {
   if (!topContainer) return;
@@ -276,19 +278,66 @@ export function updateTopHudCameraTracking(topContainer) {
 
   const scale = CONFIG.internalScale || 1.0;
   const baseHudScale = scale * 0.9;
-  const curStyle = `${baseHudScale}`;
+
+  const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
+  const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
+  const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
+  const isCamActive = isDynamic || isZooming;
+
+  if (!isCamActive) {
+    const curStyle = `static_${baseHudScale}`;
+    if (_lastTopHudStyle === curStyle) return;
+    _lastTopHudStyle = curStyle;
+    setSafeStyle(topContainer, 'transform', `scale(${baseHudScale})`, 'important');
+    setSafeStyle(topContainer, 'transform-origin', 'top center', 'important');
+    return;
+  }
+
+  const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
+  const arenaWidth = arena.width || 450;
+  const arenaX = arena.x || 45;
+  const arenaY = arena.y || 240;
+  const arenaCenterX = arenaX + arenaWidth / 2;
+
+  const is1v2 = Boolean(
+    state.mode === 'Boss Battle' ||
+    state.mode === '1v2 Stand Off' ||
+    state.mode === '1v2' ||
+    state.mode === 'Stand Off 1v2' ||
+    (typeof GAME_MODES !== 'undefined' && (state.mode === GAME_MODES.BOSS_BATTLE || state.mode === GAME_MODES.STAND_OFF_1V2))
+  );
+  const topMarginPx = is1v2 ? 82 : 72;
+  const defaultTopY = arenaY - topMarginPx;
+
+  const screenTop = worldToScreen(arenaCenterX, arenaY);
+  const camZoom = (cam && Number.isFinite(cam.zoom) && cam.zoom > 0) ? cam.zoom : 1.0;
+
+  const targetTopY = screenTop.y - (topMarginPx * camZoom);
+  const targetTopX = screenTop.x;
+
+  const canvasWidth = (typeof state !== 'undefined' && state.canvas && state.canvas.width) || CONFIG.canvasWidth || 540;
+  const canvasHeight = (typeof state !== 'undefined' && state.canvas && state.canvas.height) || CONFIG.canvasHeight || 960;
+  const boxW = _cachedBoxWidth || canvasWidth;
+  const boxH = _cachedBoxHeight || canvasHeight;
+  const ratioX = boxW / canvasWidth;
+  const ratioY = boxH / canvasHeight;
+
+  const deltaX = (targetTopX - arenaCenterX) * ratioX;
+  const deltaY = (targetTopY - defaultTopY) * ratioY;
+  const effectiveScale = baseHudScale * camZoom;
+
+  const curStyle = `${deltaX.toFixed(1)}_${deltaY.toFixed(1)}_${effectiveScale.toFixed(3)}`;
   if (_lastTopHudStyle === curStyle) return;
   _lastTopHudStyle = curStyle;
 
-  setSafeStyle(topContainer, 'transform', `scale(${baseHudScale})`, 'important');
+  setSafeStyle(topContainer, 'transform', `translate3d(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px, 0) scale(${effectiveScale.toFixed(4)})`, 'important');
   setSafeStyle(topContainer, 'transform-origin', 'top center', 'important');
 }
 
-let _lastBottomHudStyle = '';
-
 /**
- * Dynamically ensures the Bottom HUD Container (#healthHud and #hudBottomContainer)
- * remains strictly screen-locked in viewport space with ZERO camera tracking drift or arena tethering.
+ * Dynamically anchors the Bottom HUD Container (#healthHud and #hudBottomContainer)
+ * containing fighter healthbars, skill progress bars, and combat stats to the arena's
+ * bottom wall when zooming or panning.
  */
 export function updateBottomHudCameraTracking(bottomContainer) {
   if (!bottomContainer) return;
@@ -296,11 +345,143 @@ export function updateBottomHudCameraTracking(bottomContainer) {
   const isHorizontal = Boolean(typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
   const scale = CONFIG.internalScale || 1.0;
   const baseHudScale = isHorizontal ? 0.80 : (scale * 0.9);
-  const curStyle = `${baseHudScale}`;
+
+  if (isHorizontal) {
+    const curStyle = `horizontal_${baseHudScale}`;
+    if (_lastBottomHudStyle === curStyle) return;
+    _lastBottomHudStyle = curStyle;
+    setSafeStyle(bottomContainer, 'bottom', 'auto', 'important');
+    setSafeStyle(bottomContainer, 'transform', `scale(${baseHudScale})`, 'important');
+    setSafeStyle(bottomContainer, 'transform-origin', 'top center', 'important');
+    return;
+  }
+
+  const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
+  const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
+  const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
+  const isCamActive = isDynamic || isZooming;
+
+  if (!isCamActive) {
+    const curStyle = `static_${baseHudScale}`;
+    if (_lastBottomHudStyle === curStyle) return;
+    _lastBottomHudStyle = curStyle;
+    setSafeStyle(bottomContainer, 'bottom', 'auto', 'important');
+    setSafeStyle(bottomContainer, 'transform', `scale(${baseHudScale})`, 'important');
+    setSafeStyle(bottomContainer, 'transform-origin', 'top center', 'important');
+    if (_cachedBottomContainer && _cachedBottomContainer !== bottomContainer) {
+      setSafeStyle(_cachedBottomContainer, 'bottom', 'auto', 'important');
+      setSafeStyle(_cachedBottomContainer, 'transform', `scale(${baseHudScale})`, 'important');
+      setSafeStyle(_cachedBottomContainer, 'transform-origin', 'top center', 'important');
+    }
+    return;
+  }
+
+  const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
+  const arenaWidth = arena.width || 450;
+  const arenaHeight = arena.height || 450;
+  const arenaX = arena.x || 45;
+  const arenaY = arena.y || 240;
+  const arenaCenterX = arenaX + arenaWidth / 2;
+  const arenaBottomY = arenaY + arenaHeight;
+
+  const is1v2 = Boolean(
+    state.mode === 'Boss Battle' ||
+    state.mode === '1v2 Stand Off' ||
+    state.mode === '1v2' ||
+    state.mode === 'Stand Off 1v2' ||
+    (typeof GAME_MODES !== 'undefined' && (state.mode === GAME_MODES.BOSS_BATTLE || state.mode === GAME_MODES.STAND_OFF_1V2))
+  );
+  const bottomMarginPx = is1v2 ? 24 : 16;
+  const defaultHudTopY = arenaBottomY + bottomMarginPx;
+
+  const screenBottom = worldToScreen(arenaCenterX, arenaBottomY);
+  const camZoom = (cam && Number.isFinite(cam.zoom) && cam.zoom > 0) ? cam.zoom : 1.0;
+
+  // The Bottom HUD anchors right below the arena's screen bottom boundary
+  const targetHudTopY = screenBottom.y + (bottomMarginPx * camZoom);
+  const targetHudTopX = screenBottom.x;
+
+  const canvasWidth = (typeof state !== 'undefined' && state.canvas && state.canvas.width) || CONFIG.canvasWidth || 540;
+  const canvasHeight = (typeof state !== 'undefined' && state.canvas && state.canvas.height) || CONFIG.canvasHeight || 960;
+  const boxW = _cachedBoxWidth || canvasWidth;
+  const boxH = _cachedBoxHeight || canvasHeight;
+  const ratioX = boxW / canvasWidth;
+  const ratioY = boxH / canvasHeight;
+
+  const deltaX = (targetHudTopX - arenaCenterX) * ratioX;
+  const deltaY = (targetHudTopY - defaultHudTopY) * ratioY;
+  const effectiveScale = baseHudScale * camZoom;
+
+  const curStyle = `${deltaX.toFixed(1)}_${deltaY.toFixed(1)}_${effectiveScale.toFixed(3)}`;
   if (_lastBottomHudStyle === curStyle) return;
   _lastBottomHudStyle = curStyle;
 
+  const transformStyle = `translate3d(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px, 0) scale(${effectiveScale.toFixed(4)})`;
+
   setSafeStyle(bottomContainer, 'bottom', 'auto', 'important');
-  setSafeStyle(bottomContainer, 'transform', `scale(${baseHudScale})`, 'important');
+  setSafeStyle(bottomContainer, 'transform', transformStyle, 'important');
   setSafeStyle(bottomContainer, 'transform-origin', 'top center', 'important');
+
+  if (_cachedBottomContainer && _cachedBottomContainer !== bottomContainer) {
+    setSafeStyle(_cachedBottomContainer, 'bottom', 'auto', 'important');
+    setSafeStyle(_cachedBottomContainer, 'transform', transformStyle, 'important');
+    setSafeStyle(_cachedBottomContainer, 'transform-origin', 'top center', 'important');
+  }
+}
+
+/**
+ * Dynamically anchors the Side HUD Containers (#healthHudLeft and #healthHudRight)
+ * to the arena's left and right flanks in Horizontal Mode when zooming or panning.
+ */
+export function updateSideHudCameraTracking(containerLeft, containerRight) {
+  const isHorizontal = Boolean(typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
+  if (!isHorizontal) return;
+
+  const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
+  const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
+  const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
+  const isCamActive = isDynamic || isZooming;
+
+  if (!isCamActive) {
+    if (_lastSideHudStyle === 'static') return;
+    _lastSideHudStyle = 'static';
+    if (containerLeft) setSafeStyle(containerLeft, 'transform', 'none', 'important');
+    if (containerRight) setSafeStyle(containerRight, 'transform', 'none', 'important');
+    return;
+  }
+
+  const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
+  const arenaWidth = arena.width || 450;
+  const arenaHeight = arena.height || 450;
+  const arenaX = arena.x || 45;
+  const arenaY = arena.y || 240;
+  const arenaCenterY = arenaY + arenaHeight / 2;
+
+  const screenLeft = worldToScreen(arenaX, arenaCenterY);
+  const screenRight = worldToScreen(arenaX + arenaWidth, arenaCenterY);
+  const camZoom = (cam && Number.isFinite(cam.zoom) && cam.zoom > 0) ? cam.zoom : 1.0;
+
+  const canvasWidth = (typeof state !== 'undefined' && state.canvas && state.canvas.width) || 960;
+  const canvasHeight = (typeof state !== 'undefined' && state.canvas && state.canvas.height) || 540;
+  const boxW = _cachedBoxWidth || canvasWidth;
+  const boxH = _cachedBoxHeight || canvasHeight;
+  const ratioX = boxW / canvasWidth;
+  const ratioY = boxH / canvasHeight;
+
+  const deltaLeftX = (screenLeft.x - arenaX) * ratioX;
+  const deltaRightX = (screenRight.x - (arenaX + arenaWidth)) * ratioX;
+  const deltaY = (screenLeft.y - arenaCenterY) * ratioY;
+
+  const curStyle = `${deltaLeftX.toFixed(1)}_${deltaRightX.toFixed(1)}_${deltaY.toFixed(1)}_${camZoom.toFixed(3)}`;
+  if (_lastSideHudStyle === curStyle) return;
+  _lastSideHudStyle = curStyle;
+
+  if (containerLeft) {
+    setSafeStyle(containerLeft, 'transform', `translate3d(${deltaLeftX.toFixed(2)}px, ${deltaY.toFixed(2)}px, 0) scale(${camZoom.toFixed(4)})`, 'important');
+    setSafeStyle(containerLeft, 'transform-origin', 'top left', 'important');
+  }
+  if (containerRight) {
+    setSafeStyle(containerRight, 'transform', `translate3d(${deltaRightX.toFixed(2)}px, ${deltaY.toFixed(2)}px, 0) scale(${camZoom.toFixed(4)})`, 'important');
+    setSafeStyle(containerRight, 'transform-origin', 'top right', 'important');
+  }
 }

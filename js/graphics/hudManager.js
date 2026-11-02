@@ -5,7 +5,7 @@ import { drawBlueAimbotGun } from './weaponVisuals.js';
 import { drawPanel } from './ui.js';
 import { getFighterPreview, getFighterBodyOnlyPreview } from './ui/FighterPreviewCache.js';
 
-import { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking } from './ui/hudLayout.js';
+import { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking, updateSideHudCameraTracking } from './ui/hudLayout.js';
 import { getSkillDataForFighter, isSkillExceptionInDarkMode, shouldShowFighterSkill, shouldShowHudSkillBars, shouldShowHudStats } from './ui/hudSkillProviders.js';
 import { applyCameraToCtx } from '../systems/cameraSystem.js';
 import { ensureComboTrackers, getComboConfig, tickComboTrackers } from '../systems/comboTracker.js';
@@ -13,7 +13,7 @@ import { getBossConfig } from '../configs/bosses/bossConfigRegistry.js';
 import { getFighterGrade, getGradeMeta } from '../configs/gradeConfig.js';
 import { drawWingedGradeLetter, getZeusGradeCardTheme } from './ui/CollectorCardRenderer.js';
 
-export { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking };
+export { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking, updateSideHudCameraTracking };
 
 // Initialize immediately
 initHudSync();
@@ -503,6 +503,7 @@ export function drawHUD() {
       containerRight.style.visibility = 'visible';
       containerRight.style.pointerEvents = 'auto';
     }
+    updateSideHudCameraTracking(containerLeft, containerRight);
   }
 
   updateHealthHud();
