@@ -55,7 +55,8 @@ export function modUpdateMeleeCombat(target, isCombo = false) {
   }
 
   const dist = Math.hypot(target.x - this.x, target.y - this.y);
-  const maxReach = (this.r || 25) + (target.r || 25) + (CONFIG.todo?.punchRange || 60);
+  const reachBonus = (isCombo ? 35 : 0) + (this.justSwappedTimer > 0 ? 25 : 0);
+  const maxReach = (this.r || 25) + (target.r || 25) + (CONFIG.todo?.punchRange || 60) + reachBonus;
   if (dist > maxReach) {
     playTodoPunchSound(this, isCombo);
     return;
@@ -63,6 +64,13 @@ export function modUpdateMeleeCombat(target, isCombo = false) {
   
   // Calculate attack direction (if not already facing target)
   const angle = Math.atan2(target.y - this.y, target.x - this.x);
+
+  // Dynamic kinetic lunge: close gap slightly toward target on strike so punches never drop
+  const stepToTarget = Math.min(Math.max(0, dist - ((this.r || 25) + (target.r || 25) + 8)), isCombo ? 10 : 15);
+  if (stepToTarget > 0) {
+    this.x += Math.cos(angle) * stepToTarget;
+    this.y += Math.sin(angle) * stepToTarget;
+  }
 
   // Black Flash mechanic & Knockback scaling
   let damage = CONFIG.todo?.punchDamage || 15;
@@ -78,29 +86,44 @@ export function modUpdateMeleeCombat(target, isCombo = false) {
   if (this.justSwappedTimer > 0) {
     isBlackFlash = true;
     damage *= (CONFIG.todo?.blackFlashDamageMultiplier || 2.0);
-    this.justSwappedTimer = 0; // Consume the buff
     this.blackFlashGlowTimer = 35; // Keep glowing fists during and briefly after the hit!
   }
 
-  // Knockback scaling: physical pushback on intermediate hits, explosive launcher push on final hit
+  // Knockback scaling: lock target in place on intermediate combo hits, explosive launcher push on final hit
   let knockback = baseKnockback;
   if (isCombo) {
     if (this.rockCounterComboLeft > 1) {
-      // Intermediate combo hit: micro-flinch physics pushback & maintain 100% stop movement
-      knockback = CONFIG.todo?.rockCounterComboPushback || 4.5;
-      const holdFrames = (this.rockCounterComboInterval || 15) + 6;
+      // Intermediate combo hit: lock target in place, do NOT blast them out of combo reach!
+      knockback = 0;
+      target.vx = 0;
+      target.vy = 0;
+      target.knockbackVx = 0;
+      target.knockbackVy = 0;
+      const holdFrames = (this.rockCounterComboInterval || 14) + 6;
       if (typeof target.applySlow === 'function') target.applySlow(holdFrames, 0.0);
       if (typeof target.applyHitStun === 'function') target.applyHitStun(holdFrames);
     } else {
-      // Final finisher hit: explosive physics hit pushback
-      knockback = CONFIG.todo?.rockCounterFinisherPushback || 30.0;
+      // Final finisher hit: explosive physics launcher push
+      knockback = CONFIG.todo?.rockCounterFinisherPushback || 18.0;
     }
   }
 
-  const didDamage = applyDamageToTarget(target, damage, this);
+  const hitOpts = {
+    isMelee: true,
+    isBasicAttack: true,
+    bypassEvade: Boolean(this.justSwappedTimer > 0 || isCombo),
+    undodgeable: Boolean(this.justSwappedTimer > 0 || isCombo),
+    isBlackFlash
+  };
+  const didDamage = applyDamageToTarget(target, damage, this, hitOpts);
+
+  // Consume Black Flash swap buff only on a successful hit
+  if (didDamage !== false && this.justSwappedTimer > 0) {
+    this.justSwappedTimer = 0;
+  }
 
   // Apply velocity pushback impulse & universal physics knockback only if attack wasn't blocked by Infinity
-  if (didDamage !== false) {
+  if (didDamage !== false && knockback > 0) {
     if (typeof target.applyKnockback === 'function') {
       target.applyKnockback(Math.cos(angle) * knockback, Math.sin(angle) * knockback);
     } else if (!target.immuneToPush && !target.immuneToKnockback && target.characterId !== 'escanor') {

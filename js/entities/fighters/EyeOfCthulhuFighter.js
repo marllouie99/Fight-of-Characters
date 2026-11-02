@@ -358,6 +358,16 @@ export class EyeOfCthulhuFighter extends Fighter {
       return;
     }
 
+    // 2b. Pac-Man Ghost State Guard:
+    // When transformed into a frightened ghost, all skills and ram dashes are disabled.
+    // The Eye cannot dash, ram, or spawn minions, and flees away from Pac-Man!
+    if (this._handlePacmanGhostState(arena, opponent)) {
+      this.isRamming = false;
+      this.isWindupTelegraph = false;
+      this.resolveWallBounce(arena, opponent);
+      return;
+    }
+
     // Decrement action noise cooldown timer
     if (this.actionNoiseCooldown > 0) {
       this.actionNoiseCooldown--;
@@ -615,7 +625,7 @@ export class EyeOfCthulhuFighter extends Fighter {
   }
 
   _spawnServantMinion(ownerIndex, cfg) {
-    if (this.isPhase2 || this.isTransforming || this.hp <= 0) return; // Strict zero minions in Phase 2
+    if (this.isPhase2 || this.isTransforming || this.hp <= 0 || (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0)) return; // Strict zero minions in Phase 2 or when ghosted
     if (!state.illusions) state.illusions = [];
 
     const activeServants = state.illusions.filter(ill => ill && ill.isServantOfCthulhu && ill.owner === this && ill.hp > 0).length;
@@ -672,6 +682,16 @@ export class EyeOfCthulhuFighter extends Fighter {
           return applyDamageToTarget(this, amount, attacker, opts);
         },
       };
+
+      // If opponent is Pac-Man in active Chomp Mode, newly spawned minions immediately become frightened ghosts
+      const pacmanOpponent = (typeof state !== 'undefined' && Array.isArray(state.fighters))
+        ? state.fighters.find(f => f && f.characterId === 'pacman' && f.hp > 0 && f.isChompModeActive && f.chompModeTimer > 0 && (!this.isTeammate || !this.isTeammate(f)))
+        : null;
+      if (pacmanOpponent) {
+        minion.isPacmanGhost = true;
+        minion.pacmanGhostTimer = pacmanOpponent.chompModeTimer;
+        minion.pacmanGhostMaxTimer = pacmanOpponent.chompModeTimer;
+      }
 
       state.illusions.push(minion);
       spawnSparks(spawnX, spawnY, 8, 'bloodSpark', '#E11D48');

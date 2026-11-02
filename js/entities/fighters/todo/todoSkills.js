@@ -5,6 +5,7 @@ import { playSkillEffectSound } from '../../../soundEffects/skillEffectSounds.js
 import { projectileSystem } from '../../../systems/projectileSystem.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../../core/state.js';
 import { spawnImpactFlash, spawnMeleeClashShockwave, spawnSparks, spawnBoogieWoogieSwapEffect, spawnTodoClapCEParticles } from '../../../graphics/particles/sparkEffect.js';
+import { modUpdateMeleeCombat } from './todoCombat.js';
 
 export function playTodoRockCounterVoiceline(fighter) {
   if (!fighter) return;
@@ -217,6 +218,9 @@ export function modUpdateCursedRocks(targets) {
         const distToEnemy = Math.hypot(rock.x - enemy.x, rock.y - enemy.y);
         if (distToEnemy <= rockProximityTriggerDist) {
           rock.hasTriggeredTeleport = true; // Mark so rock doesn't re-trigger continuously
+          // Freeze rock immediately so it stays anchored right next to the enemy during the clap windup!
+          rock.vx = 0;
+          rock.vy = 0;
 
           // Advance windup frames: hands slam together before teleport!
           this.clapAnimTimer = 20;
@@ -244,17 +248,15 @@ export function modRepositionDisengage(target) {
  */
 export function applyBoogieDisorientation(todoFighter) {
   if (!state || !state.fighters) return;
-  const myIdx = state.fighters.indexOf(todoFighter);
-  const myTeam = (state.getFighterTeam && myIdx >= 0) ? state.getFighterTeam(myIdx) : todoFighter.team;
   const disorientFrames = CONFIG.todo?.swapDisorientationFrames ?? 20;
 
-  // Process fighters first (use loop index for team check — no indexOf needed)
+  // Process fighters first
   for (let fi = 0; fi < state.fighters.length; fi++) {
     const enemy = state.fighters[fi];
     if (!enemy || enemy === todoFighter || enemy.hp <= 0) continue;
-    const isTeammate = (state.getFighterTeam && myIdx >= 0)
-      ? (state.getFighterTeam(fi) === myTeam)
-      : (enemy.team === todoFighter.team);
+    const isTeammate = typeof todoFighter.isTeammate === 'function'
+      ? todoFighter.isTeammate(enemy)
+      : (enemy.team !== undefined && enemy.team === todoFighter.team);
     if (isTeammate) continue;
 
     if ('shootCooldown' in enemy) enemy.shootCooldown = Math.max(enemy.shootCooldown || 0, disorientFrames);
@@ -265,17 +267,12 @@ export function applyBoogieDisorientation(todoFighter) {
     if ('attackCooldown' in enemy) enemy.attackCooldown = Math.max(enemy.attackCooldown || 0, disorientFrames);
   }
 
-  // Process illusions separately (derive team from owner — no indexOf on illusions)
+  // Process illusions separately
   if (state.illusions) {
     for (let ii = 0; ii < state.illusions.length; ii++) {
       const enemy = state.illusions[ii];
       if (!enemy || enemy === todoFighter || enemy.hp <= 0) continue;
-      // Check if illusion's owner is a teammate
-      if (enemy.owner && myTeam !== null && myTeam !== undefined) {
-        const ownerIdx = state.fighters.indexOf(enemy.owner);
-        const ownerTeam = (state.getFighterTeam && ownerIdx >= 0) ? state.getFighterTeam(ownerIdx) : enemy.owner.team;
-        if (ownerTeam === myTeam) continue;
-      }
+      if (typeof todoFighter.isTeammate === 'function' && todoFighter.isTeammate(enemy)) continue;
 
       if ('shootCooldown' in enemy) enemy.shootCooldown = Math.max(enemy.shootCooldown || 0, disorientFrames);
       if ('cooldown' in enemy) enemy.cooldown = Math.max(enemy.cooldown || 0, disorientFrames);
@@ -292,8 +289,6 @@ export function applyBoogieDisorientation(todoFighter) {
  */
 export function applyBoogieEvadeBuff(todoFighter) {
   if (!state || !state.fighters) return;
-  const myIdx = state.fighters.indexOf(todoFighter);
-  const myTeam = (state.getFighterTeam && myIdx >= 0) ? state.getFighterTeam(myIdx) : todoFighter.team;
   const duration = CONFIG.todo?.evadeBuffDurationFrames ?? 75; // ~1.25s
   const chance = CONFIG.todo?.evadeChance ?? 0.60;
 
@@ -302,13 +297,13 @@ export function applyBoogieEvadeBuff(todoFighter) {
   todoFighter.evadeChance = chance;
   spawnSparks(todoFighter.x, todoFighter.y, 8, 'lightningTrail', '#00E5FF');
 
-  // Apply to living teammates
+  // Apply to living teammates ONLY (never enemies!)
   for (let i = 0; i < state.fighters.length; i++) {
     const f = state.fighters[i];
     if (!f || f === todoFighter || f.hp <= 0) continue;
-    const isTeammate = (state.getFighterTeam && myIdx >= 0)
-      ? (state.getFighterTeam(i) === myTeam)
-      : (f.team === todoFighter.team);
+    const isTeammate = typeof todoFighter.isTeammate === 'function'
+      ? todoFighter.isTeammate(f)
+      : (f.team !== undefined && f.team === todoFighter.team);
     if (isTeammate) {
       f.evadeBuffTimer = Math.max(f.evadeBuffTimer || 0, duration);
       f.evadeChance = chance;
@@ -345,7 +340,7 @@ export function modExecutePendingSwap() {
   spawnImpactFlash(this.x, this.y, 35, '#00E5FF');
   spawnTodoClapCEParticles(this.x, this.y, this.gunAngle || 0);
 
-  const vanishFrames = CONFIG.todo?.vanishDurationFrames ?? 15;
+  const vanishFrames = Math.min(CONFIG.todo?.vanishDurationFrames ?? 3, 3);
 
   if (data.type === 'fake') {
     return;
@@ -374,12 +369,11 @@ export function modExecutePendingSwap() {
       this.vy = 0;
       swapTarget.vx = 0;
       swapTarget.vy = 0;
+      swapTarget.knockbackVx = 0;
+      swapTarget.knockbackVy = 0;
 
-      // Both Todo and swapped target vanish briefly during instantaneous swap
+      // Only Todo has a brief vanish transition (never set vanishTimer on enemy targets, as it makes them untargetable & invulnerable!)
       this.vanishTimer = Math.max(this.vanishTimer || 0, vanishFrames);
-      if (swapTarget) {
-        swapTarget.vanishTimer = Math.max(swapTarget.vanishTimer || 0, vanishFrames);
-      }
 
       // Trigger full Boogie Woogie Swap Visual Beam between original positions
       spawnBoogieWoogieSwapEffect(oldTodoX, oldTodoY, oldTargetX, oldTargetY);
@@ -392,14 +386,39 @@ export function modExecutePendingSwap() {
         this.y = Math.max(arena.y + wallW + myR, Math.min(arena.y + arena.height - wallW - myR, this.y));
       }
 
-      if (swapTarget.characterId) {
-        this.aim(swapTarget);
-      } else if (data.potentialTargets && data.potentialTargets.length > 0) {
-        this.aim(data.potentialTargets[0]);
+      // Rule 1.3: Immediately align facing angle directly at the swapped target
+      const targetToAim = swapTarget || (data.potentialTargets && data.potentialTargets[0]);
+      if (targetToAim) {
+        const aimAngle = Math.atan2(targetToAim.y - this.y, targetToAim.x - this.x);
+        this.gunAngle = aimAngle;
+        this.angle = aimAngle;
+        this.aim(targetToAim);
       }
 
+      // Reset basic attack cooldown so Todo is immediately ready to strike post-swap
+      this.cooldownTimer = 0;
       this.justSwappedTimer = CONFIG.todo?.blackFlashWindow || 45;
       this.blackFlashGlowTimer = this.justSwappedTimer;
+
+      // Disorient the swapped enemy: brief movement pause / slow so they cannot instantly sprint away
+      const disorientFrames = CONFIG.todo?.swapDisorientationFrames ?? 20;
+      if (typeof swapTarget.applySlow === 'function') {
+        swapTarget.applySlow(disorientFrames, 0.2);
+      }
+      if (typeof swapTarget.applyHitStun === 'function') {
+        swapTarget.applyHitStun(10);
+      }
+
+      // If swapped enemy is directly in melee reach, immediately trigger the post-swap surprise strike!
+      const distToSwap = Math.hypot(swapTarget.x - this.x, swapTarget.y - this.y);
+      const instantPunchReach = (this.r || 25) + (swapTarget.r || 25) + (CONFIG.todo?.punchRange || 60) + 25;
+      if (distToSwap <= instantPunchReach && !this.playerControlled && (this.rockCounterComboLeft || 0) <= 0) {
+        this.aim(swapTarget);
+        modUpdateMeleeCombat.call(this, swapTarget, false);
+      } else if (!this.playerControlled) {
+        this.aim(swapTarget);
+        this.resumeMovement(swapTarget);
+      }
 
       // Apply global attack reaction delay to enemies
       applyBoogieDisorientation(this);
@@ -462,11 +481,9 @@ export function modExecutePendingSwap() {
       if (!nearestEnemy || nearestEnemy.hp <= 0) {
         let minDist = Infinity;
         if (state && state.fighters) {
-          const myIdx = state.fighters.indexOf(this);
-          const myTeam = state.getFighterTeam ? state.getFighterTeam(myIdx) : null;
           for (let i = 0; i < state.fighters.length; i++) {
             const f = state.fighters[i];
-            if (f && f.hp > 0 && state.getFighterTeam(i) !== myTeam) {
+            if (f && f.hp > 0 && !this.isTeammate(f)) {
               const d = Math.hypot(f.x - this.x, f.y - this.y);
               if (d < minDist) {
                 minDist = d;
@@ -478,7 +495,11 @@ export function modExecutePendingSwap() {
       }
 
       if (nearestEnemy && nearestEnemy.hp > 0) {
+        const aimAngle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
+        this.gunAngle = aimAngle;
+        this.angle = aimAngle;
         this.aim(nearestEnemy);
+        this.cooldownTimer = 0;
         const distToEnemy = Math.hypot(nearestEnemy.x - this.x, nearestEnemy.y - this.y);
         const isClose = distToEnemy <= (this.r || 25) + (nearestEnemy.r || 25) + 60;
 
@@ -577,14 +598,12 @@ export function modExecutePendingSwap() {
       let targetEnemy = (enemy && enemy.hp > 0 && !enemy.isDead) ? enemy : null;
       if (!targetEnemy && state && state.fighters) {
         let minDist = Infinity;
-        const myIndex = state.fighters.indexOf(this);
-        const myTeam = (state.getFighterTeam && myIndex >= 0) ? state.getFighterTeam(myIndex) : this.team;
         for (let i = 0; i < state.fighters.length; i++) {
           const f = state.fighters[i];
           if (f && f !== this && f.hp > 0 && !f.isIllusion) {
-            const isTeammate = (state.getFighterTeam && myIndex >= 0)
-              ? (state.getFighterTeam(i) === myTeam)
-              : (f.team === this.team);
+            const isTeammate = typeof this.isTeammate === 'function'
+              ? this.isTeammate(f)
+              : (f.team !== undefined && f.team === this.team);
             if (isTeammate) continue;
             const d = Math.hypot(f.x - this.x, f.y - this.y);
             if (d < minDist) {
@@ -596,8 +615,14 @@ export function modExecutePendingSwap() {
       }
 
       if (targetEnemy && targetEnemy.hp > 0) {
+        const aimAngle = Math.atan2(targetEnemy.y - this.y, targetEnemy.x - this.x);
+        this.gunAngle = aimAngle;
+        this.angle = aimAngle;
+        this.aim(targetEnemy);
+        this.cooldownTimer = 0;
+
         const distToEnemy = Math.hypot(targetEnemy.x - this.x, targetEnemy.y - this.y);
-        const isClose = distToEnemy <= (this.r || 25) + (targetEnemy.r || 25) + 60;
+        const isClose = distToEnemy <= (this.r || 25) + (targetEnemy.r || 25) + 85;
 
         if (isClose) {
           const isGojoInfinity = (typeof targetEnemy.hasActiveInfinity === 'function') && targetEnemy.hasActiveInfinity();
@@ -610,6 +635,8 @@ export function modExecutePendingSwap() {
             // Stop movement mechanic: Zero velocity, 100% movement stop, and hit stun for entire combo duration
             targetEnemy.vx = 0;
             targetEnemy.vy = 0;
+            targetEnemy.knockbackVx = 0;
+            targetEnemy.knockbackVy = 0;
 
             if (typeof targetEnemy.applySlow === 'function') {
               targetEnemy.applySlow(comboTotalDuration, 0.0);
@@ -644,8 +671,6 @@ export function modExecutePendingSwap() {
         } else {
           this.resumeMovement(targetEnemy);
         }
-
-        this.aim(targetEnemy);
       } else {
         this.resumeMovement();
       }
@@ -741,9 +766,9 @@ export function modCheckRockSwap() {
   for (let i = 0; i < state.fighters.length; i++) {
     const f = state.fighters[i];
     if (f && f !== this && f.hp > 0 && !f.isIllusion) {
-      const isTeammate = (state.getFighterTeam && myIndex >= 0)
-        ? (state.getFighterTeam(i) === myTeam)
-        : (f.team === this.team);
+      const isTeammate = typeof this.isTeammate === 'function'
+        ? this.isTeammate(f)
+        : (f.team !== undefined && f.team === this.team);
       if (isTeammate) continue;
 
       const dRock = Math.hypot(f.x - rock.x, f.y - rock.y);

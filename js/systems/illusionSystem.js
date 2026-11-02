@@ -398,6 +398,58 @@ export function updateIllusions() {
       }
     }
 
+    // Pac-Man Frightened Ghost State Handling for Illusions / Minions
+    if (illusion.isPacmanGhost && (illusion.pacmanGhostTimer || 0) > 0) {
+      illusion.pacmanGhostTimer--;
+      if (illusion.pacmanGhostTimer <= 0) {
+        illusion.isPacmanGhost = false;
+        illusion.pacmanGhostTimer = 0;
+      } else {
+        // Suppress all minion attack actions and cooldowns while in ghost state
+        illusion.attackCooldown = Math.max(illusion.attackCooldown || 0, 30);
+
+        // Flee away from nearest hostile Pac-Man
+        const pacmanFighter = (typeof state !== 'undefined' && Array.isArray(state.fighters))
+          ? state.fighters.find(f => f && f.characterId === 'pacman' && f.hp > 0 && (!illusion.owner || !f.isTeammate || !f.isTeammate(illusion.owner)))
+          : null;
+        if (pacmanFighter) {
+          const dx = illusion.x - pacmanFighter.x;
+          const dy = illusion.y - pacmanFighter.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const fleeAngle = Math.atan2(dy, dx);
+          const fleeSpeed = illusion.moveSpeed || 3.0;
+          illusion.vx = Math.cos(fleeAngle) * fleeSpeed;
+          illusion.vy = Math.sin(fleeAngle) * fleeSpeed;
+          illusion.gunAngle = fleeAngle;
+          illusion.angle = fleeAngle;
+        }
+
+        illusion.x += illusion.vx;
+        illusion.y += illusion.vy;
+
+        // Keep inside arena bounds
+        if (arena) {
+          const cx = arena.x + arena.width / 2;
+          const cy = arena.y + arena.height / 2;
+          const ar = (arena.radius || (arena.width / 2));
+          const maxLeash = ar - (illusion.r || 10) - 10;
+          const distFromC = Math.hypot(illusion.x - cx, illusion.y - cy);
+          if (distFromC > maxLeash && distFromC > 0) {
+            const nx = (cx - illusion.x) / distFromC;
+            const ny = (cy - illusion.y) / distFromC;
+            illusion.vx += nx * 1.5;
+            illusion.vy += ny * 1.5;
+          }
+          if (!illusion.isGhostTerrain) {
+            const eR = illusion.r || 15;
+            illusion.x = Math.max(arena.x + eR, Math.min(arena.x + arena.width - eR, illusion.x));
+            illusion.y = Math.max(arena.y + eR, Math.min(arena.y + arena.height - eR, illusion.y));
+          }
+        }
+        continue; // Ghost state: skip normal attack execution and minion AI
+      }
+    }
+
     // MANDATORY RULE 1: TimeStop & HitStun Freeze Guard
     if (illusion.timeStopTimer > 0 || illusion.isTargetOfAmbush) {
       if (illusion.timeStopTimer > 0) illusion.timeStopTimer--;

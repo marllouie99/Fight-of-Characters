@@ -1284,7 +1284,11 @@ export function updateFighters() {
       // Swallowed by Pac-Man state:
       // While inside Pac-Man's belly, position tracks Pac-Man and physics/skills are contained
       if (fighter.isSwallowedByPacman && fighter.swallowedBy) {
-        if (fighter.swallowedBy.hp <= 0 || !fighter.swallowedBy.isChompModeActive) {
+        if (
+          fighter.swallowedBy.hp <= 0 || !fighter.swallowedBy.isChompModeActive ||
+          fighter.isLawnmower || fighter.isPlant || fighter.isPlantMinion || fighter.isPlantBarrier || fighter.isWallnut ||
+          fighter.isDeployable || fighter.isBuilding || fighter.isTurret || fighter.isDispenser || fighter.isEndCrystal
+        ) {
           fighter.isSwallowedByPacman = false;
           fighter.swallowedBy = null;
         } else {
@@ -1303,42 +1307,63 @@ export function updateFighters() {
       // While transformed, the enemy cannot cast any skills, skill cooldowns are paused,
       // all abilities are disabled, and all they can do is move until the duration expires!
       if (fighter.isPacmanGhost && (fighter.pacmanGhostTimer || 0) > 0) {
-        fighter.pacmanGhostTimer--;
-        if (fighter.pacmanGhostTimer <= 0) {
+        const isPlant = Boolean(fighter.isPlant || fighter.isPlantMinion || fighter.isPlantBarrier || fighter.isWallnut || fighter.isImmovable || fighter.characterId === 'crazydave_plant');
+        if (
+          fighter.isLawnmower ||
+          (!isPlant && (fighter.isDeployable || fighter.isBuilding || fighter.isTurret || fighter.isDispenser || fighter.isEndCrystal))
+        ) {
           fighter.isPacmanGhost = false;
           fighter.pacmanGhostTimer = 0;
-          if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
-            const anyGhostLeft = state.fighters.some(f => f && f !== fighter && f.hp > 0 && !f.isDead && !f.dead && !f.isSwallowedByPacman && f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0);
-            if (!anyGhostLeft) {
-              stopSoundBySrc('Ghost - Turn to Blue', true);
+        } else {
+          fighter.pacmanGhostTimer--;
+          if (fighter.pacmanGhostTimer <= 0) {
+            fighter.isPacmanGhost = false;
+            fighter.pacmanGhostTimer = 0;
+            if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+              const anyGhostLeft = state.fighters.some(f => f && f !== fighter && f.hp > 0 && !f.isDead && !f.dead && !f.isSwallowedByPacman && f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0)
+                || (Array.isArray(state.illusions) && state.illusions.some(ill => ill && ill.hp > 0 && !ill.dead && !ill.isDead && ill.isPacmanGhost && (ill.pacmanGhostTimer || 0) > 0));
+              if (!anyGhostLeft) {
+                stopSoundBySrc('Ghost - Turn to Blue', true);
+              }
             }
           }
-        }
-        fighter.interruptAttacks?.(true);
-        if (fighter.skillManager) {
-          fighter.skillManager.interruptAll?.(true);
-        }
-        const opponent = getClosestOpponent(fighter);
-        const pacmanFighter = state.fighters?.find(f => f && f.characterId === 'pacman' && f.hp > 0);
-        if (pacmanFighter && pacmanFighter !== fighter) {
-          const dx = fighter.x - pacmanFighter.x;
-          const dy = fighter.y - pacmanFighter.y;
-          const dist = Math.hypot(dx, dy);
-          const currentSpeed = Math.hypot(fighter.vx || 0, fighter.vy || 0);
-          if (dist > 0.1 && currentSpeed < 1.0) {
-            const fleeAngle = Math.atan2(dy, dx);
-            const targetSpd = fighter.speed || 3.5;
-            fighter.vx = Math.cos(fleeAngle) * targetSpd;
-            fighter.vy = Math.sin(fleeAngle) * targetSpd;
+          fighter.interruptAttacks?.(true);
+          if (fighter.skillManager) {
+            fighter.skillManager.interruptAll?.(true);
           }
+          if (isPlant) {
+            fighter.vx = 0;
+            fighter.vy = 0;
+            fighter.knockbackVx = 0;
+            fighter.knockbackVy = 0;
+            if (fighter._fixedX !== undefined) {
+              fighter.x = fighter._fixedX;
+              fighter.y = fighter._fixedY;
+            }
+            return;
+          }
+          const opponent = getClosestOpponent(fighter);
+          const pacmanFighter = state.fighters?.find(f => f && f.characterId === 'pacman' && f.hp > 0);
+          if (pacmanFighter && pacmanFighter !== fighter) {
+            const dx = fighter.x - pacmanFighter.x;
+            const dy = fighter.y - pacmanFighter.y;
+            const dist = Math.hypot(dx, dy);
+            const currentSpeed = Math.hypot(fighter.vx || 0, fighter.vy || 0);
+            if (dist > 0.1 && currentSpeed < 1.0) {
+              const fleeAngle = Math.atan2(dy, dx);
+              const targetSpd = fighter.speed || 3.5;
+              fighter.vx = Math.cos(fleeAngle) * targetSpd;
+              fighter.vy = Math.sin(fleeAngle) * targetSpd;
+            }
+          }
+          fighter.applyMovementPhysics?.();
+          fighter.resolveWallBounce?.(state.arena, opponent);
+          // Update persistent deployed arena objects (e.g. Bomberman active bombs & cross explosions)
+          if (typeof fighter.updateDeployedObjects === 'function') {
+            fighter.updateDeployedObjects(state.arena);
+          }
+          return;
         }
-        fighter.applyMovementPhysics?.();
-        fighter.resolveWallBounce?.(state.arena, opponent);
-        // Update persistent deployed arena objects (e.g. Bomberman active bombs & cross explosions)
-        if (typeof fighter.updateDeployedObjects === 'function') {
-          fighter.updateDeployedObjects(state.arena);
-        }
-        return;
       }
 
       const opponent = getClosestOpponent(fighter);

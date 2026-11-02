@@ -15712,6 +15712,187 @@ async function runInteractionTests() {
     console.log('      ✅ Goku & Vegeta 120-frame melee mode duration, 8-angle flurry, finisher slam & Ki barrage verified.');
   }
 
+  // ── TEST 121: Todo Boogie Woogie & Cursed Rock Swap Anti-Self-Miss Standard ──
+  console.log('🧪 Test 121: Todo Boogie Woogie & Cursed Rock Swap Anti-Self-Miss Standard...');
+  {
+    const TodoClass = FIGHTER_CLASS_MAP.todo;
+    const NormalClass = FIGHTER_CLASS_MAP.normal;
+    assert(TodoClass && NormalClass, 'Todo and Normal classes must be registered');
+
+    const testArena = state.arena || { x: 45, y: 240, width: 450, height: 450, wallWidth: 4 };
+    state.arena = testArena;
+    state.mode = '1v1';
+    state.gameState = 'playing';
+
+    const prevFloatingTexts = state.floatingTexts || [];
+    state.floatingTexts = [];
+
+    const todo = new TodoClass({ radius: 25, x: 100, y: 300, hp: 300, maxHp: 300, color: '#eab308' });
+    const enemy = new NormalClass({ radius: 25, x: 250, y: 300, hp: 300, maxHp: 300, color: '#333333' });
+    state.fighters = [todo, enemy];
+
+    // Subtest 1: Verify 1v1 team evaluation returns false for opponent
+    assert(todo.isTeammate(enemy) === false, 'Todo.isTeammate(enemy) must be false in 1v1 mode');
+
+    // Subtest 2: Cursed Rock Proximity Trigger freezes rock velocity and prevents enemy from getting evade buff
+    todo.cursedRocks = [{
+      x: enemy.x - 30,
+      y: enemy.y,
+      vx: 12,
+      vy: 0,
+      radius: 10,
+      life: 300,
+      hasTriggeredTeleport: false,
+      color: '#00E5FF',
+      isRock: true
+    }];
+
+    const { modUpdateCursedRocks, modExecutePendingSwap, applyBoogieEvadeBuff, applyBoogieDisorientation } = await import('../js/entities/fighters/todo/todoSkills.js');
+    const { modUpdateMeleeCombat } = await import('../js/entities/fighters/todo/todoCombat.js');
+
+    modUpdateCursedRocks.call(todo, [enemy]);
+    const rock = todo.cursedRocks[0];
+    assert(rock.hasTriggeredTeleport === true, 'Rock must trigger teleport when within proximity');
+    assert(rock.vx === 0 && rock.vy === 0, 'Rock velocity must be frozen to 0 upon proximity trigger so it stays anchored next to enemy');
+    assert(todo.pendingSwapData && todo.pendingSwapData.type === 'rock', 'Pending swap data must be queued as rock swap');
+
+    // Execute swap
+    modExecutePendingSwap.call(todo);
+
+    // Assert: Todo gets evade buff, but enemy NEVER gets evade buff in 1v1!
+    assert((todo.evadeBuffTimer || 0) > 0, `Todo must receive evadeBuffTimer (got ${todo.evadeBuffTimer})`);
+    assert((enemy.evadeBuffTimer || 0) === 0, `Enemy MUST NOT receive evadeBuffTimer in 1v1 mode (got ${enemy.evadeBuffTimer})`);
+
+    // Assert: Todo landed in close strike range next to enemy
+    const distToEnemy = Math.hypot(enemy.x - todo.x, enemy.y - todo.y);
+    assert(distToEnemy <= (todo.r || 25) + (enemy.r || 25) + 85, `Todo must land within strike reach of enemy (got ${distToEnemy.toFixed(1)}px)`);
+
+    // Subtest 3: Post-swap attacks must deal damage and NEVER roll 'MISS!'
+    const initialEnemyHp = enemy.hp;
+    todo.justSwappedTimer = 30; // Active Black Flash window
+    modUpdateMeleeCombat.call(todo, enemy, false);
+
+    assert(enemy.hp < initialEnemyHp, `Enemy must take damage from post-swap strike (hp was ${initialEnemyHp}, now ${enemy.hp})`);
+    const missTexts = (state.floatingTexts || []).filter(t => t && t.text === 'MISS!');
+    assert(missTexts.length === 0, `Post-swap strike must NEVER produce 'MISS!' floating text (found ${missTexts.length})`);
+
+    // Subtest 4: Solo Boogie Woogie (data.type === 'boogie') directly with opponent
+    todo.pendingSwapData = { type: 'boogie', swapTarget: enemy, potentialTargets: [enemy] };
+    enemy.evadeBuffTimer = 0;
+    enemy.evadeChance = 0;
+    modExecutePendingSwap.call(todo);
+
+    assert((todo.evadeBuffTimer || 0) > 0, 'Todo must have evade buff after solo swap');
+    assert((enemy.evadeBuffTimer || 0) === 0, 'Enemy must NOT have evade buff after solo swap in 1v1');
+
+    // Clean up
+    state.fighters = [];
+    state.floatingTexts = prevFloatingTexts;
+    console.log('      ✅ Todo Boogie Woogie & cursed rock swap anti-self-miss standard verified.');
+  }
+
+  // ── TEST 122: Pac-Man Power Pellet vs Crazy Dave Plants (Immovable Ghost State & 1-Hit Kill) ──
+  console.log('🧪 Test 122: Pac-Man Power Pellet vs Crazy Dave Plants (Immovable Ghost State, No Lawnmower Ghost & 1-Hit Kill)...');
+  {
+    const { PacmanFighter } = await import('../js/entities/fighters/PacmanFighter.js');
+    const { CrazyDaveFighter, PeashooterEntity, WallnutEntity, LawnmowerEntity } = await import('../js/entities/fighters/CrazyDaveFighter.js');
+    const { updateFighters } = await import('../js/systems/physics.js');
+
+    assert(PacmanFighter && CrazyDaveFighter && PeashooterEntity && WallnutEntity && LawnmowerEntity, 'Classes must exist');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4 };
+    state.arena = testArena;
+    state.mode = '1v1';
+    state.gameState = 'playing';
+
+    const pacman = new PacmanFighter({
+      id: 'pacman',
+      x: 100,
+      y: 300,
+      hp: 1000,
+      maxHp: 1000,
+      gunAngle: 0,
+      facingDirection: 1,
+    });
+
+    const crazyDave = new CrazyDaveFighter({
+      id: 'crazydave',
+      x: 350,
+      y: 300,
+      hp: 1000,
+      maxHp: 1000,
+      facingDirection: -1,
+    });
+
+    const peashooter = new PeashooterEntity(280, 300, crazyDave, -1);
+    const wallnut = new WallnutEntity(240, 300, crazyDave, -1);
+    const lawnmower = new LawnmowerEntity(410, 300, crazyDave, -1);
+
+    state.fighters = [pacman, crazyDave, peashooter, wallnut, lawnmower];
+    state.getFighterTeam = (idx) => {
+      const f = state.fighters[idx];
+      if (!f) return null;
+      if (f === pacman) return 0;
+      return 1; // Crazy Dave, plants, and lawnmower are Team 1
+    };
+
+    // Subtest 1: Pre-chomp state
+    assert(peashooter.isPacmanGhost === false, 'Plant must not start as ghost');
+    assert(wallnut.isPacmanGhost === false, 'Wallnut must not start as ghost');
+    assert(lawnmower.isPacmanGhost === false, 'Lawnmower must not start as ghost');
+
+    // Subtest 2: Pac-Man activates Super Chomp Mode
+    pacman.activateChompMode('powerPellet');
+
+    // Assert: Dave and plants transform into ghosts, but Lawnmower does NOT!
+    assert(crazyDave.isPacmanGhost === true, 'Crazy Dave must become a ghost');
+    assert(peashooter.isPacmanGhost === true, 'Peashooter must become a ghost');
+    assert(wallnut.isPacmanGhost === true, 'Wallnut must become a ghost');
+    assert(lawnmower.isPacmanGhost === false, 'Lawnmower cart MUST NOT become a ghost');
+
+    // Record initial positions
+    const peaStartX = peashooter.x;
+    const peaStartY = peashooter.y;
+    const wallStartX = wallnut.x;
+    const wallStartY = wallnut.y;
+    const initialGhostTimer = peashooter.pacmanGhostTimer;
+
+    // Subtest 3: Run update steps — verify plants remain 100% stationary and do not move or drift!
+    for (let f = 0; f < 10; f++) {
+      state.frameCount = (state.frameCount || 0) + 1;
+      updateFighters();
+    }
+
+    assert(peashooter.x === peaStartX, `Peashooter X must remain stationary at ${peaStartX}, got ${peashooter.x}`);
+    assert(peashooter.y === peaStartY, `Peashooter Y must remain stationary at ${peaStartY}, got ${peashooter.y}`);
+    assert(peashooter.vx === 0 && peashooter.vy === 0, 'Peashooter velocity must remain 0');
+
+    assert(wallnut.x === wallStartX, `Wallnut X must remain stationary at ${wallStartX}, got ${wallnut.x}`);
+    assert(wallnut.y === wallStartY, `Wallnut Y must remain stationary at ${wallStartY}, got ${wallnut.y}`);
+    assert(wallnut.vx === 0 && wallnut.vy === 0, 'Wallnut velocity must remain 0');
+
+    assert(peashooter.pacmanGhostTimer < initialGhostTimer, 'Plant ghost timer must decrement over time');
+    assert(lawnmower.isPacmanGhost === false, 'Lawnmower must remain non-ghost across updates');
+
+    // Subtest 4: Consuming ghost plant is a 1-HIT KILL and cleanly removes it from state.fighters
+    pacman.x = wallnut.x - 20; // Approach Wall-nut from front
+    pacman.y = wallnut.y;
+    pacman.vx = 0;
+    pacman.vy = 0;
+    pacman.gunAngle = 0; // Facing Wall-nut
+    pacman.chompAttackCooldown = 0;
+
+    const consumed = pacman._executeChompAttack(wallnut);
+    assert(consumed === true, 'Pac-Man must successfully chomp ghost plant');
+    assert(wallnut.hp <= 0, `Ghost plant must suffer 1-Hit Kill (hp was ${wallnut.hp})`);
+    assert(wallnut.dead === true || wallnut.isDead === true, 'Ghost plant must be marked dead');
+    assert(!state.fighters.includes(wallnut), 'Dead ghost plant must be removed from state.fighters');
+
+    // Clean up
+    state.fighters = [];
+    console.log('      ✅ Pac-Man Power Pellet vs Crazy Dave plants (immovable ghost state & 1-hit kill) verified.');
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');

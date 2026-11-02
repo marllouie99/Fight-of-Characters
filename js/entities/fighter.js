@@ -2231,7 +2231,8 @@ export class Fighter {
       this.isPacmanGhost = false;
       this.pacmanGhostTimer = 0;
       if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
-        const anyGhostLeft = state.fighters.some(f => f && f !== this && f.hp > 0 && !f.isDead && !f.dead && !f.isSwallowedByPacman && f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0);
+        const anyGhostLeft = state.fighters.some(f => f && f !== this && f.hp > 0 && !f.isDead && !f.dead && !f.isSwallowedByPacman && f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0)
+          || (Array.isArray(state.illusions) && state.illusions.some(ill => ill && ill.hp > 0 && !ill.dead && !ill.isDead && ill.isPacmanGhost && (ill.pacmanGhostTimer || 0) > 0));
         if (!anyGhostLeft) {
           stopSoundBySrc('Ghost - Turn to Blue', true);
         }
@@ -4206,6 +4207,14 @@ export class Fighter {
    */
   _handlePacmanGhostState(arena, opponent) {
     if (this.isSwallowedByPacman && this.swallowedBy) {
+      if (
+        this.isLawnmower || this.isPlant || this.isPlantMinion || this.isPlantBarrier || this.isWallnut ||
+        this.isDeployable || this.isBuilding || this.isTurret || this.isDispenser
+      ) {
+        this.isSwallowedByPacman = false;
+        this.swallowedBy = null;
+        return false;
+      }
       this.x = this.swallowedBy.x;
       this.y = this.swallowedBy.y;
       this.vx = 0;
@@ -4220,12 +4229,22 @@ export class Fighter {
     if (!this.isPacmanGhost || (this.pacmanGhostTimer || 0) <= 0) {
       return false;
     }
+    const isPlant = Boolean(this.isPlant || this.isPlantMinion || this.isPlantBarrier || this.isWallnut || this.isImmovable || this.characterId === 'crazydave_plant');
+    if (
+      this.isLawnmower ||
+      (!isPlant && (this.isDeployable || this.isBuilding || this.isTurret || this.isDispenser))
+    ) {
+      this.isPacmanGhost = false;
+      this.pacmanGhostTimer = 0;
+      return false;
+    }
     this.pacmanGhostTimer--;
     if (this.pacmanGhostTimer <= 0) {
       this.isPacmanGhost = false;
       this.pacmanGhostTimer = 0;
       if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
-        const anyGhostLeft = state.fighters.some(f => f && f !== this && f.hp > 0 && !f.isDead && !f.dead && !f.isSwallowedByPacman && f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0);
+        const anyGhostLeft = state.fighters.some(f => f && f !== this && f.hp > 0 && !f.isDead && !f.dead && !f.isSwallowedByPacman && f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0)
+          || (Array.isArray(state.illusions) && state.illusions.some(ill => ill && ill.hp > 0 && !ill.dead && !ill.isDead && ill.isPacmanGhost && (ill.pacmanGhostTimer || 0) > 0));
         if (!anyGhostLeft) {
           stopSoundBySrc('Ghost - Turn to Blue', true);
         }
@@ -4234,6 +4253,18 @@ export class Fighter {
     this.interruptAttacks?.(true);
     if (this.skillManager) {
       this.skillManager.interruptAll?.(true);
+    }
+    if (isPlant) {
+      this.vx = 0;
+      this.vy = 0;
+      this.knockbackVx = 0;
+      this.knockbackVy = 0;
+      if (this._fixedX !== undefined) {
+        this.x = this._fixedX;
+        this.y = this._fixedY;
+      }
+      this._inSuperUpdate = false;
+      return true;
     }
     this.applyMovementPhysics();
     this.resolveWallBounce(arena, opponent);

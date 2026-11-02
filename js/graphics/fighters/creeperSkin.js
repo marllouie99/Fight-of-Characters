@@ -17,10 +17,22 @@ export function _drawCreeperHair(ctx, r, facingLeft = false) {
   // Creeper features no external hair asset; iconic 8x8 pixel face is integrated into body rasterizer
 }
 
+// Authentic 8x8 Minecraft Creeper Face Matrix extracted directly from reference (Image 1)
+export const CREEPER_REFERENCE_GRID = [
+  ['#A3CD9D', '#46C536', '#83CC83', '#8AC295', '#60E160', '#6FDC5D', '#A3CD9D', '#2E9546'],
+  ['#2E9546', '#618967', '#069307', '#46C536', '#457F45', '#6FDC5D', '#0E7210', '#D2D2D2'],
+  ['#46C536', '#0E0F14', '#0E0F14', '#A3CD9D', '#1BD745', '#0E0F14', '#0E0F14', '#DCDCDC'],
+  ['#09BA08', '#0E0F14', '#0E0F14', '#1BA337', '#0E7210', '#0E0F14', '#0E0F14', '#4DE552'],
+  ['#4DE552', '#46C536', '#60E160', '#0E0F14', '#0E0F14', '#C6D3C2', '#60E160', '#46C536'],
+  ['#8AC295', '#2E9546', '#0E0F14', '#0E0F14', '#0E0F14', '#0E0F14', '#618967', '#B2CDAE'],
+  ['#C2E2BB', '#589F5D', '#0E0F14', '#0E0F14', '#0E0F14', '#0E0F14', '#9DEF9D', '#2E9546'],
+  ['#1BA337', '#A3CD9D', '#0E0F14', '#7EE089', '#C2E2BB', '#0E0F14', '#46C536', '#65CD54'],
+];
+
 /**
  * Layer 1 (Toji Standard Offscreen Rasterizer — Rule 24):
  * Draws Creeper's circular pixel body with 4-neighbor #0E0F14 manga outline and authentic
- * Minecraft green moss camouflage + iconic 8x8 frowning pixel face.
+ * Minecraft green moss camouflage + iconic 8x8 frowning pixel face matching the reference exactly.
  */
 function _renderCreeperOffscreen(destCtx, intR) {
   const r = intR;
@@ -32,27 +44,22 @@ function _renderCreeperOffscreen(destCtx, intR) {
   destCtx.imageSmoothingEnabled = false;
 
   const OUTLINE = '#0E0F14';
-  const LIME = '#4ADE80';
-  const GREEN_BASE = '#22C55E';
-  const MOSS_MID = '#16A34A';
-  const FOREST_DARK = '#15803D';
-  const DEEP_SHADOW = '#14532D';
-  const FROWN_BLACK = '#0F172A';
-  const PAW_SOLE = '#090D16';
+  const effectiveR = r - 0.2;
+  const B = (r / 25) * 5.75; // Symmetrical 8x8 block size calibrated to r
 
   for (let gy = -steps; gy <= steps; gy++) {
     for (let gx = -steps; gx <= steps; gx++) {
       const rx = gx * P;
       const ry = gy * P;
       const dist = Math.hypot(rx, ry);
-      if (dist > r) continue;
+      if (dist > effectiveR) continue;
 
       // Toji 4-neighbor outer manga ink outline test (Rule 24)
       const isBorder =
-        Math.hypot((gx + 1) * P, ry) > r ||
-        Math.hypot((gx - 1) * P, ry) > r ||
-        Math.hypot(rx, (gy + 1) * P) > r ||
-        Math.hypot(rx, (gy - 1) * P) > r;
+        Math.hypot((gx + 1) * P, ry) > effectiveR ||
+        Math.hypot((gx - 1) * P, ry) > effectiveR ||
+        Math.hypot(rx, (gy + 1) * P) > effectiveR ||
+        Math.hypot(rx, (gy - 1) * P) > effectiveR;
 
       if (isBorder) {
         destCtx.fillStyle = OUTLINE;
@@ -60,37 +67,42 @@ function _renderCreeperOffscreen(destCtx, intR) {
         continue;
       }
 
-      // Procedural Minecraft Moss Camo Color Generator
-      let color = GREEN_BASE;
-      const seed = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453;
-      const frac = seed - Math.floor(seed);
-      if (frac < 0.22) color = LIME;
-      else if (frac < 0.50) color = GREEN_BASE;
-      else if (frac < 0.78) color = MOSS_MID;
-      else if (frac < 0.92) color = FOREST_DARK;
-      else color = DEEP_SHADOW;
+      // Symmetrical column mapping (rx < 0 mirrors rx >= 0 with zero asymmetry)
+      let col;
+      const distFromCenterX = Math.abs(rx);
+      const blockX = Math.floor(distFromCenterX / B);
+      if (rx < 0) {
+        if (blockX === 0) col = 3;
+        else if (blockX === 1) col = 2;
+        else if (blockX === 2) col = 1;
+        else col = 0;
+      } else {
+        if (blockX === 0) col = 4;
+        else if (blockX === 1) col = 5;
+        else if (blockX === 2) col = 6;
+        else col = 7;
+      }
 
-      // ── ZONE 1: Iconic Minecraft Frowning Face ──
-      // Eyes: Left eye (-r * 0.40 to -r * 0.14, ry -r * 0.34 to -r * 0.08), Right eye (+r * 0.14 to +r * 0.40)
-      const isLeftEye = rx >= -r * 0.40 && rx <= -r * 0.14 && ry >= -r * 0.34 && ry <= -r * 0.08;
-      const isRightEye = rx >= r * 0.14 && rx <= r * 0.40 && ry >= -r * 0.34 && ry <= -r * 0.08;
+      // Symmetrical row mapping (ry < 0 is top half, ry >= 0 is bottom half)
+      let row;
+      const distFromCenterY = Math.abs(ry);
+      const blockY = Math.floor(distFromCenterY / B);
+      if (ry < 0) {
+        if (blockY === 0) row = 3;
+        else if (blockY === 1) row = 2;
+        else if (blockY === 2) row = 1;
+        else row = 0;
+      } else {
+        if (blockY === 0) row = 4;
+        else if (blockY === 1) row = 5;
+        else if (blockY === 2) row = 6;
+        else row = 7;
+      }
 
-      // Central Nose Bridge: (-r * 0.14 to +r * 0.14, ry -r * 0.08 to +r * 0.16)
-      const isNoseBridge = Math.abs(rx) <= r * 0.14 && ry >= -r * 0.08 && ry <= r * 0.16;
-
-      // Mouth Down-Turn: Outer corner brackets
-      const isMouthOuter = Math.abs(rx) <= r * 0.34 && Math.abs(rx) >= r * 0.14 && ry >= r * 0.06 && ry <= r * 0.34;
-      const isMouthBottom = Math.abs(rx) <= r * 0.20 && ry >= r * 0.16 && ry <= r * 0.34;
-
-      if (isLeftEye || isRightEye || isNoseBridge || isMouthOuter || isMouthBottom) {
-        color = FROWN_BLACK;
-      } else if (ry >= r * 0.78) {
-        // ── ZONE 3: Stubby Creeper Feet Soles ──
-        if (Math.abs(rx) >= r * 0.35) {
-          color = PAW_SOLE;
-        } else {
-          color = DEEP_SHADOW;
-        }
+      let color = CREEPER_REFERENCE_GRID[row][col];
+      // Prevent black mouth/eye features from bleeding into the outer circular margins
+      if ((distFromCenterX >= 4 * B || distFromCenterY >= 4 * B) && color === '#0E0F14') {
+        color = '#46C536';
       }
 
       destCtx.fillStyle = color;

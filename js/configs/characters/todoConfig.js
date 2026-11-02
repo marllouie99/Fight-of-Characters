@@ -52,7 +52,7 @@ export const todoConfig = {
     enableBoogieWoogie: true,     // Master toggle for Boogie Woogie clap swap
     clapCooldown: 200,            // Cooldown in frames between Boogie Woogie claps (2.0 seconds at 60fps)
     blackFlashWindow: 45,         // Window in frames after swapping where next punch triggers Black Flash (0.75 seconds)
-    vanishDurationFrames: 15,     // Duration in frames (at 60fps) where Todo and swapped entities vanish during swap (~0.05s)
+    vanishDurationFrames: 3,      // Duration in frames (at 60fps) where Todo vanishes during swap (~0.05s)
     swapDisorientationFrames: 20, // Attack reaction delay in frames applied to enemies when Todo/partner reappears from a swap (~0.33s)
     evadeBuffDurationFrames: 50,  // Duration in frames (~0.83s) where Todo and teammate gain evasion buff after swap
     evadeChance: 0.80,            // 40% chance to completely evade/miss incoming enemy basic attacks

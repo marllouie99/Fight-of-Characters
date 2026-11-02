@@ -636,6 +636,10 @@ export class PeashooterEntity extends Fighter {
       this.y = this._fixedY;
     }
 
+    if (this._handlePacmanGhostState(arena, opponent)) {
+      return;
+    }
+
     if (this._handleTimeStop() || this.isTargetOfAmbush) {
       return;
     }
@@ -1020,6 +1024,10 @@ export class SnowPeaEntity extends Fighter {
     if (this._fixedX !== undefined) {
       this.x = this._fixedX;
       this.y = this._fixedY;
+    }
+
+    if (this._handlePacmanGhostState(arena, opponent)) {
+      return;
     }
 
     if (this._handleTimeStop() || this.isTargetOfAmbush) {
@@ -1461,6 +1469,10 @@ export class WallnutEntity extends Fighter {
     if (this._fixedX !== undefined) {
       this.x = this._fixedX;
       this.y = this._fixedY;
+    }
+
+    if (this._handlePacmanGhostState(arena, opponent)) {
+      return;
     }
   }
 
@@ -1930,6 +1942,14 @@ export class TorchwoodEntity extends Fighter {
       this.y = this._fixedY;
     }
 
+    if (this._handlePacmanGhostState(arena, opponent)) {
+      return;
+    }
+
+    if (this._handleTimeStop() || this.isTargetOfAmbush) {
+      return;
+    }
+
     // Enemies and enemy minions that approach the burning stump are ignited only if damaged
     this._applyProximityBurn();
 
@@ -2203,6 +2223,8 @@ export class PotatoMineEntity extends Fighter {
       this.x = this._fixedX;
       this.y = this._fixedY;
     }
+
+    if (this._handlePacmanGhostState(arena, opponent)) return;
 
     if (this._handleTimeStop() || this.isTargetOfAmbush) return;
 

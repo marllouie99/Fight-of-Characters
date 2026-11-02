@@ -419,6 +419,10 @@ export function drawFighters() {
       if (isPacmanGhost) {
         drawFighterFloorShadow(ctx, fighter);
         drawPacmanFrightenedGhost(ctx, fighter);
+        if ((fighter.isPlant || fighter.isPlantMinion || fighter.isPlantBarrier || fighter.isWallnut) && fighter.hp < fighter.maxHp && fighter.hp > 0 && !fighter._isSilhouettePass) {
+          const topY = fighter.y - Math.round((fighter.r || 20) * 2.1 + 8);
+          drawMinionHealthBar(ctx, fighter.x, topY, 34, 5, fighter.hp, fighter.maxHp);
+        }
         fighter.drawHealth(ctx);
         if (typeof fighter.drawFreezeTimer === 'function') {
           fighter.drawFreezeTimer(ctx);
@@ -1323,6 +1327,13 @@ export function drawIllusions() {
     if (!illusion || (illusion.hp <= 0 && !illusion.isDying)) continue;
     // Skip Rika and Plant/Deployable entities - they draw via their own dedicated renderers!
     if (illusion.isRika || illusion.isPlant || illusion.isPlantMinion || illusion.isDeployable || illusion.isTurret) continue;
+
+    // Pac-Man Frightened Ghost State Rendering:
+    // When transformed into a ghost by Pac-Man's Power Pellet, render the authentic blue arcade ghost!
+    if (illusion.isPacmanGhost && (illusion.pacmanGhostTimer || 0) > 0) {
+      drawPacmanFrightenedGhost(ctx, illusion);
+      continue;
+    }
 
     updateEntityVisualScale(illusion);
     const scale = illusion.visualScale !== undefined ? illusion.visualScale : 1.0;

@@ -296,6 +296,76 @@ export class PacmanFighter extends Fighter {
   }
 
   /**
+   * Helper to determine if an entity is an enemy minion, summon, or companion.
+   * @param {Object} entity
+   * @returns {boolean}
+   */
+  isMinionEntity(entity) {
+    if (!entity) return false;
+    return Boolean(
+      entity.isMinion ||
+      entity.isMinionEntity ||
+      entity.isPlant ||
+      entity.isPlantMinion ||
+      entity.isPlantBarrier ||
+      entity.isWallnut ||
+      entity.characterId === 'crazydave_plant' ||
+      entity.isSummon ||
+      entity.isSummoned ||
+      entity.isChessTroop ||
+      entity.isChessMinion ||
+      entity.isPokemonCompanion ||
+      entity.isPokemon ||
+      entity.isPokemonMinion ||
+      entity.isRika ||
+      entity.isMahoragaMinion ||
+      entity.isMahoragaSummon ||
+      entity.isServantOfCthulhu ||
+      entity.isZombieMinion ||
+      entity.isZombie ||
+      entity.isIllusion ||
+      entity.isClone ||
+      entity.owner ||
+      entity.type === 'Pawn' ||
+      entity.type === 'Knight' ||
+      entity.type === 'Bishop' ||
+      entity.type === 'Rook' ||
+      entity.type === 'Queen' ||
+      entity.type === 'pawn' ||
+      entity.type === 'knight' ||
+      entity.type === 'bishop' ||
+      entity.type === 'rook' ||
+      entity.type === 'queen' ||
+      entity._def?.isMinion
+    );
+  }
+
+  /**
+   * Evaluates whether an entity is an eligible target to be turned into a frightened ghost or swallowed into Pac-Man's belly.
+   * Plants CAN become frightened ghosts (they stay completely stationary).
+   * STRICT EXCLUSIONS: Inanimate deployables, Crazy Dave lawnmower carts,
+   * turrets, dispensers, buildings, end crystals, traps, barriers, and untargetable entities CANNOT become ghosts or be swallowed!
+   * @param {Object} entity
+   * @returns {boolean}
+   */
+  isEligibleGhostTarget(entity) {
+    if (!entity) return false;
+    if (entity === this) return false;
+    if (entity.hp <= 0 || entity.isDead || entity.dead) return false;
+    // Crazy Dave lawnmowers / carts
+    if (entity.isLawnmower || entity.type === 'Lawnmower' || entity.characterId === 'crazydave_lawnmower') return false;
+    // Crazy Dave plants CAN become ghosts (even though they have isDeployable)
+    const isPlant = Boolean(entity.isPlant || entity.isPlantMinion || entity.isPlantBarrier || entity.isWallnut || entity.characterId === 'crazydave_plant');
+    if (isPlant) return true;
+    // Engineer & general deployables / buildings / turrets / dispensers / traps / crystals / ice walls / barriers
+    if (entity.isDeployable || entity.isBuilding || entity.isTurret || entity.isDispenser) return false;
+    if (entity.isEndCrystal || entity.isIceWall || entity.isTrap || entity.isBarrier) return false;
+    // Untargetable / invulnerable entities
+    if (entity.isUntargetable || entity.untargetable || entity.cannotBeTargeted || entity.isTargetable === false || entity.isInvulnerable) return false;
+    return true;
+  }
+
+  /**
    * Transforms all living opposing enemies into frightened ghosts.
    * While in this state, enemies cannot cast skills, skill cooldowns are paused,
    * all abilities are disabled, and all they can do is move until the duration expires.
@@ -315,18 +385,35 @@ export class PacmanFighter extends Fighter {
     if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
       for (let i = 0; i < state.fighters.length; i++) {
         const f = state.fighters[i];
-        if (!f || f === this || f.hp <= 0 || f.isDead) continue;
+        if (!f || f === this || f.hp <= 0 || f.isDead || f.dead) continue;
         if (myTeam !== null && typeof state.getFighterTeam === 'function' && state.getFighterTeam(i) === myTeam) continue;
+        if (typeof this.isTeammate === 'function' && this.isTeammate(f)) continue;
+        if (!this.isEligibleGhostTarget(f)) continue;
+
         candidates.push(f);
-        if (f.activePokemon && f.activePokemon.hp > 0 && !f.activePokemon.isDead) {
+        if (f.activePokemon && f.activePokemon.hp > 0 && !f.activePokemon.isDead && !f.activePokemon.dead && this.isEligibleGhostTarget(f.activePokemon)) {
           candidates.push(f.activePokemon);
         }
       }
     }
-    if (candidates.length === 0 && this.opponent && this.opponent.hp > 0 && this.opponent !== this) {
+    // Also scan state.illusions for enemy minions / summons (Rika, Mahoraga minion, Servants, Clones)
+    if (typeof state !== 'undefined' && Array.isArray(state.illusions)) {
+      for (let i = 0; i < state.illusions.length; i++) {
+        const ill = state.illusions[i];
+        if (!ill || ill === this || ill.hp <= 0 || ill.isDead || ill.dead) continue;
+        const ownerTeam = (ill.owner && typeof state.getFighterTeam === 'function')
+          ? state.getFighterTeam(state.fighters.indexOf(ill.owner))
+          : ill.team;
+        if (myTeam !== null && ownerTeam !== null && ownerTeam === myTeam) continue;
+        if (typeof this.isTeammate === 'function' && this.isTeammate(ill)) continue;
+        if (!this.isEligibleGhostTarget(ill)) continue;
+        candidates.push(ill);
+      }
+    }
+    if (candidates.length === 0 && this.opponent && this.opponent.hp > 0 && this.opponent !== this && this.isEligibleGhostTarget(this.opponent)) {
       candidates.push(this.opponent);
     }
-    if (candidates.length === 0 && this._lastOpponent && this._lastOpponent.hp > 0 && this._lastOpponent !== this) {
+    if (candidates.length === 0 && this._lastOpponent && this._lastOpponent.hp > 0 && this._lastOpponent !== this && this.isEligibleGhostTarget(this._lastOpponent)) {
       candidates.push(this._lastOpponent);
     }
 
@@ -384,6 +471,7 @@ export class PacmanFighter extends Fighter {
       if (!entity || entity === this) return false;
       if (entity.hp <= 0 || entity.isDead || entity.dead) return false;
       if (entity.isSwallowedByPacman) return false; // Swallowed ghosts are inside Pac-Man, not active in the arena
+      if (!this.isEligibleGhostTarget(entity)) return false;
       return Boolean(entity.isPacmanGhost && (entity.pacmanGhostTimer || 0) > 0);
     };
 
@@ -391,6 +479,11 @@ export class PacmanFighter extends Fighter {
       for (const f of state.fighters) {
         if (isEntityActiveGhost(f)) return true;
         if (f && f.activePokemon && isEntityActiveGhost(f.activePokemon)) return true;
+      }
+    }
+    if (typeof state !== 'undefined' && Array.isArray(state.illusions)) {
+      for (const ill of state.illusions) {
+        if (isEntityActiveGhost(ill)) return true;
       }
     }
 
@@ -555,6 +648,15 @@ export class PacmanFighter extends Fighter {
     if (opponent.isSwallowedByPacman) return false;
     if (this.chompAttackCooldown > 0) return false;
 
+    // Lawnmowers / carts are invulnerable baseline defenses and can never be chomped or targeted
+    if (opponent.isLawnmower || opponent.type === 'Lawnmower' || opponent.characterId === 'crazydave_lawnmower') {
+      return false;
+    }
+    // Teammates cannot be chomped
+    if (typeof this.isTeammate === 'function' && this.isTeammate(opponent)) {
+      return false;
+    }
+
     const contactDist = Math.hypot(opponent.x - this.x, opponent.y - this.y);
     const hitReach = this.r + (opponent.r || 25) + 14;
 
@@ -566,7 +668,8 @@ export class PacmanFighter extends Fighter {
     }
 
     // If opponent is currently in a frightened ghost state, swallow them into Pac-Man's belly!
-    const isGhosted = Boolean(opponent.isPacmanGhost && (opponent.pacmanGhostTimer || 0) > 0);
+    // (Only eligible targets can be swallowed: plants, lawnmower carts, and deployables are never swallowed!)
+    const isGhosted = Boolean(opponent.isPacmanGhost && (opponent.pacmanGhostTimer || 0) > 0 && this.isEligibleGhostTarget(opponent));
     if (isGhosted) {
       return this._swallowGhostEnemy(opponent);
     }
@@ -605,7 +708,7 @@ export class PacmanFighter extends Fighter {
     this.vy = -Math.sin(pushAngle) * reboundSpeed;
 
     // 5. Floating combat text & visual bite fx
-    spawnFloatingText(opponent.x, opponent.y - (opponent.r || 25) - 18, `30% CHOMP! (-${dmg})`, '#F2F000');
+    spawnFloatingText(opponent.x, opponent.y - (opponent.r || 25) - 18, '30% CHOMP!', '#F2F000');
 
     const contactX = (this.x + opponent.x) * 0.5;
     const contactY = (this.y + opponent.y) * 0.5;
@@ -651,26 +754,105 @@ export class PacmanFighter extends Fighter {
 
   /**
    * Swallows a ghosted enemy into Pac-Man's belly.
-   * Inflicts 30% Max HP chomp damage, conceals the enemy inside Pac-Man,
+   * Inflicts 30% Max HP chomp damage (or 100% 1-Hit Kill against enemy minions), conceals the enemy inside Pac-Man,
    * and holds them until Super Chomp Mode expires.
    */
   _swallowGhostEnemy(opponent) {
     if (!opponent || opponent.hp <= 0 || opponent.isSwallowedByPacman) return false;
+    // Inanimate deployables, carts/lawnmowers, plants, plant barriers, and buildings can NEVER be swallowed!
+    if (!this.isEligibleGhostTarget(opponent)) return false;
 
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : pacmanConfig;
+    const isMinion = this.isMinionEntity(opponent);
 
-    // 1. Calculate 30% damage (based on opponent maxHp)
+    // 1. Calculate damage:
+    // When a minion from the enemy becomes a ghost and gets consumed by Pac-Man, it is a 1-HIT KILL!
     const targetMaxHp = opponent.maxHp || 1000;
-    const dmg = Math.max(1, Math.round(targetMaxHp * this.chompDamagePercent));
+    const dmg = isMinion
+      ? Math.max(1, opponent.hp || opponent.maxHp || 999999)
+      : Math.max(1, Math.round(targetMaxHp * this.chompDamagePercent));
 
     // 2. Deliver damage (ghosted enemies cannot dodge: damage is delivered directly with bypass flags)
     if (typeof opponent.takeDamage === 'function') {
-      opponent.takeDamage(dmg, this, { isChomp: true, isMelee: true, bypassDodge: true, undodgeable: true, bypassEvade: true });
+      opponent.takeDamage(dmg, this, {
+        isChomp: true,
+        isMelee: true,
+        bypassDodge: true,
+        undodgeable: true,
+        bypassEvade: true,
+        isExecution: isMinion,
+      });
     } else {
       opponent.hp = Math.max(0, opponent.hp - dmg);
     }
 
-    // 3. Mark enemy as swallowed and position inside Pac-Man
+    // Minion 1-Hit Kill guarantee:
+    if (isMinion) {
+      opponent.hp = 0;
+      opponent.dead = true;
+      opponent.isDead = true;
+    }
+
+    // 3. Audio & Haptic Feedback
+    this._playSfx('eatGhost');
+    triggerGlobalScreenShake(isMinion ? 6.0 : 5.0, isMinion ? 16 : 14);
+    opponent.hitFlashTimer = 12;
+
+    // 4. Visual impact & floating combat text
+    spawnFloatingText(
+      this.x,
+      this.y - this.r - 20,
+      isMinion ? '1-HIT KILL!' : 'GHOST SWALLOWED!',
+      isMinion ? '#EF4444' : (cfg.themeColor || '#F2F000')
+    );
+
+    this.activeVisualEffects.push({
+      type: 'chompImpact',
+      x: this.x,
+      y: this.y,
+      angle: this.gunAngle || 0,
+      timer: 20,
+      maxTimer: 20,
+      radius: 60,
+    });
+
+    this.chompAttackCooldown = 45;
+    this._mouthAnimTicks += 28;
+
+    // 5. Handle immediate execution vs holding in belly
+    if (opponent.hp <= 0) {
+      opponent.isSwallowedByPacman = false;
+      opponent.swallowedBy = null;
+      opponent.isPacmanGhost = false;
+      opponent.pacmanGhostTimer = 0;
+
+      if (typeof opponent.onDeath === 'function') {
+        opponent.onDeath();
+      }
+      if (typeof opponent.checkRoundOrMatchEnd === 'function') {
+        opponent.checkRoundOrMatchEnd();
+      }
+      // If minion is in state.illusions, clean it up
+      if (typeof state !== 'undefined' && Array.isArray(state.illusions)) {
+        const illIdx = state.illusions.indexOf(opponent);
+        if (illIdx !== -1) {
+          state.illusions.splice(illIdx, 1);
+        }
+      }
+      // If plant/minion is in state.fighters, clean it up
+      if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+        const fIdx = state.fighters.indexOf(opponent);
+        if (fIdx !== -1 && (opponent.isPlant || opponent.isPlantMinion || opponent.isPlantBarrier || opponent.isWallnut || opponent.characterId === 'crazydave_plant' || opponent.isMinion || opponent.isAutonomousMinion)) {
+          state.fighters.splice(fIdx, 1);
+        }
+      }
+      if (!this.hasActiveGhostInArena()) {
+        this.cutoffGhostAudio();
+      }
+      return true;
+    }
+
+    // 6. Non-fatal swallow: hold enemy fighter in belly until Super Chomp Mode expires
     opponent.isSwallowedByPacman = true;
     opponent.swallowedBy = this;
     opponent.x = this.x;
@@ -689,26 +871,6 @@ export class PacmanFighter extends Fighter {
       this.cutoffGhostAudio();
     }
 
-    // 4. Audio & Haptic Feedback
-    this._playSfx('eatGhost');
-    triggerGlobalScreenShake(5.0, 14);
-    opponent.hitFlashTimer = 12;
-
-    // 5. Visual gulp impact & floating combat text
-    spawnFloatingText(this.x, this.y - this.r - 20, `GHOST SWALLOWED! (-${dmg})`, cfg.themeColor || '#F2F000');
-
-    this.activeVisualEffects.push({
-      type: 'chompImpact',
-      x: this.x,
-      y: this.y,
-      angle: this.gunAngle || 0,
-      timer: 20,
-      maxTimer: 20,
-      radius: 60,
-    });
-
-    this.chompAttackCooldown = 45;
-    this._mouthAnimTicks += 28;
     return true;
   }
 
@@ -746,11 +908,10 @@ export class PacmanFighter extends Fighter {
         enemy.takeDamage(dpsDmg, this, { isDigestion: true, isDamageOverTime: true });
       } else {
         enemy.hp = Math.max(0, enemy.hp - dpsDmg);
+        spawnFloatingText(this.x + (Math.random() * 20 - 10), this.y - this.r - 20, `-${dpsDmg}`, '#EF4444');
       }
 
       enemy.hitFlashTimer = 8;
-      // Floating digestion damage number above Pac-Man
-      spawnFloatingText(this.x + (Math.random() * 20 - 10), this.y - this.r - 20, `-${dpsDmg}`, '#EF4444');
 
       // Subtle digestion munch/spark VFX
       this.activeVisualEffects.push({
@@ -850,6 +1011,8 @@ export class PacmanFighter extends Fighter {
    */
   onCollide(other) {
     if (this.isChompModeActive && other && other.hp > 0) {
+      if (other.isLawnmower || other.type === 'Lawnmower' || other.characterId === 'crazydave_lawnmower') return;
+      if (typeof this.isTeammate === 'function' && this.isTeammate(other)) return;
       this._executeChompAttack(other);
     }
   }
@@ -931,10 +1094,70 @@ export class PacmanFighter extends Fighter {
           this.refillDots(activeArena);
         }
       } else {
-        // Contact check with all active enemy targets in the match
-        const targets = (typeof state !== 'undefined' && Array.isArray(state.fighters))
-          ? state.fighters.filter(f => f && f !== this && f.hp > 0 && !f.isSwallowedByPacman)
-          : (opponent && opponent.hp > 0 && !opponent.isSwallowedByPacman ? [opponent] : []);
+        const myTeam = (typeof state !== 'undefined' && state.fighters && typeof state.getFighterTeam === 'function')
+          ? state.getFighterTeam(state.fighters.indexOf(this))
+          : null;
+
+        // Ensure any newly spawned or living enemy minions in state.illusions are transformed into ghosts during active Chomp Mode
+        if (typeof state !== 'undefined' && Array.isArray(state.illusions)) {
+          for (let i = 0; i < state.illusions.length; i++) {
+            const ill = state.illusions[i];
+            if (!ill || ill.hp <= 0 || ill.dead || ill.isDead) continue;
+            if (ill.isPacmanGhost && (ill.pacmanGhostTimer || 0) > 0) continue;
+            if (this.isEligibleGhostTarget(ill)) {
+              const ownerTeam = (ill.owner && typeof state.getFighterTeam === 'function')
+                ? state.getFighterTeam(state.fighters.indexOf(ill.owner))
+                : ill.team;
+              if (myTeam !== null && ownerTeam !== null && ownerTeam === myTeam) continue;
+              if (typeof this.isTeammate === 'function' && this.isTeammate(ill)) continue;
+              ill.isPacmanGhost = true;
+              ill.pacmanGhostTimer = this.chompModeTimer;
+              ill.pacmanGhostMaxTimer = this.chompModeTimer;
+              if (typeof ill.interruptAttacks === 'function') ill.interruptAttacks(true);
+              if (ill.skillManager && typeof ill.skillManager.interruptAll === 'function') ill.skillManager.interruptAll(true);
+              spawnFloatingText(ill.x, ill.y - (ill.r || 12) - 15, 'GHOST TRANSFORM!', '#3B82F6');
+            }
+          }
+        }
+
+        // Ensure any newly spawned or living enemy plants/minions in state.fighters are also transformed during active Chomp Mode
+        if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+          for (let i = 0; i < state.fighters.length; i++) {
+            const f = state.fighters[i];
+            if (!f || f === this || f.hp <= 0 || f.dead || f.isDead || f.isSwallowedByPacman) continue;
+            if (f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0) continue;
+            if (this.isMinionEntity(f) && this.isEligibleGhostTarget(f)) {
+              const fTeam = (f.owner && typeof state.getFighterTeam === 'function')
+                ? state.getFighterTeam(state.fighters.indexOf(f.owner))
+                : ((typeof state.getFighterTeam === 'function') ? state.getFighterTeam(state.fighters.indexOf(f)) : f.team);
+              if (myTeam !== null && fTeam !== null && fTeam === myTeam) continue;
+              if (typeof this.isTeammate === 'function' && this.isTeammate(f)) continue;
+              f.isPacmanGhost = true;
+              f.pacmanGhostTimer = this.chompModeTimer;
+              f.pacmanGhostMaxTimer = this.chompModeTimer;
+              if (typeof f.interruptAttacks === 'function') f.interruptAttacks(true);
+              if (f.skillManager && typeof f.skillManager.interruptAll === 'function') f.skillManager.interruptAll(true);
+              spawnFloatingText(f.x, f.y - (f.r || 12) - 15, 'GHOST TRANSFORM!', '#3B82F6');
+            }
+          }
+        }
+
+        // Contact check with all active enemy targets in the match (fighters and minions/illusions)
+        const candidatePool = [
+          ...(Array.isArray(state?.fighters) ? state.fighters : []),
+          ...(Array.isArray(state?.illusions) ? state.illusions : [])
+        ];
+
+        const targets = candidatePool.filter((f) => {
+          if (!f || f === this || f.hp <= 0 || f.dead || f.isDead || f.isSwallowedByPacman) return false;
+          if (f.isLawnmower || f.type === 'Lawnmower' || f.characterId === 'crazydave_lawnmower') return false;
+          const fTeam = (f.owner && typeof state.getFighterTeam === 'function')
+            ? state.getFighterTeam(state.fighters.indexOf(f.owner))
+            : ((typeof state.getFighterTeam === 'function') ? state.getFighterTeam(state.fighters.indexOf(f)) : f.team);
+          if (myTeam !== null && fTeam !== null && fTeam === myTeam) return false;
+          if (typeof this.isTeammate === 'function' && this.isTeammate(f)) return false;
+          return true;
+        });
 
         for (const target of targets) {
           this._executeChompAttack(target);

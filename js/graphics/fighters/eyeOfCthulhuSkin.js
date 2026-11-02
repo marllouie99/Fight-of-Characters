@@ -5,6 +5,7 @@ import { state } from '../../core/state.js';
 import { FighterRenderer } from '../renderers/fighterRenderer.js';
 import { drawMinionHealthBar } from '../statusEffects.js';
 import { drawTerrariaEyeGore } from '../particles/deathShatterEffect.js';
+import { drawPacmanFrightenedGhost } from './pacmanSkin.js';
 
 let _phase1Image = null;
 let _phase2Image = null;
@@ -564,6 +565,12 @@ export function drawEyeOfCthulhuSkin(ctx, fighter) {
  */
 export function drawServantOfCthulhuMinion(ctx, minion) {
   if (!ctx || !minion) return;
+  // Pac-Man Frightened Ghost State Rendering:
+  // When transformed into a ghost by Pac-Man's Power Pellet, render the authentic blue arcade ghost!
+  if (minion.isPacmanGhost && (minion.pacmanGhostTimer || 0) > 0) {
+    drawPacmanFrightenedGhost(ctx, minion);
+    return;
+  }
   const r = minion.r || 10;
   const img = _getPhase1Image();
   const ticksPerFrame = 6;

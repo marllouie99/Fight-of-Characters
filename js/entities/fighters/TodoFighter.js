@@ -330,7 +330,7 @@ export class TodoFighter extends Fighter {
         const swappedRock = modCheckRockSwap.call(this);
         if (!swappedRock && !hasLiveTeammate(this) && this.cursedRocks.length === 0 && targets.length > 0) {
           const dist = Math.hypot(targets[0].x - this.x, targets[0].y - this.y);
-          if (dist > 150 && (this.boogieWoogieCooldown || 0) <= 0) {
+          if (dist > 60 && (this.boogieWoogieCooldown || 0) <= 0) {
             modUpdateBoogieWoogie.call(this, targets);
           }
         }
@@ -350,17 +350,20 @@ export class TodoFighter extends Fighter {
       } else {
         // Track and stay glued within strike range so intermediate knockback never cancels the combo!
         const distToTarget = Math.hypot(comboTarget.x - this.x, comboTarget.y - this.y);
-        const desiredDist = (this.r || 25) + (comboTarget.r || 25) + 20;
+        const desiredDist = (this.r || 25) + (comboTarget.r || 25) + 15;
         if (distToTarget > desiredDist) {
-          const moveSpeed = this.speed || 3.5;
+          const catchUpSpeed = Math.max((this.speed || 5.8) * 2.5, 12);
           const moveAngle = Math.atan2(comboTarget.y - this.y, comboTarget.x - this.x);
-          this.x += Math.cos(moveAngle) * Math.min(distToTarget - desiredDist, moveSpeed);
-          this.y += Math.sin(moveAngle) * Math.min(distToTarget - desiredDist, moveSpeed);
+          this.x += Math.cos(moveAngle) * Math.min(distToTarget - desiredDist, catchUpSpeed);
+          this.y += Math.sin(moveAngle) * Math.min(distToTarget - desiredDist, catchUpSpeed);
         }
         this.vx = 0;
         this.vy = 0;
         this.rockCounterComboTimer--;
         if (this.rockCounterComboTimer <= 0) {
+          const punchAngle = Math.atan2(comboTarget.y - this.y, comboTarget.x - this.x);
+          this.gunAngle = punchAngle;
+          this.angle = punchAngle;
           this.aim(comboTarget);
           modUpdateMeleeCombat.call(this, comboTarget, true); // isCombo = true
           this.rockCounterComboLeft--;
@@ -377,7 +380,19 @@ export class TodoFighter extends Fighter {
 
     // AI/Skill execution
     if (!this.playerControlled && targets.length > 0 && (this.rockCounterComboLeft || 0) <= 0) {
-      let target = targets[0];
+      // Find closest living enemy to Todo's current position
+      let target = null;
+      let minTargetDist = Infinity;
+      for (const cand of targets) {
+        if (!cand || cand.hp <= 0 || cand.isDead) continue;
+        const d = Math.hypot(cand.x - this.x, cand.y - this.y);
+        if (d < minTargetDist) {
+          minTargetDist = d;
+          target = cand;
+        }
+      }
+      if (!target && targets.length > 0) target = targets[0];
+
       if (target) {
         this.aim(target);
         
@@ -393,7 +408,8 @@ export class TodoFighter extends Fighter {
 
         // Melee Combat (Basic Attack Punch if naturally in range)
         const isTargetReforming = Boolean(target && (target.isRevivingFromContract || target.isShatterReviving));
-        const punchMaxRange = (this.r || 25) + (target.r || 25) + (CONFIG.todo?.punchRange || 60);
+        const punchReachBonus = (this.justSwappedTimer > 0 ? 25 : 0);
+        const punchMaxRange = (this.r || 25) + (target.r || 25) + (CONFIG.todo?.punchRange || 60) + punchReachBonus;
         if (dist <= punchMaxRange && !isTargetReforming && (this.cooldownTimer || 0) <= 0 && (this.rockCounterComboLeft || 0) <= 0) {
           this.aim(target);
           modUpdateMeleeCombat.call(this, target, false);
@@ -415,22 +431,24 @@ export class TodoFighter extends Fighter {
        for (let i = 0; i < state.fighters.length; i++) {
           const f = state.fighters[i];
           if (!f || f === this || f.hp <= 0 || f.isIllusion) continue;
-          if (state.getFighterTeam && state.getFighterTeam(state.fighters.indexOf(this)) === state.getFighterTeam(i)) continue;
+          if (typeof this.isTeammate === 'function' ? this.isTeammate(f) : false) continue;
           allTargets.push(f);
        }
     }
     if (state && state.illusions) {
        for (let ill of state.illusions) {
           if (!ill || ill === this || ill.hp <= 0) continue;
-          if (ill.ownerIndex !== undefined && state.getFighterTeam && state.getFighterTeam(state.fighters.indexOf(this)) === state.getFighterTeam(ill.ownerIndex)) continue;
+          if (typeof this.isTeammate === 'function' ? this.isTeammate(ill) : false) continue;
           allTargets.push(ill);
        }
     }
 
     // Find the closest valid target within punch range
+    const punchReachBonus = (this.justSwappedTimer > 0 ? 25 : 0);
+    const basePunchReach = (this.r || 25) + (CONFIG.todo?.punchRange || 60) + punchReachBonus;
     for (let target of allTargets) {
       const dist = Math.hypot(target.x - this.x, target.y - this.y);
-      const punchMaxRange = (this.r || 25) + (target.r || 25) + (CONFIG.todo?.punchRange || 60);
+      const punchMaxRange = basePunchReach + (target.r || 25);
       if (dist <= punchMaxRange && dist < closestDist) {
         closestDist = dist;
         bestTarget = target;

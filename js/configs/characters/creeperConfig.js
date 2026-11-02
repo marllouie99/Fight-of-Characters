@@ -13,7 +13,7 @@ export const creeperConfig = {
   description:
     'Iconic silent Minecraft stalker with no basic attack. His sole offensive mechanism is stalking opponents and self-detonating with a devastating white-flashing concussive blast (sacrificing HP per explosion), tossing bouncing TNT blocks, and channeling celestial lightning to awaken as Charged Creeper.',
 
-  // ── Base Stats (Rule 24 Universal Baseline Radius: 25) ──
+  // ── Base Stats (Custom Giant Body Scale: r=32) ──
   r: 32,
   radius: 32,
   hp: 380,

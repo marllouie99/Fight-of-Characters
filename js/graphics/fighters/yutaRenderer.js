@@ -10,6 +10,7 @@ import { fastCleanArray, pushTrailCap } from '../particles/visualTrailSystem.js'
 import { renderYutaDomainBackground } from '../../entities/fighters/yuta/yutaDomainVisuals.js';
 import { updateRika, hasDodgingMechanic } from '../../entities/fighters/yuta/rikaLogic.js';
 import { drawYutaGhostSkin } from './yutaSkin.js';
+import { drawPacmanFrightenedGhost } from './pacmanSkin.js';
 import { drawTargetChainsOverlay } from '../weapons/makimaWeaponGraphics.js';
 import { drawBurnEffect } from '../statusEffects.js';
 import { YutaBushEntrance } from '../../bosses/animations/YutaBushEntrance.js';
@@ -396,6 +397,10 @@ export class YutaRenderer {
   }
 
   static _drawRika(ctx, fighter, opponent, renderState = null) {
+    if (fighter.rika?.isPacmanGhost && (fighter.rika.pacmanGhostTimer || 0) > 0) {
+      drawPacmanFrightenedGhost(ctx, fighter.rika);
+      return;
+    }
     if (!fighter.rika) return;
 
     const rk = fighter.rika;
