@@ -33,18 +33,21 @@ export const chosoConfig = {
   desc: 'Eldest brother of the Cursed Womb: Death Paintings from Jujutsu Kaisen. Converts cursed energy into inexhaustible blood reserves, seeds the arena with poisonous blood droplets, and transmutates all blood particles into a deadly multi-angle piercing laser crossfire grid.',
 
   // Passive 1: Mugen Ketsuryū (Infinite Sanguine Reserves)
-  enableInfiniteBlood: 0,
+  enableInfiniteBlood: 1,
   maxBloodNodesInArena: 999, // No artificial 32 limit: converts all currently existing arena blood into beams
-  bloodNodeLifespanFrames: 720, // 12.0 seconds
+  bloodNodeLifespanFrames: 480, // ~8.0 seconds natural expiration lifespan
   bloodNodesPerDamageTakenMin: 2,
   bloodNodesPerDamageTakenMax: 4,
   bloodPoisonDurationFrames: 240, // 4.0 seconds
   bloodPoisonSlowPerStack: 0.05,  // 5% slow per stack
   bloodPoisonMaxStacks: 5,
   bloodPoisonTickDamage: 3,
+  // Sanguine Blood Resonance: Damage scales with active unexpired blood particles in arena
+  bloodDamageMultiplierPerNode: 0.04,  // +4% damage per unexpired blood particle in arena
+  maxBloodDamageMultiplier: 2.25,      // Capped at 2.25x max (+125% max damage bonus)
 
   // Passive 2: Flowing Red Scale: Stack (Sekirin Ketsurui: Chō)
-  enableFlowingRedScale: 0,
+  enableFlowingRedScale: 1,
   redScaleHpThreshold: 0.60,      // Below 60% HP
   redScaleSpeedMultiplier: 1.25,  // +25% movement speed
   redScaleDropMultiplier: 2,      // 2x blood droplet spawning rate
@@ -59,14 +62,14 @@ export const chosoConfig = {
   hitLockFrames: 6, // Mandatory Impact Lock / Latch Phase
   hitRecoveryFrames: 10,
   meleeDamageCombo: [22, 26, 34],
-  enableBloodDarts: 0,           // Only engage in melee combos; do not shoot blood darts at range without blood
+  enableBloodDarts: 1,           // Retaliates with Sanguine Darts from blood particles
   rangedDartDamage: 18,
   rangedDartSpeed: 15,
   dartDropletsOnHit: 1,
   comboDropletsOnFinisher: 3,
 
   // Skill 1: Slicing Exorcist / Blood Chakram (Karisō)
-  enableChakram: 0,
+  enableChakram: 1,
   skill1Cooldown: 360,           // 6.0s (360 frames)
   chakramDamage: 36,
   chakramSpeed: 11,
@@ -75,7 +78,7 @@ export const chosoConfig = {
   chakramDropInterval: 6,        // Emits a droplet every 6 frames
 
   // Skill 2: Supernova (Chōshinsei)
-  enableSupernova: 0,
+  enableSupernova: 1,
   skill2Cooldown: 540,           // 9.0s (540 frames)
   supernovaOrbCount: 8,
   supernovaPelletCount: 12,
@@ -103,7 +106,7 @@ export const chosoConfig = {
   overdriveMicroLaserDamage: 8,
 
   // Skill 3: Piercing Blood (Teisō / Fuga)
-  enablePiercingBlood: 0,    // Disabled by default so Choso does not fire blood streams when there are 0 blood particles
+  enablePiercingBlood: 1,
   enableUltimate: true,
   piercingBloodCooldown: 900,    // 15.0s (900 frames)
   ultChargeFrames: 30,           // Clasp compression phase

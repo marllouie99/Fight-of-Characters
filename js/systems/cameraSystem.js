@@ -32,6 +32,7 @@ export function initCameraState() {
     targetX: centerX,
     targetY: centerY,
     targetZoom: 1.0,
+    userZoom: 1.0,
     shakeX: 0,
     shakeY: 0,
     smoothing: CONFIG.camera?.smoothing ?? 0.085,
@@ -153,6 +154,48 @@ export function setCameraMode(mode) {
     btn.innerText = (state.camera.mode === 'dynamic') ? 'ON' : 'OFF';
   }
   import('../graphics/hudManager.js').then(m => m.clearHealthHud && m.clearHealthHud()).catch(() => {});
+}
+
+/**
+ * Zooms in the in-game combat camera closer to fighters and arena.
+ * @param {number} [step=0.10]
+ * @returns {number} New userZoom multiplier
+ */
+export function zoomInCamera(step = 0.10) {
+  if (!state.camera) state.camera = initCameraState();
+  const current = state.camera.userZoom || 1.0;
+  const next = Math.max(0.40, Math.min(2.50, Math.round((current + step) * 100) / 100));
+  state.camera.userZoom = next;
+  state.camera.toastText = `📷 Camera Zoom: ${Math.round(next * 100)}%`;
+  state.camera.toastTimer = 60;
+  return next;
+}
+
+/**
+ * Zooms out the in-game combat camera for a wider view.
+ * @param {number} [step=0.10]
+ * @returns {number} New userZoom multiplier
+ */
+export function zoomOutCamera(step = 0.10) {
+  if (!state.camera) state.camera = initCameraState();
+  const current = state.camera.userZoom || 1.0;
+  const next = Math.max(0.40, Math.min(2.50, Math.round((current - step) * 100) / 100));
+  state.camera.userZoom = next;
+  state.camera.toastText = `📷 Camera Zoom: ${Math.round(next * 100)}%`;
+  state.camera.toastTimer = 60;
+  return next;
+}
+
+/**
+ * Resets in-game combat camera zoom back to 100% default.
+ * @returns {number} 1.0
+ */
+export function resetCameraZoom() {
+  if (!state.camera) state.camera = initCameraState();
+  state.camera.userZoom = 1.0;
+  state.camera.toastText = '📷 Camera Zoom: 100% (Default)';
+  state.camera.toastTimer = 60;
+  return 1.0;
 }
 
 export function updateCamera() {
@@ -636,6 +679,10 @@ export function updateCamera() {
     const catchup = Math.min(0.55, (camDist / 180) * 0.35);
     posSmoothing = Math.min(0.85, baseSmoothing + catchup);
   }
+
+  // Apply manual user zoom factor (0.4x - 2.5x)
+  const userZ = (camera && Number.isFinite(camera.userZoom) && camera.userZoom > 0) ? camera.userZoom : 1.0;
+  camera.targetZoom *= userZ;
 
   // Defensive fallback against NaN in camera positions
   if (!Number.isFinite(camera.targetX)) camera.targetX = arenaCenterX;

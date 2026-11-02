@@ -200,6 +200,50 @@
         }
       }
     },
+    "goku": {
+      "name": "Son Goku",
+      "archetype": "brawler",
+      "hp": 380,
+      "speed": 5.6,
+      "radius": 25,
+      "baseDamage": 28,
+      "baseCooldown": 40,
+      "themeColor": "#FF7A00",
+      "keySkills": {
+        "kamehameha": {
+          "damage": 170,
+          "knockback": 25
+        },
+        "dragonHammer": {
+          "damage": 66
+        },
+        "kaiokenStrike": {
+          "damage": 45
+        }
+      }
+    },
+    "vegeta": {
+      "name": "Vegeta",
+      "archetype": "brawler",
+      "hp": 390,
+      "speed": 5.4,
+      "radius": 25,
+      "baseDamage": 30,
+      "baseCooldown": 42,
+      "themeColor": "#1565C0",
+      "keySkills": {
+        "finalFlash": {
+          "damage": 204,
+          "knockback": 28
+        },
+        "bigBang": {
+          "damage": 52
+        },
+        "galickGun": {
+          "damage": 55
+        }
+      }
+    },
     "genos": {
       "name": "Genos",
       "archetype": "zoner",

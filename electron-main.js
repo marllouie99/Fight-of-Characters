@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, session } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, session, screen } from 'electron';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -235,6 +235,12 @@ ipcMain.handle('save-weapon-database', async (event, { codeContent }) => {
 
 // Dynamic Desktop Window Resizing IPC Handlers (Vertical 9:16 <-> Horizontal 16:9)
 let currentWindowOrientation = 'vertical';
+
+function getBaseDimensions() {
+  const isHorizontal = (currentWindowOrientation === 'horizontal');
+  return isHorizontal ? { width: 960, height: 540 } : { width: 540, height: 960 };
+}
+
 ipcMain.handle('set-window-orientation', async (event, orientation) => {
   currentWindowOrientation = (orientation === 'horizontal') ? 'horizontal' : 'vertical';
   try {
@@ -249,7 +255,7 @@ ipcMain.handle('set-window-orientation', async (event, orientation) => {
       win.setContentSize(540, 960);
     }
     win.center();
-    win.setResizable(false);
+    // win.setResizable(false);
     return true;
   } catch (err) {
     console.error('Error in set-window-orientation IPC:', err);
@@ -266,7 +272,7 @@ ipcMain.handle('set-window-size', async (event, { width, height, center = true }
     win.setResizable(true);
     win.setContentSize(width, height);
     if (center) win.center();
-    win.setResizable(false);
+    // win.setResizable(false);
     return true;
   } catch (err) {
     console.error('Error in set-window-size IPC:', err);
@@ -323,7 +329,11 @@ function createWindow () {
     width: 540,
     height: 960,
     useContentSize: true, // Ensures web content viewport is exactly 540x960px
-    resizable: false,
+    minWidth: 320,
+    minHeight: 480,
+    resizable: true, // Allow user to freely drag & resize window
+    thickFrame: true, // Preserves native border resizing & aero shadows on Windows frameless window
+    hasShadow: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -333,20 +343,44 @@ function createWindow () {
     autoHideMenuBar: true
   });
   win.webContents.session.clearCache();
+
+  // Track window resizing to keep currentZoomFactor in sync with manual drags
+  win.on('resize', () => {
+    if (!win.isFullScreen()) {
+      const [w, h] = win.getContentSize();
+      const base = getBaseDimensions();
+      // Track resize
+    }
+  });
   // win.setAspectRatio(9 / 16); // Removed to allow black bars (letterboxing) on taller window sizes
   
   // Intercept reload shortcuts to perform a clean relaunch of the process.
   // This prevents OBS from losing the WebGL/GPU hook and falling back to a blurry GDI capture.
-  win.webContents.on('before-input-event', (event, input) => {
+    win.webContents.on('before-input-event', (event, input) => {
     if (input.type === 'keyDown') {
-      const isR = input.key.toLowerCase() === 'r';
-      const isF5 = input.key === 'F5';
-      if (isF5 || (input.control && isR) || (input.meta && isR)) {
+      const isCtrl = input.control || input.meta;
+
+      // F10: Toggle 1X (native) <-> Fit-to-Screen-Height windowed size
+      if (input.key === 'F10') {
         event.preventDefault();
-        session.defaultSession.clearCache().finally(() => {
-          app.relaunch();
-          app.exit(0);
-        });
+        if (win.isFullScreen()) {
+          win.setFullScreen(false);
+        }
+        const [width, height] = win.getContentSize();
+        const base = getBaseDimensions();
+        const display = screen.getDisplayMatching(win.getBounds());
+        const workArea = display.workAreaSize || { width: 1920, height: 1080 };
+
+        const isNearBase = Math.abs(width - base.width) < 20 && Math.abs(height - base.height) < 20;
+        if (isNearBase) {
+          const maxScaleH = (workArea.height - 30) / base.height;
+          const maxScaleW = (workArea.width - 30) / base.width;
+          const fitFactor = Math.min(maxScaleH, maxScaleW);
+          win.setContentSize(Math.round(base.width * fitFactor), Math.round(base.height * fitFactor)); win.center();
+        } else {
+          win.setContentSize(base.width, base.height); win.center();
+        }
+        return;
       }
 
       // F11 or Alt+Enter: Toggle standard Fullscreen
@@ -355,36 +389,19 @@ function createWindow () {
         const isFullScreen = win.isFullScreen();
         win.setResizable(true);
         win.setFullScreen(!isFullScreen);
-        if (isFullScreen) {
-          win.setResizable(false);
-        }
+        return;
       }
 
-      // F10: Toggle 1X <-> 2X windowed size (centered)
-      if (input.key === 'F10') {
+      // Reload
+      const isR = input.key.toLowerCase() === 'r';
+      const isF5 = input.key === 'F5';
+      if (isF5 || (input.control && isR) || (input.meta && isR)) {
         event.preventDefault();
-        if (win.isFullScreen()) {
-          win.setFullScreen(false);
-        }
-        const [width, height] = win.getContentSize();
-        win.setResizable(true);
-        const isHorizontal = currentWindowOrientation === 'horizontal';
-        if (isHorizontal) {
-          if (Math.abs(width - 1920) < 10 && Math.abs(height - 1080) < 10) {
-            win.setContentSize(960, 540);
-          } else {
-            win.setContentSize(1920, 1080);
-          }
-        } else {
-          // Vertical: original behavior (1920x1080 letterboxed <-> native 540x960)
-          if (Math.abs(width - 1920) < 10 && Math.abs(height - 1080) < 10) {
-            win.setContentSize(540, 960);
-          } else {
-            win.setContentSize(1920, 1080);
-          }
-        }
-        win.center();
-        win.setResizable(false);
+        session.defaultSession.clearCache().finally(() => {
+          app.relaunch();
+          app.exit(0);
+        });
+        return;
       }
     }
   });

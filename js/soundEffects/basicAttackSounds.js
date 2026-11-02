@@ -621,6 +621,18 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
     volume: 2.8,
     delay: 0,
   },
+  // Goku — Turtle School CQC & Ki Blast Barrage
+  'goku': {
+    src: 'Assets/Sound Effects/Attacks/punch.mp3',
+    volume: 0.85,
+    delay: 0,
+  },
+  // Vegeta — Royal Saiyan Beatdown & Rapid Ki Volley
+  'vegeta': {
+    src: 'Assets/Sound Effects/Attacks/punch.mp3',
+    volume: 0.85,
+    delay: 0,
+  },
   'saitama_punch': {
     src: 'Assets/Sound Effects/Attacks/punch.mp3',
     volume: 2.8,

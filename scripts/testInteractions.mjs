@@ -8999,6 +8999,260 @@ async function runInteractionTests() {
     assert(choso.bloodNodes.length >= 14, 'Blood droplet nodes must remain alive as laser emitter squares during discharge');
     assert(choso.bloodNodes.every(n => n.dischargeTimer > 0), 'Nodes must have active dischargeTimer during laser blast');
 
+    // Frame 4: After laser discharge completes, all used blood particles are cleanly cleared up!
+    while (choso.bloodNodes.some(n => n.dischargeTimer > 0)) {
+      choso._updateVisualEffects();
+    }
+    assert(choso.bloodNodes.length === 0, 'All blood particles used by Laser Matrix must be cleared up after discharge completes');
+    assert(choso._getActiveBloodCount() === 0, 'Active blood count must be 0 after used particles are cleared up');
+
+    // 11. Verify On-Hit Piercing Blood Retaliation (Blood particle is the source of the beam)
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    dummy.hp = 300;
+    dummy.isDead = false;
+    choso.ultCooldown = 999; // Ult on cooldown
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 0; // Skill 3 ready
+    choso.takeDamage(20, dummy, { hitType: 'punch' });
+    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Piercing Blood retaliation');
+    assert(choso.isChargingPiercingBlood === true, 'Hit when Piercing Blood ready must trigger Piercing Blood retaliation');
+    assert(choso.piercingBloodSource !== null, 'Piercing Blood must have a designated blood particle source');
+    assert(typeof choso.piercingBloodSource.x === 'number', 'Piercing Blood source must have X coordinate from blood droplet');
+    assert(choso.piercingBloodCooldown > 0, 'Piercing Blood cooldown must be consumed');
+
+    // Verify used source blood particle is cleared up when Piercing Blood completes
+    const pbSourceNode = choso.piercingBloodSource.node;
+    assert(pbSourceNode !== null, 'Piercing Blood source node must exist');
+    choso.piercingBloodTimer = 1;
+    choso.update(dummy, 0, state.arena); // Transition from charging to firing
+    choso.piercingBloodTimer = 1;
+    choso.update(dummy, 0, state.arena); // Beam discharge finishes
+    assert(choso.bloodNodes.includes(pbSourceNode) === false, 'Source blood particle used by Piercing Blood must be cleared up after beam completes');
+
+    // 12. Verify On-Hit Supernova Retaliation (Blood particles are the source of detonation)
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    dummy.hp = 300;
+    dummy.isDead = false;
+    state.gameState = 'playing';
+    choso.ultCooldown = 999;
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 999;
+    choso.skill2Cooldown = 0; // Supernova ready
+    choso.takeDamage(20, dummy, { hitType: 'punch' });
+    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Supernova retaliation');
+    assert(choso.isChargingSupernova === true, 'Hit when Supernova ready must trigger Supernova retaliation');
+    assert(choso.supernovaSources.length > 0, 'Supernova sources must be populated from spawned blood particles');
+    assert(choso.skill2Cooldown > 0, 'Supernova cooldown must be consumed');
+
+    // Verify all source blood particles used by Supernova are cleared up upon detonation
+    const novaSources = [...choso.supernovaSources];
+    choso.supernovaTimer = 0;
+    choso.update(dummy, 0, state.arena); // Detonates
+    for (const src of novaSources) {
+      assert(choso.bloodNodes.includes(src) === false, 'All source blood particles used by Supernova must be cleared up upon detonation');
+    }
+
+    // 13. Verify On-Hit Slicing Exorcist (Chakram) Retaliation (Blood particle is the source of chakram)
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    dummy.hp = 300;
+    dummy.isDead = false;
+    state.gameState = 'playing';
+    choso.ultCooldown = 999;
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 999;
+    choso.skill2Cooldown = 999;
+    choso.skill1Cooldown = 0; // Chakram ready
+    choso.takeDamage(20, dummy, { hitType: 'punch' });
+    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Chakram retaliation');
+    assert(choso.chakrams.length > 0, 'Hit when Chakram ready must trigger Chakram retaliation');
+    assert(choso.skill1Cooldown > 0, 'Chakram cooldown must be consumed');
+    const chakramSourceId = choso.chakrams[0].sourceNodeId;
+    if (chakramSourceId) {
+      assert(choso.bloodNodes.every(n => n.id !== chakramSourceId), 'Blood particle used to form Chakram must be cleared up');
+    }
+
+    // 14. Verify On-Hit Sanguine Darts Retaliation (Blood particles shoot darts)
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    choso.activeLaserBeams.length = 0;
+    dummy.hp = 300;
+    dummy.isDead = false;
+    state.gameState = 'playing';
+    choso.ultCooldown = 999;
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 999;
+    choso.skill2Cooldown = 999;
+    choso.skill1Cooldown = 999;
+    choso.basicAttackCooldown = 0; // Basic attack ready
+    choso.takeDamage(20, dummy, { hitType: 'punch' });
+    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Sanguine Darts retaliation');
+    assert(choso.activeLaserBeams.length >= 4, 'Spawned blood particles must each fire a Sanguine Dart at the attacker');
+    assert(choso.basicAttackCooldown > 0, 'Basic attack cooldown must be consumed');
+
+    // Verify all blood particles used as Sanguine Darts are cleared up after firing completes
+    while (choso.bloodNodes.some(n => n.dischargeTimer > 0)) {
+      choso._updateVisualEffects();
+    }
+    assert(choso.bloodNodes.length === 0, 'All blood particles used as Sanguine Darts must be cleared up after firing completes');
+    assert(choso.basicAttackCooldown > 0, 'Basic attack cooldown must be consumed');
+
+    // 15. Verify Natural Blood Expiration & Unexpired Blood Damage Scaling
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    assert(choso.getBloodDamageMultiplier() === 1.0, 'Damage multiplier must be 1.0 with 0 unexpired blood particles');
+
+    // Seed 10 unexpired blood nodes
+    for (let i = 0; i < 10; i++) {
+      choso.spawnBloodNode(200 + i * 5, 250);
+    }
+    const countWith10 = choso._getActiveBloodCount();
+    assert(countWith10 === 10, 'Must have 10 unexpired blood particles');
+    const multWith10 = choso.getBloodDamageMultiplier();
+    assert(multWith10 > 1.30, `With 10 unexpired blood particles, damage multiplier must scale above 1.30 (got ${multWith10.toFixed(2)})`);
+
+    // Verify Piercing Blood deals more damage with 10 unexpired blood particles
+    choso.ultCooldown = 999;
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 0;
+    dummy.hp = 500;
+    dummy.maxHp = 500;
+    dummy.isDead = false;
+    state.gameState = 'playing';
+    choso._startPiercingBlood(dummy);
+    choso.piercingBloodTimer = 1;
+    choso.update(dummy, 0, state.arena); // Transition to firing and deals damage
+    const damageWithBlood = 500 - dummy.hp;
+    const basePbDmg = CONFIG.choso.ultBeamDamage || 125;
+    assert(damageWithBlood > basePbDmg, `Piercing Blood must deal amplified damage with 10 unexpired blood nodes (dealt ${damageWithBlood} vs base ${basePbDmg})`);
+
+    // Verify blood particles expire naturally when their lifespan lapses
+    choso.interruptAttacks(true);
+    if (state.bloodEffects) {
+      state.bloodEffects.length = 0;
+    }
+    for (let i = 0; i < choso.bloodNodes.length; i++) {
+      choso.bloodNodes[i].lifespan = 0;
+      if (choso.bloodNodes[i].particleRef) choso.bloodNodes[i].particleRef.life = 0;
+    }
+    // Update visual effects to process natural expiration
+    choso._updateVisualEffects();
+    assert(choso.getBloodDamageMultiplier() === 1.0, 'Multiplier must gracefully return to 1.0 after all blood particles expire naturally');
+
+    // 16. Verify Choso Smooth Windup & Hand Animation Kinematics (Rule 20 & Rule 30)
+    const { drawChosoSkin } = await import('../js/graphics/fighters/chosoSkin.js');
+    const chosoMockCtx = createMockCtx();
+
+    // A. Idle state (canonical default flanks)
+    choso.interruptAttacks(true);
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin in idle state must maintain 0 Canvas 2D stack depth');
+
+    // B. Convergence Retaliation Spray Lift
+    choso.isRetaliationSpraying = true;
+    choso.retaliationSprayTimer = 4;
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin during Convergence spray lift must maintain 0 Canvas 2D stack depth');
+
+    // C. Convergence Inward Prayer Clasp Windup
+    choso.isRetaliationSpraying = false;
+    choso.isCastingLaserMatrix = true;
+    choso.laserMatrixTimer = 10;
+    choso.laserMatrixCastMax = 16;
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin during Convergence prayer windup must maintain 0 Canvas 2D stack depth');
+
+    // D. Convergence Diode Telegraph Hold & Singularity Compression
+    choso.laserMatrixTimer = 0;
+    choso.laserTelegraphTimer = 8;
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin during Convergence diode hold must maintain 0 Canvas 2D stack depth');
+
+    // E. Convergence Post-Discharge Recovery
+    choso.isCastingLaserMatrix = false;
+    choso.convergenceRecoveryTimer = 8;
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin during Convergence recovery must maintain 0 Canvas 2D stack depth');
+    choso.convergenceRecoveryTimer = 0;
+
+    // F. Piercing Blood Charging & Aperture Nozzle Windup
+    choso.isChargingPiercingBlood = true;
+    choso.piercingBloodChargeMax = 30;
+    for (const timer of [28, 15, 3]) {
+      choso.piercingBloodTimer = timer;
+      chosoMockCtx.resetStackDepth();
+      drawChosoSkin(chosoMockCtx, choso);
+      assert(chosoMockCtx.getStackDepth() === 0, `drawChosoSkin during Piercing Blood charge (timer=${timer}) must maintain 0 Canvas 2D stack depth`);
+    }
+
+    // G. Piercing Blood Supersonic Discharge & Hypersonic Recoil Kickback
+    choso.isChargingPiercingBlood = false;
+    choso.isFiringPiercingBlood = true;
+    choso.piercingBloodBeamMax = 36;
+    for (const timer of [34, 20, 4]) {
+      choso.piercingBloodTimer = timer;
+      chosoMockCtx.resetStackDepth();
+      drawChosoSkin(chosoMockCtx, choso);
+      assert(chosoMockCtx.getStackDepth() === 0, `drawChosoSkin during Piercing Blood fire & recoil (timer=${timer}) must maintain 0 Canvas 2D stack depth`);
+    }
+    choso.isFiringPiercingBlood = false;
+
+    // H. Supernova Commanding Gravitational Hold Windup
+    choso.isChargingSupernova = true;
+    choso.supernovaWindupMax = 24;
+    choso.supernovaTimer = 16;
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin during Supernova windup must maintain 0 Canvas 2D stack depth');
+
+    // I. Supernova Concussive Detonation Snap & Settle
+    choso.isChargingSupernova = false;
+    choso.supernovaDetonationTimer = 10;
+    chosoMockCtx.resetStackDepth();
+    drawChosoSkin(chosoMockCtx, choso);
+    assert(chosoMockCtx.getStackDepth() === 0, 'drawChosoSkin during Supernova detonation snap must maintain 0 Canvas 2D stack depth');
+    choso.supernovaDetonationTimer = 0;
+
+    // J. Slicing Exorcist (Chakram) Asymmetrical Coiling Windup, Whip Throw & Settle
+    for (const timer of [14, 8, 3]) {
+      choso.chakramThrowTimer = timer;
+      chosoMockCtx.resetStackDepth();
+      drawChosoSkin(chosoMockCtx, choso);
+      assert(chosoMockCtx.getStackDepth() === 0, `drawChosoSkin during Chakram throw (timer=${timer}) must maintain 0 Canvas 2D stack depth`);
+    }
+    choso.chakramThrowTimer = 0;
+
+    // K. Sanguine Darts Needle Coil, Forward Flick & Spring Settle
+    for (const timer of [10, 6, 2]) {
+      choso.dartThrowTimer = timer;
+      chosoMockCtx.resetStackDepth();
+      drawChosoSkin(chosoMockCtx, choso);
+      assert(chosoMockCtx.getStackDepth() === 0, `drawChosoSkin during Darts throw (timer=${timer}) must maintain 0 Canvas 2D stack depth`);
+    }
+    choso.dartThrowTimer = 0;
+
+    // L. Blood Edge Melee 5-Phase Cleave (Lift, Hold, Whip Strike, Impact Lock, Recovery) with Coagulated Blood Dagger
+    choso.slashSwingMax = 36;
+    for (const timer of [32, 25, 18, 12, 4]) {
+      choso.slashSwingTimer = timer;
+      chosoMockCtx.resetStackDepth();
+      drawChosoSkin(chosoMockCtx, choso);
+      assert(chosoMockCtx.getStackDepth() === 0, `drawChosoSkin during Blood Edge melee (timer=${timer}) must maintain 0 Canvas 2D stack depth`);
+    }
+    choso.slashSwingTimer = 0;
+
     console.log('      ✅ Choso Infinite Blood Generation, Laser Transmutation Matrix & Piercing Blood verified successfully.');
     state.fighters = [];
   }
@@ -15272,6 +15526,190 @@ async function runInteractionTests() {
     state.illusions = [];
     state.gameState = 'playing';
     console.log('      ✅ Dynamic camera tracking focus on Sukuna minion Mahoraga & opponent verified successfully.');
+  }
+
+  // ── TEST 119: Goku & Vegeta CQC Vanish Slip & Instant Melee Counter-Attack ──
+  console.log('🧪 Test 119: Goku & Vegeta CQC Vanish Slip & Instant Melee Counter-Attack...');
+  {
+    const GokuClass = FIGHTER_CLASS_MAP.goku;
+    const VegetaClass = FIGHTER_CLASS_MAP.vegeta;
+    assert(GokuClass, 'Goku class must be registered in FIGHTER_CLASS_MAP');
+    assert(VegetaClass, 'Vegeta class must be registered in FIGHTER_CLASS_MAP');
+
+    const goku = new GokuClass({ radius: 25, x: 200, y: 300, hp: 500, maxHp: 500, color: '#FF9800' });
+    const vegeta = new VegetaClass({ radius: 25, x: 250, y: 300, hp: 500, maxHp: 500, color: '#00E5FF' });
+    goku._cfg.dodgeChance = 1.0; // Deterministic 100% dodge chance for unit test
+    vegeta._cfg.dodgeChance = 1.0;
+    goku.team = 0;
+    vegeta.team = 1;
+    state.fighters = [goku, vegeta];
+    state.mode = '1v1';
+    state.gameState = 'playing';
+    const testArena = state.arena || { x: 45, y: 240, width: 450, height: 450, wallWidth: 4 };
+    state.arena = testArena;
+
+    // 1. Goku CQC Vanish Slip during Melee Mode
+    goku.basicComboPhase = 2;
+    goku.meleeHitIndex = 0;
+    goku.meleePunchCooldown = 12; // Waiting on cadence
+    goku.dodgeCooldown = 0;
+
+    const gokuInitialHp = goku.hp;
+    const dodgeResult = goku.takeDamage(30, vegeta, { isMelee: true });
+
+    assert(dodgeResult === false, 'Goku must autonomously dodge incoming attack during Melee Mode');
+    assert(goku.hp === gokuInitialHp, 'Goku HP must not decrease when CQC vanish slip triggers');
+
+    const distAfterDodge = Math.hypot(goku.x - vegeta.x, goku.y - vegeta.y);
+    assert(distAfterDodge <= 75, `Goku CQC vanish must anchor within striking reach (~68px), got ${distAfterDodge}`);
+    assert(goku.basicComboPhase === 2, 'Goku must remain in Melee Mode (Phase 2) after CQC vanish');
+    assert(goku.meleePunchCooldown === 0, 'Goku melee punch cooldown must immediately reset to 0 to enable instant counter-strike');
+    assert(vegeta.teleportChaseDelayTimer >= 5, `Attacker must incur a whiff delay (>= 5 frames), got ${vegeta.teleportChaseDelayTimer}`);
+
+    // Verify Goku immediately delivers counter-strike on next update frame
+    vegeta.dodgeCooldown = 999; // Prevent Vegeta from dodging the verification strike
+    const vegetaHpBeforeCounter = vegeta.hp;
+    goku.update(vegeta, 0, testArena);
+    assert(goku.meleePunchCooldown > 0, 'Goku must have executed counter-strike and initiated punch cadence cooldown');
+    assert(vegeta.hp < vegetaHpBeforeCounter || vegeta.armorShield < 50, 'Vegeta must take damage or shield loss from Goku counter-strike');
+
+    // 2. Vegeta CQC Vanish Slip during Melee Mode
+    vegeta.timeStopTimer = 0; // Clear hit pause from previous verification strike
+    vegeta.basicComboPhase = 2;
+    vegeta.meleeHitIndex = 1;
+    vegeta.meleePunchCooldown = 14;
+    vegeta.dodgeCooldown = 0;
+
+    const vegetaHpBefore = vegeta.hp;
+    const vegDodgeResult = vegeta.takeDamage(30, goku, { isMelee: true });
+
+    assert(vegDodgeResult === false, 'Vegeta must autonomously dodge incoming attack during Melee Mode');
+    assert(vegeta.hp === vegetaHpBefore, 'Vegeta HP must not decrease when CQC vanish slip triggers');
+
+    const vegDistAfterDodge = Math.hypot(vegeta.x - goku.x, vegeta.y - goku.y);
+    assert(vegDistAfterDodge <= 75, `Vegeta CQC vanish must anchor within striking reach (~68px), got ${vegDistAfterDodge}`);
+    assert(vegeta.basicComboPhase === 2, 'Vegeta must remain in Melee Mode (Phase 2) after CQC vanish');
+    assert(vegeta.meleePunchCooldown === 0, 'Vegeta melee punch cooldown must immediately reset to 0 for instant counter');
+    assert(goku.teleportChaseDelayTimer >= 5, 'Goku must incur a whiff delay when Vegeta slips');
+
+    // Verify Vegeta immediately delivers counter-strike on next update frame
+    goku.dodgeCooldown = 999; // Prevent Goku from dodging the verification strike
+    const gokuHpBeforeCounter = goku.hp;
+    vegeta.update(goku, 1, testArena);
+    assert(vegeta.meleePunchCooldown > 0, 'Vegeta must have executed counter-strike and initiated punch cadence cooldown');
+    assert(goku.hp < gokuHpBeforeCounter, 'Goku must take damage from Vegeta counter-strike');
+
+    // Clean up
+    state.fighters = [];
+    console.log('      ✅ Goku & Vegeta CQC vanish slip, flank re-anchor, whiff delay & instant melee counter-attack verified.');
+  }
+
+  // ── TEST 120: Goku & Vegeta 120-Frame Melee Mode Duration, Multi-Strike Flurry, Finisher Slam & Follow-Up Ki Barrage ──
+  console.log('🧪 Test 120: Goku & Vegeta 120-Frame Melee Mode Duration, Multi-Strike Flurry, Finisher Slam & Ki Barrage...');
+  {
+    const GokuClass = FIGHTER_CLASS_MAP.goku;
+    const VegetaClass = FIGHTER_CLASS_MAP.vegeta;
+    assert(GokuClass, 'Goku class must be registered in FIGHTER_CLASS_MAP');
+    assert(VegetaClass, 'Vegeta class must be registered in FIGHTER_CLASS_MAP');
+
+    const testArena = state.arena || { x: 45, y: 240, width: 450, height: 450, wallWidth: 4 };
+    state.arena = testArena;
+    state.gameState = 'playing';
+
+    // ── 1. Goku 120-Frame Melee Mode Duration & Multi-Angle Flurry ──
+    const goku = new GokuClass({ radius: 25, x: 200, y: 465, hp: 500, maxHp: 500, color: '#FF9800' });
+    const dummy = new VegetaClass({ radius: 25, x: 260, y: 465, hp: 1000, maxHp: 1000, color: '#00E5FF' });
+    dummy._cfg.enableDodge = false; // Disable dummy dodge for deterministic combo tracking
+    dummy._cfg.enableBasicMelee = false;
+    goku._cfg.enableDodge = false;
+    goku.team = 0;
+    dummy.team = 1;
+    state.fighters = [goku, dummy];
+
+    // Initiate Step-In
+    goku.basicComboPhase = 0;
+    goku.basicAttackCooldownTimer = 0;
+    goku.update(dummy, 0, testArena);
+    assert(goku.basicComboPhase === 1, 'Goku must transition to Phase 1 (Step-In) when within gap close reach');
+
+    // Step-In executes
+    goku.update(dummy, 0, testArena);
+    assert(goku.basicComboPhase === 2, 'Goku must transition to Phase 2 (CQC Melee Mode Flurry)');
+    assert(goku.meleeModeDurationTimer === 120, `Goku meleeModeDurationTimer must be initialized to 120 frames, got ${goku.meleeModeDurationTimer}`);
+    assert(goku.meleePunchCooldown === 0, 'Goku meleePunchCooldown must be ready (0) at flurry start');
+
+    // Simulate 50 frames of active CQC brawling
+    for (let f = 0; f < 50; f++) {
+      dummy.timeStopTimer = 0; // Clear hit pause so dummy can be tracked
+      goku.update(dummy, 0, testArena);
+      assert(goku.basicComboPhase === 2, `Goku must remain in Melee Mode (Phase 2) during duration (frame ${f})`);
+      const dist = Math.hypot(goku.x - dummy.x, goku.y - dummy.y);
+      assert(dist <= 85, `Goku must stay anchored within CQC striking distance during Melee Mode, got ${dist}`);
+    }
+
+    assert(goku.meleeHitIndex >= 3, `Goku must have executed multiple combo strikes during 50 frames, got ${goku.meleeHitIndex}`);
+    assert(goku.meleeModeDurationTimer <= 70, `Goku meleeModeDurationTimer must have decremented, got ${goku.meleeModeDurationTimer}`);
+
+    // Fast-forward duration to 0 and punch cadence to ready
+    goku.meleeModeDurationTimer = 0;
+    goku.meleePunchCooldown = 0;
+    dummy.timeStopTimer = 0;
+    dummy.isWallRicochet = false;
+
+    // Next strike must be the Overhead Sledgehammer Finisher Slam!
+    goku.update(dummy, 0, testArena);
+    assert(dummy.isWallRicochet === true, 'Finisher Slam must launch opponent into wall ricochet');
+    assert(goku.basicComboPhase === 3, 'Goku must transition to Phase 3 (Follow-Up Ki Blast Barrage) after Finisher Slam');
+    const distAfterFinisher = Math.hypot(goku.x - dummy.x, goku.y - dummy.y);
+    assert(distAfterFinisher >= 100, `Goku must vault backward >= 100px after finisher slam, got ${distAfterFinisher}`);
+
+    // Simulate Ki Barrage until completion
+    for (let f = 0; f < 60 && goku.basicComboPhase === 3; f++) {
+      goku.update(dummy, 0, testArena);
+    }
+    assert(goku.basicComboPhase === 0, 'Goku basicComboPhase must return to 0 (Idle) after Ki Blast Barrage completes');
+    assert(goku.basicAttackCooldownTimer >= 150, `Goku must enter separation cooldown (>= 150 frames), got ${goku.basicAttackCooldownTimer}`);
+
+    // ── 2. Vegeta 120-Frame Melee Mode Duration & Rapid Ki Volley ──
+    const vegeta = new VegetaClass({ radius: 25, x: 200, y: 465, hp: 500, maxHp: 500, color: '#00E5FF' });
+    const dummy2 = new GokuClass({ radius: 25, x: 260, y: 465, hp: 1000, maxHp: 1000, color: '#FF9800' });
+    dummy2._cfg.enableDodge = false;
+    dummy2._cfg.enableBasicMelee = false;
+    vegeta._cfg.enableDodge = false;
+    vegeta.team = 0;
+    dummy2.team = 1;
+    state.fighters = [vegeta, dummy2];
+
+    vegeta.basicComboPhase = 0;
+    vegeta.basicAttackCooldownTimer = 0;
+    vegeta.update(dummy2, 0, testArena); // Phase 1
+    vegeta.update(dummy2, 0, testArena); // Phase 2
+    assert(vegeta.basicComboPhase === 2, 'Vegeta must enter Phase 2 Melee Mode');
+    assert(vegeta.meleeModeDurationTimer === 120, `Vegeta meleeModeDurationTimer must be 120, got ${vegeta.meleeModeDurationTimer}`);
+
+    // Fast-forward duration to 0 and punch cadence to ready
+    vegeta.meleeModeDurationTimer = 0;
+    vegeta.meleePunchCooldown = 0;
+    dummy2.timeStopTimer = 0;
+    dummy2.isWallRicochet = false;
+
+    // Finisher Slam (High Overhead Axe Kick)
+    vegeta.update(dummy2, 0, testArena);
+    assert(dummy2.isWallRicochet === true, 'Vegeta Finisher Axe Kick must launch opponent into wall ricochet');
+    assert(vegeta.basicComboPhase === 3, 'Vegeta must transition to Phase 3 (Rapid Ki Volley)');
+    const vegDistAfterFinisher = Math.hypot(vegeta.x - dummy2.x, vegeta.y - dummy2.y);
+    assert(vegDistAfterFinisher >= 100, `Vegeta must vault backward >= 100px after finisher, got ${vegDistAfterFinisher}`);
+
+    // Simulate Ki Volley until completion
+    for (let f = 0; f < 60 && vegeta.basicComboPhase === 3; f++) {
+      vegeta.update(dummy2, 0, testArena);
+    }
+    assert(vegeta.basicComboPhase === 0, 'Vegeta basicComboPhase must return to 0 (Idle) after Ki Volley completes');
+    assert(vegeta.basicAttackCooldownTimer >= 150, `Vegeta must enter separation cooldown (>= 150 frames), got ${vegeta.basicAttackCooldownTimer}`);
+
+    // Clean up
+    state.fighters = [];
+    console.log('      ✅ Goku & Vegeta 120-frame melee mode duration, 8-angle flurry, finisher slam & Ki barrage verified.');
   }
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;

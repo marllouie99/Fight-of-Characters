@@ -37,10 +37,18 @@ Choso's fighter model, facial silhouette, hair knots, and traditional Noritoshi 
   - Sleeveless dusty-lavender / deep plum-charcoal martial arts tabard tunic (`#2E2236`) spanning full circle width (`r * 0.42 <= ry < r * 0.65`).
   - Wide dark burgundy/black obi belt sash tightly bound at `y = +r * 0.65` to `+r * 0.78` with a forward knot fold.
   - Deep slate-black baggy hakama trousers (`#1A1622`) flowing downward to `+r * 1.05`.
-- **Default Symmetrical Hands & Convergence Clasp (Rule 20 Standard)**:
-  - **Left Hand**: `(x: -r * 0.82, y: +r * 0.38)` with `handRadius = r * 0.30`.
-  - **Right Hand**: `(x: +r * 0.82, y: +r * 0.38)` with `handRadius = r * 0.30`.
-  - **Convergence Hand Pose**: During *Convergence* and *Piercing Blood*, both hands translate smoothly to the center `(0, r * 0.25)` and clasp together into Choso's signature prayer compression gesture (`drawPixelHand` at `(0, 0)` with clasped fingers), cupping a radiant glowing blood sphere.
+- **Default Symmetrical Hands, Dynamic Arm Linkages & Hand Animation Kinematics (Rule 20 & Rule 30 Standard)**:
+  - **Left Hand Baseline**: `(x: -r * 0.82, y: +r * 0.38)` with `handRadius = getHandSize(r * 0.30)`.
+  - **Right Hand Baseline**: `(x: +r * 0.82, y: +r * 0.38)` with `handRadius = getHandSize(r * 0.30)`.
+  - **Dynamic Arm Linkage (`_drawChosoArmLinkage`)**: Connects shoulders `(±r * 0.65, r * 0.22)` directly to hands with natural 2-segment elbow flexion based on extension distance. Renders the outer `#0E0F14` ink border, plum-charcoal martial arts sleeve fabric (`#2E2236`, shadow `#1D1422`, crest highlight `#3F2F4A`), pale athletic forearms (`#EAD2C2`, crest highlight `#F4E4D7`), cream sleeve cuffs (`#EEE5D3`), and deltoid rim caps (`#221828`).
+  - **Single Source of Truth Hand Guarantee (Rule 20)**: Exactly ONE pair of hands (`drawPixelHand`) rendered on screen across all combat states. Weapon hilts, singularities, and needles anchor directly to the canonical hands with zero duplicate hands.
+  - **Smooth Windup & Ability Hand Animations**:
+    - **Convergence (Ultimate)**: Sanguine spray lift (`retaliationSprayTimer`, arms sweep up-out to `±r * 0.98, -r * 0.10`) $\to$ cosine inward prayer glide (`laserMatrixTimer`, hands smoothly glide inward from flanks to chest center `0, r * 0.22`) $\to$ optical diode telegraph hold (`laserTelegraphTimer`, interlocking prayer clasp with high-frequency micro-tremor vibration & pulsing crimson/white diode in palms) $\to$ post-discharge smooth recovery glide back to flanks.
+    - **Piercing Blood (Skill 3)**: Forward nozzle thrust ($p < 0.35$, hands travel forward to `+r * 0.72`) $\to$ tight aperture nozzle clamp ($0.35 \le p < 0.80$, thumbs and index fingers pressed together forming circular nozzle ring at `+r * 0.80, 0`) $\to$ Mach 3 compression tension tremor ($p \ge 0.80$, high-frequency vibration) $\to$ supersonic beam discharge & instant kinetic recoil kickback (hands jar back to `+r * 0.20, ±r * 0.22`) $\to$ decelerating power ease recovery back to default resting flanks.
+    - **Supernova (Skill 2)**: Commanding gravitational hold windup (`supernovaWindupMax = 24`, arms sweep outward and upward to `±r * 1.04, -r * 0.15` in authoritative posture with pulsing concentric cursed energy rings around open palms) $\to$ concussive outward/downward detonation snap (`supernovaDetonationTimer = 14`, hands thrust to `±r * 1.12, +r * 0.18` with impact lock) $\to$ decelerating return to resting flanks.
+    - **Slicing Exorcist / Chakram (Skill 1)**: Asymmetrical coiling windup (`chakramThrowTimer = 16`, right throwing arm coils back across chest to `-r * 0.25, +r * 0.44` with spinning miniature chakram in palm, while left arm raises in tactical front guard `-r * 0.78, -r * 0.08`) $\to$ hypersonic whip strike (right arm whips forward across the body to `+r * 1.15, -r * 0.05`, launching the chakram) $\to$ follow-through settle back to default hands.
+    - **Sanguine Darts (Primary)**: Needle coil back (`dartThrowTimer = 12`, right hand pulls back to `+r * 0.65, +r * 0.44` with razor blood needle glint) $\to$ sharp needle flick forward (`+r * 1.05, +r * 0.12`) $\to$ spring recoil settle back to default flanks.
+    - **Blood Edge (Melee)**: 5-phase cleave kinematics (Rule 30: Lift/coil $\to$ apex hold $\to$ hypersonic whip strike $\to$ impact lock $\to$ recovery settle) with a razor-sharp single-edged coagulated blood dagger (`#990000` base, `#FF2A55` edge, `#FFFFFF` spine glint) anchored directly in the right hand.
   - Full compatibility with `state.showSkinOnly`.
 
 ### 2. Discrete Pixel Art Rasterization ($P = 2.0\text{px}$) & Offscreen Cache (Rule 3.5 & Rule 24)
@@ -51,10 +59,17 @@ Choso's fighter model, facial silhouette, hair knots, and traditional Noritoshi 
 
 ### 3. Damage Blood Particles & Sanguine Particle Architecture
 - Whenever Choso takes damage in combat, arterial blood particles spray violently out of his wounds (`spawnBloodEffect` into `state.bloodEffects`):
-  - Every blood particle erupting from Choso is tagged (`isChosoBlood: true`, `sourceEntity: choso`) and tracked via the `onBloodParticleSpawned(particleData)` engine hook.
+  - Every blood particle erupting from Choso is tagged (`isChosoBlood: true`, `sourceEntity: choso`) and tracked via the `onBloodParticleSpawned(particleData)` engine hook and stored in `this.bloodNodes`.
   - While airborne, droplets follow true fluid ballistic gravity arcs and arena wall/floor bounces.
   - Up to **32 concurrent blood droplets** can saturate the arena simultaneously.
-  - Sanguine particles decay naturally over 12.0 seconds (`720 frames`), but Choso can seize command of them at any moment to transmute them into laser beams.
+  - Sanguine particles decay naturally over their lifespan (~8.0s / `480 frames`) if unconsumed.
+- **Strict Enemy Blood Isolation Standard**:
+  - Choso **strictly manipulates his own blood**. Blood particles shed by enemies when damaged by Choso's attacks are strictly filtered out by `isEnemyBlood()` and **never captured** into `this.bloodNodes`.
+  - Enemy blood droplets never contribute to Choso's Sanguine Resonance damage multiplier, cannot be ignited into laser diodes, and decay according to standard arena physics.
+- **Used Particle Consumption & Natural Expiration Lifecycle**:
+  - **Natural Expiration**: When an unconsumed blood particle's lifespan reaches 0 (`node.lifespan <= 0`), it is cleanly eradicated from the arena (`_clearBloodNode(node, false)`), removing it from `state.bloodEffects`, destroying its PIXI sprite, and emitting subtle dissolution sparks.
+  - **Shift Queue Cleanup**: When the 32-droplet cap is reached, oldest nodes shifted off the queue are cleanly cleared from `state.bloodEffects` and memory to prevent orphaned background particles.
+  - **Used Particle Consumption**: Whenever blood particles are seized and used as the physical origin or ammunition for any offensive ability, they are **cleanly consumed and cleared from the arena** upon completion of the attack via `_clearBloodNode()`.
 
 ### 4. Crimson Laser Transmutation Visuals (Unique Signature Aesthetic)
 - When Choso activates **Blood Manipulation: Convergence**:
@@ -89,14 +104,16 @@ Choso's fighter model, facial silhouette, hair knots, and traditional Noritoshi 
 
 ## ⚡ Passives & Inherent Mechanics
 
-### 1. 🩸 Innate Technique: Infinite Sanguine Generation (*Mugen Ketsuryū — 無限血流*)
+### 1. 🩸 Innate Technique: Infinite Sanguine Generation & Resonance (*Mugen Ketsuryū*)
 Unlike ordinary humans who suffer lethal blood loss and anemia from Blood Manipulation, Choso's half-curse biology enables **endless hematopoiesis**:
-* **Cursed Energy to Blood Conversion**:
-  - Choso has zero blood loss vulnerability.
-  - Whenever Choso takes damage from enemy attacks, he bleeds violently—spawning **2 to 4 interactive Blood Droplet Nodes** that scatter around him with random velocity vectors (`speed: 3–6 px/f`).
-  - Casting blood abilities also deposits blood droplets along their trajectory.
+* **Cursed Energy to Blood Conversion & Natural Expiration**:
+  - Whenever Choso takes damage from enemy attacks, he bleeds violently—spawning interactive Blood Droplet Nodes that scatter into the arena.
+  - Droplets follow natural fluid ballistics and land on the arena floor, where they **expire naturally** over their lifespan (~8.0s / floor decay).
+* **Unexpired Blood Damage Scaling (Sanguine Resonance)**:
+  - **Dynamic Damage Scaling**: Every active blood particle in the arena that **has not yet expired** supercharges Choso's cursed energy output, increasing the damage dealt by ALL of his abilities by **+4% per unexpired blood particle** (up to +125% bonus / 2.25x damage cap!).
+  - When Choso takes multiple rapid hits in succession, unexpired blood pools heavily in the arena, causing his retaliatory counterattacks (Convergence, Piercing Blood, Supernova, Chakrams, and Sanguine Darts) to hit with devastating amplified damage!
+  - As blood particles expire naturally, this damage boost gracefully decays back to base level (1.0x).
 * **Poisonous Death Painting Blood (*Yūdokuketsu*)**:
-  - Because Choso is a Cursed Womb: Death Painting, his blood is inherently lethal poison to humans and foreign sorcerers.
   - Stepping on or colliding with a Blood Droplet Node applies **1 stack of Blood Poison** for 4.0s (capped at 5 stacks).
   - Each stack slows movement speed by **5%** and deals **3 True Damage / sec**.
 
@@ -114,43 +131,53 @@ By manipulating his internal blood composition, Choso accelerates his pulse, bod
 
 ---
 
-## ⚔️ Abilities & Moveset
+## ⚔️ Abilities & Moveset (On-Hit Sanguine Retaliation Standard)
 
-### 🗡️ Primary Attack: Blood Edge & Sanguine Darts (*Ketsueki no Ya*)
-* **Type**: Hybrid (130° Frontal Melee Cleave / Piercing Ranged Dart)
+> [!IMPORTANT]
+> **Blood Particle Attack Origin & Used Particle Consumption Standard**:
+> All of Choso's offensive attacks and abilities trigger **when he gets hit** in combat. Taking damage erupts fresh arterial blood particles into the arena. These blood particles immediately become the **physical source and firing origin** of his offensive attacks, and are **cleanly cleared up** upon completing their firing lifecycle:
+> - **Convergence (Ultimate)**: Every blood droplet in the arena ignites into an optical laser focus diode and discharges high-intensity piercing laser beams directly from each blood droplet. Upon completion of the laser discharge (`dischargeTimer <= 0`), all used blood focus nodes are cleanly dissolved and cleared from the arena.
+> - **Piercing Blood (Skill 3)**: A blood particle condenses under extreme hydraulic pressure and fires the supersonic Mach 3 beam directly from the blood droplet. When the beam sequence finishes, the origin blood droplet is dissolved and cleared up.
+> - **Supernova (Skill 2)**: Blood particles swell with orbiting compressed spheres and detonate in 360° fragmentation bursts directly from the blood droplets. The source blood nodes are immediately cleared upon detonation.
+> - **Slicing Exorcist (Skill 1)**: A blood droplet condenses into a razor-sharp rotating blood chakram that launches directly from the droplet, cleanly consuming the source node upon launch.
+> - **Sanguine Darts (Primary)**: Spawned blood droplets shoot high-velocity piercing blood needles directly from each droplet into the attacker, after which the fired droplets are cleared from the battlefield.
+>
+> **Natural Expiration vs Ability Consumption**: Blood particles that are NOT consumed by retaliatory abilities expire naturally over their ~8.0s lifespan. While unexpired blood particles persist, Choso gains up to **+125% (+4% per node)** bonus damage on his ready abilities. Once consumed by an ability, the particle is cleared, dynamically adjusting the resonance multiplier.
+
+### 🗡️ Primary Attack: Sanguine Darts (*Ketsueki no Ya*)
+* **Type**: High-Velocity Retaliatory Blood Needle Barrage (Fires directly from spawned blood particles)
 * **Cooldown**: `36 frames` (~0.60s)
-* **Damage**: 
-  - **Melee Mode (Distance ≤ 70px)**: `22 / 26 / 32 Damage` (3-Hit Blood Dagger Combo)
-  - **Ranged Mode (Distance > 70px)**: `18 Piercing Damage`
+* **Damage**: `18 Piercing Damage per Dart`
 * **Mechanics**:
-  - **Melee Mode**: Choso coagulates hardened blood blades around his wrists and slashes in wide 130° crescents (Rule 30 compliant 5-phase impact lock). Third hit splatters 3 blood droplets across the target.
-  - **Ranged Mode**: Choso snaps his wrist, flicking a high-pressure needle dart of condensed blood at high velocity (`15 px/f`). Pierces through minor obstacles and leaves a lingering blood droplet on impact.
+  - Triggers on hit when higher-tier skills are on cooldown. Fresh blood particles erupt from Choso's wound.
+  - Each spawned blood droplet instantly crystallizes and fires a supersonic blood needle dart directly from `(node.x, node.y)` into the attacker.
 * **Basic Projectile Suppression (Rule 23)**:
-  - Overrides default `shoot(ownerIndex)` with dedicated Blood Dart logic to suppress generic circular bullets.
+  - Overrides default `shoot(ownerIndex)` to suppress generic circular bullets.
 
 ---
 
 ### 🩸 Skill 1: Slicing Exorcist / Blood Chakram (*Karisō — 刈祓*)
-* **Type**: High-Velocity Bouncing Blood Chakram / Carpet Spreader
+* **Type**: High-Velocity Bouncing Blood Chakram (Launches directly from a spawned blood droplet)
 * **Cooldown**: `6.0 seconds` (`360 frames`)
 * **Damage**: `38 Slashing Damage` (multi-hits up to 2 times for `76 Damage`)
 * **Lifespan**: `90 frames` (1.5 seconds)
 * **Mechanics**:
-  - Choso compresses blood into a rotating, circular disc blade of spinning razor-sharp blood and hurls it forward.
+  - Triggers on hit when Skill 1 is ready. Blood particles erupt from the wound.
+  - A spawned blood droplet condenses into a rotating, circular disc blade of spinning razor-sharp blood and launches forward from `(node.x, node.y)`.
   - The Chakram slices through enemies with continuous shredding hitstun, bouncing off arena boundary walls up to **3 times**.
-  - **Droplet Trail**: Every 6 frames of travel, the chakram flings off a droplets of blood, rapidly seeding the battlefield with **8–10 Blood Droplet Nodes**.
+  - **Droplet Trail**: Every 6 frames of travel, the chakram flings off droplets of blood, seeding the battlefield with Blood Droplet Nodes.
 
 ---
 
 ### 💥 Skill 2: Supernova (*Chōshinsei — 超新星*)
-* **Type**: 360° Omnidirectional Sanguine Fragmentation Detonation
+* **Type**: 360° Omnidirectional Fragmentation Detonations (Detonates directly from blood droplets)
 * **Cooldown**: `9.0 seconds` (`540 frames`)
-* **Damage**: `14 Damage per Shrapnel Pellet` (Spawns 12 pellets in a radial starburst; up to `84 Burst Damage` at point-blank range)
+* **Damage**: `14 Damage per Shrapnel Pellet` (Spawns 12 pellets in a radial starburst per blood node)
 * **Mechanics**:
-  - Choso pulls surrounding blood into 8 dense, compressed blood orbs orbiting tightly around his body.
-  - With a sudden concussive release, the orbs detonate outward in a 360° explosive fragmentation ring!
+  - Triggers on hit when Skill 2 is ready. Blood particles erupt from the wound.
+  - Blood droplets swell and compress into high-pressure orbs orbiting around each blood node.
+  - With a sudden concussive release, the blood droplets detonate in 360° explosive fragmentation rings directly from `(node.x, node.y)`!
   - Enemies caught in the blast are knocked back with heavy physical hit-pause.
-  - Each detonated pellet scatters into an active **Blood Droplet Node** upon reaching max range or hitting a wall, saturating the arena in a massive perimeter of blood nodes primed for his unique signature skill.
 
 ---
 
@@ -158,42 +185,29 @@ By manipulating his internal blood composition, Choso accelerates his pulse, bod
 * **Type**: Arena-Wide Particle-to-Laser Conversion & Hitscan Piercing Crossfire
 * **Cooldown**: `14.0 seconds` (`840 frames`)
 * **Cast Time**: `16 frames` (Tense Convergence Clasp Stance)
-* **Laser Damage**: `12 True Piercing Damage per Active Blood Node` (Up to `180+ True Burst Damage` if arena is saturated with 15+ blood droplets!)
-* **Transmutation Duration**: `5.0 seconds` (`300 frames`)
+* **Laser Damage**: `14 True Piercing Damage per Active Blood Node`
 * **Mechanics**:
-  - **Step 1 — The Convergence Clasp**: Choso brings both hands together into his signature Convergence prayer clasp at `(0, r * 0.25)`. A localized time-slow distortion wavers around him (Rule 1.1 / 1.5 compliant).
-  - **Step 2 — Particle Freezing & Diode Ignition**: 
-    - Every single **Blood Droplet Node** previously scattered across the arena abruptly freezes in mid-air and on walls.
-    - Each droplet crystallizes into a radiant, super-pressurized crimson-white optical focus diode (`#FF2A55` glowing ring with white core).
-  - **Step 3 — Razor-Thin Lock Telegraph**:
-    - For 10 frames, high-precision targeting lasers project from EVERY active blood node directly toward the primary opponent, illuminating the battlefield in a dense, crisscrossing red web of targeting lines.
-  - **Step 4 — Supersonic Laser Discharge**:
-    - With a deafening ionized thunderclap, ALL blood nodes simultaneously discharge continuous piercing laser beams!
-    - The beams pierce through all obstacles, terrain, and shields, melting the target with stacked True Damage.
-    - Enemies hit by 3 or more simultaneous beams are struck with **Sanguine Stun (0.50s immobilization)**.
-  - **Step 5 — Active Overdrive Transmutation State (5.0s)**:
-    - For the next 5.0 seconds, any blood particles emitted from Choso's body (whether from taking damage, swinging his blood daggers, or sprinting) do NOT fall as inert fluid—**they instantaneously ignite into miniature forward-firing laser pulses** (`8 Damage each`), creating a relentless storm of continuous laser fire!
+  - **Step 1 — On-Hit Retaliation**: When Choso is hit with Ultimate ready, he erupts 14–18 blood particles fanning out into mid-air behind him away from the attacker.
+  - **Step 2 — Diode Ignition**: Every blood droplet in the arena abruptly halts and crystallizes into a radiant crimson-white optical focus diode.
+  - **Step 3 — Razor-Thin Lock Telegraph**: Guidance laser lines project from EVERY active blood node directly toward the opponent.
+  - **Step 4 — Supersonic Laser Discharge**: Every blood droplet simultaneously discharges continuous piercing laser beams from `(node.x, node.y)` cutting straight through the target!
 
 ---
 
 ### 🩸⚡ SKILL 3: Piercing Blood (*Teisō / Fuga — 穿血・真収斂*)
-* **Type**: Cinematic Supersonic Pressure Cannon & Full-Arena Line Cleave
-* **Cooldown**: `28.0 seconds` (`1680 frames`)
-* **Total Damage**: `145 True Damage` (`45 Shockwave Blast` + `100 Sustained Supersonic Beam`)
-* **Recoil Force**: `18 px/frame` backward momentum with global camera shake
+* **Type**: Cinematic Supersonic Pressure Cannon (Fires directly from a mid-air blood droplet!)
+* **Cooldown**: `15.0 seconds` (`900 frames`)
+* **Total Damage**: `125 True Piercing Damage`
+* **Recoil Force**: `16 px/frame` backward momentum
 * **Cinematic Execution Sequence**:
-  1. **Phase 1 — Extreme Pressure Compression (Frames 1–28)**:
-     - Choso anchors his stance, clasping his palms tightly in front of his chest.
-     - A colossal sphere of compressed blood shrinks violently down to a marble-sized singularity at `(0, r * 0.25)`.
-     - 3 concentric supersonic compression shockwaves ripple inward (Rule 26).
-     - Screen colors tint to deep monochromatic crimson-violet with pitch-black vignette.
-  2. **Phase 2 — Mach 3 Piercing Release (Frames 29–65)**:
-     - Choso uncaps the pressure! A devastating, Mach 3 supersonic beam of hyper-pressurized blood shoots from between his index fingers along his committed 360° cast angle (Rule 1.4).
-     - Beam diameter: `28px` with white-hot laser core (`#FFFFFF`), burning crimson mid-sheath (`#FF1E44`), and dark violet ionization outer boundary (`#6B1736`).
-     - Pierces end-to-end through the entire arena, obliterating all enemy projectiles, traps, and barriers in its path.
-  3. **Phase 3 — Sanguine Vapor Fallout & Laser Ignition**:
-     - As the colossal beam disperses, it leaves a vapor trail of **12 fresh Blood Droplet Nodes** along its line of fire.
-      - If *Blood Manipulation: Convergence* is currently active, these 12 vapor nodes immediately ignite into supplementary laser beams, executing a devastating double-burst finale!
+  1. **Phase 1 — Singularity Compression (Frames 1–30)**:
+     - Triggers on hit when Skill 3 is ready. Blood particles spray from Choso.
+     - A leading blood droplet freezes in mid-air and compresses violently down to a white-hot singularity with concentric compression shockwaves (Rule 26).
+  2. **Phase 2 — Mach 3 Piercing Release (Frames 31–66)**:
+     - The blood droplet fires a devastating Mach 3 supersonic beam of hyper-pressurized blood directly from `(node.x, node.y)` through the target.
+     - Diameter: `26px` with white-hot laser core (`#FFFFFF`) and burning crimson sheath (`#FF1E44`).
+  3. **Phase 3 — Sanguine Vapor Fallout**:
+     - Leaves a vapor trail of fresh blood droplet nodes along its line of fire.
 
 ---
 

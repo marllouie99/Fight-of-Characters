@@ -2776,7 +2776,7 @@ export const HUD_SKILL_PROVIDERS = {
     }
 
     // 3. Skill 3: Piercing Blood (Supersonic Hydraulic Beam)
-    if (isSkillEnabled(cfg.enablePiercingBlood, false)) {
+    if (isSkillEnabled(cfg.enablePiercingBlood, true)) {
       const pbMax = f.piercingBloodCooldownMax || cfg.piercingBloodCooldown || 900;
       const pbCd = f.piercingBloodCooldown !== undefined ? f.piercingBloodCooldown : 0;
       const pbPct = Math.max(0, Math.min(100, (1 - (pbCd / pbMax)) * 100));
@@ -2820,7 +2820,7 @@ export const HUD_SKILL_PROVIDERS = {
         id: 'laser_matrix',
         pct: laserPct,
         ready: isReady,
-        color: '#FF2A55',
+        color: themeColor,
         label: label,
         isUltimate: true,
         isSignature: true,
@@ -3253,6 +3253,225 @@ export const HUD_SKILL_PROVIDERS = {
 
     return skills;
   },
+  goku(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.goku) ? CONFIG.goku : {};
+    const themeColor = f.color || cfg.themeColor || '#FF7A00';
+    const skills = [];
+
+    if (isSkillEnabled(cfg.enableBasicMelee, true)) {
+      const cdMax = cfg.meleeModeSeparationCooldown || cfg.basicAttackResetCooldown || 180;
+      const cdTimer = f.basicAttackCooldownTimer || 0;
+      let pct = 100;
+      let ready = true;
+      let label = 'HYBRID CQC';
+
+      if (f.basicComboPhase === 2 && (f.meleeModeDurationTimer || 0) > 0) {
+        const durMax = cfg.initialMeleeDuration || 120;
+        pct = Math.max(0, Math.min(100, ((f.meleeModeDurationTimer || 0) / durMax) * 100));
+        ready = true;
+        label = `HYBRID CQC (${((f.meleeModeDurationTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (f.basicComboPhase === 3) {
+        pct = 100;
+        ready = true;
+        label = 'KI BARRAGE';
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `HYBRID CQC (${(cdTimer / 60).toFixed(1)}S)`;
+      }
+
+      skills.push({ id: 'cqc', pct, ready, color: themeColor, label });
+    }
+
+    if (isSkillEnabled(cfg.enableDragonHammer, true)) {
+      const cdMax = cfg.dragonHammerCooldown || 420;
+      const cdTimer = f.dragonHammerCooldown || 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = cdTimer <= 0;
+      const label = cdTimer > 0 ? `DRAGON HAMMER (${(cdTimer / 60).toFixed(1)}S)` : 'DRAGON HAMMER';
+      skills.push({ id: 'dragon_hammer', pct, ready, color: themeColor, label });
+    }
+
+    if (isSkillEnabled(cfg.enableKaiokenStrike, true)) {
+      const cdMax = cfg.kaiokenCooldown || 390;
+      const cdTimer = f.kaiokenCooldown || 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = cdTimer <= 0;
+      const label = cdTimer > 0 ? `KAIOKEN STRIKE (${(cdTimer / 60).toFixed(1)}S)` : 'KAIOKEN STRIKE';
+      skills.push({ id: 'kaioken', pct, ready, color: themeColor, label });
+    }
+
+    if (isSkillEnabled(cfg.enableKamehameha, true)) {
+      const cdMax = cfg.kamehamehaCooldown || 1800;
+      const cdTimer = f.kamehamehaCooldown || 0;
+      let pct = 100;
+      let label = 'SUPER KAMEHAMEHA';
+      let ready = false;
+
+      if (f.isFiringKamehameha) {
+        pct = Math.max(0, Math.min(100, ((f.kamehamehaFireTimer || 0) / (cfg.kamehamehaFireFrames || 48)) * 100));
+        ready = true;
+        label = `SUPER KAMEHAMEHA (${((f.kamehamehaFireTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (f.isChargingKamehameha) {
+        pct = 100;
+        ready = true;
+        label = 'SUPER KAMEHAMEHA';
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `SUPER KAMEHAMEHA (${(cdTimer / 60).toFixed(1)}S)`;
+      } else {
+        pct = 100;
+        ready = true;
+        label = 'SUPER KAMEHAMEHA';
+      }
+
+      skills.push({
+        id: 'kamehameha',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
+    }
+
+    if (isSkillEnabled(cfg.enableSuperSaiyan, true)) {
+      const isSSJ = Boolean(f.isSuperSaiyan && (f.superSaiyanTimer || 0) > 0);
+      const durMax = cfg.superSaiyanDuration || 900;
+      const timer = f.superSaiyanTimer || 0;
+      const pct = isSSJ ? Math.max(0, Math.min(100, (timer / durMax) * 100)) : (f.hasAwakenedSuperSaiyan ? 0 : 100);
+      const label = isSSJ ? `SUPER SAIYAN (${Math.ceil(timer / 60)}S)` : (f.hasAwakenedSuperSaiyan ? 'SSJ EXHAUSTED' : 'SUPER SAIYAN (ZENKAI)');
+      skills.push({
+        id: 'super_saiyan',
+        pct,
+        ready: isSSJ,
+        color: themeColor,
+        label
+      });
+    }
+
+    return skills;
+  },
+
+  vegeta(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.vegeta) ? CONFIG.vegeta : {};
+    const themeColor = f.color || cfg.themeColor || '#1565C0';
+    const skills = [];
+
+    if (isSkillEnabled(cfg.enableBasicMelee, true)) {
+      const cdMax = cfg.meleeModeSeparationCooldown || cfg.basicAttackResetCooldown || 180;
+      const cdTimer = f.basicAttackCooldownTimer || 0;
+      let pct = 100;
+      let ready = true;
+      let label = 'SAIYAN BEATDOWN';
+
+      if (f.basicComboPhase === 2 && (f.meleeModeDurationTimer || 0) > 0) {
+        const durMax = cfg.initialMeleeDuration || 120;
+        pct = Math.max(0, Math.min(100, ((f.meleeModeDurationTimer || 0) / durMax) * 100));
+        ready = true;
+        label = `SAIYAN BEATDOWN (${((f.meleeModeDurationTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (f.basicComboPhase === 3) {
+        pct = 100;
+        ready = true;
+        label = 'KI VOLLEY';
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `SAIYAN BEATDOWN (${(cdTimer / 60).toFixed(1)}S)`;
+      }
+
+      skills.push({ id: 'beatdown', pct, ready, color: themeColor, label });
+    }
+
+    if (isSkillEnabled(cfg.enableBigBang, true)) {
+      const cdMax = cfg.bigBangCooldown || 450;
+      const cdTimer = f.bigBangCooldown || 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = cdTimer <= 0;
+      const label = cdTimer > 0 ? `BIG BANG (${(cdTimer / 60).toFixed(1)}S)` : 'BIG BANG';
+      skills.push({ id: 'big_bang', pct, ready, color: themeColor, label });
+    }
+
+    if (isSkillEnabled(cfg.enableGalickGun, true)) {
+      const cdMax = cfg.galickGunCooldown || 420;
+      const cdTimer = f.galickGunCooldown || 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = cdTimer <= 0;
+      const label = cdTimer > 0 ? `GALICK GUN (${(cdTimer / 60).toFixed(1)}S)` : 'GALICK GUN';
+      skills.push({ id: 'galick_gun', pct, ready, color: themeColor, label });
+    }
+
+    if (isSkillEnabled(cfg.enableFinalFlash, true)) {
+      const cdMax = cfg.finalFlashCooldown || 1920;
+      const cdTimer = f.finalFlashCooldown || 0;
+      let pct = 100;
+      let label = 'FINAL FLASH';
+      let ready = false;
+
+      if (f.isFiringFinalFlash) {
+        pct = Math.max(0, Math.min(100, ((f.finalFlashFireTimer || 0) / (cfg.finalFlashFireFrames || 48)) * 100));
+        ready = true;
+        label = `FINAL FLASH (${((f.finalFlashFireTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (f.isChargingFinalFlash) {
+        pct = 100;
+        ready = true;
+        label = 'FINAL FLASH';
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `FINAL FLASH (${(cdTimer / 60).toFixed(1)}S)`;
+      } else {
+        pct = 100;
+        ready = true;
+        label = 'FINAL FLASH';
+      }
+
+      skills.push({
+        id: 'final_flash',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
+    }
+
+    if (isSkillEnabled(cfg.enableBattleArmor, true)) {
+      const maxShield = cfg.armorShieldMax || 50;
+      const curShield = f.armorShield || 0;
+      const pct = Math.max(0, Math.min(100, (curShield / maxShield) * 100));
+      const label = `BATTLE ARMOR (${curShield}/${maxShield})`;
+      skills.push({
+        id: 'battle_armor',
+        pct,
+        ready: curShield >= maxShield,
+        color: themeColor,
+        label
+      });
+    }
+
+    if (isSkillEnabled(cfg.enableSuperSaiyan, true)) {
+      const isSSJ = Boolean(f.isSuperSaiyan && (f.superSaiyanTimer || 0) > 0);
+      const durMax = cfg.superSaiyanDuration || 900;
+      const timer = f.superSaiyanTimer || 0;
+      const pct = isSSJ ? Math.max(0, Math.min(100, (timer / durMax) * 100)) : (f.hasAwakenedSuperSaiyan ? 0 : 100);
+      const label = isSSJ ? `SUPER SAIYAN (${Math.ceil(timer / 60)}S)` : (f.hasAwakenedSuperSaiyan ? 'SSJ EXHAUSTED' : 'SUPER SAIYAN (PRIDE)');
+      skills.push({
+        id: 'super_saiyan',
+        pct,
+        ready: isSSJ,
+        color: themeColor,
+        label
+      });
+    }
+
+    return skills;
+  },
 };
 
 /**
@@ -3384,7 +3603,9 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     creeper: ['charged_creeper', 'CHARGED CREEPER'],
     pacman: ['chomp_mode', 'CHOMP MODE', 'chomp'],
     eye_of_cthulhu: ['servants', 'servants_of_cthulhu', 'SERVANTS OF CTHULHU', 'SERVANTS', 'SERVANT OF CTHULHU', 'SERVANT', 'chain_dash', 'BERSERK RAM'],
-    eyeofcthulhu: ['servants', 'servants_of_cthulhu', 'SERVANTS OF CTHULHU', 'SERVANTS', 'SERVANT OF CTHULHU', 'SERVANT', 'chain_dash', 'BERSERK RAM']
+    eyeofcthulhu: ['servants', 'servants_of_cthulhu', 'SERVANTS OF CTHULHU', 'SERVANTS', 'SERVANT OF CTHULHU', 'SERVANT', 'chain_dash', 'BERSERK RAM'],
+    goku: ['kamehameha', 'super_kamehameha', 'SUPER KAMEHAMEHA', 'KAMEHAMEHA', 'super_saiyan', 'SUPER SAIYAN'],
+    vegeta: ['final_flash', 'finalflash', 'FINAL FLASH', 'super_saiyan', 'SUPER SAIYAN']
   };
 
   const keys = signatureMap[fId];

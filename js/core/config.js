@@ -71,6 +71,8 @@ import { unarmedConfig } from '../configs/characters/unarmedConfig.js';
 import { bombermanConfig } from '../configs/characters/bombermanConfig.js';
 import { pacmanConfig } from '../configs/characters/pacmanConfig.js';
 import { creeperConfig } from '../configs/characters/creeperConfig.js';
+import { gokuConfig } from '../configs/characters/gokuConfig.js';
+import { vegetaConfig } from '../configs/characters/vegetaConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -93,6 +95,12 @@ export const CONFIG = {
   pac_man: pacmanConfig,
   creeper: creeperConfig,
   Creeper: creeperConfig,
+  goku: gokuConfig,
+  Goku: gokuConfig,
+  GOKU: gokuConfig,
+  vegeta: vegetaConfig,
+  Vegeta: vegetaConfig,
+  VEGETA: vegetaConfig,
   genos: genosConfig,
   mahito: mahitoConfig,
   nanami: nanamiConfig,
@@ -1942,6 +1950,56 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: 1.0,
     ability: 'Tssssss..., TNT Toss & Charged Creeper',
     desc: creeperConfig.description || 'Iconic silent Minecraft stalker that sneaks up on targets, primes a devastating white-flashing concussive explosion with its signature hiss, tosses volatile bouncing TNT blocks, and channels celestial lightning to awaken as Charged Creeper.',
+  },
+  {
+    id: 68,
+    name: gokuConfig.name || 'GOKU',
+    grade: gokuConfig.grade ?? DEFAULT_GRADE,
+    displayName: gokuConfig.displayName || gokuConfig.name || 'Son Goku',
+    category: 'Anime',
+    color: gokuConfig.color || '#FF7A00',
+    themeColor: gokuConfig.themeColor || '#FF7A00',
+    secondaryColor: gokuConfig.secondaryColor || '#1A237E',
+    startX: 300,
+    startY: 250,
+    startVx: 1.2,
+    startVy: 1.0,
+    radius: gokuConfig.radius || gokuConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'goku',
+    hp: gokuConfig.hp || 380,
+    damage: gokuConfig.damage || 28,
+    cooldown: gokuConfig.cooldown || 40,
+    moveSpeed: gokuConfig.moveSpeed || gokuConfig.speed || 5.6,
+    projectileSpeedMultiplier: 1.0,
+    ability: gokuConfig.ability || 'Turtle School Hybrid Martial Arts & Super Kamehameha',
+    desc: gokuConfig.desc,
+  },
+  {
+    id: 69,
+    name: vegetaConfig.name || 'VEGETA',
+    grade: vegetaConfig.grade ?? DEFAULT_GRADE,
+    displayName: vegetaConfig.displayName || vegetaConfig.name || 'Vegeta',
+    category: 'Anime',
+    color: vegetaConfig.color || '#1565C0',
+    themeColor: vegetaConfig.themeColor || '#1565C0',
+    secondaryColor: vegetaConfig.secondaryColor || '#FFC107',
+    startX: 300,
+    startY: 250,
+    startVx: 1.2,
+    startVy: 1.0,
+    radius: vegetaConfig.radius || vegetaConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'vegeta',
+    hp: vegetaConfig.hp || 390,
+    damage: vegetaConfig.damage || 30,
+    cooldown: vegetaConfig.cooldown || 42,
+    moveSpeed: vegetaConfig.moveSpeed || vegetaConfig.speed || 5.4,
+    projectileSpeedMultiplier: 1.0,
+    ability: vegetaConfig.ability || 'Royal Saiyan Martial Arts, Big Bang & Final Flash',
+    desc: vegetaConfig.desc,
   }
 ];
 

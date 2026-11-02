@@ -85,6 +85,9 @@ export class ChosoFighter extends Fighter {
     this.supernovaTimer = 0;
     this.supernovaOrbs = [];
     this.supernovaPellets = [];
+    this.supernovaWindupMax = 24;
+    this.supernovaDetonationTimer = 0;
+    this.supernovaDetonationMax = 14;
 
     // Skill 3: Piercing Blood: True Convergence (Teisō / Fuga)
     this.piercingBloodCooldown = 0;
@@ -95,6 +98,9 @@ export class ChosoFighter extends Fighter {
     this.piercingBloodAngle = 0;
     this.piercingBloodWidth = cfg.ultBeamWidth || 26;
     this.piercingBloodProgress = 0;
+    this.piercingBloodSource = null;
+    this.piercingBloodChargeMax = cfg.ultChargeFrames || 30;
+    this.piercingBloodBeamMax = cfg.ultBeamFrames || 36;
 
     // ULTIMATE: Blood Manipulation: Convergence
     // As long as Ultimate is UP and blood exists in the arena, converts all blood droplets into laser beams!
@@ -105,12 +111,23 @@ export class ChosoFighter extends Fighter {
     this.isCastingLaserMatrix = false;
     this.laserMatrixTimer = 0;
     this.laserTelegraphTimer = 0;
+    this.laserMatrixCastMax = cfg.laserMatrixCastFrames || 16;
+    this.laserTelegraphMax = cfg.laserTelegraphFrames || 12;
     this.activeLaserBeams = [];
     this.isClaspedForConvergence = false;
+    this.convergenceRecoveryTimer = 0;
+    this.convergenceRecoveryMax = 14;
     this.isRetaliationSpraying = false;
     this.retaliationSprayTimer = 0;
     this._retaliationTarget = null;
     this._retaliationNodes = [];
+    this.supernovaSources = [];
+
+    // Animation Kinematic Timers (Rule 20 & Rule 30)
+    this.chakramThrowTimer = 0;
+    this.chakramThrowMax = 16;
+    this.dartThrowTimer = 0;
+    this.dartThrowMax = 12;
   }
 
   /**
@@ -149,14 +166,17 @@ export class ChosoFighter extends Fighter {
       size: particleData.size || 4.5,
       onGround: Boolean(particleData.onGround),
       particleRef: particleData,
-      lifespan: cfg.bloodNodeLifespanFrames || 720,
+      lifespan: cfg.bloodNodeLifespanFrames || 480,
       isIgnitedAsLaser: false,
       isDead: false,
       fromDamage: true
     };
 
     if (this.bloodNodes.length >= this.maxBloodNodes) {
-      this.bloodNodes.shift();
+      const oldest = this.bloodNodes.shift();
+      if (oldest) {
+        this._clearBloodNode(oldest, false);
+      }
     }
     this.bloodNodes.push(node);
 
@@ -173,8 +193,11 @@ export class ChosoFighter extends Fighter {
    */
   spawnBloodNode(x, y, vx = 0, vy = 0) {
     if (this.bloodNodes.length >= this.maxBloodNodes) {
-      // Remove oldest node to preserve performance cap
-      this.bloodNodes.shift();
+      // Remove oldest node to preserve performance cap and clean from state.bloodEffects
+      const oldest = this.bloodNodes.shift();
+      if (oldest) {
+        this._clearBloodNode(oldest, false);
+      }
     }
     const cfg = CONFIG.choso || {};
     const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
@@ -286,6 +309,46 @@ export class ChosoFighter extends Fighter {
   }
 
   /**
+   * Cleans up and destroys a blood particle after it has been used by an attack/ability.
+   * Removes from this.bloodNodes, cleans up PIXI Sprite, and removes from state.bloodEffects.
+   */
+  _clearBloodNode(node, removeFromNodes = true) {
+    if (!node) return;
+    node.isDead = true;
+    node.lifespan = 0;
+    delete node.dischargeTimer;
+    node.isIgnitedAsLaser = false;
+
+    // Visual dissolution spark
+    if (typeof spawnSparks === 'function' && typeof node.x === 'number' && typeof node.y === 'number') {
+      spawnSparks(node.x, node.y, 4, '#FF2A55', '#FFFFFF');
+    }
+
+    // Clean up PIXI sprite & particle reference if present
+    if (node.particleRef) {
+      node.particleRef.isDead = true;
+      node.particleRef.life = 0;
+      node.particleRef.isIgnitedAsLaser = false;
+      if (node.particleRef.sprite) {
+        if (node.particleRef.sprite.parent) {
+          node.particleRef.sprite.parent.removeChild(node.particleRef.sprite);
+        }
+        if (typeof node.particleRef.sprite.destroy === 'function') {
+          node.particleRef.sprite.destroy();
+        }
+        node.particleRef.sprite = null;
+      }
+      if (typeof state !== 'undefined' && Array.isArray(state.bloodEffects)) {
+        fastCleanArray(state.bloodEffects, p => p !== node.particleRef);
+      }
+    }
+
+    if (removeFromNodes && this.bloodNodes && this.bloodNodes.length > 0) {
+      fastCleanArray(this.bloodNodes, n => n !== node && n.id !== node.id);
+    }
+  }
+
+  /**
    * Top-of-update lifecycle decay for active visual effects and interactive entities.
    * Strictly complies with Rule 1.9 & Rule 25: runs BEFORE the freeze guard exit!
    */
@@ -297,27 +360,33 @@ export class ChosoFighter extends Fighter {
       fastCleanArray(this.bloodNodes, (node) => {
         if (!node || node.isDead) return false;
 
-        // If node was discharged in a laser matrix, keep it visible as the laser emitter square
+        // If node was used/discharged in a laser matrix or dart, keep it visible as the emitter diode during firing
         if (node.dischargeTimer !== undefined) {
           node.dischargeTimer--;
           if (node.dischargeTimer <= 0) {
-            if (node.particleRef) {
-              node.particleRef.life = 0;
-              node.particleRef.decay = 1.0;
-              if (node.particleRef.sprite) node.particleRef.sprite.visible = false;
-            }
-            spawnSparks(node.x, node.y, 6, '#FF2A55', '#FFFFFF');
+            delete node.dischargeTimer;
+            node.isIgnitedAsLaser = false;
+            // The blood particle was used! Clean it up immediately upon completion
+            this._clearBloodNode(node, false);
             return false;
+          } else {
+            return true;
           }
-          return true;
         }
 
         node.lifespan--;
-        if (node.lifespan <= 0) return false;
+        if (node.lifespan <= 0) {
+          // Naturally expired after ~8.0s lifespan! Clean it up from arena, state.bloodEffects & PIXI
+          this._clearBloodNode(node, false);
+          return false;
+        }
 
         // If linked to active state.bloodEffects particle, sync position with fluid ballistic trajectory
         if (node.particleRef) {
-          if (!node.isIgnitedAsLaser && node.particleRef.life < 0.05) return false;
+          if (!node.isIgnitedAsLaser && (node.particleRef.isDead || node.particleRef.life < 0.05)) {
+            this._clearBloodNode(node, false);
+            return false;
+          }
           if (typeof state !== 'undefined' && Array.isArray(state.bloodEffects) && !state.bloodEffects.includes(node.particleRef)) {
             return false;
           }
@@ -435,12 +504,6 @@ export class ChosoFighter extends Fighter {
           if ((c.bounces || 0) > (c.maxBounces || 3)) return false;
         }
 
-        // Drop intermittent blood nodes along flight path (strictly inside arena)
-        c.dropTimer = (c.dropTimer || 0) + 1;
-        if (c.dropTimer % 6 === 0) {
-          this.spawnBloodNode(c.x, c.y, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2);
-        }
-
         // Damage candidates along slicing trajectory
         const candidates = this._getAllValidEnemyTargets();
         for (let j = 0; j < candidates.length; j++) {
@@ -451,11 +514,10 @@ export class ChosoFighter extends Fighter {
           if (dist <= (c.r + (enemy.r || 25))) {
             c.hitTargets.add(enemy);
             const cfg = CONFIG.choso || {};
-            applyDamageToTarget(enemy, cfg.chakramDamage || 36, this, { hitType: 'chakram' });
+            const bloodMultiplier = this.getBloodDamageMultiplier();
+            const chakramDmg = Math.round((cfg.chakramDamage || 36) * bloodMultiplier);
+            applyDamageToTarget(enemy, chakramDmg, this, { hitType: 'chakram' });
             spawnSparks(enemy.x, enemy.y, 8, '#FF2A55', '#A31D1D');
-            for (let k = 0; k < 2; k++) {
-              this.spawnBloodNode(enemy.x + (Math.random() - 0.5) * 12, enemy.y + (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
-            }
           }
         }
 
@@ -468,8 +530,7 @@ export class ChosoFighter extends Fighter {
       fastCleanArray(this.supernovaPellets, (p) => {
         p.lifespan--;
         if (p.lifespan <= 0) {
-          // Pellet turns into lingering blood droplet on floor
-          this.spawnBloodNode(p.x, p.y, p.vx * 0.2, p.vy * 0.2);
+          spawnSparks(p.x, p.y, 4, '#FF2A55', '#FFFFFF');
           return false;
         }
 
@@ -485,9 +546,7 @@ export class ChosoFighter extends Fighter {
           const maxY = arena.y + arena.height - margin;
 
           if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
-            const clampedX = Math.max(minX, Math.min(maxX, p.x));
-            const clampedY = Math.max(minY, Math.min(maxY, p.y));
-            this.spawnBloodNode(clampedX, clampedY, 0, 0);
+            spawnSparks(p.x, p.y, 4, '#FF2A55', '#FFFFFF');
             return false;
           }
         }
@@ -518,7 +577,7 @@ export class ChosoFighter extends Fighter {
 
     const cfg = CONFIG.choso || {};
 
-    // 2. Cooldowns Tick
+    // 2. Cooldowns & Animation Timers Tick
     if (this.basicAttackCooldown > 0) this.basicAttackCooldown--;
     if (this.skill1Cooldown > 0) this.skill1Cooldown--;
     if (this.skill2Cooldown > 0) this.skill2Cooldown--;
@@ -526,6 +585,10 @@ export class ChosoFighter extends Fighter {
     if (this.piercingBloodCooldown > 0) this.piercingBloodCooldown--;
     if (this.ultCooldown > 0) this.ultCooldown--;
     if (this.laserTransmutationOverdriveTimer > 0) this.laserTransmutationOverdriveTimer--;
+    if (this.chakramThrowTimer > 0) this.chakramThrowTimer--;
+    if (this.dartThrowTimer > 0) this.dartThrowTimer--;
+    if (this.supernovaDetonationTimer > 0) this.supernovaDetonationTimer--;
+    if (this.convergenceRecoveryTimer > 0) this.convergenceRecoveryTimer--;
 
     // 3. Passive 2: Flowing Red Scale: Stack Check (<60% HP)
     const hpRatio = this.hp / this.maxHp;
@@ -569,51 +632,19 @@ export class ChosoFighter extends Fighter {
       return;
     }
 
-    // 5. Standard AI Combat Aim & Skill Decision Matrix
+    // 5. Standard AI Combat Aim & Convergence Check on Existing Blood
     const target = this._findClosestEnemy() || opponent;
     if (target && !target.isDead && target.hp > 0) {
       this.aim(target);
-      const dist = Math.hypot(target.x - this.x, target.y - this.y);
 
-      // 1. ULTIMATE: Blood Manipulation: Convergence
-      // As long as Ultimate is UP and blood exists in the arena, turn them all into beams!
+      // ULTIMATE: Blood Manipulation: Convergence
+      // Automatically converts all existing blood in the arena into laser beams when ready!
       const isUltUp = (this.ultCooldown <= 0 || this.skill3Cooldown <= 0);
       if (isUltUp && isSkillEnabled(cfg.enableLaserMatrix, true)) {
         const activeBlood = this._getActiveBloodParticles();
         if (activeBlood.length > 0) {
           this._startLaserMatrix(target, activeBlood);
           return;
-        }
-      }
-
-      // 2. Skill 3: Piercing Blood (Supersonic Hydraulic Beam)
-      // Strictly gated by config AND requires existing blood in arena
-      if (isSkillEnabled(cfg.enablePiercingBlood, false) && this.piercingBloodCooldown <= 0 && dist >= 80 && Math.random() < 0.65) {
-        const activeBlood = this._getActiveBloodParticles();
-        if (activeBlood.length > 0) {
-          this._startPiercingBlood(target);
-          return;
-        }
-      }
-
-      // Check Skill 2: Supernova (AOE perimeter scatter)
-      if (isSkillEnabled(cfg.enableSupernova, false) && this.skill2Cooldown <= 0 && dist <= 180) {
-        this._startSupernova(target);
-        return;
-      }
-
-      // Check Skill 1: Slicing Exorcist (Chakram disc)
-      if (isSkillEnabled(cfg.enableChakram, false) && this.skill1Cooldown <= 0 && dist >= 90) {
-        this._castChakram(target);
-        return;
-      }
-
-      // Primary Attack: Melee Combo (<=70px) or Blood Dart (>70px if enabled)
-      if (this.basicAttackCooldown <= 0) {
-        if (dist <= (this.meleeReach + target.r)) {
-          this._startMeleeCombo(target);
-        } else if (dist <= 260 && isSkillEnabled(cfg.enableBloodDarts, false)) {
-          this._throwBloodDart(target);
         }
       }
     }
@@ -651,10 +682,23 @@ export class ChosoFighter extends Fighter {
       }
     }
 
+    // Helper to identify enemy blood: blood originating from an enemy entity must NEVER be captured by Choso
+    const isEnemyBlood = (bp) => {
+      if (bp.isChosoBlood === true) return false;
+      if (bp.sourceCharacterId === 'choso') return false;
+      if (bp.sourceEntity === this) return false;
+      if (bp.sourceEntity && bp.sourceEntity !== this) return true;
+      if (bp.sourceCharacterId && bp.sourceCharacterId !== 'choso') return true;
+      if (bp.isChosoBlood === false && (bp.sourceEntity || bp.sourceCharacterId)) return true;
+      return false;
+    };
+
     // Filter living, visible blood particles directly from state.bloodEffects (single source of truth)
+    // STRICT RULE: ONLY CHOSO'S BLOOD! Enemy blood from damage must NEVER be captured by Choso.
     const livingBloodEffects = (typeof state !== 'undefined' && Array.isArray(state.bloodEffects))
       ? state.bloodEffects.filter(bp => {
-          if (!bp || bp.life < 0.05) return false;
+          if (!bp || bp.isDead || bp.life < 0.05) return false;
+          if (isEnemyBlood(bp)) return false;
           return isInsideArena(bp.x, bp.y);
         })
       : [];
@@ -664,7 +708,8 @@ export class ChosoFighter extends Fighter {
       if (this.bloodNodes && this.bloodNodes.length > 0) {
         const validNodes = this.bloodNodes.filter(n => {
           if (!n || n.isDead || n.lifespan <= 0) return false;
-          if (n.particleRef && n.particleRef.life < 0.05) return false;
+          if (n.particleRef && (n.particleRef.isDead || n.particleRef.life < 0.05)) return false;
+          if (n.particleRef && isEnemyBlood(n.particleRef)) return false;
           return isInsideArena(n.x, n.y);
         });
         if (validNodes.length > 0) {
@@ -693,7 +738,7 @@ export class ChosoFighter extends Fighter {
           size: bp.size || 4.5,
           onGround: Boolean(bp.onGround),
           particleRef: bp,
-          lifespan: Math.round((bp.life || 1.0) * 720),
+          lifespan: Math.round((bp.life || 1.0) * (CONFIG.choso?.bloodNodeLifespanFrames || 480)),
           isIgnitedAsLaser: false,
           isDead: false,
           fromDamage: true
@@ -713,7 +758,42 @@ export class ChosoFighter extends Fighter {
   }
 
   _getActiveBloodCount() {
-    return this._getActiveBloodParticles().length;
+    if (this.bloodNodes) {
+      const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
+      const isInsideArena = (x, y) => (!arena || (x >= arena.x && x <= arena.x + arena.width && y >= arena.y && y <= arena.y + arena.height));
+      const isEnemyBlood = (bp) => {
+        if (!bp) return false;
+        if (bp.isChosoBlood === true) return false;
+        if (bp.sourceCharacterId === 'choso') return false;
+        if (bp.sourceEntity === this) return false;
+        if (bp.sourceEntity && bp.sourceEntity !== this) return true;
+        if (bp.sourceCharacterId && bp.sourceCharacterId !== 'choso') return true;
+        if (bp.isChosoBlood === false && (bp.sourceEntity || bp.sourceCharacterId)) return true;
+        return false;
+      };
+      const valid = this.bloodNodes.filter(n => {
+        if (!n || n.isDead || n.lifespan <= 0) return false;
+        if (n.particleRef && (n.particleRef.isDead || n.particleRef.life < 0.05)) return false;
+        if (n.particleRef && isEnemyBlood(n.particleRef)) return false;
+        return isInsideArena(n.x, n.y);
+      });
+      return valid.length;
+    }
+    const particles = this._getActiveBloodParticles();
+    return particles ? particles.length : 0;
+  }
+
+  /**
+   * Calculates the damage scaling multiplier based on active, unexpired blood particles in the arena.
+   * If there are more blood particles that have not expired and an ability is ready, Choso deals more damage.
+   * As blood particles expire naturally, this multiplier smoothly returns to 1.0.
+   */
+  getBloodDamageMultiplier(overrideCount = null) {
+    const cfg = CONFIG.choso || {};
+    const unexpiredCount = (typeof overrideCount === 'number') ? overrideCount : this._getActiveBloodCount();
+    const bonusPerNode = cfg.bloodDamageMultiplierPerNode ?? 0.04; // +4% per unexpired blood particle
+    const maxMultiplier = cfg.maxBloodDamageMultiplier ?? 2.25;    // Capped at 2.25x (+125% bonus)
+    return Math.min(maxMultiplier, 1.0 + (unexpiredCount * bonusPerNode));
   }
 
   /**
@@ -738,8 +818,10 @@ export class ChosoFighter extends Fighter {
     this.retaliationSprayTimer = 0;
     this.isCastingLaserMatrix = true;
     this.isClaspedForConvergence = true;
-    this.laserMatrixTimer = cfg.laserMatrixCastFrames || 16;
-    this.laserTelegraphTimer = cfg.laserTelegraphFrames || 12;
+    this.laserMatrixCastMax = cfg.laserMatrixCastFrames || 16;
+    this.laserMatrixTimer = this.laserMatrixCastMax;
+    this.laserTelegraphMax = cfg.laserTelegraphFrames || 12;
+    this.laserTelegraphTimer = this.laserTelegraphMax;
     this.ultCooldown = this.ultCooldownMax;
     this.skill3Cooldown = this.skill3CooldownMax;
     this.vx = 0;
@@ -799,6 +881,7 @@ export class ChosoFighter extends Fighter {
         this._dischargeLaserMatrix(target);
         this.isCastingLaserMatrix = false;
         this.isClaspedForConvergence = false;
+        this.convergenceRecoveryTimer = this.convergenceRecoveryMax || 14;
         const cfg = CONFIG.choso || {};
         this.laserTransmutationOverdriveTimer = cfg.laserTransmutationOverdriveFrames || 300; // 5.0s
       }
@@ -808,6 +891,7 @@ export class ChosoFighter extends Fighter {
     // Finished casting
     this.isCastingLaserMatrix = false;
     this.isClaspedForConvergence = false;
+    this.convergenceRecoveryTimer = this.convergenceRecoveryMax || 14;
     const cfg = CONFIG.choso || {};
     this.laserTransmutationOverdriveTimer = cfg.laserTransmutationOverdriveFrames || 300; // 5.0s
   }
@@ -824,7 +908,6 @@ export class ChosoFighter extends Fighter {
 
     const cfg = CONFIG.choso || {};
     let hitCount = 0;
-    const damagePerNode = cfg.laserDamagePerNode || 14;
     const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
 
     // Filter strictly to living nodes that were ignited for this matrix
@@ -836,6 +919,9 @@ export class ChosoFighter extends Fighter {
       this.isClaspedForConvergence = false;
       return;
     }
+
+    const bloodMultiplier = this.getBloodDamageMultiplier(validNodes.length);
+    const damagePerNode = Math.round((cfg.laserDamagePerNode || 14) * bloodMultiplier);
 
     for (let i = 0; i < validNodes.length; i++) {
       const node = validNodes[i];
@@ -915,15 +1001,24 @@ export class ChosoFighter extends Fighter {
   // SKILL 1: SLICING EXORCIST (CHAKRAM)
   // ═══════════════════════════════════════════════════════════
 
-  _castChakram(target) {
+  _castChakram(target, sourceNode = null) {
     const cfg = CONFIG.choso || {};
     this.skill1Cooldown = this.skill1CooldownMax;
-    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+    this.chakramThrowTimer = this.chakramThrowMax || 16;
+    let node = sourceNode;
+    if (!node) {
+      const activeBlood = this._getActiveBloodParticles();
+      node = (activeBlood.length > 0 ? activeBlood[activeBlood.length - 1] : null);
+    }
+    const startX = (node && typeof node.x === 'number') ? node.x : this.x;
+    const startY = (node && typeof node.y === 'number') ? node.y : (this.y - (this.z || 0));
+
+    const angle = Math.atan2(target.y - startY, target.x - startX);
     const speed = cfg.chakramSpeed || 11;
 
     this.chakrams.push({
-      x: this.x + Math.cos(angle) * (this.r + 10),
-      y: (this.y - (this.z || 0)) + Math.sin(angle) * (this.r + 10),
+      x: startX,
+      y: startY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       r: 16,
@@ -931,8 +1026,14 @@ export class ChosoFighter extends Fighter {
       lifespan: cfg.chakramLifespan || 90,
       bounces: 0,
       maxBounces: cfg.chakramMaxBounces || 3,
-      dropTimer: 0
+      dropTimer: 0,
+      sourceNodeId: node ? node.id : null
     });
+
+    // Blood particle was used to form the chakram — clear it up!
+    if (node) {
+      this._clearBloodNode(node, true);
+    }
 
     audioSystem.playSFX(cfg.sounds?.chakramSpin || 'Assets/Sound Effects/Skills/spinslash.mp3', cfg.soundVolumes?.chakramSpin || 0.85);
   }
@@ -941,19 +1042,31 @@ export class ChosoFighter extends Fighter {
   // SKILL 2: SUPERNOVA
   // ═══════════════════════════════════════════════════════════
 
-  _startSupernova(target) {
+  _startSupernova(target, sourceNodes = null) {
     const cfg = CONFIG.choso || {};
     this.skill2Cooldown = this.skill2CooldownMax;
     this.isChargingSupernova = true;
-    this.supernovaTimer = 18;
+    this.supernovaWindupMax = 24;
+    this.supernovaTimer = this.supernovaWindupMax;
     this.supernovaOrbs = [];
 
+    let sources = sourceNodes;
+    if (!sources || sources.length === 0) {
+      const activeBlood = this._getActiveBloodParticles();
+      sources = (activeBlood.length > 0) ? activeBlood.slice(0, 4) : [{ x: this.x, y: this.y }];
+    }
+    this.supernovaSources = sources;
+
     const orbCount = cfg.supernovaOrbCount || 8;
-    for (let i = 0; i < orbCount; i++) {
-      this.supernovaOrbs.push({
-        angle: (i * Math.PI * 2) / orbCount,
-        dist: this.r + 14
-      });
+    for (let s = 0; s < sources.length; s++) {
+      const src = sources[s];
+      for (let i = 0; i < orbCount; i++) {
+        this.supernovaOrbs.push({
+          source: src,
+          angle: (i * Math.PI * 2) / orbCount,
+          dist: 14
+        });
+      }
     }
 
     audioSystem.playSFX(cfg.sounds?.convergenceClasp || 'Assets/Sound Effects/Skills/enhance.mp3', 0.90);
@@ -962,39 +1075,56 @@ export class ChosoFighter extends Fighter {
   _updateSupernovaSequence(opponent) {
     if (this.supernovaTimer > 0) {
       this.supernovaTimer--;
-      // Spin orbiting orbs
+      // Spin orbiting orbs around source blood particles
       for (let i = 0; i < this.supernovaOrbs.length; i++) {
         this.supernovaOrbs[i].angle += 0.20;
       }
       return;
     }
 
-    // Detonate Supernova in 360° Fragmentation Burst!
+    // Detonate Supernova in 360° Fragmentation Burst from each source blood particle!
     this.isChargingSupernova = false;
+    this.supernovaDetonationTimer = this.supernovaDetonationMax || 14;
     const cfg = CONFIG.choso || {};
     const pelletCount = cfg.supernovaPelletCount || 12;
     const speed = cfg.supernovaPelletSpeed || 13;
+    const sources = (this.supernovaSources && this.supernovaSources.length > 0)
+      ? this.supernovaSources
+      : [{ x: this.x, y: this.y }];
 
-    for (let i = 0; i < pelletCount; i++) {
-      const angle = (i * Math.PI * 2) / pelletCount + (Math.random() - 0.5) * 0.2;
-      this.supernovaPellets.push({
-        x: this.x + Math.cos(angle) * (this.r + 8),
-        y: (this.y - (this.z || 0)) + Math.sin(angle) * (this.r + 8),
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        lifespan: 16
-      });
+    for (let s = 0; s < sources.length; s++) {
+      const src = sources[s];
+      for (let i = 0; i < pelletCount; i++) {
+        const angle = (i * Math.PI * 2) / pelletCount + (Math.random() - 0.5) * 0.2;
+        this.supernovaPellets.push({
+          x: src.x + Math.cos(angle) * 8,
+          y: src.y + Math.sin(angle) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          lifespan: 16
+        });
+      }
+
+      // AOE Damage in proximity of each source blood particle
+      const candidates = this._getAllValidEnemyTargets();
+      for (let i = 0; i < candidates.length; i++) {
+        const ent = candidates[i];
+        const d = Math.hypot(ent.x - src.x, ent.y - src.y);
+        if (d <= (cfg.supernovaRange || 210)) {
+          const bloodMultiplier = this.getBloodDamageMultiplier();
+          const novaDamage = Math.round((cfg.supernovaPelletDamage || 14) * 3 * bloodMultiplier);
+          applyDamageToTarget(ent, novaDamage, this, { hitType: 'supernova' });
+          spawnSparks(ent.x, ent.y, 8, '#FF2A55', '#FFFFFF');
+        }
+      }
     }
 
-    // AOE Damage in proximity
-    const candidates = this._getAllValidEnemyTargets();
-    for (let i = 0; i < candidates.length; i++) {
-      const ent = candidates[i];
-      const d = Math.hypot(ent.x - this.x, ent.y - this.y);
-      if (d <= (cfg.supernovaRange || 210)) {
-        applyDamageToTarget(ent, cfg.supernovaPelletDamage * 3, this, { hitType: 'supernova' });
-        spawnSparks(ent.x, ent.y, 8, '#FF2A55', '#FFFFFF');
+    // Blood particles were used to detonate Supernova — clear them up!
+    if (this.supernovaSources && this.supernovaSources.length > 0) {
+      for (let s = 0; s < this.supernovaSources.length; s++) {
+        this._clearBloodNode(this.supernovaSources[s], true);
       }
+      this.supernovaSources = [];
     }
 
     audioSystem.playSFX(cfg.sounds?.supernovaExplode || 'Assets/Sound Effects/Attacks/explosion.mp3', cfg.soundVolumes?.supernovaExplode || 1.15);
@@ -1005,19 +1135,31 @@ export class ChosoFighter extends Fighter {
   // ULTIMATE: PIERCING BLOOD (TEISŌ / FUGA)
   // ═══════════════════════════════════════════════════════════
 
-  _startPiercingBlood(target) {
-    // Gated: Piercing Blood MUST NOT activate if there are no blood particles in the arena!
-    const activeBlood = this._getActiveBloodParticles();
-    if (!activeBlood || activeBlood.length === 0) {
-      return false;
+  _startPiercingBlood(target, sourceNode = null) {
+    let node = sourceNode;
+    if (!node) {
+      const activeBlood = this._getActiveBloodParticles();
+      if (!activeBlood || activeBlood.length === 0) {
+        return false;
+      }
+      node = activeBlood[0];
     }
 
     const cfg = CONFIG.choso || {};
     this.piercingBloodCooldown = this.piercingBloodCooldownMax;
     this.isChargingPiercingBlood = true;
     this.isClaspedForConvergence = true;
-    this.piercingBloodTimer = cfg.ultChargeFrames || 30;
-    this.piercingBloodAngle = Math.atan2(target.y - this.y, target.x - this.x);
+    this.piercingBloodChargeMax = cfg.ultChargeFrames || 30;
+    this.piercingBloodBeamMax = cfg.ultBeamFrames || 36;
+    this.piercingBloodTimer = this.piercingBloodChargeMax;
+    this.piercingBloodSource = { x: node.x, y: node.y, node: node };
+
+    // Halt source blood particle in mid-air
+    node.vx = 0;
+    node.vy = 0;
+    node.isIgnitedAsLaser = true;
+
+    this.piercingBloodAngle = Math.atan2(target.y - node.y, target.x - node.x);
     this.gunAngle = this.piercingBloodAngle;
     this.vx = 0;
     this.vy = 0;
@@ -1032,7 +1174,14 @@ export class ChosoFighter extends Fighter {
     this.vx = 0;
     this.vy = 0;
 
-    // Phase 1: High-Pressure Singularity Compression
+    const startX = (this.piercingBloodSource && typeof this.piercingBloodSource.x === 'number')
+      ? this.piercingBloodSource.x
+      : this.x;
+    const startY = (this.piercingBloodSource && typeof this.piercingBloodSource.y === 'number')
+      ? this.piercingBloodSource.y
+      : (this.y - (this.z || 0));
+
+    // Phase 1: High-Pressure Singularity Compression at the Blood Particle
     if (this.isChargingPiercingBlood) {
       this.piercingBloodTimer--;
       if (this.piercingBloodTimer <= 0) {
@@ -1045,8 +1194,8 @@ export class ChosoFighter extends Fighter {
         this.vx -= Math.cos(this.piercingBloodAngle) * (cfg.ultRecoilKick || 16);
         this.vy -= Math.sin(this.piercingBloodAngle) * (cfg.ultRecoilKick || 16);
 
-        // Deal full arena cleave damage along beam trajectory
-        this._executePiercingBloodDamage();
+        // Deal full arena cleave damage along beam trajectory starting from the blood particle
+        this._executePiercingBloodDamage(startX, startY, this.piercingBloodAngle);
 
         audioSystem.playSFX(cfg.sounds?.piercingBloodCannon || 'Assets/Sound Effects/Skills/redblast.mp3', cfg.soundVolumes?.piercingBloodCannon || 1.35);
         if (typeof triggerGlobalScreenShake === 'function') triggerGlobalScreenShake(4.5, 16);
@@ -1054,7 +1203,7 @@ export class ChosoFighter extends Fighter {
       return;
     }
 
-    // Phase 2: Active Supersonic Beam Discharge
+    // Phase 2: Active Supersonic Beam Discharge from the Blood Particle
     if (this.isFiringPiercingBlood) {
       this.piercingBloodTimer--;
       this.piercingBloodProgress = this.piercingBloodTimer / (cfg.ultBeamFrames || 36);
@@ -1063,10 +1212,15 @@ export class ChosoFighter extends Fighter {
         this.isFiringPiercingBlood = false;
         this.isClaspedForConvergence = false;
 
+        // Source blood particle was used for Piercing Blood — clear it up!
+        if (this.piercingBloodSource && this.piercingBloodSource.node) {
+          this._clearBloodNode(this.piercingBloodSource.node, true);
+          this.piercingBloodSource.node = null;
+        }
+
         // Deposit vapor droplets along beam path strictly within arena walls
         const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
-        const startY = this.y - (this.z || 0);
-        const maxDist = arena ? getRayArenaIntersection(this.x, startY, this.piercingBloodAngle, arena, 10) : 400;
+        const maxDist = arena ? getRayArenaIntersection(startX, startY, this.piercingBloodAngle, arena, 10) : 400;
         const safeBeamDist = Math.max(0, maxDist - 12);
         const maxNodes = cfg.ultFalloutNodes || 10;
         const dropCount = Math.min(maxNodes, Math.max(1, Math.floor(safeBeamDist / 50)));
@@ -1075,7 +1229,7 @@ export class ChosoFighter extends Fighter {
           const step = safeBeamDist / (dropCount + 1);
           for (let i = 1; i <= dropCount; i++) {
             const dist = i * step;
-            const dropX = this.x + Math.cos(this.piercingBloodAngle) * dist;
+            const dropX = startX + Math.cos(this.piercingBloodAngle) * dist;
             const dropY = startY + Math.sin(this.piercingBloodAngle) * dist;
             this.spawnBloodNode(dropX, dropY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2);
           }
@@ -1084,15 +1238,16 @@ export class ChosoFighter extends Fighter {
     }
   }
 
-  _executePiercingBloodDamage() {
+  _executePiercingBloodDamage(startX = this.x, startY = this.y, beamAngle = this.piercingBloodAngle) {
     const cfg = CONFIG.choso || {};
-    const damage = cfg.ultBeamDamage || 125;
+    const bloodMultiplier = this.getBloodDamageMultiplier();
+    const damage = Math.round((cfg.ultBeamDamage || 125) * bloodMultiplier);
     const candidates = this._getAllValidEnemyTargets();
 
     for (let i = 0; i < candidates.length; i++) {
       const ent = candidates[i];
-      const angleToEnt = Math.atan2(ent.y - this.y, ent.x - this.x);
-      const angleDiff = Math.abs(Math.atan2(Math.sin(angleToEnt - this.piercingBloodAngle), Math.cos(angleToEnt - this.piercingBloodAngle)));
+      const angleToEnt = Math.atan2(ent.y - startY, ent.x - startX);
+      const angleDiff = Math.abs(Math.atan2(Math.sin(angleToEnt - beamAngle), Math.cos(angleToEnt - beamAngle)));
 
       // Beam line intersection within narrow 22° cone
       if (angleDiff <= (22 * Math.PI) / 180) {
@@ -1143,8 +1298,9 @@ export class ChosoFighter extends Fighter {
 
   _executeMeleeImpact(opponent) {
     const cfg = CONFIG.choso || {};
+    const bloodMultiplier = this.getBloodDamageMultiplier();
     const comboDmg = cfg.meleeDamageCombo || [22, 26, 34];
-    const dmg = comboDmg[this.comboCount - 1] || 22;
+    const dmg = Math.round((comboDmg[this.comboCount - 1] || 22) * bloodMultiplier);
     const candidates = this._getAllValidEnemyTargets();
 
     for (let i = 0; i < candidates.length; i++) {
@@ -1170,16 +1326,47 @@ export class ChosoFighter extends Fighter {
     }
   }
 
-  _throwBloodDart(target) {
+  _throwBloodDart(target, sourceNode = null) {
     const cfg = CONFIG.choso || {};
     this.basicAttackCooldown = cfg.cooldown || 36;
-    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+    this.dartThrowTimer = this.dartThrowMax || 12;
+    let node = sourceNode;
+    if (!node) {
+      const activeBlood = this._getActiveBloodParticles();
+      node = (activeBlood.length > 0 ? activeBlood[activeBlood.length - 1] : null);
+    }
+    const startX = (node && typeof node.x === 'number') ? node.x : this.x;
+    const startY = (node && typeof node.y === 'number') ? node.y : (this.y - (this.z || 0));
+
+    const angle = Math.atan2(target.y - startY, target.x - startX);
     this.gunAngle = angle;
 
+    const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
+    const maxDist = arena ? getRayArenaIntersection(startX, startY, angle, arena, 4) : 400;
+    const dist = Math.min(400, maxDist);
+    const endX = startX + Math.cos(angle) * dist;
+    const endY = startY + Math.sin(angle) * dist;
+
+    this.activeLaserBeams.push({
+      startX: startX,
+      startY: startY,
+      endX: endX,
+      endY: endY,
+      timer: 6,
+      maxTimer: 6,
+      thickness: 2.6,
+      damageDealt: true,
+      target: target
+    });
+
     // Apply damage
-    applyDamageToTarget(target, cfg.rangedDartDamage || 18, this, { hitType: 'blood_dart' });
-    if (isSkillEnabled(cfg.enableInfiniteBlood, false)) {
-      this.spawnBloodNode(target.x, target.y, 0, 0);
+    const bloodMultiplier = this.getBloodDamageMultiplier();
+    const dartDmg = Math.round((cfg.rangedDartDamage || 18) * bloodMultiplier);
+    applyDamageToTarget(target, dartDmg, this, { hitType: 'blood_dart' });
+
+    // Blood particle was thrown as a dart — clear it up!
+    if (node) {
+      this._clearBloodNode(node, true);
     }
 
     audioSystem.playSFX(cfg.sounds?.dartThrow || 'Assets/Sound Effects/Attacks/shurikenthrow.mp3', cfg.soundVolumes?.dartThrow || 0.85);
@@ -1189,11 +1376,33 @@ export class ChosoFighter extends Fighter {
   // DAMAGE REACTION & SANGUINE RETALIATION MATRIX (FRAME 1 -> 2 -> 3)
   // ═══════════════════════════════════════════════════════════
 
+  /**
+   * Helper to spawn blood particles fanning out along hit angle away from attacker.
+   */
+  _spawnRetaliationBlood(hitAngle, count = 6) {
+    const dropMultiplier = this.isFlowingRedScaleActive ? 2 : 1;
+    const totalCount = Math.round(count * dropMultiplier);
+    const nodes = [];
+    for (let i = 0; i < totalCount; i++) {
+      const spread = (Math.random() - 0.5) * 1.5; // ~85° fan cone away from hit
+      const speed = 4.0 + Math.random() * 7.5;
+      const vx = Math.cos(hitAngle + spread) * speed;
+      const vy = Math.sin(hitAngle + spread) * speed;
+      const dist = 6 + Math.random() * 16;
+      const sx = this.x + Math.cos(hitAngle + spread) * dist;
+      const sy = this.y + Math.sin(hitAngle + spread) * dist;
+      const node = this.spawnBloodNode(sx, sy, vx, vy);
+      if (node) nodes.push(node);
+    }
+    return nodes;
+  }
+
   takeDamage(finalAmount, attacker, opts) {
     const res = super.takeDamage(finalAmount, attacker, opts);
 
     if (!this.isDead && this.hp > 0) {
       this.lastDamageAttacker = attacker || this.lastDamageAttacker;
+      const target = attacker || this._findClosestEnemy();
 
       const cfg = CONFIG.choso || {};
       const isUltReady = (this.ultCooldown <= 0 || this.skill3Cooldown <= 0) &&
@@ -1201,25 +1410,47 @@ export class ChosoFighter extends Fighter {
                          !this.isCastingLaserMatrix &&
                          !this.isRetaliationSpraying;
 
+      const isPiercingBloodReady = isSkillEnabled(cfg.enablePiercingBlood, true) &&
+                                   this.piercingBloodCooldown <= 0 &&
+                                   !this.isChargingPiercingBlood &&
+                                   !this.isFiringPiercingBlood &&
+                                   !this.isCastingLaserMatrix;
+
+      const isSupernovaReady = isSkillEnabled(cfg.enableSupernova, true) &&
+                               this.skill2Cooldown <= 0 &&
+                               !this.isChargingSupernova &&
+                               !this.isCastingLaserMatrix;
+
+      const isChakramReady = isSkillEnabled(cfg.enableChakram, true) &&
+                             this.skill1Cooldown <= 0 &&
+                             !this.isCastingLaserMatrix;
+
       // Calculate damage impact angle away from attacker
-      const hitAngle = (attacker && typeof attacker.x === 'number')
-        ? Math.atan2(this.y - attacker.y, this.x - attacker.x)
+      const hitAngle = (target && typeof target.x === 'number')
+        ? Math.atan2(this.y - target.y, this.x - target.x)
         : (this.lastHitAngle || 0);
 
-      // FRAME 1 -> FRAME 2: Hit from enemy triggers Sanguine Retaliation when Ultimate is UP!
-      if (isUltReady && attacker && !attacker.isDead && attacker.hp > 0) {
-        this._triggerSanguineRetaliation(attacker, hitAngle);
-      } else {
-        // Standard combat blood shedding (Passive 1: Mugen Ketsuryū)
-        const dropMultiplier = this.isFlowingRedScaleActive ? 2 : 1;
-        const count = (3 + Math.floor(Math.random() * 3)) * dropMultiplier;
-        for (let i = 0; i < count; i++) {
-          const spread = (Math.random() - 0.5) * 1.4;
-          const speed = 4 + Math.random() * 6;
-          const vx = Math.cos(hitAngle + spread) * speed;
-          const vy = Math.sin(hitAngle + spread) * speed;
-          this.spawnBloodNode(this.x, this.y, vx, vy);
+      // Trigger offensive ability on hit with blood particles as the source!
+      if (target && !target.isDead && target.hp > 0) {
+        if (isUltReady) {
+          // 1. Ultimate: Convergence (Laser Matrix) from all blood particles
+          this._triggerSanguineRetaliation(target, hitAngle);
+        } else if (isPiercingBloodReady) {
+          // 2. Skill 3: Piercing Blood from blood particle
+          this._triggerPiercingBloodRetaliation(target, hitAngle);
+        } else if (isSupernovaReady) {
+          // 3. Skill 2: Supernova from blood particles
+          this._triggerSupernovaRetaliation(target, hitAngle);
+        } else if (isChakramReady) {
+          // 4. Skill 1: Slicing Exorcist from blood particle
+          this._triggerChakramRetaliation(target, hitAngle);
+        } else {
+          // 5. Basic Offensive Attack: Sanguine Darts from blood particles
+          this._triggerSanguineDartsRetaliation(target, hitAngle);
         }
+      } else {
+        // Standard combat blood shedding if no valid target
+        this._spawnRetaliationBlood(hitAngle, 4);
       }
     }
 
@@ -1227,8 +1458,8 @@ export class ChosoFighter extends Fighter {
   }
 
   /**
-   * FRAME 2: Erupts a dramatic spray of blood particles fanning out behind Choso away from attacker.
-   * After 6 frames of visible flight into mid-air, halts all particles and transitions to Convergence Laser Matrix (Frame 3).
+   * Retaliation 1 (Ultimate): Erupts a dramatic spray of blood particles fanning out behind Choso away from attacker.
+   * After 6 frames of visible flight into mid-air, halts all particles and transitions to Convergence Laser Matrix.
    */
   _triggerSanguineRetaliation(attacker, hitAngle) {
     const cfg = CONFIG.choso || {};
@@ -1258,6 +1489,92 @@ export class ChosoFighter extends Fighter {
     this._retaliationNodes = sprayNodes;
 
     audioSystem.playSFX(cfg.sounds?.meleeSlash || 'Assets/Sound Effects/Attacks/swordswing.mp3', 0.85);
+  }
+
+  /**
+   * Retaliation 2 (Skill 3): Piercing Blood fired directly from a blood particle!
+   */
+  _triggerPiercingBloodRetaliation(attacker, hitAngle) {
+    const nodes = this._spawnRetaliationBlood(hitAngle, 8);
+    const sourceNode = (nodes.length > 0)
+      ? nodes[Math.floor(nodes.length / 2)]
+      : (this.bloodNodes[this.bloodNodes.length - 1] || { x: this.x, y: this.y });
+    this._startPiercingBlood(attacker, sourceNode);
+  }
+
+  /**
+   * Retaliation 3 (Skill 2): Supernova detonates directly from blood particles!
+   */
+  _triggerSupernovaRetaliation(attacker, hitAngle) {
+    const nodes = this._spawnRetaliationBlood(hitAngle, 8);
+    const sourceNodes = (nodes.length > 0)
+      ? nodes.slice(0, Math.min(4, nodes.length))
+      : (this.bloodNodes.slice(0, 4));
+    this._startSupernova(attacker, sourceNodes);
+  }
+
+  /**
+   * Retaliation 4 (Skill 1): Slicing Exorcist (Chakram) launched directly from a blood particle!
+   */
+  _triggerChakramRetaliation(attacker, hitAngle) {
+    const nodes = this._spawnRetaliationBlood(hitAngle, 6);
+    const sourceNode = (nodes.length > 0)
+      ? nodes[0]
+      : (this.bloodNodes[this.bloodNodes.length - 1] || { x: this.x, y: this.y });
+    this._castChakram(attacker, sourceNode);
+  }
+
+  /**
+   * Retaliation 5 (Basic Attack): Sanguine Darts shoot directly from each spawned blood particle!
+   */
+  _triggerSanguineDartsRetaliation(attacker, hitAngle) {
+    const cfg = CONFIG.choso || {};
+    this.basicAttackCooldown = cfg.cooldown || 36;
+    this.dartThrowTimer = this.dartThrowMax || 12;
+    const freshNodes = this._spawnRetaliationBlood(hitAngle, 5);
+    const allUnexpired = this._getActiveBloodParticles();
+    const firingNodes = (allUnexpired.length > 0) ? allUnexpired : freshNodes;
+    if (!firingNodes || firingNodes.length === 0) return;
+
+    const bloodMultiplier = this.getBloodDamageMultiplier();
+    const dartDamage = Math.round((cfg.rangedDartDamage || 18) * bloodMultiplier);
+
+    const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
+    for (let i = 0; i < firingNodes.length; i++) {
+      const node = firingNodes[i];
+      const angle = Math.atan2(attacker.y - node.y, attacker.x - node.x);
+      const maxDist = arena ? getRayArenaIntersection(node.x, node.y, angle, arena, 4) : 400;
+      const dist = Math.min(400, maxDist);
+      const endX = node.x + Math.cos(angle) * dist;
+      const endY = node.y + Math.sin(angle) * dist;
+
+      this.activeLaserBeams.push({
+        startX: node.x,
+        startY: node.y,
+        endX: endX,
+        endY: endY,
+        timer: 6,
+        maxTimer: 6,
+        thickness: 2.6,
+        damageDealt: true,
+        target: attacker
+      });
+
+      // Blood particle acts as dart emitter for 6 frames, then clears up!
+      node.dischargeTimer = 6;
+      node.isIgnitedAsLaser = true;
+
+      const isInfinity = (typeof attacker.hasActiveInfinity === 'function') && attacker.hasActiveInfinity();
+      if (!isInfinity) {
+        applyDamageToTarget(attacker, dartDamage, this, { hitType: 'blood_dart' });
+        spawnSparks(attacker.x, attacker.y, 4, '#FF2A55', '#FFFFFF');
+      } else if (typeof attacker.triggerInfinityBlock === 'function') {
+        attacker.triggerInfinityBlock(attacker.x, attacker.y, this);
+      }
+    }
+
+    audioSystem.playSFX(cfg.sounds?.dartThrow || 'Assets/Sound Effects/Attacks/shurikenthrow.mp3', cfg.soundVolumes?.dartThrow || 0.85);
+    audioSystem.playSFX(cfg.sounds?.fleshHit || 'Assets/Sound Effects/Attacks/fleshhit.mp3', 0.90);
   }
 
   /**
@@ -1323,11 +1640,22 @@ export class ChosoFighter extends Fighter {
     this.isChargingSupernova = false;
     this.isChargingPiercingBlood = false;
     this.isFiringPiercingBlood = false;
+    this.piercingBloodSource = null;
+    this.chakramThrowTimer = 0;
+    this.dartThrowTimer = 0;
+    this.supernovaDetonationTimer = 0;
+    this.convergenceRecoveryTimer = 0;
+    if (this.supernovaSources) this.supernovaSources.length = 0;
 
     if (this.bloodNodes) {
-      for (let i = 0; i < this.bloodNodes.length; i++) {
-        if (this.bloodNodes[i]) {
-          this.bloodNodes[i].isIgnitedAsLaser = false;
+      for (let i = this.bloodNodes.length - 1; i >= 0; i--) {
+        const n = this.bloodNodes[i];
+        if (n) {
+          n.isIgnitedAsLaser = false;
+          if (forceCancelAll && n.dischargeTimer !== undefined) {
+            this._clearBloodNode(n, false);
+            this.bloodNodes.splice(i, 1);
+          }
         }
       }
     }

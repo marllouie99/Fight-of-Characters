@@ -859,17 +859,25 @@ export function updateBloodEffects() {
   fastCleanArray(state.bloodEffects, (effect) => {
     // Choso Convergence / Laser Transmutation stasis: Suspends blood droplets frozen in mid-air
     if (effect.isIgnitedAsLaser) {
-      effect.vx = 0;
-      effect.vy = 0;
-      if (effect.sprite) {
-        effect.sprite.x = effect.x;
-        effect.sprite.y = effect.y;
-        effect.sprite.width = effect.size;
-        effect.sprite.height = effect.size;
-        effect.sprite.alpha = 1.0;
-        effect.sprite.rotation = 0;
+      // Safety stasis watchdog: max laser stasis duration is 90 frames (~1.5s).
+      // If stasis exceeds 90 frames or source entity is dead, release laser lock so particle decays naturally
+      effect.laserStasisFrames = (effect.laserStasisFrames || 0) + 1;
+      if (effect.laserStasisFrames > 90 || (effect.sourceEntity && effect.sourceEntity.isDead)) {
+        effect.isIgnitedAsLaser = false;
+        delete effect.laserStasisFrames;
+      } else {
+        effect.vx = 0;
+        effect.vy = 0;
+        if (effect.sprite) {
+          effect.sprite.x = effect.x;
+          effect.sprite.y = effect.y;
+          effect.sprite.width = effect.size;
+          effect.sprite.height = effect.size;
+          effect.sprite.alpha = 1.0;
+          effect.sprite.rotation = 0;
+        }
+        return true;
       }
-      return true;
     }
 
     if (!effect.onGround) {
@@ -903,6 +911,16 @@ export function updateBloodEffects() {
         effect.onGround = true;
         effect.vy = 0;
         effect.vx *= 0.5;
+      }
+
+      // Airborne safety decay: if airborne for > 240 frames (~4.0s), start decaying so it doesn't float forever
+      effect.airborneFrames = (effect.airborneFrames || 0) + 1;
+      if (effect.airborneFrames > 240) {
+        effect.life -= (effect.decay || 0.006);
+        if (effect.life <= 0) {
+          if (effect.sprite) releaseBloodSprite(effect.sprite);
+          return false;
+        }
       }
 
       // Droplet remains 100% visible while falling to the floor

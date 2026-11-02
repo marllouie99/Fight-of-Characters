@@ -218,13 +218,20 @@ export function drawBloodChakram(ctx, chakram) {
 export function drawSupernovaVisuals(ctx, fighter) {
   if (!fighter) return;
 
-  // 1. Orbiting Compressed Blood Spheres before detonation
+  // 1. Orbiting Compressed Blood Spheres around source blood particles before detonation
   if (fighter.isChargingSupernova && fighter.supernovaOrbs && fighter.supernovaOrbs.length > 0) {
     ctx.save();
     for (let i = 0; i < fighter.supernovaOrbs.length; i++) {
       const orb = fighter.supernovaOrbs[i];
-      const ox = fighter.x + Math.cos(orb.angle) * orb.dist;
-      const oy = (fighter.y - (fighter.z || 0)) + Math.sin(orb.angle) * orb.dist;
+      const centerX = (orb.source && typeof orb.source.x === 'number')
+        ? orb.source.x
+        : fighter.x;
+      const centerY = (orb.source && typeof orb.source.y === 'number')
+        ? orb.source.y
+        : (fighter.y - (fighter.z || 0));
+
+      const ox = centerX + Math.cos(orb.angle) * orb.dist;
+      const oy = centerY + Math.sin(orb.angle) * orb.dist;
 
       ctx.beginPath();
       ctx.arc(ox, oy, 5.5, 0, Math.PI * 2);
@@ -247,13 +254,44 @@ export function drawSupernovaVisuals(ctx, fighter) {
 
 /**
  * Draws the colossal Mach 3 Piercing Blood death beam.
+ * Starts directly from the source blood particle in mid-air/on-ground!
  */
 export function drawPiercingBloodBeam(ctx, fighter) {
-  if (!fighter || !fighter.isFiringPiercingBlood) return;
+  if (!fighter) return;
 
   const r = fighter.r || 25;
-  const startX = fighter.x;
-  const startY = fighter.y - (fighter.z || 0);
+  const startX = (fighter.piercingBloodSource && typeof fighter.piercingBloodSource.x === 'number')
+    ? fighter.piercingBloodSource.x
+    : fighter.x;
+  const startY = (fighter.piercingBloodSource && typeof fighter.piercingBloodSource.y === 'number')
+    ? fighter.piercingBloodSource.y
+    : (fighter.y - (fighter.z || 0));
+
+  // Hyper-pressure singularity compression at the source blood particle
+  if (fighter.isChargingPiercingBlood) {
+    const chargeMax = fighter.piercingBloodChargeMax || 30;
+    const progress = Math.max(0, Math.min(1, 1.0 - ((fighter.piercingBloodTimer || 0) / chargeMax)));
+    ctx.save();
+
+    // Expanding fluid compression disc
+    ctx.beginPath();
+    ctx.arc(startX, startY, Math.max(3, 16 * (1 - progress)), 0, Math.PI * 2);
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // Radiant glowing focus core
+    ctx.beginPath();
+    ctx.arc(startX, startY, Math.max(2.5, 6 * progress), 0, Math.PI * 2);
+    ctx.fillStyle = '#FF2A55';
+    ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  if (!fighter.isFiringPiercingBlood) return;
+
   const angle = fighter.piercingBloodAngle !== undefined ? fighter.piercingBloodAngle : (fighter.gunAngle || 0);
   const arena = (typeof state !== 'undefined' && state.arena) || (typeof CONFIG !== 'undefined' && CONFIG.arena);
   const maxBeamLength = arena ? getRayArenaIntersection(startX, startY, angle, arena, 6) : 1200;
@@ -298,10 +336,9 @@ export function drawPiercingBloodBeam(ctx, fighter) {
     ctx.beginPath();
     ctx.arc(startX + Math.cos(angle) * (r + i * 8), startY + Math.sin(angle) * (r + i * 8), ringR, 0, Math.PI * 2);
     ctx.strokeStyle = (i === 0) ? '#FFFFFF' : '#FF2A55';
-    ctx.lineWidth = 2.0 - i * 0.4;
+    ctx.lineWidth = Math.max(1.0, (2.5 - i * 0.6) * progress);
     ctx.stroke();
   }
-
 
   ctx.restore();
 }

@@ -1539,7 +1539,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   }
 
   const nameFont = '700 42px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
-  const vsFont = '700 24px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
+  const vsFont = '700 42px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
 
   ctx.font = nameFont;
   ctx.textBaseline = 'bottom';
@@ -1868,7 +1868,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
     const hasStackedTeam = team0.length > 1 || team1.length > 1;
     const nameFontSize = hasStackedTeam ? 44 : 60;
     const customFighterFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
-    const customVsFont = `700 ${hasStackedTeam ? 30 : 32}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
+    const customVsFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
 
     let wTeam0 = 0;
     team0Data.forEach(td => {
@@ -1888,7 +1888,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
     if ('letterSpacing' in ctx) {
       ctx.letterSpacing = '0.5px';
     }
-    const vsText = 'vs';
+    const vsText = 'VS';
     const wVs = ctx.measureText(vsText).width;
 
     const pad = 14;
@@ -1933,11 +1933,16 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       drawHudName(team0Data[1], startX, bottomY);
     }
 
-    // Render Center "vs"
+    // Render Center "VS"
     ctx.font = customVsFont;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
     ctx.fillStyle = isDark ? '#94A3B8' : '#475569';
-    ctx.fillText(vsText, vsX, (hasStackedTeam ? midY : bottomY) - 1.5);
+    if (!isDark) {
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.0;
+      ctx.strokeText(vsText, vsX, hasStackedTeam ? midY : bottomY);
+    }
+    ctx.fillText(vsText, vsX, hasStackedTeam ? midY : bottomY);
 
     // Render Team 1 (Right Side)
     if (team1Data.length === 1) {
@@ -1961,7 +1966,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       //    NAME (P2)   NAME (P3)
       const nameFontSize = 26;
       const customFighterFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
-      const customVsFont = `700 24px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
+      const customVsFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
 
       const bottomY = arena.y - 12;
       const topY = bottomY - 50;
@@ -2023,9 +2028,9 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
 
       ctx.restore();
     } else {
-      // Multi-fighter FFA fallback: horizontal row joined with "vs"
+      // Multi-fighter FFA fallback: horizontal row joined with "VS"
       const pad = 10;
-      const vsText = 'vs';
+      const vsText = 'VS';
       const textY = arena.y - 12;
 
       let totalW = 0;
@@ -2066,7 +2071,12 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
           ctx.font = vsFont;
           if ('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
           ctx.fillStyle = isDark ? '#94A3B8' : '#475569';
-          ctx.fillText(vsText, startX, textY - 1.5);
+          if (!isDark) {
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.0;
+            ctx.strokeText(vsText, startX, textY);
+          }
+          ctx.fillText(vsText, startX, textY);
           startX += ctx.measureText(vsText).width + pad;
         }
       });

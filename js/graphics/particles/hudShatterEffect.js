@@ -337,7 +337,7 @@ function getTopMatchNameCharacters(arena) {
     const hasStackedTeam = team0.length > 1 || team1.length > 1;
     const nameFontSize = hasStackedTeam ? 34 : 42;
     const customNameFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
-    const vsFontSize = hasStackedTeam ? 22 : 24;
+    const vsFontSize = nameFontSize;
     const customVsFont = `700 ${vsFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
 
     if (measureCtx) {
@@ -361,7 +361,7 @@ function getTopMatchNameCharacters(arena) {
       measureCtx.font = customVsFont;
       if ('letterSpacing' in measureCtx) measureCtx.letterSpacing = '0.5px';
     }
-    const vsText = 'vs';
+    const vsText = 'VS';
     const wVs = measureCtx ? measureCtx.measureText(vsText).width : (vsText.length * vsFontSize * 0.7);
 
     const pad = 14;
@@ -432,7 +432,7 @@ function getTopMatchNameCharacters(arena) {
   } else {
     // Multi-fighter FFA fallback
     const pad = 10;
-    const vsText = 'vs';
+    const vsText = 'VS';
     const textY = arena.y - 12;
     const fighterData = mainFighters.map(f => ({
       name: (f.displayName || f.name || f._def?.displayName || f._def?.name || f.characterId || 'P').toUpperCase(),
@@ -440,9 +440,9 @@ function getTopMatchNameCharacters(arena) {
     }));
 
     const nameFont = '700 42px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
-    const vsFont = '700 24px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
+    const vsFont = '700 42px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
     const nameFontSize = 42;
-    const vsFontSize = 24;
+    const vsFontSize = 42;
 
     let totalW = 0;
     if (measureCtx) {

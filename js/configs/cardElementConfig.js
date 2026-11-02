@@ -117,6 +117,8 @@ const TYPE_ELEMENT_MAP = {
   todo: 'fighting',
   yuji: 'fighting',
   saitama: 'fighting',
+  goku: 'fighting',
+  vegeta: 'fighting',
   naoya: 'fighting',
   escanor: 'fighting',
   berserker: 'fighting',

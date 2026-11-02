@@ -72,6 +72,8 @@ import { UnarmedFighter } from '../fighters/UnarmedFighter.js';
 import { BombermanFighter } from '../fighters/BombermanFighter.js';
 import { PacmanFighter } from '../fighters/PacmanFighter.js';
 import { CreeperFighter } from '../fighters/CreeperFighter.js';
+import { GokuFighter } from '../fighters/GokuFighter.js';
+import { VegetaFighter } from '../fighters/VegetaFighter.js';
 
 export const FIGHTER_CLASS_MAP = {
   'unarmed':    UnarmedFighter,
@@ -87,6 +89,12 @@ export const FIGHTER_CLASS_MAP = {
   'creeper':    CreeperFighter,
   'Creeper':    CreeperFighter,
   'CREEPER':    CreeperFighter,
+  'goku':       GokuFighter,
+  'Goku':       GokuFighter,
+  'GOKU':       GokuFighter,
+  'vegeta':     VegetaFighter,
+  'Vegeta':     VegetaFighter,
+  'VEGETA':     VegetaFighter,
   'Unarmed':    UnarmedFighter,
   'UNARMED':    UnarmedFighter,
   'zombie':     ZombieFighter,

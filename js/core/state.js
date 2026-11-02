@@ -177,7 +177,7 @@ export function detectOptimalAspectScaling() {
   }
 
   if (typeof window === 'undefined') return 'fit';
-  if (window.electronAPI) return 'fixed';
+  // Default to 'fit' across both Electron desktop and web browsers
 
   return 'fit';
 }
@@ -246,6 +246,7 @@ export const state = {
     targetX: (CONFIG.arena?.x ?? 40) + (CONFIG.arena?.width ?? 450) / 2,
     targetY: (CONFIG.arena?.y ?? 240) + (CONFIG.arena?.height ?? 450) / 2,
     targetZoom: 1.0,
+    userZoom: 1.0,
     shakeX: 0,
     shakeY: 0,
     smoothing: 0.08,

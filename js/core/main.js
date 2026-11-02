@@ -15,7 +15,7 @@ import { initGraphicsCache } from '../graphics/graphicsCache.js';
 import { syncHudPosition } from '../graphics/ui/hudLayout.js';
 import { clearHealthHud } from '../graphics/hudManager.js';
 import { GAME_MODES } from './modeConfig.js';
-import { toggleCameraMode } from '../systems/cameraSystem.js';
+import { toggleCameraMode, zoomInCamera, zoomOutCamera, resetCameraZoom } from '../systems/cameraSystem.js';
 import { BalanceManager } from '../configs/balanceManager.js';
 import { initPixelModelExportUI, updatePixelModelPreview } from '../graphics/ui/PixelModelExportScreen.js';
 import { initImageBgRemoverUI, processAndRenderImage } from '../graphics/ui/ImageBgRemoverScreen.js';
@@ -455,6 +455,18 @@ inputTarget.addEventListener('wheel', (e) => {
     } else if (e.deltaY < 0 && state.indexPage > 0) {
       state.indexPage--;
     }
+  } else if (
+    state.gameState === 'playing' ||
+    state.gameState === 'countdown' ||
+    state.gameState === 'paused' ||
+    state.gameState === 'roundEnd' ||
+    state.gameState === 'matchEnd'
+  ) {
+    e.preventDefault();
+    const nextZoom = (e.deltaY < 0) ? zoomInCamera(0.10) : zoomOutCamera(0.10);
+    const pct = Math.round(nextZoom * 100);
+    const suffix = pct === 100 ? ' (DEFAULT)' : '';
+    showZoomToast(`📷 CAMERA ZOOM: ${pct}%${suffix}`);
   }
 }, { passive: false });
 
@@ -1545,6 +1557,37 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  const isCombat = (
+    state.gameState === 'playing' ||
+    state.gameState === 'countdown' ||
+    state.gameState === 'paused' ||
+    state.gameState === 'roundEnd' ||
+    state.gameState === 'matchEnd'
+  );
+
+  if (e.key === '=' || e.key === '+' || e.code === 'NumpadAdd') {
+    if (isCombat || e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const nextZoom = zoomInCamera(0.10);
+      const pct = Math.round(nextZoom * 100);
+      showZoomToast(`📷 CAMERA ZOOM: ${pct}%`);
+      return;
+    }
+  } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+    if (isCombat || e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const nextZoom = zoomOutCamera(0.10);
+      const pct = Math.round(nextZoom * 100);
+      showZoomToast(`📷 CAMERA ZOOM: ${pct}%`);
+      return;
+    }
+  } else if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.code === 'Numpad0' || e.code === 'Digit0')) {
+    e.preventDefault();
+    resetCameraZoom();
+    showZoomToast('📷 CAMERA ZOOM: 100% (DEFAULT)');
+    return;
+  }
+
   if (e.key.toLowerCase() === 'o') {
     toggleAspectScaling();
     return;
@@ -1676,6 +1719,7 @@ export function toggleAspectScaling() {
     localStorage.setItem('ramball_aspect_scaling', nextMode);
   }
   updateAspectScaling();
+  showZoomToast(nextMode === 'fit' ? '📐 SCALING: AUTO-FIT' : '🔍 SCALING: FIXED 1X');
 }
 
 if (quickBtnFit) {
@@ -1822,4 +1866,51 @@ if (typeof window !== 'undefined') {
   window.setArenaDecorationsEnabled = setArenaDecorationsEnabled;
   window.setArenaDecorationTheme = setArenaDecorationTheme;
   window.isArenaDecorationsEnabled = isArenaDecorationsEnabled;
+}
+
+// ─────────────────────────────────────────────
+// GLOBAL WINDOW ZOOM & FEEDBACK TOAST ENGINE
+// ─────────────────────────────────────────────
+let _zoomToastEl = null;
+let _zoomToastTimer = null;
+
+export function showZoomToast(text) {
+  if (typeof document === 'undefined') return;
+  if (!_zoomToastEl) {
+    _zoomToastEl = document.createElement('div');
+    _zoomToastEl.id = 'app-zoom-toast';
+    _zoomToastEl.style.cssText = `
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(11, 15, 25, 0.94);
+      border: 1.5px solid #00F0FF;
+      box-shadow: 0 4px 24px rgba(0, 240, 255, 0.4);
+      color: #FFFFFF;
+      font-family: 'Rajdhani', 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 1.2px;
+      padding: 8px 20px;
+      border-radius: 6px;
+      z-index: 999999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    `;
+    document.body.appendChild(_zoomToastEl);
+  }
+
+  _zoomToastEl.textContent = text;
+  _zoomToastEl.style.opacity = '1';
+  _zoomToastEl.style.transform = 'translateX(-50%) translateY(0px)';
+
+  if (_zoomToastTimer) clearTimeout(_zoomToastTimer);
+  _zoomToastTimer = setTimeout(() => {
+    if (_zoomToastEl) {
+      _zoomToastEl.style.opacity = '0';
+      _zoomToastEl.style.transform = 'translateX(-50%) translateY(-6px)';
+    }
+  }, 1200);
 }
