@@ -10,6 +10,15 @@ export const naoyaConfig = {
   bossTitle: 'Projection Sorcery Prodigy',
   title: 'Hei Commander',
 
+  assets: {
+    hair: 'Assets/model/naoya/Naoya_hair.png',
+    domainOverlay: 'Assets/model/naoya/Naoya_arena_overlay.png',
+    curseForm: 'Assets/model/naoya/Naoya-curse-form.png'
+  },
+
+  // Curse Form sprite model sizing (vertical height in multiples of r)
+  curseFormModelLength: 5.4,
+
   // Base Attributes
   hp: 190,
   speed: 6.6,
@@ -54,8 +63,8 @@ export const naoyaConfig = {
   movementAfterimageSFX: false,      // ⚡ Subtle step SFX on each movement afterimage pop
 
   // Passive: 24-Frame Palm Touch & Frame Stasis Freeze
-  enableFrameFreeze: 1,             // ⚡ Enabled when tantoCooldown is UP
-  frameFreezeChance: 0.25,          // ⚡ Trigger chance (0.0 to 1.0, 35% chance per flurry sequence so it doesn't trigger too frequently)
+  enableFrameFreeze: 0,             // ⚡ Disabled per user tuning
+  frameFreezeChance: 0.0,           // ⚡ Trigger chance disabled
   frameFreezeCooldown: 500,         // ⚡ Synced with tantoCooldown
   frameFreezeVulnerability: 0.30,   // +30% bonus True Damage taken while frozen
   maxDisruptionsForStasis: 1,       // Triggers on flurry hit once tantoCooldown is UP
@@ -75,11 +84,11 @@ export const naoyaConfig = {
   flurryLungeSpeed: 2.5,
   punchDamage: 8,                  // Damage per flurry punch
   punchComboFinisherDamage: 18,    // Bonus damage on the final finisher punch
-  punchCooldown: 40,               // Cooldown between full flurry bursts (~0.66s)
+  punchCooldown: 30,               // Low cooldown between full flurry bursts (~0.50s)
   punchKnockback: 16,              // Knockback applied ONLY on the final finisher punch
   tantoDamage: 8,                  // Backward compatibility alias
   tantoComboFinisherDamage: 30,
-  tantoCooldown: 500,
+  tantoCooldown: 30,               // Low cooldown between flurry sequences
   knifeStabFrames: 50,              // ⚡ Total duration of the smooth tanto stab finisher animation (frames)
   tantoStrikeFrames: 30,
   tantoRecoveryFrames: 8,
@@ -137,7 +146,7 @@ export const naoyaConfig = {
   // ═══════════════════════════════════════════════════════════
   // OPTION B: VENGEFUL CURSE REBIRTH & AWAKENED JET MECHANICS
   // ═══════════════════════════════════════════════════════════
-  enableCurseRebirth: 0,         // ⚡ Master toggle for Vengeful Curse Rebirth upon lethal damage (hp <= 0)
+  enableCurseRebirth: 1,         // ⚡ Master toggle for Vengeful Curse Rebirth upon lethal damage (hp <= 0)
   startInCurseForm: false,          // ⚡ Debug / testing toggle to start battle directly in Curse Form
   curseRebirthHpPercent: 0.50,      // ⚡ Reborn with 50% max HP (95 HP)
   curseWombDurationFrames: 60,      // ⚡ Duration (frames) of Cursed Womb cocoon phase before hatching (~1.0s)
@@ -149,47 +158,57 @@ export const naoyaConfig = {
   curseMaxSpeed: 14.5,              // ⚡ Mach 3 top speed
   curseCarapaceFrontalResist: 0.20, // ⚡ Takes 20% reduced damage from frontal incoming attacks
   
-  // Ramjet Mach 3 Gauge
-  enableMachGauge: 0,            // ⚡ Mach 3 Overdrive Gauge (0-100%)
-  machGaugeRampPerSecond: 12,       // ⚡ Passive gauge charge rate per second while moving
+  // Ramjet Mach 3 Gauge (1. Mach 3 Propulsion & Flight)
+  enableMachGauge: 1,               // ⚡ Mach 3 Overdrive Gauge (0-100%)
+  machGaugeRampPerSecond: 16,       // ⚡ Passive gauge charge rate per second while moving
   machGaugePerRicochet: 25,         // ⚡ Gauge bonus on arena wall bounce
   machGaugePerHit: 20,              // ⚡ Gauge bonus when landing melee attacks
   machOverdriveDurationFrames: 180, // ⚡ Duration of 100% Mach 3 Overdrive mode (3.0s)
   machRamContactDamage: 18,         // ⚡ Collision body-check damage when rushing through enemies in Mach 3
   machRamKnockback: 14,             // ⚡ Collision pushback
-  
-  // Awakened Basic Attack: Turbine Carapace Slam & Cursed Claws
-  curseMeleeReach: 80,
-  curseMeleeArc: (140 * Math.PI) / 180,
-  cursePunchDamage: 8,
-  cursePunchFinisherDamage: 24,
-  cursePunchCooldown: 36,
 
-  // Awakened Skill 1: Mach 3 Supersonic Ramjet (Chōsoku Ramjet)
-  enableCurseRamjet: 0,
-  curseSkill1Cooldown: 390,          // 6.5s (390 frames)
-  curseRamjetChargeFrames: 8,       // Spool-up windup
-  curseRamjetTravelFrames: 14,      // Supersonic vector thrust
-  curseRamjetDamage: 45,            // Direct pierce damage
+  // Upgraded Projection Sorcery in Curse Form (2. 24 FPS Frame Trapping & 1s Freeze)
+  curseFrameFreezeChance: 0.0,      // ⚡ Disabled per user tuning (Passive 24-Frame Freeze disabled)
+  curseFrameFreezeDuration: 60,     // ⚡ 1.0 full second (60 frames) freeze inside animation frame
+  curseFrameShatterDamage: 24,      // ⚡ Bonus True Damage when shattering a frozen 24 FPS frame in Curse Form
+
+  // Awakened Basic Attack: Rapid 24 FPS Hypersonic Flurry Barrage (Attack-Teleport-Attack Sequence)
+  curseMeleeReach: 88,
+  curseMeleeArc: (150 * Math.PI) / 180,
+  cursePunchDamage: 9,
+  cursePunchFinisherDamage: 22,
+  cursePunchCooldown: 24,           // ⚡ Low cooldown (0.4s) between Curse Form flurry sequences
+  curseDomainFlurryCooldown: 12,    // ⚡ Ultra-low cooldown (0.2s) between flurry sequences inside Time Cell Moon Palace
+  curseDomainFlurryIntervalFrames: 5, // ⚡ Faster attack-teleport-attack cadence inside Domain Expansion
+
+  // Awakened Skill 1: Mach 3 Propulsion & Flight (Chōsoku Ramjet)
+  enableCurseRamjet: 1,
+  curseSkill1Cooldown: 300,          // 5.0s (300 frames)
+  curseRamjetChargeFrames: 10,      // Armor panels open & compress air spool-up
+  curseRamjetTravelFrames: 16,      // Supersonic Mach 3 vector thrust
+  curseRamjetDamage: 45,            // Direct kinetic Mach 3 ramming damage
   curseRamjetWallImpactDamage: 25,  // Wall-splat rebound damage
   curseRamjetWallPinFrames: 60,     // 1.0s wall pin
 
-  // Awakened Skill 2: Concussive Air Turbine Inhale & Cannon Burst
-  enableCurseTurbineCannon: 0,
-  curseSkill2Cooldown: 480,          // 8.0s (480 frames)
-  curseTurbineInhaleRadius: 220,    // Vacuum suction radius
-  curseTurbineInhaleDuration: 18,   // Suction frames
-  curseTurbineBurstRadius: 180,     // Shockwave explosion radius
-  curseTurbineBurstDamage: 38,      // Shockwave burst damage
-  curseTurbineKnockback: 18,        // Concussive repulsion
+  // Awakened Skill 2: Air Compression Attacks (Explosive Air Bursts)
+  enableCurseTurbineCannon: 1,
+  curseSkill2Cooldown: 390,          // 6.5s (390 frames)
+  curseTurbineInhaleRadius: 230,    // Intake vent air compression suction radius
+  curseTurbineInhaleDuration: 18,   // Air compression charge frames
+  curseTurbineBurstRadius: 185,     // Explosive air burst radius
+  curseTurbineBurstDamage: 38,      // Explosive air burst damage
+  curseTurbineKnockback: 18,        // Concussive repulsion blowing opponents away
 
   // Awakened Ultimate: Domain Expansion — Time Cell Moon Palace (時胞月宮殿 - Tokyū Gesshōkyū)
-  enableCurseDomain: 0,
-  curseUltCooldown: 1440,            // 24.0s (1440 frames)
+  enableCurseDomain: 1,
+  curseDomainInitialCooldown: 240,   // ⚡ Initial cooldown (4.0s = 240 frames) when transforming into Curse Form before Domain can be opened
+  curseUltCooldown: 1200,            // 20.0s (1200 frames)
   curseDomainDurationFrames: 480,    // 8.0s Domain duration
-  curseDomainCellularBleedInterval: 24, // Cellular rupture tick rate (every 24 frames = 0.4s)
-  curseDomainCellularBleedDamage: 6, // Bleed true damage per moving step
-  curseDomainCellularStunFrames: 6,  // Micro-hitstun on movement breach
+  curseDomainSpeed: 18.5,            // ⚡ Significant movement speed increase while inside Time Cell Moon Palace
+  curseDomainCellularBleedInterval: 20, // Cellular rupture tick rate (every 20 frames = 0.33s)
+  curseDomainCellularBleedDamage: 8, // Internal cellular rupturing bleed True Damage per out-of-sync action/movement
+  curseDomainCellularStunFrames: 6,  // Micro-hitstun on cellular misalignment
+  curseDomainOverlayAlpha: 0.95,     // Opacity of arena PNG overlay during Domain Expansion
 
   // Sound Configuration & Volumes
   sounds: {

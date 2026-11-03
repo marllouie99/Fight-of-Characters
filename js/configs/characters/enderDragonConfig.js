@@ -157,6 +157,18 @@ export const enderDragonConfig = {
   divebombKnockback: 22.0,
   divebombReach: 95,
   divebombAcidDeployInterval: 4,
+  divebombSlowDuration: 90, // 1.5s slow debuff applied to enemies hit by divebomb (~90 frames at 60 FPS)
+  divebombSlowMultiplier: 0.40, // 40% movement speed (60% slow)
+
+  // ── End Crystal Healing Mechanics (4 Corners) ──
+  enableCornerCrystals: true, // Spawns 4 End Crystals in the 4 corners of the arena
+  cornerCrystalCount: 4,
+  crystalTetherReach: 340, // Max distance (px) between dragon and crystal for tether healing
+  crystalHealAmount: 6, // HP restored per heal tick
+  crystalHealInterval: 45, // Ticks (frames) between heal pulses (~0.75s)
+  crystalBacklashDamage: 60, // Damage dealt to dragon when an opponent destroys an End Crystal
+  crystalAnimTicks: 3, // Pacing: ticks per animation frame (3 ticks = ~3.0s per revolution, calm & authentic to Minecraft)
+  crystalDrawSize: 140, // Rendered scale size of the End Crystal sprite on screen (140px, imposing beacon scale)
 
   // ── Death Sequence ──
   deathAscentFrames: 90,

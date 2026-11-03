@@ -179,6 +179,16 @@ async function verifyAll() {
           topLevelDecls[name] = topLevelDecls[name] || [];
           topLevelDecls[name].push({ line: idx + 1, type: 'let' });
         }
+
+        // Named import declarations
+        const importMatch = lineTrim.match(/^import\s*\{([^}]+)\}\s*from/);
+        if (importMatch && importMatch[1]) {
+          const names = importMatch[1].split(',').map(s => s.trim().split(/\s+as\s+/)[1] || s.trim().split(/\s+as\s+/)[0]).filter(Boolean);
+          for (const name of names) {
+            topLevelDecls[name] = topLevelDecls[name] || [];
+            topLevelDecls[name].push({ line: idx + 1, type: 'import' });
+          }
+        }
       }
 
       // Accurate token brace depth tracker

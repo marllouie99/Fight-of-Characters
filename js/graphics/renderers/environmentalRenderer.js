@@ -608,3 +608,5 @@ export function renderCjBaguvixBackground(fighter, ctx, isClashSecondary = false
   ctx.restore();
 }
 
+export { getNaoyaDomainOverlayImage, renderNaoyaDomainBackground, drawTimeCellMoonPalaceDomain } from '../weapons/naoyaWeaponGraphics.js';
+

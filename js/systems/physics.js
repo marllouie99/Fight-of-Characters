@@ -301,7 +301,10 @@ export function resolveFighterCollision(a, b) {
     const dragon = aIsDragonDive ? a : b;
     const victim = aIsDragonDive ? b : a;
     if (victim && !victim.isEndCrystal && !victim.isBoss && typeof dragon._catchAndDragVictim === 'function') {
-      dragon._catchAndDragVictim(victim);
+      const isTeammate = (typeof dragon.isTeammate === 'function') ? dragon.isTeammate(victim) : false;
+      if (!isTeammate) {
+        dragon._catchAndDragVictim(victim);
+      }
     }
     return; // Skip standard elastic bounce and separation physics
   }
@@ -1246,7 +1249,10 @@ export function updateFighters() {
       const isPokemonFainting = Boolean(
         fighter && (fighter.isPokemon || fighter.isPokemonCompanion) && fighter.hp <= 0 && (fighter.isFainting || fighter.animState === 'faint')
       );
-      if (fighter.hp <= 0 && !isMakimaReviving && !isPokemonFainting) {
+      const isNaoyaTransforming = Boolean(
+        fighter && (fighter.isCurseWomb || ((fighter.curseWombTimer || 0) > 0))
+      );
+      if (fighter.hp <= 0 && !isMakimaReviving && !isPokemonFainting && !isNaoyaTransforming) {
         clearFighterDomain(fighter, state);
         if (typeof fighter._healthBarShakeTimer === 'number' && fighter._healthBarShakeTimer > 0) {
           fighter._healthBarShakeTimer--;

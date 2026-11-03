@@ -11,7 +11,7 @@ import {
   drawArena, drawArenaBorder, drawArenaWatermark, drawArenaMatchNames, drawProjectiles, drawFuelPickups, drawFighters, drawFloatingTexts, drawUltimateChannelingTexts,
   drawFlames, drawDeathEffects, drawBlackHoleEffects, drawBloodEffects, drawDroppedMagazines, drawIllusions, 
   drawIllusionDeathEffects, drawIllusionSpawnEffects, drawBerserkerRageEffects, 
-  drawSparkEffects, drawPurpleDimScreen, drawRedDimScreen, drawGojoDomainDimScreen, drawRubbickDomainDimScreen, drawSukunaDomainDimScreen, drawYutaDomainDimScreen, drawMahitoDomainDimScreen, drawStormDimScreen, drawFurnaceDimScreen, 
+  drawSparkEffects, drawPurpleDimScreen, drawRedDimScreen, drawGojoDomainDimScreen, drawRubbickDomainDimScreen, drawSukunaDomainDimScreen, drawYutaDomainDimScreen, drawMahitoDomainDimScreen, drawNaoyaDomainDimScreen, drawStormDimScreen, drawFurnaceDimScreen, 
   drawRikaSummonDimScreen, drawCjBaguvixDimScreen, drawMahitoDomainOverlay, drawTojiUltimateOverlay, drawNanamiOvertimeArenaOverlay, drawGenosUltimateArenaOverlay, drawEscanorUltimateArenaOverlay, drawMahoragaAdaptationDimScreen, drawMahoragaWheelArenaOverlay, drawMahoragaLevel8DimScreen,
   drawAllCronosSpheres, drawThermobaricExplosions, drawThinIceBreakerDimScreen,
   drawGenosSpeedLines, drawMahoragaSpeedLines, drawNanamiSpeedLines, drawSaitamaSpeedLines, drawIchigoBankaiSpeedLines, drawTojiSpeedLines, drawSaitamaSeriousPunchDimScreen, drawGenosSelfDestructDimScreen,
@@ -309,6 +309,7 @@ export function renderGame() {
           drawSukunaDomainDimScreen(); // Dark crimson dim overlay when Sukuna's Malevolent Shrine domain is active (full-screen, unclipped)
           drawYutaDomainDimScreen(); // Dark cursed purple dim overlay when Yuta's domain is active (full-screen, unclipped)
           drawMahitoDomainDimScreen(); // Dark cursed purple dim overlay when Mahito's Self-Embodiment of Perfection domain is active (full-screen, unclipped)
+          drawNaoyaDomainDimScreen(); // Dark cursed teal-black cosmic void & coronal iris atmosphere when Naoya's Time Cell Moon Palace is active (full-screen, unclipped)
           drawMahoragaAdaptationDimScreen();
           drawMahoragaWheelArenaOverlay(); // 2D Eight-Handled Sword Wheel pop & rotation arena overlay
           drawMahoragaLevel8DimScreen();
@@ -336,7 +337,7 @@ export function renderGame() {
         if (!state.pixiApp && !state.disableDimEffects && state.fighters) {
           const activeDomainFighter = state.fighters.find(f =>
             f && f.hp > 0 &&
-            (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) &&
+            (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) &&
             typeof f.drawDomainBackground === 'function'
           );
           if (activeDomainFighter) {

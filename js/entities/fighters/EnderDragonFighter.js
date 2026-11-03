@@ -5,11 +5,17 @@
 import { Fighter, applyDamageToTarget } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { enderDragonConfig } from '../../configs/characters/enderDragonConfig.js';
-import { drawEnderDragonSkin, drawDragonAcidPool } from '../../graphics/fighters/enderDragonSkin.js';
+import {
+  drawEnderDragonSkin,
+  drawDragonAcidPool,
+  drawMinecraftDragonFireball,
+  drawMinecraftBreathStream,
+} from '../../graphics/fighters/enderDragonSkin.js';
 import { state, triggerGlobalScreenShake, spawnFloatingText } from '../../core/state.js';
-import { spawnSparks, spawnImpactFlash } from '../../graphics/particles/sparkEffect.js';
+import { spawnSparks, spawnImpactFlash, spawnMeleeClashShockwave } from '../../graphics/particles/sparkEffect.js';
 import { projectileSystem } from '../../systems/projectileSystem.js';
 import { audioSystem } from '../../systems/audioSystem.js';
+import { EndCrystalEntity, getCornerEndCrystals, drawCrystalHealingTetherBeams } from '../EndCrystalEntity.js';
 
 export const DRAGON_STATE = {
   HOVER: 'HOVER',
@@ -198,6 +204,54 @@ export class EnderDragonFighter extends Fighter {
     return false;
   }
 
+  reset() {
+    super.reset();
+    this.aiState = DRAGON_STATE.HOVER;
+    this.stateTimer = 0;
+    this.altitude = 1.0;
+    this.targetAltitude = 1.0;
+    this.z = 20;
+    this.currentPhase = 1;
+    this.phaseSpeedMult = 1.0;
+    this.fireballCooldown = 120 + Math.floor(Math.random() * 80);
+    this.swoopCooldown = 240 + Math.floor(Math.random() * 100);
+    this.cataclysmCooldown = 600 + Math.floor(Math.random() * 200);
+    this.divebombCooldown = 200 + Math.floor(Math.random() * 100);
+    this.isSwooping = false;
+    this.isIntercepting = false;
+    this.isDivebombing = false;
+    this.isTelegraphingDivebomb = false;
+    this.isChannelingCataclysm = false;
+    this.isGrounded = false;
+    this.acidPools = [];
+    this.afterImages = [];
+    if (this.draggedVictims) this.draggedVictims.clear();
+    if (this.divebombHitFighters) this.divebombHitFighters.clear();
+    this._hasSpawnedCornerCrystals = false;
+  }
+
+  _ensureCornerEndCrystals(arena) {
+    if (typeof state === 'undefined' || !Array.isArray(state.fighters)) return;
+    if (state.activeFocMap && state.activeFocMap.id === 'foc_ender_dragon_map') return;
+    if (this._hasSpawnedCornerCrystals) return;
+
+    const existingCount = state.fighters.filter(f => f && f.isEndCrystal && f.hp > 0).length;
+    if (existingCount >= 4) {
+      this._hasSpawnedCornerCrystals = true;
+      return;
+    }
+
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const cornerDefs = getCornerEndCrystals(curArena);
+    // Remove stale/residual crystals first
+    state.fighters = state.fighters.filter(f => !f.isEndCrystal);
+    for (let cDef of cornerDefs) {
+      const crystal = new EndCrystalEntity(cDef.x, cDef.y, cDef.id, cDef.name);
+      state.fighters.push(crystal);
+    }
+    this._hasSpawnedCornerCrystals = true;
+  }
+
   _getConfig() {
     if (this.bossConfig) return this.bossConfig;
     if (typeof CONFIG !== 'undefined' && CONFIG.ender_dragon) return CONFIG.ender_dragon;
@@ -324,6 +378,13 @@ export class EnderDragonFighter extends Fighter {
 
   // ── Main Update Loop ──
   update(opponent, ownerIndex, arena) {
+    const validOpponent = this._getValidEnemyOpponent(opponent);
+
+    // 0. Update visual effects & transient particle lifecycles before freeze guard (Rule 25)
+    // (Ensures active dragon breath acid pools & afterimages decay naturally when dragon is immobilized)
+    this._updateAcidPools(validOpponent);
+    this._updateAfterImages();
+
     // Dynamic divebomb pushback and pull immunity sync
     const isDivebombActive = this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.isChannelingCataclysm || this.aiState === DRAGON_STATE.CATACLYSM_CHANNEL;
     this.immuneToKnockback = isDivebombActive;
@@ -348,7 +409,9 @@ export class EnderDragonFighter extends Fighter {
     }
 
     const cfg = this._getConfig();
-    const validOpponent = this._getValidEnemyOpponent(opponent);
+
+    // 0b. Ensure 4 Corner End Crystals are active in arena for Fighter Ender Dragon
+    this._ensureCornerEndCrystals(arena);
 
     // ── Pillar 4: Environmental Reactivity & HP Phase Check ──
     this._evaluateEnvironmentalReactivity(cfg);
@@ -370,12 +433,6 @@ export class EnderDragonFighter extends Fighter {
       this.skills[2].currentCooldown = this.divebombCooldown;
       this.skills[3].currentCooldown = this.cataclysmCooldown;
     }
-
-    // Update lingering acid pools
-    this._updateAcidPools(validOpponent);
-
-    // Update trailing afterimages
-    this._updateAfterImages();
 
     // AI State Machine Execution
     switch (this.aiState) {
@@ -539,7 +596,7 @@ export class EnderDragonFighter extends Fighter {
 
   // ── Pillar 1: Dynamic Flight Paths & Sweeping Perimeter Patrols ──
   _updatePatrolState(opponent, arena, cfg) {
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 40, y: 240, width: 450, height: 450 };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
     const baseAr = (curArena.radius || (curArena.width / 2));
@@ -685,7 +742,7 @@ export class EnderDragonFighter extends Fighter {
 
   _updatePerchDescent(arena, cfg) {
     this.stateTimer--;
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 40, y: 240, width: 450, height: 450 };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const anchorX = curArena.x + curArena.width / 2;
     const anchorY = curArena.y + curArena.height / 2;
 
@@ -716,7 +773,7 @@ export class EnderDragonFighter extends Fighter {
 
   _updatePerchGrounded(opponent, arena, cfg) {
     this.stateTimer--;
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 40, y: 240, width: 450, height: 450 };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
 
@@ -763,6 +820,8 @@ export class EnderDragonFighter extends Fighter {
     this._playAudio('fireball', 'Assets/Sound Effects/Skills/redblast.mp3', 0.65);
     const baseAngle = this.gunAngle || 0;
     const count = 3;
+    const sourceFighter = this;
+
     for (let i = 0; i < count; i++) {
       const spread = (i - 1) * 0.22;
       const angle = baseAngle + spread;
@@ -776,7 +835,7 @@ export class EnderDragonFighter extends Fighter {
         vy: Math.sin(angle) * speed,
         radius: r,
         damage: 14,
-        owner: this,
+        owner: sourceFighter,
         color: '#D946EF',
         maxDistance: 220,
         traveled: 0,
@@ -784,27 +843,44 @@ export class EnderDragonFighter extends Fighter {
           this.x += this.vx;
           this.y += this.vy;
           this.traveled += speed;
+
+          if (Math.random() < 0.45) {
+            spawnSparks(this.x, this.y, '#D946EF', 2, 2.0);
+          }
+
           const targets = (typeof state !== 'undefined' && state.fighters) ? state.fighters : [];
           for (let f of targets) {
             if (f && f !== this.owner && f.hp > 0 && !f.isEndCrystal && !f.isBoss) {
               const d = Math.hypot(f.x - this.x, f.y - this.y);
               if (d < (f.r || 20) + this.radius) {
                 applyDamageToTarget(f, this.damage, this.owner);
-                spawnSparks(this.x, this.y, '#E879F9', 6, 3.0);
+                spawnSparks(this.x, this.y, '#E879F9', 8, 3.5);
+                this.deployPool();
                 return true;
               }
             }
           }
-          return this.traveled >= this.maxDistance;
+          if (this.traveled >= this.maxDistance) {
+            this.deployPool();
+            return true;
+          }
+          return false;
+        },
+        deployPool() {
+          sourceFighter.acidPools.push({
+            x: this.x,
+            y: this.y,
+            radius: (cfg.acidPoolRadius || 70) * 0.70,
+            duration: Math.floor((cfg.acidPoolDurationFrames || 180) * 0.75),
+            maxDuration: Math.floor((cfg.acidPoolDurationFrames || 180) * 0.75),
+            tickTimer: 0,
+            tickInterval: cfg.acidTickInterval || 15,
+            damagePerTick: cfg.acidDamagePerTick || 6,
+            owner: sourceFighter,
+          });
         },
         draw(ctx) {
-          ctx.save();
-          ctx.translate(this.x, this.y);
-          ctx.fillStyle = '#D946EF';
-          ctx.beginPath();
-          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          drawMinecraftBreathStream(ctx, this);
         }
       };
 
@@ -1010,9 +1086,9 @@ export class EnderDragonFighter extends Fighter {
         sourceFighter._playAudio('fireballImpact', 'Assets/Sound Effects/Skills/purpledeploy.mp3', 0.90);
         triggerGlobalScreenShake(6, 15);
         spawnImpactFlash(this.x, this.y, cfg.fireballDetonationRadius || 70, '#F5D0FE');
-        spawnSparks(this.x, this.y, '#C026D3', 18, 5.0);
+        spawnSparks(this.x, this.y, '#C026D3', 20, 5.0);
 
-        // Deploy lingering acid pool
+        // Deploy lingering Minecraft Dragon's Breath Area Effect Cloud
         sourceFighter.acidPools.push({
           x: this.x,
           y: this.y,
@@ -1026,22 +1102,7 @@ export class EnderDragonFighter extends Fighter {
         });
       },
       draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.fillStyle = '#C026D3';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#F5D0FE';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = '#E879F9';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
+        drawMinecraftDragonFireball(ctx, this, false);
       }
     };
 
@@ -1275,13 +1336,7 @@ export class EnderDragonFighter extends Fighter {
         return this.traveled >= this.maxDistance;
       },
       draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.fillStyle = '#D946EF';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        drawMinecraftDragonFireball(ctx, this, true);
       }
     };
 
@@ -1333,12 +1388,12 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
-  _collectAllEnemyTargets() {
+  _collectAllEnemyTargets(opponent = null) {
     const targets = [];
     if (typeof state !== 'undefined') {
       if (Array.isArray(state.fighters)) {
         for (let f of state.fighters) {
-          if (f && f !== this && f.hp > 0 && !f.isEndCrystal && !f.isBoss) targets.push(f);
+          if (f && f !== this && f.hp > 0 && !f.isEndCrystal) targets.push(f);
         }
       }
       if (Array.isArray(state.illusions)) {
@@ -1346,6 +1401,9 @@ export class EnderDragonFighter extends Fighter {
           if (ill && ill !== this && ill.hp > 0 && !ill.isEndCrystal) targets.push(ill);
         }
       }
+    }
+    if (opponent && opponent !== this && opponent.hp > 0 && !opponent.isEndCrystal) {
+      if (!targets.includes(opponent)) targets.push(opponent);
     }
     return targets;
   }
@@ -1371,7 +1429,7 @@ export class EnderDragonFighter extends Fighter {
     this.isTelegraphingDivebomb = false;
     this.isDivebombing = false;
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 40, y: 240, width: 450, height: 450 };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
     const ar = (curArena.radius || (curArena.width / 2));
@@ -1402,7 +1460,7 @@ export class EnderDragonFighter extends Fighter {
   _updateDivebombSetup(opponent, arena, cfg) {
     this.stateTimer--;
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 40, y: 240, width: 450, height: 450 };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
     const ar = (curArena.radius || (curArena.width / 2));
@@ -1503,21 +1561,149 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
+  _clampToArena(entity, arena) {
+    if (!entity || !arena) return;
+    const er = entity.r || 20;
+    if (arena.shape === 'circle') {
+      const cx = arena.x + arena.width / 2;
+      const cy = arena.y + arena.height / 2;
+      const ar = Math.max(30, (arena.radius || (arena.width / 2)) - er);
+      const d = Math.hypot(entity.x - cx, entity.y - cy);
+      if (d > ar && d > 0) {
+        entity.x = cx + ((entity.x - cx) / d) * ar;
+        entity.y = cy + ((entity.y - cy) / d) * ar;
+      }
+    } else {
+      const minX = arena.x + er;
+      const maxX = arena.x + arena.width - er;
+      const minY = arena.y + er;
+      const maxY = arena.y + arena.height - er;
+      entity.x = Math.max(minX, Math.min(maxX, entity.x));
+      entity.y = Math.max(minY, Math.min(maxY, entity.y));
+    }
+  }
+
+  _isCollidingWithArenaWall(x, y, radius, arena) {
+    if (!arena) return false;
+    const r = radius || 20;
+    if (arena.shape === 'circle') {
+      const cx = arena.x + arena.width / 2;
+      const cy = arena.y + arena.height / 2;
+      const ar = Math.max(30, (arena.radius || (arena.width / 2)) - r);
+      return Math.hypot(x - cx, y - cy) >= ar;
+    }
+    const minX = arena.x + r;
+    const maxX = arena.x + arena.width - r;
+    const minY = arena.y + r;
+    const maxY = arena.y + arena.height - r;
+    return x <= minX || x >= maxX || y <= minY || y >= maxY;
+  }
+
+  _getClampedArenaPos(x, y, radius, arena) {
+    if (!arena) return { x, y };
+    const r = radius || 20;
+    if (arena.shape === 'circle') {
+      const cx = arena.x + arena.width / 2;
+      const cy = arena.y + arena.height / 2;
+      const ar = Math.max(30, (arena.radius || (arena.width / 2)) - r);
+      const d = Math.hypot(x - cx, y - cy);
+      if (d > ar && d > 0) {
+        return {
+          x: cx + ((x - cx) / d) * ar,
+          y: cy + ((y - cy) / d) * ar
+        };
+      }
+      return { x, y };
+    }
+    const minX = arena.x + r;
+    const maxX = arena.x + arena.width - r;
+    const minY = arena.y + r;
+    const maxY = arena.y + arena.height - r;
+    return {
+      x: Math.max(minX, Math.min(maxX, x)),
+      y: Math.max(minY, Math.min(maxY, y))
+    };
+  }
+
+  _isTargetInDivebombStrikeCorridor(target, strikeSpeed, cfg) {
+    if (!target || target === this || target.hp <= 0 || target.isDead) return false;
+    if (typeof this.isTeammate === 'function' && this.isTeammate(target)) return false;
+
+    const tr = target.r || 20;
+    const dr = this.r || 36;
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    const cosA = Math.cos(this.divebombAngle);
+    const sinA = Math.sin(this.divebombAngle);
+
+    // Forward projection along dive trajectory
+    const forwardDist = dx * cosA + dy * sinA;
+    // Perpendicular lateral distance from flight centerline
+    const lateralDist = Math.abs(-dx * sinA + dy * cosA);
+
+    // Lateral collision check: Must strictly fall within the physical dragon snout/body width
+    // (Prevents entities to the flank or outside the ground danger carpet from being caught or snapped)
+    const maxCorridorHalfWidth = (cfg && cfg.divebombCorridorWidth ? cfg.divebombCorridorWidth * 0.5 : 47.5);
+    const maxLateral = Math.min(maxCorridorHalfWidth, (dr * 0.85) + tr);
+    if (lateralDist > maxLateral) return false;
+
+    // Longitudinal collision check: Must be within physical front contact reach this frame
+    // (Dragon travels at strikeSpeed px/frame, front snout is at dr, cannot hit behind the dragon)
+    const minForward = -tr * 0.4;
+    const maxForward = dr + tr + Math.min(22, (strikeSpeed || 24.5) * 0.75);
+    return forwardDist >= minForward && forwardDist <= maxForward;
+  }
+
   _catchAndDragVictim(victim) {
     if (!victim || victim.isEndCrystal || victim.isBoss || victim === this || victim.hp <= 0 || victim.isDead) return;
+    if (typeof this.isTeammate === 'function' && this.isTeammate(victim)) return;
+    if (this.divebombHitFighters && this.divebombHitFighters.has(victim)) return;
     if (!this.draggedVictims) this.draggedVictims = new Set();
+    if (this.draggedVictims.has(victim)) return;
     this.draggedVictims.add(victim);
+    if (this.divebombHitFighters) this.divebombHitFighters.add(victim);
     victim.isDraggedByDragon = true;
-    if (typeof victim.applyTimeStop === 'function') {
-      victim.applyTimeStop(4);
-    }
+
+    // Rule 1.5: Hitstun/Timestop applied to target only on initial impact contact
     if (typeof victim.applyHitStun === 'function') {
-      victim.applyHitStun(4);
+      victim.applyHitStun(8);
+    }
+    if (typeof victim.applyTimeStop === 'function') {
+      victim.applyTimeStop(6);
+    }
+
+    // Immediate tactile impact response at the contact point (NO coordinate snap!)
+    this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 0.90);
+    spawnImpactFlash(victim.x, victim.y, 50, '#F5D0FE');
+    spawnSparks(victim.x, victim.y, '#E879F9', 10, 5.0);
+    triggerGlobalScreenShake(6, 12);
+
+    // Apply slow debuff upon initial divebomb contact
+    const cfg = this._getConfig();
+    this._applyDivebombSlow(victim, cfg, false);
+  }
+
+  _applyDivebombSlow(target, cfg, showFloatingText = true, yOffset = -45) {
+    if (!target || target.hp <= 0 || target.isDead) return;
+    const slowFrames = (cfg && cfg.divebombSlowDuration) || 90;
+    const slowMult = (cfg && cfg.divebombSlowMultiplier) || 0.40;
+    if (typeof target.applySlow === 'function') {
+      target.applySlow(slowFrames, slowMult, { isDivebomb: true });
+    } else if (target.statusEffects && typeof target.statusEffects.applySlow === 'function') {
+      target.statusEffects.applySlow(slowFrames, slowMult, { isDivebomb: true });
+    } else {
+      target.slowTimer = Math.max(target.slowTimer || 0, slowFrames);
+      target.slowMultiplier = Math.min(target.slowMultiplier || 1.0, slowMult);
+    }
+    if (showFloatingText) {
+      spawnFloatingText(target.x, target.y + yOffset, 'SLOWED!', '#E879F9');
     }
   }
 
   _updateDivebombStrike(opponent, arena, cfg) {
     this.stateTimer--;
+
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
 
     // Trail vivid amethyst afterimages
     if (this.stateTimer % 2 === 0) {
@@ -1553,48 +1739,106 @@ export class EnderDragonFighter extends Fighter {
     this.gunAngle = this.divebombAngle;
     this.angle = this.divebombAngle;
 
-    // Detect and catch any reachable targets along the dive trajectory
-    const reach = cfg.divebombReach || 95;
-    const targets = this._collectAllEnemyTargets();
+    // Detect and catch any reachable targets along the physical dive corridor (Zero-Snap corridor collision)
+    const targets = this._collectAllEnemyTargets(opponent);
     for (let target of targets) {
       if (!target || target === this || target.hp <= 0 || target.isDead) continue;
-      const dist = Math.hypot(target.x - this.x, target.y - this.y);
-      if (dist <= reach + (target.r || 20)) {
+      if (!this._isTargetInDivebombStrikeCorridor(target, strikeSpeed, cfg)) continue;
+
+      if (target.isBoss) {
+        if (!this.divebombHitFighters.has(target)) {
+          this.divebombHitFighters.add(target);
+          const damage = cfg.divebombDamage || 45;
+          const knockback = (cfg.divebombKnockback || 22.0) * this.phaseSpeedMult;
+          this._applyDivebombHit(target, damage, knockback, curArena, cfg);
+        }
+      } else {
         this._catchAndDragVictim(target);
       }
     }
 
-    // Drag caught victims along with the dragon in 1 direction
+    // Drag caught victims along with the dragon in 1 direction with ZERO positional snapping
     if (this.draggedVictims && this.draggedVictims.size > 0) {
-      for (let victim of this.draggedVictims) {
+      const victims = [...this.draggedVictims];
+      for (let victim of victims) {
         if (!victim || victim.hp <= 0 || victim.isDead) {
+          if (victim) {
+            victim.isDraggedByDragon = false;
+            this._clampToArena(victim, curArena);
+          }
           this.draggedVictims.delete(victim);
           continue;
         }
 
-        // Lock victim position in front of dragon snout along dive direction
-        const dragDist = (this.r || 36) + (victim.r || 20) + 6;
-        victim.x = this.x + Math.cos(this.divebombAngle) * dragDist;
-        victim.y = this.y + Math.sin(this.divebombAngle) * dragDist;
-        victim.vx = this.vx;
-        victim.vy = this.vy;
-        victim.knockbackVx = this.vx;
-        victim.knockbackVy = this.vy;
-        victim.isDraggedByDragon = true;
+        const vr = victim.r || 20;
+        const dr = this.r || 36;
+        const cosA = Math.cos(this.divebombAngle);
+        const sinA = Math.sin(this.divebombAngle);
 
-        // Maintain continuous hitstun & lock during drag
-        if (typeof victim.applyTimeStop === 'function') {
-          victim.applyTimeStop(4);
-        }
-        if (typeof victim.applyHitStun === 'function') {
-          victim.applyHitStun(4);
+        // 1. Natural forward momentum: victim moves smoothly along with dragon velocity
+        let nextX = victim.x + this.vx;
+        let nextY = victim.y + this.vy;
+
+        // 2. Physical cowcatcher penetration resolution:
+        // Compute victim's forward position relative to dragon's next position
+        const nextDragonX = this.x + this.vx;
+        const nextDragonY = this.y + this.vy;
+        const relX = nextX - nextDragonX;
+        const relY = nextY - nextDragonY;
+        const forwardProj = relX * cosA + relY * sinA;
+        const minSeparation = dr + vr + 2;
+
+        // Only push forward if the dragon's body penetrates into the victim
+        // STRICT PROHIBITION of snapping: NEVER pull backward, NEVER snap laterally across space!
+        if (forwardProj < minSeparation) {
+          const pushDist = minSeparation - forwardProj;
+          nextX += cosA * pushDist;
+          nextY += sinA * pushDist;
         }
 
-        // Deal drag friction scrap damage tick
-        if (this.stateTimer % 4 === 0) {
-          applyDamageToTarget(victim, 6, this);
-          spawnSparks(victim.x, victim.y, '#E879F9', 4, 3.5);
-          triggerGlobalScreenShake(4, 8);
+        // Check if victim collides with the arena boundary wall
+        if (this._isCollidingWithArenaWall(nextX, nextY, vr, curArena)) {
+          // ── WALL CRASH SLAM ──
+          // Dragon slams victim against the arena wall!
+          // Pin victim at the perimeter wall inside arena, release them from drag,
+          // and detonate wall impact explosion so enemy NEVER leaves the arena or disappears!
+          const clamped = this._getClampedArenaPos(nextX, nextY, vr, curArena);
+          victim.x = clamped.x;
+          victim.y = clamped.y;
+          victim.isDraggedByDragon = false;
+          this.draggedVictims.delete(victim);
+
+          const damage = cfg.divebombDamage || 45;
+          const knockback = (cfg.divebombKnockback || 22.0) * this.phaseSpeedMult;
+          this._applyDivebombWallSlam(victim, damage, knockback, curArena, cfg);
+        } else {
+          victim.x = nextX;
+          victim.y = nextY;
+          victim.vx = this.vx;
+          victim.vy = this.vy;
+          victim.knockbackVx = this.vx;
+          victim.knockbackVy = this.vy;
+          victim.isDraggedByDragon = true;
+
+          // Maintain continuous hitstun & lock during drag
+          if (typeof victim.applyHitStun === 'function') {
+            victim.applyHitStun(4);
+          }
+          if (typeof victim.applyTimeStop === 'function') {
+            victim.applyTimeStop(4);
+          }
+
+          // Deal drag friction scrap damage tick
+          if (this.stateTimer % 4 === 0) {
+            applyDamageToTarget(victim, 6, this);
+            spawnSparks(victim.x, victim.y, '#E879F9', 4, 3.5);
+            triggerGlobalScreenShake(4, 8);
+            if (victim.hp <= 0 || victim.isDead) {
+              victim.isDraggedByDragon = false;
+              this._clampToArena(victim, curArena);
+              this.draggedVictims.delete(victim);
+            }
+          }
         }
       }
     }
@@ -1607,14 +1851,17 @@ export class EnderDragonFighter extends Fighter {
       this.vx *= 0.40;
       this.vy *= 0.40;
 
-      // Deliver final explosive impact and launch knockback to all dragged victims
+      // Deliver final explosive impact and launch knockback to all remaining dragged victims
       const damage = cfg.divebombDamage || 45;
       const knockback = (cfg.divebombKnockback || 22.0) * this.phaseSpeedMult;
       if (this.draggedVictims && this.draggedVictims.size > 0) {
         for (let victim of this.draggedVictims) {
-          if (victim && victim.hp > 0 && !victim.isDead) {
-            this._applyDivebombHit(victim, damage, knockback, cfg);
+          if (victim) {
             victim.isDraggedByDragon = false;
+            this._clampToArena(victim, curArena);
+            if (victim.hp > 0 && !victim.isDead) {
+              this._applyDivebombHit(victim, damage, knockback, curArena, cfg);
+            }
           }
         }
         this.draggedVictims.clear();
@@ -1622,32 +1869,100 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
-  _applyDivebombHit(target, damage, knockback, cfg) {
+  _applyDivebombWallSlam(victim, damage, knockback, curArena, cfg) {
+    this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 1.0);
+    this._playAudio('fireballImpact', 'Assets/Sound Effects/Skills/purpledeploy.mp3', 0.95);
+    triggerGlobalScreenShake(14, 26);
+    spawnImpactFlash(victim.x, victim.y, 80, '#F5D0FE');
+    spawnSparks(victim.x, victim.y, '#EF4444', 24, 9.0);
+    spawnSparks(victim.x, victim.y, '#C026D3', 18, 7.0);
+    if (typeof spawnMeleeClashShockwave === 'function') {
+      spawnMeleeClashShockwave(victim.x, victim.y, 110, '#C026D3');
+    }
+
+    applyDamageToTarget(victim, damage, this);
+    spawnFloatingText(victim.x, victim.y - 25, `-${damage}`, '#EF4444');
+    spawnFloatingText(victim.x, victim.y - 45, 'WALL SLAM!', '#F43F5E');
+
+    // Rule 1.5: Hitstun applied to target only
+    if (typeof victim.applyHitStun === 'function') {
+      victim.applyHitStun(24);
+    } else {
+      victim.hitStunTimer = 24;
+    }
+
+    // Apply slow debuff on divebomb wall slam
+    this._applyDivebombSlow(victim, cfg, true, -65);
+
+    // Rebound inward away from the wall toward arena interior
+    if (curArena) {
+      const cx = curArena.x + curArena.width / 2;
+      const cy = curArena.y + curArena.height / 2;
+      const reboundAngle = Math.atan2(cy - victim.y, cx - victim.x);
+      const reboundSpeed = Math.min(8.0, Math.max(4.0, knockback * 0.35));
+      victim.vx = Math.cos(reboundAngle) * reboundSpeed;
+      victim.vy = Math.sin(reboundAngle) * reboundSpeed;
+      victim.knockbackVx = victim.vx;
+      victim.knockbackVy = victim.vy;
+      this._clampToArena(victim, curArena);
+    } else {
+      victim.vx = 0;
+      victim.vy = 0;
+      victim.knockbackVx = 0;
+      victim.knockbackVy = 0;
+    }
+  }
+
+  _applyDivebombHit(target, damage, knockback, curArena, cfg) {
     this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 1.0);
     this._playAudio('fireballImpact', 'Assets/Sound Effects/Skills/purpledeploy.mp3', 0.90);
     triggerGlobalScreenShake(10, 24);
     spawnImpactFlash(target.x, target.y, 65, '#F5D0FE');
     spawnSparks(target.x, target.y, '#EF4444', 20, 8.0);
+    if (typeof spawnMeleeClashShockwave === 'function') {
+      spawnMeleeClashShockwave(target.x, target.y, 85, '#C026D3');
+    }
 
     applyDamageToTarget(target, damage, this);
     spawnFloatingText(target.x, target.y - 25, `-${damage}`, '#EF4444');
 
     // Rule 1.5: Hitstun applied to target only
-    if (typeof target.applyTimeStop === 'function') {
-      target.applyTimeStop(10);
+    if (typeof target.applyHitStun === 'function') {
+      target.applyHitStun(16);
+    } else {
+      target.hitStunTimer = 16;
     }
 
-    // Knockback outward from strike vector
-    const pushAngle = this.divebombAngle + (Math.random() < 0.5 ? 0.35 : -0.35);
-    if (typeof target.applyKnockback === 'function') {
-      target.applyKnockback(Math.cos(pushAngle) * knockback, Math.sin(pushAngle) * knockback, 16);
+    // Apply slow debuff on divebomb hit
+    this._applyDivebombSlow(target, cfg, true, -45);
+
+    if (curArena) {
+      this._clampToArena(target, curArena);
+      const cx = curArena.x + curArena.width / 2;
+      const cy = curArena.y + curArena.height / 2;
+      const distFromCenter = Math.hypot(target.x - cx, target.y - cy);
+      const ar = (curArena.radius || (curArena.width / 2));
+      let pushAngle;
+      if (distFromCenter > ar * 0.7) {
+        // If near wall, push inward toward arena center
+        pushAngle = Math.atan2(cy - target.y, cx - target.x);
+      } else {
+        pushAngle = this.divebombAngle + (Math.random() < 0.5 ? 0.35 : -0.35);
+      }
+      if (typeof target.applyKnockback === 'function') {
+        target.applyKnockback(Math.cos(pushAngle) * knockback, Math.sin(pushAngle) * knockback, 16);
+      }
+    } else {
+      if (typeof target.applyKnockback === 'function') {
+        target.applyKnockback(Math.cos(this.divebombAngle) * knockback, Math.sin(this.divebombAngle) * knockback, 16);
+      }
     }
   }
 
   _updateDivebombRecovery(opponent, arena, cfg) {
     this.stateTimer--;
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 40, y: 240, width: 450, height: 450 };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
 
@@ -1689,20 +2004,29 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
-  interruptAttacks() {
+  interruptAttacks(forceCancelAll = false) {
     this.isSwooping = false;
     this.isChannelingCataclysm = false;
     this.isTelegraphingDivebomb = false;
     this.isDivebombing = false;
     if (this.draggedVictims) {
+      const curArena = (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
       for (let victim of this.draggedVictims) {
-        if (victim) victim.isDraggedByDragon = false;
+        if (victim) {
+          victim.isDraggedByDragon = false;
+          this._clampToArena(victim, curArena);
+        }
       }
       this.draggedVictims.clear();
     }
     if (this.aiState !== DRAGON_STATE.HOVER) {
       this.aiState = DRAGON_STATE.HOVER;
     }
+  }
+
+  onDeath() {
+    this.interruptAttacks(true);
+    super.onDeath();
   }
 
   /**
@@ -1824,11 +2148,19 @@ export class EnderDragonFighter extends Fighter {
   draw(ctx) {
     if (!ctx) return;
 
-    // Draw acid pools beneath dragon
+    // 1. Draw glowing amethyst crystal healing tether beams
+    drawCrystalHealingTetherBeams(ctx, this);
+
+    // 2. Draw acid pools beneath dragon
     for (let pool of this.acidPools) {
       drawDragonAcidPool(ctx, pool);
     }
 
+    // 3. Draw authentic animated dragon model
     drawEnderDragonSkin(ctx, this);
+
+    // 4. Mandatory Rule 21 In-Game Overhead HP & Status
+    this.drawHealth(ctx);
+    this.drawFreezeTimer(ctx);
   }
 }

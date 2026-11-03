@@ -801,6 +801,13 @@ export function drawEnderDragonSkin(ctx, fighter) {
     _drawRetroBreathVapor(ctx, r, exhaleStep, heaveX + chestExpansionX, heaveY);
   }
 
+  // ── LAYER 5: Minecraft Dragon's Breath Maw Charging Particles (Skill 1 Telegraph) ──
+  if (fighter.aiState === 'FIREBALL_SPIT' && fighter.stateTimer !== undefined) {
+    _drawMinecraftMawChargingBreath(ctx, r, fighter.stateTimer);
+  } else if (fighter.aiState === 'PERCH_GROUNDED' && fighter.perchBreathTimer !== undefined && fighter.perchBreathTimer <= 14) {
+    _drawMinecraftMawChargingBreath(ctx, r, fighter.perchBreathTimer + 8);
+  }
+
   // Status overlays & hit flash
   FighterRenderer.drawStatusOverlays(ctx, fighter);
 
@@ -808,43 +815,409 @@ export function drawEnderDragonSkin(ctx, fighter) {
 }
 
 /**
- * Draws the Lingering Dragon Breath Acid Pool on the arena ground
+ * Minecraft Dragon's Breath Swirling Maw Charging Animation
+ * Renders swirling square purple/magenta/white particles spiraling into the dragon's snout
+ */
+function _drawMinecraftMawChargingBreath(ctx, r, stateTimer) {
+  const baseNx = r * 0.84;
+  const baseNy = r * 0.20;
+  const progress = Math.min(1.0, Math.max(0, (18 - stateTimer) / 10));
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  const P = 2.0;
+  const particleCount = 12;
+  const spiralRadius = r * (0.65 * (1.0 - progress * 0.75));
+
+  for (let i = 0; i < particleCount; i++) {
+    const dist = spiralRadius * (0.35 + (i % 4) * 0.20);
+    const angle = (i / particleCount) * Math.PI * 2 + progress * Math.PI * 3.5;
+
+    const px = Math.round((baseNx + Math.cos(angle) * dist) / P) * P;
+    const py = Math.round((baseNy + Math.sin(angle) * dist) / P) * P;
+    const pSize = Math.round((P * (1.5 + (i % 2) * 0.5)) / P) * P;
+
+    const palette = ['#FFFFFF', '#F5D0FE', '#E879F9', '#D946EF', '#C026D3'];
+    ctx.fillStyle = palette[i % palette.length];
+    ctx.globalAlpha = Math.min(1.0, 0.45 + progress * 0.55);
+    ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
+  }
+
+  // Glowing aperture core spark at mouth opening
+  if (progress > 0.35) {
+    const coreAlpha = Math.min(1.0, (progress - 0.35) * 1.6);
+    const coreSize = Math.round((P * (2.0 + progress * 1.5)) / P) * P;
+
+    ctx.fillStyle = '#D946EF';
+    ctx.globalAlpha = coreAlpha * 0.65;
+    ctx.fillRect(Math.round(baseNx / P) * P - coreSize, Math.round(baseNy / P) * P - coreSize, coreSize * 2, coreSize * 2);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.globalAlpha = coreAlpha * 0.95;
+    ctx.fillRect(Math.round(baseNx / P) * P - P, Math.round(baseNy / P) * P - P, P * 2, P * 2);
+  }
+
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────────
+// MINECRAFT DRAGON'S BREATH ENGINE (AREA EFFECT CLOUD)
+// 100% authentic Minecraft visuals:
+// 1. Pixel-snapped mottled ground residue carpet (Area Effect Cloud footprint)
+// 2. Volumetric rising & wafting square dragon_breath pixel puffs (3-tier shaded)
+// 3. Magical potion/spell sparkle twinkling squares
+// ─────────────────────────────────────────────
+
+// Pre-seeded Minecraft Area Effect Cloud Ground Residue Carpet Tiles (~55 discrete grid cells)
+const MC_BREATH_CARPET_TILES = (() => {
+  const tiles = [];
+  const stepX = 0.20, stepY = 0.20;
+  for (let gx = -0.90; gx <= 0.90; gx += stepX) {
+    for (let gy = -0.80; gy <= 0.80; gy += stepY) {
+      const dist = Math.hypot(gx, gy / 0.82);
+      if (dist <= 0.98) {
+        const tier = dist <= 0.40 ? 0 : (dist <= 0.75 ? 1 : 2);
+        const phase = +(gx * 3.7 + gy * 5.1 + dist * 4.2).toFixed(2);
+        const sizeP = dist <= 0.35 ? 3.0 : (dist <= 0.70 ? 2.5 : 2.0);
+        tiles.push({ gx: +gx.toFixed(2), gy: +gy.toFixed(2), tier, phase, sizeP });
+      }
+    }
+  }
+  return tiles;
+})();
+
+// Pre-seeded 48 Volumetric Rising Minecraft dragon_breath Square Puffs
+const MC_DRAGON_BREATH_PARTICLES = (() => {
+  const particles = [];
+  const count = 48;
+  for (let i = 0; i < count; i++) {
+    const angle = +((i / count) * Math.PI * 2 + (i % 3) * 0.15).toFixed(3);
+    const distRatio = +(0.12 + ((i * 17) % 43) / 52).toFixed(3);
+    const speed = +(0.008 + ((i * 7) % 9) * 0.001).toFixed(3);
+    const maxRise = 18 + ((i * 11) % 18);
+    const swayAmp = +(3.5 + ((i * 5) % 6) * 0.7).toFixed(1);
+    const swayFreq = +(0.04 + ((i * 13) % 7) * 0.006).toFixed(3);
+    const swayPhase = +((i * 1.37) % (Math.PI * 2)).toFixed(2);
+    const baseSize = 6 + (i % 3) * 2;
+    const lifeOffset = +(i / count).toFixed(3);
+    const tier = i % 3;
+    particles.push({ angle, distRatio, speed, maxRise, swayAmp, swayFreq, swayPhase, baseSize, lifeOffset, tier });
+  }
+  return particles;
+})();
+
+// Pre-seeded 16 Minecraft Magic Potion Sparkles
+const MC_BREATH_SPARKLES = (() => {
+  const sparkles = [];
+  for (let i = 0; i < 16; i++) {
+    const nx = +(Math.cos(i * 1.96) * (0.2 + (i % 5) * 0.14)).toFixed(3);
+    const ny = +(Math.sin(i * 1.96) * (0.2 + (i % 5) * 0.14) * 0.82).toFixed(3);
+    const phase = +(i * 0.87).toFixed(2);
+    const sizeP = i % 2 === 0 ? 2 : 3;
+    sparkles.push({ nx, ny, phase, sizeP });
+  }
+  return sparkles;
+})();
+
+/**
+ * Draws the Authentic Minecraft Dragon's Breath Area Effect Cloud on the arena ground
+ * Replaces generic blurry circle with authentic pixelated Minecraft square clouds,
+ * rising volumetric dragon_breath particles, and potion sparkles.
  */
 export function drawDragonAcidPool(ctx, pool) {
   if (!ctx || !pool || pool.duration <= 0) return;
   const radius = pool.radius || 70;
-  const alpha = Math.max(0, Math.min(0.65, pool.duration / 30));
+  const maxDur = pool.maxDuration || 180;
+  const inAlpha = Math.min(1.0, (maxDur - pool.duration) / 10);
+  const outAlpha = Math.min(1.0, pool.duration / 28);
+  const alpha = inAlpha * outAlpha;
+  if (alpha <= 0.005) return;
+
+  const expandP = Math.min(1.0, (maxDur - pool.duration) / 14);
+  const curRadius = radius * (0.82 + 0.18 * Math.sin(expandP * Math.PI * 0.5));
+  const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : Math.floor(Date.now() / 16);
 
   ctx.save();
   ctx.translate(pool.x, pool.y);
+  ctx.imageSmoothingEnabled = false;
 
-  // Outer acid glow
-  const grad = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
-  grad.addColorStop(0, `rgba(162, 28, 175, ${alpha * 0.9})`);
-  grad.addColorStop(0.6, `rgba(192, 38, 211, ${alpha * 0.5})`);
-  grad.addColorStop(1, 'rgba(162, 28, 175, 0)');
+  const P = 2.0;
+  const snap = (v) => Math.round(v / P) * P;
 
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.fill();
+  // ── LAYER 1: Minecraft Area Effect Cloud Ground Carpet (Mottled Dithered Residue) ──
+  const tileCount = MC_BREATH_CARPET_TILES.length;
+  for (let i = 0; i < tileCount; i++) {
+    const tile = MC_BREATH_CARPET_TILES[i];
+    const tx = snap(tile.gx * curRadius);
+    const ty = snap(tile.gy * curRadius * 0.82);
+    const pulse = Math.sin(time * 0.06 + tile.phase);
 
-  // Floating acidic vapor bubbles
-  const bubbleCount = 6;
-  const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : 0;
-  ctx.fillStyle = `rgba(244, 114, 182, ${alpha * 0.8})`;
+    let tileAlpha, tileColor;
+    if (tile.tier === 0) {
+      // Core bubbling zone
+      tileAlpha = alpha * (0.45 + 0.18 * pulse);
+      tileColor = pulse > 0.35 ? '#D946EF' : '#C026D3';
+    } else if (tile.tier === 1) {
+      // Mid carpet lattice
+      tileAlpha = alpha * (0.32 + 0.14 * pulse);
+      tileColor = pulse > 0.2 ? '#A21CAF' : '#86198F';
+    } else {
+      // Outer perimeter residue
+      tileAlpha = alpha * (0.18 + 0.10 * pulse);
+      tileColor = pulse > 0 ? '#581C87' : '#4A044E';
+    }
 
-  for (let i = 0; i < bubbleCount; i++) {
-    const angle = (i / bubbleCount) * Math.PI * 2 + time * 0.03;
-    const dist = (radius * 0.45) + Math.sin(time * 0.08 + i) * (radius * 0.25);
-    const bx = Math.cos(angle) * dist;
-    const by = Math.sin(angle) * dist;
-    const bSize = 3 + (i % 3);
-
-    ctx.beginPath();
-    ctx.arc(bx, by, bSize, 0, Math.PI * 2);
-    ctx.fill();
+    const size = snap(tile.sizeP * P);
+    ctx.fillStyle = tileColor;
+    ctx.globalAlpha = Math.max(0, Math.min(1.0, tileAlpha));
+    ctx.fillRect(tx - size / 2, ty - size / 2, size, size);
   }
+
+  // ── LAYER 2: Volumetric Floating Minecraft Square dragon_breath Particles ──
+  const pCount = MC_DRAGON_BREATH_PARTICLES.length;
+  for (let i = 0; i < pCount; i++) {
+    const p = MC_DRAGON_BREATH_PARTICLES[i];
+    const pLife = ((time * p.speed + p.lifeOffset) % 1.0);
+
+    // Ground anchor with perspective compression
+    const x0 = Math.cos(p.angle) * (curRadius * p.distRatio);
+    const y0 = Math.sin(p.angle) * (curRadius * p.distRatio * 0.82);
+
+    // Upward rising float (Minecraft chimney / buoyant cloud motion)
+    const py = y0 - pLife * p.maxRise;
+    // Horizontal gentle swaying
+    const px = x0 + Math.sin(time * p.swayFreq + p.swayPhase) * p.swayAmp;
+
+    const sx = snap(px);
+    const sy = snap(py);
+
+    // Dynamic puff expansion and fading lifecycle
+    const pop = Math.sin(pLife * Math.PI);
+    const S = Math.max(P * 2, snap(p.baseSize * (0.60 + 0.55 * pop)));
+    const pIn = Math.min(1.0, pLife * 5.0);
+    const pOut = Math.max(0, 1.0 - Math.pow(pLife, 2.2));
+    const pAlpha = alpha * pIn * pOut * 0.92;
+
+    if (pAlpha > 0.02) {
+      // Tier A: Outer dark plum / violet shadow border
+      ctx.fillStyle = p.tier === 1 ? '#4A044E' : (p.tier === 2 ? '#581C87' : '#701A75');
+      ctx.globalAlpha = pAlpha;
+      ctx.fillRect(sx - S / 2, sy - S / 2, S, S);
+
+      // Tier B: Mid vibrant magenta / fuchsia body
+      if (S >= P * 3) {
+        const midS = S - P * 2;
+        ctx.fillStyle = p.tier === 2 ? '#E879F9' : '#D946EF';
+        ctx.globalAlpha = Math.min(1.0, pAlpha * 1.15);
+        ctx.fillRect(sx - midS / 2, sy - midS / 2, midS, midS);
+      }
+
+      // Tier C: Core bright highlight pixel
+      if (S >= P * 4) {
+        const coreS = Math.max(P, S - P * 4);
+        ctx.fillStyle = p.tier === 2 ? '#FFFFFF' : '#F5D0FE';
+        ctx.globalAlpha = Math.min(1.0, pAlpha * 1.30);
+        ctx.fillRect(sx - coreS / 2, sy - coreS / 2, coreS, coreS);
+      }
+    }
+  }
+
+  // ── LAYER 3: Minecraft Spell / Potion Effect Twinkle Sparkles ──
+  const sCount = MC_BREATH_SPARKLES.length;
+  for (let i = 0; i < sCount; i++) {
+    const s = MC_BREATH_SPARKLES[i];
+    const spark = Math.sin(time * 0.22 + s.phase);
+    if (spark > 0.65) {
+      const sInt = (spark - 0.65) / 0.35;
+      const spx = snap(s.nx * curRadius);
+      const spy = snap(s.ny * curRadius * 0.82) - snap(Math.sin(time * 0.05 + s.phase) * 6);
+      const sSize = snap(s.sizeP * P);
+
+      // Outer pastel glow square
+      ctx.fillStyle = '#F5D0FE';
+      ctx.globalAlpha = alpha * sInt * 0.75;
+      ctx.fillRect(spx - (sSize + P) / 2, spy - (sSize + P) / 2, sSize + P, sSize + P);
+
+      // Inner white spark square
+      ctx.fillStyle = '#FFFFFF';
+      ctx.globalAlpha = alpha * sInt * 0.95;
+      ctx.fillRect(spx - sSize / 2, spy - sSize / 2, sSize, sSize);
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Renders the Authentic Minecraft Dragon Fireball Projectile
+ * Features:
+ * - Faceted obsidian / bedrock core cube
+ * - Orbiting swirling square magenta flame facets
+ * - Trailing Minecraft dragon_breath square pixel puffs
+ * - Central radiant amethyst core spark
+ */
+export function drawMinecraftDragonFireball(ctx, proj, isSecondary = false) {
+  if (!ctx || !proj) return;
+  const r = proj.radius || (isSecondary ? 12 : 16);
+  const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : Math.floor(Date.now() / 16);
+  const vx = proj.vx || 0;
+  const vy = proj.vy || 0;
+  const moveAngle = Math.atan2(vy, vx);
+
+  ctx.save();
+  ctx.translate(proj.x, proj.y);
+  ctx.imageSmoothingEnabled = false;
+
+  const P = 2.0;
+  const snap = (v) => Math.round(v / P) * P;
+
+  // 1. Trailing Minecraft Dragon Breath Square Puffs
+  const trailPuffs = isSecondary ? 3 : 5;
+  for (let k = 1; k <= trailPuffs; k++) {
+    const dist = k * (r * 0.6);
+    const wobble = Math.sin(time * 0.22 + k) * (P * 1.5);
+    const perpAngle = moveAngle + Math.PI / 2;
+    const tx = -Math.cos(moveAngle) * dist + Math.cos(perpAngle) * wobble;
+    const ty = -Math.sin(moveAngle) * dist + Math.sin(perpAngle) * wobble;
+    const puffSize = Math.max(P * 2, snap(r * (0.55 - k * 0.08)));
+    const trailAlpha = (1.0 - k / (trailPuffs + 1)) * 0.75;
+
+    // Outer dark violet
+    ctx.fillStyle = k > 2 ? '#4A044E' : '#701A75';
+    ctx.globalAlpha = trailAlpha * 0.85;
+    ctx.fillRect(snap(tx) - puffSize / 2, snap(ty) - puffSize / 2, puffSize, puffSize);
+
+    // Inner magenta puff
+    if (puffSize >= P * 3) {
+      const midPuff = puffSize - P * 2;
+      ctx.fillStyle = '#C026D3';
+      ctx.globalAlpha = trailAlpha;
+      ctx.fillRect(snap(tx) - midPuff / 2, snap(ty) - midPuff / 2, midPuff, midPuff);
+    }
+  }
+
+  // 2. Swirling Orbiting Flame Facets (Authentic Minecraft Fireball Corona)
+  const orbitCount = 4;
+  for (let o = 0; o < orbitCount; o++) {
+    const orbitAngle = (o / orbitCount) * Math.PI * 2 + time * 0.12;
+    const orbitDist = r * (0.85 + 0.15 * Math.sin(time * 0.18 + o));
+    const ox = snap(Math.cos(orbitAngle) * orbitDist);
+    const oy = snap(Math.sin(orbitAngle) * orbitDist);
+    const fSize = snap(P * (2.5 + (o % 2)));
+
+    ctx.fillStyle = o % 2 === 0 ? '#D946EF' : '#E879F9';
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(ox - fSize / 2, oy - fSize / 2, fSize, fSize);
+
+    // White hot core pixel
+    ctx.fillStyle = '#FFFFFF';
+    ctx.globalAlpha = 0.95;
+    ctx.fillRect(ox - P / 2, oy - P / 2, P, P);
+  }
+
+  // 3. Faceted Obsidian Bedrock Core Cube / Octagon
+  const coreR = snap(r * 0.72);
+  const halfC = coreR / 2;
+
+  // Dark obsidian outer boundary
+  ctx.fillStyle = '#120C18';
+  ctx.globalAlpha = 1.0;
+  ctx.fillRect(-coreR, -halfC, coreR * 2, coreR);
+  ctx.fillRect(-halfC, -coreR, coreR, coreR * 2);
+
+  // Inset bedrock obsidian facet
+  const innerC = snap(coreR * 0.75);
+  const innerHalf = innerC / 2;
+  ctx.fillStyle = '#1F132B';
+  ctx.fillRect(-innerC, -innerHalf, innerC * 2, innerC);
+  ctx.fillRect(-innerHalf, -innerC, innerC, innerC * 2);
+
+  // Amethyst void seams
+  const seamW = snap(coreR * 0.55);
+  ctx.fillStyle = '#9333EA';
+  ctx.fillRect(-seamW, -P, seamW * 2, P * 2);
+  ctx.fillRect(-P, -seamW, P * 2, seamW * 2);
+
+  // Core radiant spark cross
+  ctx.fillStyle = '#F5D0FE';
+  ctx.fillRect(-P * 1.5, -P * 0.5, P * 3, P);
+  ctx.fillRect(-P * 0.5, -P * 1.5, P, P * 3);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(-P * 0.5, -P * 0.5, P, P);
+
+  ctx.restore();
+}
+
+/**
+ * Renders the Minecraft Dragon's Breath Direct Exhale Stream (Perch Breath)
+ * Cascades forward as an expanding cone of billowing square dragon breath particle puffs
+ */
+export function drawMinecraftBreathStream(ctx, proj) {
+  if (!ctx || !proj) return;
+  const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : Math.floor(Date.now() / 16);
+  const vx = proj.vx || 0;
+  const vy = proj.vy || 0;
+  const moveAngle = Math.atan2(vy, vx);
+  const r = proj.radius || 14;
+
+  ctx.save();
+  ctx.translate(proj.x, proj.y);
+  ctx.rotate(moveAngle);
+  ctx.imageSmoothingEnabled = false;
+
+  const P = 2.0;
+  const snap = (v) => Math.round(v / P) * P;
+
+  // Expanding trailing stream of square puffs
+  const streamSteps = 4;
+  for (let s = streamSteps; s >= 1; s--) {
+    const backX = -s * (r * 0.65);
+    const coneSpread = (s / streamSteps) * (r * 0.55);
+    const puffSize = snap(r * (0.60 + s * 0.12));
+    const stepAlpha = (1.0 - (s - 1) / streamSteps) * 0.85;
+
+    const yOffsets = [0, -coneSpread, coneSpread];
+    for (let yOff of yOffsets) {
+      const wobble = Math.sin(time * 0.25 + s + yOff) * P;
+      const px = snap(backX);
+      const py = snap(yOff + wobble);
+
+      // Outer violet square
+      ctx.fillStyle = s >= 3 ? '#4A044E' : '#701A75';
+      ctx.globalAlpha = stepAlpha * 0.70;
+      ctx.fillRect(px - puffSize / 2, py - puffSize / 2, puffSize, puffSize);
+
+      // Mid magenta puff
+      if (puffSize >= P * 3) {
+        const midSize = puffSize - P * 2;
+        ctx.fillStyle = '#D946EF';
+        ctx.globalAlpha = stepAlpha * 0.90;
+        ctx.fillRect(px - midSize / 2, py - midSize / 2, midSize, midSize);
+      }
+    }
+  }
+
+  // Leading dense puff head
+  const headSize = snap(r * 0.95);
+  ctx.fillStyle = '#581C87';
+  ctx.globalAlpha = 0.95;
+  ctx.fillRect(-headSize / 2, -headSize / 2, headSize, headSize);
+
+  const headMid = headSize - P * 2;
+  ctx.fillStyle = '#D946EF';
+  ctx.fillRect(-headMid / 2, -headMid / 2, headMid, headMid);
+
+  const headCore = headSize - P * 4;
+  if (headCore >= P) {
+    ctx.fillStyle = '#F5D0FE';
+    ctx.fillRect(-headCore / 2, -headCore / 2, headCore, headCore);
+  }
+
+  // Sparkling tip
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(snap(headSize * 0.3), -P / 2, P, P);
 
   ctx.restore();
 }

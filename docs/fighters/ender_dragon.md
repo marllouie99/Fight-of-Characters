@@ -80,12 +80,37 @@ The Ender Dragon employs the authentic Circle Mini-Battle upright minimalist cir
 
 ---
 
+### Passive: 4 Corner End Crystals (Bedrock Pedestals, Healing Tether & Backlash Damage)
+- **4 Arena Corner Spawns**:
+  - In non-boss fighter matches (1v1, 2v2, Tag Match, FFA), when the Ender Dragon enters the battlefield, exactly **4 End Crystals** (`EndCrystalEntity`) spawn in the 4 corners of the arena (top-left, top-right, bottom-left, bottom-right with calibrated wall clearance; diagonal perimeters for circular arenas).
+- **60-Frame 3D Minecraft End Crystal Animation (`Assets/model/enderDragon/end_crystal/`)**:
+  - Model rendering uses a dedicated 60-frame animation sequence (`end_crystal-1.png` through `end_crystal-60.png`) and master 10×6 spritesheet (`end_crystal-b.png`, $2560 \times 1536\text{px}$) extracted from the canonical 3D Minecraft End Crystal model.
+  - Features prominent scaling (`crystalDrawSize: 140px`, ~61×94px visible beacon footprint) and a calm, majestic rotation cadence (`crystalAnimTicks: 3`, ~3.0s per full 360° rotation) across 60 discrete angles showcasing the rotating outer glass protective cages, inner tumbling magenta rune cube, and native 3D bedrock plate with burning fire.
+  - Ground contact shadow ellipse provides clean floor anchoring without intrusive flat procedural boxes.
+  - Crystals remain completely stationary on their pedestals, ignoring knockback, velocity changes, and circle-circle pushback.
+- **Authentic Minecraft End Crystal Beam (`end_crystal_beam.png`) (`crystalTetherReach = 340px`)**:
+  - Whenever the Ender Dragon flies within reach of an End Crystal (`340px`), the crystal projects the 100% authentic vanilla Minecraft End Crystal beam: a rigid, straight energy conduit featuring the authentic `end_crystal_beam.png` black-and-white pixel noise static texture streaming from the crystal core directly to the dragon.
+  - Employs dual-layer cylindrical 3D rotation parallax (an 18px outer beam scrolling at 3.2 px/frame and a 12px inner core scrolling at 5.0 px/frame with a 64px phase offset), crisp dark pixel boundaries, and an ambient translucent void amethyst corona wash.
+  - Origin anchors directly into the center of the spinning magenta rune cube (`crystal.y - 63px`).
+  - While tethered, each active crystal restores `+6 HP` every 45 frames (~0.75s) (`crystalHealAmount: 6`, `crystalHealInterval: 45`), pulsing the top HUD health card via `this._healthBarHealTimer = 16`. Multiple crystals within range tether and heal cumulatively.
+- **Crystal Destruction & Backlash Detonation (`crystalBacklashDamage = 60 HP`)**:
+  - Opponents can target and destroy the crystals (`60 HP`).
+  - When destroyed, the crystal detonates with a violent radial void explosion, inflicting **60 BACKLASH damage** directly to the Ender Dragon, triggering camera shake, an enrage reaction, and an infuriated draconic roar.
+- **Seamless Game Flow & HUD Isolation**:
+  - Crystals declare `isEndCrystal: true`, ensuring they are excluded from match win/draw determinations, camera bounding boxes, and HUD fighter health cards.
+
+---
+
 ### Skill 1: Dragon's Breath / Void Fireball (`dragonsBreath`)
 - **Cooldown**: 480 frames (~8.0s)
 - **Mechanics**:
-  - The Ender Dragon rears back and launches an explosive purple Dragon Fireball traveling at `9.0 px/frame` along committed 360° aim angle.
+  - The Ender Dragon rears back while spiraling square Minecraft purple/magenta particles gather into her snout, then launches an authentic faceted Minecraft Dragon Fireball traveling at `9.0 px/frame` along committed 360° aim angle, trailing distinct square `dragon_breath` pixel smoke puffs in flight.
   - On collision with an opponent or upon reaching max range, the fireball detonates with an area-of-effect impact (70px radius) dealing 28 impact damage.
-  - **Lingering Acid Pool**: Spawns a glowing purple pool of Dragon's Breath on the ground that lingers for 180 frames (3.0s). Any enemy standing within the vapor pool suffers continuous acid damage (6 damage every 15 frames) and 25% movement slow.
+  - **Lingering Minecraft Area Effect Cloud**: Spawns an authentic Minecraft Dragon's Breath Area Effect Cloud on the ground lingering for 180 frames (3.0s):
+    - **Dithered Residue Carpet**: Stepped 3-tier pixel-snapped ground footprint with undulating void magenta/acid purple bubbling tiles.
+    - **Volumetric Rising Puffs**: 48 discrete 3-tier shaded Minecraft `dragon_breath` square particles drifting upward from the floor with authentic lateral chimney wafting.
+    - **Potion Sparkles**: 16 twinkling white-pink square magic spell sparkles flashing across the vapor volume.
+    - Any enemy standing within the cloud suffers continuous acid damage (6 damage every 15 frames) and 25% movement slow.
 
 ---
 
@@ -106,6 +131,18 @@ The Ender Dragon employs the authentic Circle Mini-Battle upright minimalist cir
   - **The Roar**: At frame 40, she emits the legendary Ender Dragon roar, triggering a 12px camera trauma screen shake.
   - **Void Burst**: Releases an expansive 360° radial shockwave (220px radius) dealing 65 damage and launching all nearby enemies away.
   - Simultaneously discharges 6 homing void fireballs in an outward spiral that curve toward surviving opponents.
+
+---
+
+### Skill 4: Off-Screen Telegraphed Divebomb Strafe (`divebombStrafe`)
+- **Cooldown**: 600 frames (~10.0s)
+- **Mechanics**:
+  - The Ender Dragon disengages and accelerates beyond the arena perimeter into the outer void airspace.
+  - **Telegraph Corridor Carpet**: Projects an ominous red danger corridor warning across the arena floor pointing along committed dive direction (55 frames / ~0.91s telegraph).
+  - **Supersonic Divebomb**: At frame 0, launches forward at hyper-velocity (`24.5 px/frame`), trailing amethyst afterimages and lingering acid pools along the strike corridor.
+  - **Corridor Contact & Anti-Snap Push**: Entities in the flight corridor are impacted with 45 kinetic damage, screen shake, and purple sparks. Struck victims are smoothly pushed forward without positional snapping.
+  - **Slow Debuff**: Enemies struck by the divebomb suffer a heavy **1.5s slow debuff** (`divebombSlowDuration: 90`, `divebombSlowMultiplier: 0.40`), reducing their movement speed by 60% with visual `SLOWED!` amethyst feedback.
+  - **Wall Slam Detonation**: If a victim is driven into the arena perimeter wall, the dragon detonates a massive Wall Slam shockwave dealing full impact damage, rebounding the enemy safely inward into the arena without clipping out of bounds.
 
 ---
 

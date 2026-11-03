@@ -1288,24 +1288,62 @@ export function drawCursedWombCocoonVFX(ctx, fighter) {
 }
 
 /**
- * Draws the Mach 3 Ramjet supersonic thrust VFX, shockwave cone, and speed needle lines.
+ * Draws the Mach 3 Ramjet supersonic thrust VFX, biomechanical air intake compression,
+ * supersonic Mach shockwave cone, and rear propulsion exhaust.
  */
 export function drawCurseNaoyaMachRamjetVFX(ctx, fighter) {
-  if (!fighter || (!fighter.isRamjetLunging && !fighter.isMachOverdrive)) return;
-
-  ctx.save();
-  ctx.translate(fighter.x, fighter.y);
-  const angle = fighter.gunAngle || fighter.angle || 0;
-  ctx.rotate(angle);
+  if (!fighter || (!fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isMachOverdrive)) return;
 
   const r = fighter.r || 25;
+
+  // Phase 1: Biomechanical Carapace Air Intake & Compression (isRamjetCharging)
+  if (fighter.isRamjetCharging) {
+    const maxT = fighter.ramjetChargeMaxTimer || 10;
+    const rem = fighter.ramjetChargeTimer || 0;
+    const p = Math.max(0, Math.min(1, 1.0 - (rem / Math.max(1, maxT))));
+
+    ctx.save();
+    ctx.translate(fighter.x, fighter.y);
+
+    // Staggered inward-contracting air compression rings (Rule 26 clean concentric rings)
+    const offsets = [0.00, 0.18, 0.36];
+    for (let k = 0; k < offsets.length; k++) {
+      const lp = Math.max(0, Math.min(1, (p - offsets[k]) / (1.0 - offsets[k])));
+      if (lp <= 0) continue;
+      const rad = r * (3.2 * (1.0 - Math.pow(lp, 0.7)) + 0.7);
+      const alpha = Math.sin(lp * Math.PI) * 0.65;
+
+      ctx.fillStyle = `rgba(214, 62, 158, ${alpha * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, rad, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = k === 0 ? `rgba(255, 255, 255, ${alpha})` : `rgba(214, 62, 158, ${alpha * 0.9})`;
+      ctx.lineWidth = 2.0 - k * 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, rad, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    return;
+  }
+
+  // Phase 2: Supersonic Mach 3 Propulsion & Flight (isRamjetLunging / isMachOverdrive)
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y);
+  const angle = fighter.ramjetCastAngle !== undefined && fighter.isRamjetLunging
+    ? fighter.ramjetCastAngle
+    : (fighter.gunAngle || fighter.angle || 0);
+  ctx.rotate(angle);
+
   const isLunge = fighter.isRamjetLunging;
 
-  // 1. Supersonic Aerodynamic Wind Cone (Porous vector cone in front of jet)
-  const coneLength = isLunge ? r * 3.5 : r * 2.2;
-  const coneWidth = r * 1.6;
+  // 1. Supersonic Aerodynamic Mach Cone
+  const coneLength = isLunge ? r * 3.8 : r * 2.4;
+  const coneWidth = isLunge ? r * 1.85 : r * 1.45;
 
-  ctx.fillStyle = 'rgba(0, 242, 254, 0.18)';
+  ctx.fillStyle = isLunge ? 'rgba(214, 62, 158, 0.22)' : 'rgba(0, 242, 254, 0.16)';
   ctx.beginPath();
   ctx.moveTo(coneLength, 0);
   ctx.lineTo(-r * 0.3, -coneWidth);
@@ -1314,21 +1352,21 @@ export function drawCurseNaoyaMachRamjetVFX(ctx, fighter) {
   ctx.closePath();
   ctx.fill();
 
-  // White razor cutting contour line
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-  ctx.lineWidth = 1.5;
+  // White razor Mach cutting wavefront contour
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = isLunge ? 2.0 : 1.5;
   ctx.beginPath();
   ctx.moveTo(-r * 0.3, -coneWidth);
   ctx.lineTo(coneLength, 0);
   ctx.lineTo(-r * 0.3, coneWidth);
   ctx.stroke();
 
-  // 2. Rear Ramjet Exhaust Flame Burst
-  const flameLen = (isLunge ? r * 4.0 : r * 2.5) + (Math.random() - 0.5) * 8;
-  const flameWidth = r * 0.85;
+  // 2. Rear Biomechanical Jet Exhaust Blast
+  const flameLen = (isLunge ? r * 4.2 : r * 2.6) + (Math.random() - 0.5) * 8;
+  const flameWidth = r * 0.90;
 
-  // Outer Cyan Thermal Flare
-  ctx.fillStyle = 'rgba(0, 242, 254, 0.75)';
+  // Outer Magenta / Violet Cursed Exhaust Plume
+  ctx.fillStyle = 'rgba(214, 62, 158, 0.78)';
   ctx.beginPath();
   ctx.moveTo(-r * 0.8, -flameWidth);
   ctx.lineTo(-r * 0.8 - flameLen, 0);
@@ -1336,12 +1374,12 @@ export function drawCurseNaoyaMachRamjetVFX(ctx, fighter) {
   ctx.closePath();
   ctx.fill();
 
-  // Inner Lime Core Flame
-  ctx.fillStyle = 'rgba(118, 224, 66, 0.90)';
+  // Inner Supersonic Cyan Core Flame
+  ctx.fillStyle = 'rgba(0, 242, 254, 0.90)';
   ctx.beginPath();
-  ctx.moveTo(-r * 0.8, -flameWidth * 0.6);
+  ctx.moveTo(-r * 0.8, -flameWidth * 0.58);
   ctx.lineTo(-r * 0.8 - flameLen * 0.65, 0);
-  ctx.lineTo(-r * 0.8, flameWidth * 0.6);
+  ctx.lineTo(-r * 0.8, flameWidth * 0.58);
   ctx.closePath();
   ctx.fill();
 
@@ -1358,127 +1396,265 @@ export function drawCurseNaoyaMachRamjetVFX(ctx, fighter) {
 }
 
 /**
- * Draws the Turbine Cannon inhale suction vortex and radial shockwave bursts.
+ * Draws the Air Compression intake compression rings while Curse Naoya pulls air into his shell vents.
+ * Adheres strictly to Rule 26 (Clean Concentric Shockwave Standard — zero radial spokes).
  */
 export function drawCurseTurbineCannonVFX(ctx, fighter) {
   if (!fighter || !fighter.isTurbineInhaling) return;
 
   const timer = fighter.turbineInhaleTimer || 0;
   const maxTimer = fighter.turbineInhaleMaxTimer || 18;
-  const p = 1.0 - (timer / maxTimer);
+  const p = Math.max(0, Math.min(1, 1.0 - (timer / Math.max(1, maxTimer))));
   const r = fighter.r || 25;
 
   ctx.save();
   ctx.translate(fighter.x, fighter.y);
 
-  // Concentric converging vacuum spiral lines
-  const numSpirals = 6;
-  const rot = timer * 0.35;
-  ctx.strokeStyle = 'rgba(0, 242, 254, 0.45)';
-  ctx.lineWidth = 1.6;
+  // Staggered inward-compressing air intake rings (Rule 26 compliant — no radial lines)
+  const offsets = [0.00, 0.15, 0.30];
+  for (let k = 0; k < offsets.length; k++) {
+    const lp = Math.max(0, Math.min(1, (p - offsets[k]) / (1.0 - offsets[k])));
+    if (lp <= 0) continue;
+    const rad = 185 * (1.0 - Math.pow(lp, 0.65)) + r * 0.75;
+    const alpha = Math.sin(lp * Math.PI) * 0.60;
 
-  for (let i = 0; i < numSpirals; i++) {
-    const a = rot + (i * Math.PI * 2) / numSpirals;
-    const startDist = 200 * (1.0 - p * 0.8);
-    const endDist = r * 0.8;
+    ctx.fillStyle = `rgba(0, 242, 254, ${alpha * 0.12})`;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(a) * startDist, Math.sin(a) * startDist);
-    ctx.lineTo(Math.cos(a + 0.6) * endDist, Math.sin(a + 0.6) * endDist);
+    ctx.arc(0, 0, rad, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = k === 0 ? `rgba(255, 255, 255, ${alpha * 0.95})` : `rgba(0, 242, 254, ${alpha * 0.85})`;
+    ctx.lineWidth = 2.2 - k * 0.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad, 0, Math.PI * 2);
     ctx.stroke();
   }
 
-  // Cyan intake glow
-  ctx.fillStyle = `rgba(0, 242, 254, ${0.25 + Math.sin(p * Math.PI) * 0.35})`;
+  // Pressurized core glow around shell vents
+  ctx.fillStyle = `rgba(214, 62, 158, ${0.22 + Math.sin(p * Math.PI) * 0.32})`;
   ctx.beginPath();
-  ctx.arc(0, 0, r * 1.8, 0, Math.PI * 2);
+  ctx.arc(0, 0, r * 1.65, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
 }
 
 /**
- * Draws Domain Expansion: Time Cell Moon Palace (Tokyū Gesshōkyū).
- * Renders the lunar embryo backdrop, organic film lattice, and 24 FPS cellular grid.
+ * Draws Explosive Air Bursts released from Curse Naoya's shell vents.
+ * Adheres strictly to Rule 26 (Sequential Water-Ripple Wavefront Staggering,
+ * Expanding Translucent Interior Wash, Zero Radial Spokes / Cobwebs).
  */
-export function drawTimeCellMoonPalaceDomain(ctx, fighter) {
-  if (!fighter || !fighter.isDomainActive) return;
+export function drawCurseAirCompressionBursts(ctx, fighter) {
+  if (!ctx || !fighter || !fighter.airCompressionBursts || fighter.airCompressionBursts.length === 0) return;
+
+  const waveOffsets = [0.00, 0.12, 0.24];
+  const speedPow = 0.52;
+
+  for (let i = 0; i < fighter.airCompressionBursts.length; i++) {
+    const b = fighter.airCompressionBursts[i];
+    if (!b || b.timer >= b.maxTimer) continue;
+    const overallP = Math.max(0, Math.min(1, b.timer / Math.max(1, b.maxTimer)));
+    const maxR = b.maxRadius || 180;
+
+    ctx.save();
+    ctx.translate(b.x, b.y);
+
+    for (let k = 0; k < waveOffsets.length; k++) {
+      const t0 = waveOffsets[k];
+      if (overallP <= t0) continue;
+      const lp = Math.max(0, Math.min(1, (overallP - t0) / (1.0 - t0)));
+      const rad = maxR * Math.pow(lp, speedPow);
+      const popIn = Math.min(1.0, lp / 0.10);
+      const fadeOut = Math.pow(1.0 - lp, 1.25);
+      const waveAlpha = popIn * fadeOut;
+      if (waveAlpha <= 0.01) continue;
+
+      // Expanding translucent interior wash
+      ctx.fillStyle = k === 0
+        ? `rgba(0, 242, 254, ${0.16 * waveAlpha})`
+        : `rgba(214, 62, 158, ${0.14 * waveAlpha})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, rad, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Outer Magenta / Violet Ionization Rim
+      ctx.strokeStyle = `rgba(214, 62, 158, ${0.85 * waveAlpha})`;
+      ctx.lineWidth = (3.6 - k * 0.7) * (0.4 + 0.6 * fadeOut);
+      ctx.beginPath();
+      ctx.arc(0, 0, rad, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Supersonic White / Cyan Leading Core Ring
+      ctx.strokeStyle = k === 0
+        ? `rgba(255, 255, 255, ${0.95 * waveAlpha})`
+        : `rgba(0, 242, 254, ${0.88 * waveAlpha})`;
+      ctx.lineWidth = (1.8 - k * 0.3) * (0.4 + 0.6 * fadeOut);
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(1, rad - 2), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
+let _naoyaDomainOverlayImg = null;
+let _naoyaDomainOverlayImgLoading = false;
+
+/**
+ * Preload and retrieve Naoya's Domain Expansion arena overlay image
+ * (Assets/model/naoya/Naoya_arena_overlay.png).
+ */
+export function getNaoyaDomainOverlayImage() {
+  if (_naoyaDomainOverlayImg && _naoyaDomainOverlayImg.complete && _naoyaDomainOverlayImg.naturalWidth > 0) {
+    return _naoyaDomainOverlayImg;
+  }
+  if (!_naoyaDomainOverlayImgLoading && typeof Image !== 'undefined') {
+    _naoyaDomainOverlayImgLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _naoyaDomainOverlayImg = img;
+      _naoyaDomainOverlayImgLoading = false;
+    };
+    img.onerror = (e) => {
+      console.warn('Failed to load Naoya domain overlay image at Assets/model/naoya/Naoya_arena_overlay.png:', e);
+      _naoyaDomainOverlayImgLoading = false;
+    };
+    img.src = 'Assets/model/naoya/Naoya_arena_overlay.png';
+    _naoyaDomainOverlayImg = img;
+  }
+  return _naoyaDomainOverlayImg;
+}
+
+// Preload immediately if running in browser
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  getNaoyaDomainOverlayImage();
+}
+
+/**
+ * Draws Domain Expansion: Time Cell Moon Palace (Tokyū Gesshōkyū).
+ * Renders the authentic pixel art arena overlay from Assets/model/naoya/Naoya_arena_overlay.png
+ * occupying the arena interior, strictly clipped within arena bounds.
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {object} fighter - The Naoya fighter instance
+ * @param {boolean} [isClashSecondary=false] - Whether secondary in a domain clash
+ * @param {object} [options={}] - Custom options (e.g. { isLocal: true })
+ */
+export function drawTimeCellMoonPalaceDomain(ctx, fighter, isClashSecondary = false, options = {}) {
+  if (!ctx) return;
+  if (!fighter || (!fighter.isDomainActive && !fighter.domainActive)) return;
 
   const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
   if (!arena) return;
 
+  const isLocal = Boolean(options.isLocal || (ctx.canvas && Math.abs(ctx.canvas.width - arena.width) < 2));
+  const ax = isLocal ? 0 : arena.x;
+  const ay = isLocal ? 0 : arena.y;
+  const aw = isLocal ? ctx.canvas.width : arena.width;
+  const ah = isLocal ? ctx.canvas.height : arena.height;
+  const ww = isLocal ? 0 : ((arena.wallWidth !== undefined) ? arena.wallWidth : 4);
+
   const timer = fighter.domainTimer || 0;
   const maxTimer = fighter.domainMaxTimer || 480;
-  const alpha = Math.min(1.0, Math.sin((timer / maxTimer) * Math.PI) * 1.4);
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const maxOverlayAlpha = cfg.curseDomainOverlayAlpha ?? 0.95;
+
+  // Smooth sinusoidal fade-in / fade-out curve (Rule 2.11 / domain lifecycle standard)
+  const pulseAlpha = Math.min(1.0, Math.sin((timer / Math.max(1, maxTimer)) * Math.PI) * 1.4);
+  let alpha = Math.max(0, Math.min(1.0, pulseAlpha)) * maxOverlayAlpha;
+  if (isClashSecondary) {
+    alpha *= 0.75;
+  }
 
   ctx.save();
 
-  // 1. Full-Arena Somber Slate Tint Overlay (Rule 11 Zero shadowBlur)
-  ctx.fillStyle = `rgba(6, 9, 15, ${alpha * 0.72})`;
-  ctx.fillRect(arena.x, arena.y, arena.width, arena.height);
-
-  // 2. The Celestial Lunar Womb / Cellular Embryo (Backdrop Structure)
-  const centerX = arena.x + arena.width / 2;
-  const centerY = arena.y + arena.height / 2;
-  const moonRadius = 140;
-
-  // Outer Pale Greenish-Gold Crescent Halo
-  ctx.fillStyle = `rgba(200, 230, 74, ${alpha * 0.22})`;
+  // 1. Clip strictly inside arena boundaries (Rule 31 Anti-Rectangular Clipping Standard)
   ctx.beginPath();
-  ctx.arc(centerX, centerY - 20, moonRadius * 1.15, 0, Math.PI * 2);
-  ctx.fill();
+  if (arena.shape === 'circle') {
+    const acx = ax + aw / 2;
+    const acy = ay + ah / 2;
+    const ar = arena.radius !== undefined ? arena.radius : (aw / 2);
+    ctx.arc(acx, acy, Math.max(0, ar - ww), 0, Math.PI * 2);
+  } else {
+    ctx.rect(ax + ww, ay + ww, aw - ww * 2, ah - ww * 2);
+  }
+  ctx.clip();
 
-  // Giant Translucent Cellular Womb Moon
-  ctx.fillStyle = `rgba(18, 26, 38, ${alpha * 0.88})`;
-  ctx.strokeStyle = `rgba(118, 224, 66, ${alpha * 0.65})`;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY - 20, moonRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
+  ctx.globalAlpha = alpha;
 
-  // Microscopic Cellular Lattice Grid inside Moon
-  ctx.strokeStyle = `rgba(0, 242, 254, ${alpha * 0.25})`;
-  ctx.lineWidth = 1.0;
-  const gridSize = 24;
-  for (let x = centerX - moonRadius + 12; x < centerX + moonRadius; x += gridSize) {
-    for (let y = centerY - 20 - moonRadius + 12; y < centerY - 20 + moonRadius; y += gridSize) {
-      if (Math.hypot(x - centerX, y - (centerY - 20)) < moonRadius * 0.90) {
-        ctx.strokeRect(x - 8, y - 8, 16, 16);
-        // Small cross-hair in center of cell
-        ctx.beginPath();
-        ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y);
-        ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 3);
-        ctx.stroke();
+  // 2. Base Pitch-Black Cosmic Void Floor Background
+  ctx.fillStyle = '#010305';
+  ctx.fillRect(ax + ww, ay + ww, aw - ww * 2, ah - ww * 2);
+
+  const cx = ax + aw / 2;
+  const cy = ay + ah / 2;
+  const drawX = ax + ww;
+  const drawY = ay + ww;
+  const drawW = aw - ww * 2;
+  const drawH = ah - ww * 2;
+
+  // 3. Draw Authentic High-Res Domain Expansion Arena Overlay Image (Naoya_arena_overlay.png)
+  const img = getNaoyaDomainOverlayImage();
+  if (img && (img.complete || img.width > 0) && img.naturalWidth > 0) {
+    ctx.imageSmoothingEnabled = true; // High-quality smooth filtering preserves intricate filaments and neural iris details
+    if ('imageSmoothingQuality' in ctx) {
+      ctx.imageSmoothingQuality = 'high';
+    }
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+  } else {
+    // ── Procedural Fallback while image initializes ──
+    const moonRadius = Math.min(drawW, drawH) * 0.32;
+
+    // Outer Pale Greenish-Gold Crescent Halo
+    ctx.fillStyle = 'rgba(200, 230, 74, 0.22)';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 20, moonRadius * 1.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Translucent Cellular Womb Moon
+    ctx.fillStyle = 'rgba(18, 26, 38, 0.88)';
+    ctx.strokeStyle = 'rgba(118, 224, 66, 0.65)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 20, moonRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Microscopic Cellular Lattice Grid inside Moon
+    ctx.strokeStyle = 'rgba(0, 242, 254, 0.25)';
+    ctx.lineWidth = 1.0;
+    const gridSize = 24;
+    for (let x = cx - moonRadius + 12; x < cx + moonRadius; x += gridSize) {
+      for (let y = cy - 20 - moonRadius + 12; y < cy - 20 + moonRadius; y += gridSize) {
+        if (Math.hypot(x - cx, y - (cy - 20)) < moonRadius * 0.90) {
+          ctx.strokeRect(x - 8, y - 8, 16, 16);
+          ctx.beginPath();
+          ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y);
+          ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 3);
+          ctx.stroke();
+        }
       }
     }
   }
 
-  // 3. 35mm Organic Film Strip Borders Along Arena Perimeters
-  const filmWidth = 24;
-  ctx.fillStyle = `rgba(15, 23, 42, ${alpha * 0.85})`;
-  // Top & Bottom strips
-  ctx.fillRect(arena.x, arena.y, arena.width, filmWidth);
-  ctx.fillRect(arena.x, arena.y + arena.height - filmWidth, arena.width, filmWidth);
-
-  // Film Reel Sprocket Perforations
-  ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.75})`;
-  const spSpacing = 28;
-  for (let sx = arena.x + 14; sx < arena.x + arena.width - 14; sx += spSpacing) {
-    ctx.fillRect(sx, arena.y + 6, 12, 12);
-    ctx.fillRect(sx, arena.y + arena.height - filmWidth + 6, 12, 12);
+  // 4. Subtle Outer Arena Boundary Soft Feather (Feathers smoothly at arena walls without dimming the iris artwork)
+  const maxR = Math.max(drawW, drawH) * 0.70;
+  const vignetteGrad = ctx.createRadialGradient(cx, cy, maxR * 0.82, cx, cy, maxR);
+  if (vignetteGrad) {
+    vignetteGrad.addColorStop(0.00, 'rgba(1, 3, 5, 0.00)');
+    vignetteGrad.addColorStop(1.00, 'rgba(1, 3, 5, 0.35)');
+    ctx.fillStyle = vignetteGrad;
+    ctx.fillRect(drawX, drawY, drawW, drawH);
   }
 
-  // 4. Domain Name & Status Banner
-  ctx.fillStyle = `rgba(200, 230, 74, ${alpha * 0.95})`;
-  ctx.font = 'bold 15px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('時胞月宮殿 — TIME CELL MOON PALACE', centerX, arena.y + filmWidth + 24);
-
-  ctx.fillStyle = `rgba(0, 242, 254, ${alpha * 0.85})`;
-  ctx.font = '11px sans-serif';
-  ctx.fillText('[ CELLULAR 24 FPS STASIS RULE ACTIVE ]', centerX, arena.y + filmWidth + 40);
-
   ctx.restore();
+}
+
+/**
+ * Universal alias matching standard domain renderer naming convention
+ */
+export function renderNaoyaDomainBackground(fighter, ctx, isClashSecondary = false, options = {}) {
+  drawTimeCellMoonPalaceDomain(ctx, fighter, isClashSecondary, options);
 }
 
 /**
@@ -1490,9 +1666,11 @@ export function drawCurseMachGaugeHUD(ctx, fighter) {
   const gauge = Math.max(0, Math.min(100, fighter.machGauge || 0));
   const isOverdrive = fighter.isMachOverdrive;
   const r = fighter.r || 25;
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const halfModelH = r * (cfg.curseFormModelLength ?? 5.4) * 0.5;
 
   ctx.save();
-  ctx.translate(fighter.x, fighter.y - r - 22);
+  ctx.translate(fighter.x, fighter.y - halfModelH - 12);
 
   const barWidth = 44;
   const barHeight = 5;
@@ -1513,7 +1691,8 @@ export function drawCurseMachGaugeHUD(ctx, fighter) {
   ctx.fillStyle = isOverdrive ? '#00F2FE' : '#94A3B8';
   ctx.font = 'bold 9px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(isOverdrive ? 'MACH 3 OVERDRIVE!' : `MACH ${(1.0 + (gauge / 100) * 2.0).toFixed(1)}`, 0, -3);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(isOverdrive ? 'MACH 3 OVERDRIVE!' : `MACH ${(1.0 + (gauge / 100) * 2.0).toFixed(1)}`, 0, -2);
 
   ctx.restore();
 }

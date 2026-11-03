@@ -34,6 +34,7 @@ import { clearBamEffects } from '../graphics/particles/bamImpactEffect.js';
 import { clearHybridProjectiles } from '../graphics/renderers/hybridProjectileRenderer.js';
 import { resetCamera } from '../systems/cameraSystem.js';
 import { resetComboTrackers } from '../systems/comboTracker.js';
+import { EndCrystalEntity } from '../entities/EndCrystalEntity.js';
 import { BossManager, BossEntranceSequence } from '../bosses/index.js';
 import { getFocMapForBoss } from '../maps/index.js';
 import { setViewportOrientation, getArenaConfigForMode } from './viewportManager.js';
@@ -466,6 +467,9 @@ export function reinitFighters(isNewMatch = false) {
     const resolvedArena = getArenaConfigForMode(state.mode, state.viewOrientation);
     CONFIG.arena = { ...resolvedArena };
     state.arena = { ...resolvedArena };
+
+    // Clean up any lingering corner crystals from previous rounds so reinitFighters preserves exact player count
+    state.fighters = state.fighters.filter(f => !f.isEndCrystal);
   }
 
   const arena = state.arena;

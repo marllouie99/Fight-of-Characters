@@ -6833,6 +6833,98 @@ async function runInteractionTests() {
 
     console.log('      ✅ Naoya 24-Frame Palm Touch stasis correctly preserves active skill casting and resumes on stasis end without resetting.');
     console.log('      ✅ Gojo Limitless Infinity blocks Naoya 24-Frame Palm Touch and is disabled only during Naoya Ultimate Mach 3 Runway Breach.');
+
+    // F. Naoya Domain Expansion: Time Cell Moon Palace (Tokyū Gesshōkyū) Arena PNG Overlay
+    const { getNaoyaDomainOverlayImage, renderNaoyaDomainBackground, drawTimeCellMoonPalaceDomain } = await import('../js/graphics/weapons/naoyaWeaponGraphics.js');
+    const domainOverlayImg = getNaoyaDomainOverlayImage();
+    assert(domainOverlayImg !== null, 'getNaoyaDomainOverlayImage must return an Image object');
+    assert(domainOverlayImg.src && domainOverlayImg.src.includes('Naoya_arena_overlay.png'), 'Overlay image src must reference Assets/model/naoya/Naoya_arena_overlay.png');
+
+    // Activate Naoya Domain Expansion
+    naoya.isDomainActive = true;
+    naoya.domainTimer = 480;
+    naoya.domainMaxTimer = 480;
+    assert(naoya.domainActive === true, 'naoya.domainActive getter must be true when isDomainActive is true');
+
+    // Test Canvas 2D rendering stack balance on rectangular arena
+    state.arena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect', wallWidth: 4 };
+    mockCtx.resetStackDepth();
+    naoya.drawDomainBackground(mockCtx);
+    assert(mockCtx.getStackDepth() === 0, `naoya.drawDomainBackground rect arena must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+
+    // Test Canvas 2D rendering stack balance on circular arena
+    state.arena = { x: 45, y: 240, width: 450, height: 450, shape: 'circle', radius: 225, wallWidth: 4 };
+    mockCtx.resetStackDepth();
+    renderNaoyaDomainBackground(naoya, mockCtx);
+    assert(mockCtx.getStackDepth() === 0, `renderNaoyaDomainBackground circle arena must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+
+    mockCtx.resetStackDepth();
+    drawTimeCellMoonPalaceDomain(mockCtx, naoya, true); // Domain clash secondary mode
+    assert(mockCtx.getStackDepth() === 0, `drawTimeCellMoonPalaceDomain clash secondary must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+
+    // Test Naoya Domain Expansion Dim Screen & Outer Atmosphere
+    const { drawNaoyaDomainDimScreen, getNaoyaDomainDimOpacity, resetNaoyaDomainDimOpacity } = await import('../js/graphics/renderers/domainDimOverlays.js');
+    resetNaoyaDomainDimOpacity();
+    assert(getNaoyaDomainDimOpacity() === 0, 'Initial Naoya domain dim opacity must be 0');
+
+    naoya.isDomainActive = true;
+    state.fighters = [naoya];
+    state.ctx = mockCtx;
+    state.canvas = mockCtx.canvas;
+    state.camera = { enabled: false, zoom: 1.0, mode: 'fixed' };
+
+    mockCtx.resetStackDepth();
+    drawNaoyaDomainDimScreen();
+    assert(mockCtx.getStackDepth() === 0, `drawNaoyaDomainDimScreen must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+    assert(getNaoyaDomainDimOpacity() > 0, `Naoya domain dim opacity must ramp up when domain is active (got ${getNaoyaDomainDimOpacity()})`);
+
+    // Run multiple frames to test particles, embers, and filaments update
+    for (let frame = 0; frame < 10; frame++) {
+      mockCtx.resetStackDepth();
+      drawNaoyaDomainDimScreen();
+      assert(mockCtx.getStackDepth() === 0, `drawNaoyaDomainDimScreen frame ${frame} must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+    }
+
+    // Reset domain
+    naoya.isDomainActive = false;
+    resetNaoyaDomainDimOpacity();
+
+    // G. Naoya Vengeful Curse Rebirth & Awakened Jet Cursed Spirit Transformation
+    const testNaoya = new NaoyaFighter({ x: 200, y: 200, hp: 190, maxHp: 190 });
+    testNaoya.team = 0;
+    gojo.team = 1;
+    state.fighters = [testNaoya, gojo];
+    state.gameState = 'playing';
+
+    // Apply lethal damage to trigger Cursed Womb cocoon transformation
+    testNaoya.takeDamage(500, gojo);
+    assert(testNaoya.isCurseWomb === true, 'Naoya must enter Cursed Womb cocoon state upon taking lethal damage');
+    assert(testNaoya.hp === 0, 'Naoya HP must be 0 at moment of entering cocoon');
+    assert(testNaoya.isDead === false && testNaoya.dead === false, 'Naoya must NOT be marked dead while transforming in Cursed Womb cocoon');
+
+    // Run 70 frames of updateFighters to simulate cocoon incubation and hatching
+    const { updateFighters } = await import('../js/systems/physics.js');
+    for (let f = 0; f < 70; f++) {
+      updateFighters();
+    }
+    assert(testNaoya.isCurseWomb === false, 'Naoya must exit Cursed Womb cocoon after incubation timer completes');
+    assert(testNaoya.isCurseForm === true, 'Naoya must hatch into Awakened Jet Skull Cursed Spirit (isCurseForm = true)');
+    assert(testNaoya.hp > 0, `Naoya HP must be restored upon hatching into Curse Form (got ${testNaoya.hp})`);
+    assert(testNaoya.hasCurseReborn === true, 'Naoya hasCurseReborn flag must be true');
+    assert(state.gameState === 'playing', `Game state must remain playing during and after curse rebirth (got ${state.gameState})`);
+
+    // Verify object-based damage payloads ({ damage: 500 }) also trigger Curse Rebirth
+    const testNaoyaObj = new NaoyaFighter({ x: 200, y: 200, hp: 190, maxHp: 190 });
+    testNaoyaObj.team = 0;
+    state.fighters = [testNaoyaObj, gojo];
+    testNaoyaObj.takeDamage({ damage: 500 }, gojo);
+    assert(testNaoyaObj.isCurseWomb === true, 'Object-based lethal damage ({ damage }) must trigger Cursed Womb cocoon transformation');
+    assert(testNaoyaObj.isDead === false, 'Object-based lethal damage must not bypass rebirth');
+
+    console.log('      ✅ Naoya Vengeful Curse Rebirth: Cursed Womb cocoon incubation & hatching into Awakened Jet Cursed Spirit verified.');
+    console.log('      ✅ Naoya Domain Expansion: Time Cell Moon Palace arena PNG overlay and atmospheric void/corona render cleanly with balanced Canvas 2D stack depth across rect & circle arenas.');
+    assert(naoya.domainActive === false, 'naoya.domainActive getter must be false after deactivating domain');
+    console.log('      ✅ Naoya Domain Expansion: Time Cell Moon Palace arena PNG overlay and atmospheric void/corona render cleanly with balanced Canvas 2D stack depth across rect & circle arenas.');
   }
 
   // ── TEST 63: Shiro Living Chess Troops — Body Blocking & Enemy Targetability ──

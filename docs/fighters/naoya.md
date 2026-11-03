@@ -154,6 +154,28 @@ Touching an enemy during active Projection Sorcery forces them to abide by the 2
 
 ---
 
+### 🌑 Awakened Ultimate (Curse Form): Domain Expansion — Time Cell Moon Palace (*時胞月宮殿 - Tokyū Gesshōkyū*)
+* **Type**: Full-Arena Sure-Hit Domain Expansion with Cellular Stasis Constraint & Atmospheric Cosmic Iris Environment
+* **Arena Floor Overlay Image**: `Assets/model/naoya/Naoya_arena_overlay.png`
+* **Cooldown**: `24.0 seconds` (`1440 frames`)
+* **Duration**: `8.0 seconds` (`480 frames`)
+* **Sure-Hit Effect & Atmospheric Void**:
+  - Traps the entire arena inside the lunar embryo womb of Projection Sorcery.
+  - **Arena Floor Core**: Replaced with the authentic pixel art arena overlay (`Naoya_arena_overlay.png`), displaying the central pupil, specular reflection dots, and concentric dark iris.
+  - **Outer Coronal Filaments (The Living Iris)**: 220 dense radial electric needle filaments in radiant white (`#FFFFFF`), electric lime (`#76E042`), and shutter cyan (`#00F2FE`) radiating 20px–125px outward into the cosmic void from the arena perimeter.
+  - **Sinuous Nerve Membrane Ring**: An undulating, jagged multi-harmonic electric lightning ring pulsing along the arena perimeter with layered glow, lime, and white-core strokes.
+  - **Luminous Cursed Womb / Embryo Entity**: Anchored at the upper-left flank of the arena rim (~10:30 o'clock / -2.40 rad) featuring a pearlescent teardrop chrysalis body, swept-back wing/horn spikes projecting into the void, a satellite egg pod, anchoring root, and gentle cellular breathing pulse.
+  - **Full-Screen Atmospheric Void**:
+    - Abyssal teal-black multi-stop linear gradient (`#010508` to `#031E26`).
+    - Soft diffuse drifting cyan/teal nebula gas clouds across screen corners and flanks.
+    - **Left Half**: Twinkling celestial stardust motes and 4-point diamond cross stars in teal, lime, mint, and white.
+    - **Right Half**: Dynamic shower of glowing copper, amber, molten orange, and gold embers (`#FF4500`, `#FF7B1A`, `#FF9E3B`, `#FFD269`) drifting upward with sinusoidal sway.
+    - Deep cinematic corner vignette.
+  - **Cellular 24 FPS Rule**: Every 24 frames, any non-Toji enemy executing actions or moving faster than 0.6 speed suffers cellular rupture (`6 True Damage` per violation) and micro-hitstun pauses.
+  - Supports WebGL hybrid container rendering, native Canvas 2D fallback, and Domain Clashes with Gojo, Sukuna, Yuta, and Mahito.
+
+---
+
 ## 🎯 Matchup Dynamics & Synergies
 
 | Opponent | Unique Interaction |

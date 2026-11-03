@@ -947,7 +947,7 @@ export function updateSaitamaWallShatters() {
  */
 export function drawSaitamaWallShatters(ctx, isDark, arena) {
   if (state.shatteredWalls && state.shatteredWalls.length > 0) {
-    const hasActiveDomain = state.fighters && state.fighters.some(f => f && (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
+    const hasActiveDomain = state.fighters && state.fighters.some(f => f && (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
     const isStorming = Boolean(
       (state.fighters && state.fighters.some(f => 
         f && f.hp > 0 && (

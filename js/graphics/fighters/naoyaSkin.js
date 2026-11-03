@@ -9,7 +9,7 @@
 // - Rule 11: Zero shadowBlur / shadowColor
 // ─────────────────────────────────────────────
 
-import { getHandSize } from '../../core/config.js';
+import { getHandSize, CONFIG } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
 import { drawNaoyaTanto, drawCursedWombCocoonVFX, drawCurseNaoyaMachRamjetVFX } from '../weapons/naoyaWeaponGraphics.js';
@@ -803,96 +803,96 @@ export function drawNaoyaGhostModel(ctx, x, y, angle, r, alpha = 0.5) {
 }
 
 /**
- * Discrete Grid Rasterization Engine for Curse Naoya (Jet Turbine Exoskeleton Form).
- * Fixed discrete grid unit (P = 2.0px) rasterized onto an offscreen canvas buffer.
+ * Procedural fallback for Curse Naoya (Vengeful Cursed Spirit Form) matching
+ * the exact upright magenta hooded skull-and-carapace silhouette of Naoya-curse-form.png.
  */
-function _renderCurseNaoyaPixelBodyToCanvas(destCanvas, r) {
-  const destCtx = destCanvas.getContext('2d');
-  destCtx.imageSmoothingEnabled = false;
+function _renderCurseNaoyaPixelBodyToCanvas(canvasOrCtx, r) {
+  let destCtx;
+  let cx = 0;
+  let cy = 0;
+  if (canvasOrCtx && typeof canvasOrCtx.getContext === 'function') {
+    destCtx = canvasOrCtx.getContext('2d');
+    cx = canvasOrCtx.width / 2;
+    cy = canvasOrCtx.height / 2;
+  } else {
+    destCtx = canvasOrCtx;
+  }
+  if (!destCtx) return;
 
-  const P = 2.0;
-  const steps = Math.ceil((r * 1.6 + P) / P);
-  const cx = destCanvas.width / 2;
-  const cy = destCanvas.height / 2;
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const h = r * (cfg.curseFormModelLength ?? 5.4);
+  const w = h * (494 / 1024);
+  const hw = w * 0.5;
+  const hh = h * 0.5;
 
   destCtx.save();
-  destCtx.translate(cx, cy);
-
-  const isInsideCurseBody = (gx, gy) => {
-    const rx = gx * P;
-    const ry = gy * P;
-    // Aerodynamic elongated body: radius r with side turbine nacelles
-    const mainBody = (rx * rx) / ((r * 1.15) * (r * 1.15)) + (ry * ry) / (r * r) <= 1.0;
-    const leftTurbine = Math.hypot(rx - (-r * 0.3), ry - (-r * 0.65)) <= r * 0.42;
-    const rightTurbine = Math.hypot(rx - (-r * 0.3), ry - (r * 0.65)) <= r * 0.42;
-    return mainBody || leftTurbine || rightTurbine;
-  };
-
-  for (let gy = -steps; gy <= steps; gy++) {
-    for (let gx = -steps; gx <= steps; gx++) {
-      if (!isInsideCurseBody(gx, gy)) continue;
-
-      const rx = gx * P;
-      const ry = gy * P;
-      const px = rx - P / 2;
-      const py = ry - P / 2;
-
-      // 4-neighbor attached boundary test for solid manga ink outline
-      const isBorder = (
-        !isInsideCurseBody(gx + 1, gy) ||
-        !isInsideCurseBody(gx - 1, gy) ||
-        !isInsideCurseBody(gx, gy + 1) ||
-        !isInsideCurseBody(gx, gy - 1)
-      );
-
-      if (isBorder) {
-        destCtx.fillStyle = '#020617';
-        destCtx.fillRect(px, py, P, P);
-        continue;
-      }
-
-      // Zone 1: Bone-White Visor / Facial Skull Plate (-r * 0.35 to +r * 0.35 in Y, rx > 0)
-      if (rx >= -r * 0.15 && Math.abs(ry) <= r * 0.42) {
-        if (rx > r * 0.65) {
-          destCtx.fillStyle = '#FFFFFF'; // Front aerodynamic nose glint
-        } else if (rx > r * 0.25) {
-          destCtx.fillStyle = '#E2E8F0'; // Pale bone visor
-        } else {
-          destCtx.fillStyle = '#94A3B8'; // Visor seam shadow
-        }
-        destCtx.fillRect(px, py, P, P);
-        continue;
-      }
-
-      // Zone 2: Jet Ramjet Turbines (Upper & Lower Side Nacelles)
-      const distLeftTurbine = Math.hypot(rx - (-r * 0.3), ry - (-r * 0.65));
-      const distRightTurbine = Math.hypot(rx - (-r * 0.3), ry - (r * 0.65));
-      if (distLeftTurbine <= r * 0.38 || distRightTurbine <= r * 0.38) {
-        const d = Math.min(distLeftTurbine, distRightTurbine);
-        if (d <= r * 0.16) {
-          destCtx.fillStyle = '#00F2FE'; // Cyan intake core
-        } else if (d <= r * 0.28) {
-          destCtx.fillStyle = '#76E042'; // Lime intake ring
-        } else {
-          destCtx.fillStyle = '#0F172A'; // Obsidian turbine housing
-        }
-        destCtx.fillRect(px, py, P, P);
-        continue;
-      }
-
-      // Zone 3: Aerodynamic Exoskeleton Carapace Plates
-      if (rx < -r * 0.45) {
-        destCtx.fillStyle = '#0B0F19'; // Rear thruster exhaust housing
-      } else if (Math.abs(ry) > r * 0.50) {
-        destCtx.fillStyle = '#1E293B'; // Lateral carapace armor
-      } else if (rx > r * 0.10) {
-        destCtx.fillStyle = '#334155'; // Dorsal ridge plate
-      } else {
-        destCtx.fillStyle = '#111827'; // Dark chitin underlayer
-      }
-      destCtx.fillRect(px, py, P, P);
-    }
+  if (cx !== 0 || cy !== 0) {
+    destCtx.translate(cx, cy);
   }
+
+  // 1. Outer Magenta Segmented Carapace & Pointed Hood Silhouette
+  destCtx.fillStyle = '#B82983';
+  destCtx.strokeStyle = '#0B0612';
+  destCtx.lineWidth = 2.0;
+  destCtx.beginPath();
+  destCtx.moveTo(0, -hh); // Top hood apex
+  destCtx.lineTo(hw * 0.52, -hh * 0.62);
+  destCtx.lineTo(hw * 0.98, -hh * 0.28); // Upper shoulder flare
+  destCtx.lineTo(hw * 0.62, hh * 0.05);  // Mid waist pinch
+  destCtx.lineTo(hw * 0.72, hh * 0.42);  // Lower hip plate
+  destCtx.lineTo(hw * 0.28, hh * 0.72);
+  destCtx.lineTo(0, hh);                 // Tapered tail tip
+  destCtx.lineTo(-hw * 0.28, hh * 0.72);
+  destCtx.lineTo(-hw * 0.72, hh * 0.42);
+  destCtx.lineTo(-hw * 0.62, hh * 0.05);
+  destCtx.lineTo(-hw * 0.98, -hh * 0.28);
+  destCtx.lineTo(-hw * 0.52, -hh * 0.62);
+  destCtx.closePath();
+  destCtx.fill();
+  destCtx.stroke();
+
+  // 2. Deep Dark-Purple Central Vertical Cleft & Hood Recess
+  destCtx.fillStyle = '#180828';
+  destCtx.beginPath();
+  destCtx.moveTo(0, -hh * 0.92);
+  destCtx.lineTo(hw * 0.30, -hh * 0.45);
+  destCtx.lineTo(hw * 0.16, hh * 0.10);
+  destCtx.lineTo(hw * 0.20, hh * 0.55);
+  destCtx.lineTo(0, hh * 0.80);
+  destCtx.lineTo(-hw * 0.20, hh * 0.55);
+  destCtx.lineTo(-hw * 0.16, hh * 0.10);
+  destCtx.lineTo(-hw * 0.30, -hh * 0.45);
+  destCtx.closePath();
+  destCtx.fill();
+
+  // 3. Recessed Magenta Skull Plate Inside Upper Hood
+  destCtx.fillStyle = '#D63E9E';
+  destCtx.strokeStyle = '#12061B';
+  destCtx.lineWidth = 1.2;
+  destCtx.beginPath();
+  destCtx.ellipse(0, -hh * 0.48, hw * 0.26, hh * 0.22, 0, 0, Math.PI * 2);
+  destCtx.fill();
+  destCtx.stroke();
+
+  // 4. Hollow Black Eye Sockets & Glowing White Eyes + Left-Eye Light Streak
+  destCtx.fillStyle = '#050208';
+  destCtx.beginPath();
+  destCtx.arc(-hw * 0.11, -hh * 0.46, hw * 0.08, 0, Math.PI * 2);
+  destCtx.arc(hw * 0.11, -hh * 0.46, hw * 0.08, 0, Math.PI * 2);
+  destCtx.fill();
+
+  destCtx.fillStyle = '#FFFFFF';
+  destCtx.beginPath();
+  destCtx.arc(-hw * 0.11, -hh * 0.46, hw * 0.035, 0, Math.PI * 2);
+  destCtx.arc(hw * 0.11, -hh * 0.46, hw * 0.035, 0, Math.PI * 2);
+  destCtx.fill();
+
+  destCtx.strokeStyle = '#FFFFFF';
+  destCtx.lineWidth = 1.4;
+  destCtx.beginPath();
+  destCtx.moveTo(hw * 0.11, -hh * 0.46);
+  destCtx.quadraticCurveTo(hw * 0.28, -hh * 0.52, hw * 0.48, -hh * 0.54);
+  destCtx.stroke();
 
   destCtx.restore();
 }
@@ -901,9 +901,7 @@ export function getCurseNaoyaCachedCanvas(r) {
   const intR = Math.round(r);
   if (!_cachedCurseFighterCanvas || _cachedCurseFighterR !== intR) {
     if (typeof document !== 'undefined') {
-      const P = 2.0;
-      const steps = Math.ceil((intR * 1.6 + P) / P);
-      const size = (steps * 2 + 1) * P;
+      const size = Math.ceil(intR * 5.8);
       _cachedCurseFighterCanvas = document.createElement('canvas');
       _cachedCurseFighterCanvas.width = size;
       _cachedCurseFighterCanvas.height = size;
@@ -914,88 +912,142 @@ export function getCurseNaoyaCachedCanvas(r) {
   return _cachedCurseFighterCanvas;
 }
 
+// ── Curse Form Reference Model Sprite (Assets/model/naoya/Naoya-curse-form.png) ──
+const CURSE_FORM_SPRITE_PATH = 'Assets/model/naoya/Naoya-curse-form.png';
+let _curseFormImage = null;
+let _curseFormImageLoading = false;
+let _curseFormScaledCanvas = null;
+let _curseFormScaledKey = '';
+
+export function _getCurseFormImage() {
+  if (_curseFormImage && _curseFormImage.complete && _curseFormImage.naturalWidth > 0) {
+    return _curseFormImage;
+  }
+  if (!_curseFormImageLoading && typeof Image !== 'undefined') {
+    _curseFormImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _curseFormImage = img;
+      _curseFormImageLoading = false;
+      _curseFormScaledCanvas = null;
+      _curseFormScaledKey = '';
+    };
+    img.onerror = () => {
+      _curseFormImageLoading = false;
+    };
+    img.src = CURSE_FORM_SPRITE_PATH;
+    _curseFormImage = img;
+  }
+  return _curseFormImage;
+}
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') _getCurseFormImage();
+
 /**
- * Draws Curse Naoya (Awakened Jet Turbine Cursed Spirit Form).
- * Adheres strictly to Rule 19, Rule 20, and Rule 3.5.
+ * Returns a pre-downscaled (multi-step, high quality) copy of the curse form sprite,
+ * cached per target size so no expensive large-image resampling happens per frame.
+ */
+function _getCurseFormScaledCanvas(lengthPx) {
+  const img = _getCurseFormImage();
+  if (!img || !img.complete || !img.naturalWidth || typeof document === 'undefined') return null;
+  const targetH = Math.max(8, Math.round(lengthPx));
+  const targetW = Math.max(4, Math.round(targetH * (img.naturalWidth / img.naturalHeight)));
+  const key = `${targetW}x${targetH}`;
+  if (_curseFormScaledCanvas && _curseFormScaledKey === key) return _curseFormScaledCanvas;
+
+  // Step-down halving for clean anti-aliased line art
+  let src = img;
+  let sw = img.naturalWidth;
+  let sh = img.naturalHeight;
+  while (sw / 2 > targetW * 2) {
+    const step = document.createElement('canvas');
+    step.width = Math.round(sw / 2);
+    step.height = Math.round(sh / 2);
+    const sctx = step.getContext('2d');
+    if (!sctx) break;
+    sctx.imageSmoothingEnabled = true;
+    sctx.drawImage(src, 0, 0, step.width, step.height);
+    src = step; sw = step.width; sh = step.height;
+  }
+  const out = document.createElement('canvas');
+  out.width = targetW;
+  out.height = targetH;
+  const octx = out.getContext('2d');
+  if (!octx) return null;
+  octx.imageSmoothingEnabled = true;
+  if ('imageSmoothingQuality' in octx) octx.imageSmoothingQuality = 'high';
+  octx.drawImage(src, 0, 0, targetW, targetH);
+  _curseFormScaledCanvas = out;
+  _curseFormScaledKey = key;
+  return out;
+}
+
+/**
+ * Draws a translucent fading afterimage of Curse Naoya's upright magenta carapace
+ * during Mach 3 Propulsion & Flight / Supersonic Ramjet dashes.
+ */
+export function drawCurseNaoyaGhostModel(ctx, x, y, r = 25, alpha = 0.45) {
+  if (!ctx || alpha <= 0.01) return;
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const modelLength = r * (cfg.curseFormModelLength ?? 5.4);
+  const sprite = _getCurseFormScaledCanvas(modelLength);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+  if (sprite) {
+    ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
+  } else {
+    getCurseNaoyaCachedCanvas(r);
+    if (_cachedCurseFighterCanvas) {
+      const w = _cachedCurseFighterCanvas.width;
+      const h = _cachedCurseFighterCanvas.height;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(_cachedCurseFighterCanvas, -w / 2, -h / 2, w, h);
+    } else {
+      _renderCurseNaoyaPixelBodyToCanvas(ctx, r);
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draws Curse Naoya (Awakened Vengeful Cursed Spirit Form) using the exact reference model
+ * (Assets/model/naoya/Naoya-curse-form.png): upright magenta segmented carapace, pointed hood,
+ * recessed skull face with glowing eyes and left-eye light streak, dark central vertical cleft,
+ * and tapered tail. No detached hands (Curse Naoya has no arms).
  */
 export function drawCurseNaoyaSkin(ctx, fighter) {
   if (!fighter) return;
 
   const r = fighter.r || 25;
-  const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle || 0);
-
-  // 1. Offscreen Canvas Caching check
-  getCurseNaoyaCachedCanvas(r);
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const modelLength = r * (cfg.curseFormModelLength ?? 5.4);
+  const sprite = _getCurseFormScaledCanvas(modelLength);
 
   ctx.save();
   ctx.translate(fighter.x, fighter.y - (fighter.z || 0));
-  ctx.rotate(angle);
 
-  // Rule 19: Vertical mirroring when aiming left
-  const facingLeft = Math.abs(angle) > Math.PI / 2;
-  if (facingLeft) {
-    ctx.scale(1, -1);
+  if (sprite) {
+    ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
+    ctx.restore();
+    return;
   }
 
-  // 2. Draw Rear Ramjet Jet Exhaust Flames / Heat Distortion
-  drawCurseNaoyaMachRamjetVFX(ctx, fighter);
-
-  // 3. Render Cached Pixel Art Jet Body
+  // Fallback while the sprite loads or in headless environments: matching magenta hooded skull silhouette
+  getCurseNaoyaCachedCanvas(r);
   if (_cachedCurseFighterCanvas) {
     const w = _cachedCurseFighterCanvas.width;
     const h = _cachedCurseFighterCanvas.height;
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
     ctx.drawImage(_cachedCurseFighterCanvas, -w / 2, -h / 2, w, h);
   } else {
     _renderCurseNaoyaPixelBodyToCanvas(ctx, r);
-  }
-
-  // 4. Render Symmetrical Cursed Talon Claws (Rule 20 Canonical Lower Flanks)
-  const shouldHideHands = Boolean(
-    (typeof state !== 'undefined' && state.showSkinOnly) ||
-    fighter.hideHands
-  );
-
-  if (!shouldHideHands) {
-    const handR = getHandSize(r * 0.32);
-    const clawTone = '#1E293B';
-    const clawOutline = '#020617';
-
-    const isPunching = Boolean(fighter.punchAnimTimer && fighter.punchAnimTimer > 0);
-    const isLunging = Boolean(fighter.isRamjetLunging);
-
-    let leftX = -r * 0.82;
-    let leftY = -r * 0.38;
-    let rightX = r * 0.82;
-    let rightY = r * 0.38;
-
-    if (isLunging) {
-      // Both talons thrust forward during Mach 3 ramjet lunge
-      leftX = r * 0.85;
-      leftY = -r * 0.45;
-      rightX = r * 0.85;
-      rightY = r * 0.45;
-    } else if (isPunching) {
-      const maxT = fighter.punchAnimMaxTimer || 8;
-      const rawProgress = Math.min(1.0, Math.max(0.0, 1.0 - (fighter.punchAnimTimer / maxT)));
-      const lunge = Math.sin(rawProgress * Math.PI) * (r * 1.25);
-      if (fighter.punchAnimHand === 1) {
-        leftX += lunge;
-      } else {
-        rightX += lunge;
-      }
-    }
-
-    // Draw Cursed Fists & Cyan Claw Tips
-    drawPixelHand(ctx, leftX, leftY, handR, clawTone, clawOutline);
-    drawPixelHand(ctx, rightX, rightY, handR, clawTone, clawOutline);
-
-    // Glowing Cyan Talon Points
-    ctx.fillStyle = '#00F2FE';
-    ctx.beginPath();
-    ctx.arc(leftX + handR * 0.6, leftY, handR * 0.35, 0, Math.PI * 2);
-    ctx.arc(rightX + handR * 0.6, rightY, handR * 0.35, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   ctx.restore();

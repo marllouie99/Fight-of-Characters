@@ -934,7 +934,7 @@ export function drawArena() {
     )
   );
 
-  const hasActiveDomain = state.fighters && state.fighters.some(f => f && (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
+  const hasActiveDomain = state.fighters && state.fighters.some(f => f && (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
   const isStorming = Boolean(
     (state.fighters && state.fighters.some(f => 
       f && f.hp > 0 && (
@@ -1057,7 +1057,7 @@ export function drawArena() {
         // In native Canvas 2D mode with dim effects disabled, render active domain background here.
         // When dim effects are enabled, renderSystem.js repaints the active domain background ON TOP of the dim wash,
         // so skipping it here eliminates a duplicate full-screen domain background render pass every frame.
-        const activeDomainFighter = state.fighters?.find(f => f && (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
+        const activeDomainFighter = state.fighters?.find(f => f && (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
         if (activeDomainFighter) {
           ctx.save();
           applyCameraToCtx(ctx);

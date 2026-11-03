@@ -2,10 +2,10 @@
   "project": "Circle Mini-Battle (Fight of Larpers 101)",
   "schemaVersion": "1.0.0",
   "summary": {
-    "totalFiles": 1962,
-    "totalSizeMB": 385.16,
-    "fighterCount": 48,
-    "imageFiles": 1319,
+    "totalFiles": 2033,
+    "totalSizeMB": 399.49,
+    "fighterCount": 50,
+    "imageFiles": 1390,
     "audioFiles": 614,
     "fontFiles": 4
   },
@@ -58,7 +58,7 @@
       "id": "ash",
       "sourcePath": "Assets/model/ash",
       "fileCount": 132,
-      "totalBytes": 5787928,
+      "totalBytes": 7260285,
       "assets": {
         "hair": "Assets/model/ash/Ash-hair.png",
         "skin": null,
@@ -633,8 +633,8 @@
       "index": "0009",
       "id": "enderDragon",
       "sourcePath": "Assets/model/enderDragon",
-      "fileCount": 14,
-      "totalBytes": 16554468,
+      "fileCount": 76,
+      "totalBytes": 18438283,
       "assets": {
         "hair": null,
         "skin": "Assets/model/enderDragon/dragon-texture-skin.png",
@@ -671,6 +671,72 @@
           "Ender-dragon-model-sprite-sheet2": {
             "type": "spritesheet",
             "path": "Assets/model/enderDragon/Ender-dragon-model-sprite-sheet2.png"
+          },
+          "end_crystal": {
+            "frameCount": 61,
+            "frames": [
+              "Assets/model/enderDragon/end_crystal/end_crystal-1.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-10.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-11.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-12.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-13.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-14.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-15.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-16.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-17.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-18.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-19.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-2.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-20.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-21.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-22.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-23.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-24.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-25.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-26.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-27.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-28.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-29.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-3.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-30.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-31.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-32.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-33.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-34.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-35.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-36.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-37.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-38.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-39.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-4.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-40.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-41.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-42.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-43.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-44.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-45.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-46.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-47.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-48.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-49.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-5.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-50.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-51.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-52.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-53.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-54.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-55.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-56.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-57.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-58.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-59.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-6.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-60.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-7.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-8.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-9.png",
+              "Assets/model/enderDragon/end_crystal/end_crystal-b.png"
+            ]
           }
         },
         "allFiles": [
@@ -687,7 +753,69 @@
           "Assets/model/enderDragon/Ender-dragon-model-sprite-sheet.png",
           "Assets/model/enderDragon/Ender-dragon-model-sprite-sheet2.png",
           "Assets/model/enderDragon/Ender-Dragon-Model.png",
-          "Assets/model/enderDragon/Enderdragon.jpg"
+          "Assets/model/enderDragon/Enderdragon.jpg",
+          "Assets/model/enderDragon/end_crystal/end_crystal-1.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-10.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-11.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-12.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-13.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-14.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-15.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-16.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-17.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-18.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-19.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-2.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-20.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-21.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-22.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-23.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-24.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-25.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-26.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-27.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-28.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-29.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-3.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-30.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-31.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-32.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-33.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-34.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-35.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-36.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-37.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-38.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-39.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-4.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-40.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-41.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-42.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-43.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-44.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-45.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-46.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-47.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-48.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-49.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-5.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-50.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-51.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-52.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-53.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-54.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-55.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-56.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-57.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-58.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-59.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-6.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-60.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-7.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-8.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-9.png",
+          "Assets/model/enderDragon/end_crystal/end_crystal-b.png",
+          "Assets/model/enderDragon/end_crystal_beam.png"
         ]
       }
     },
@@ -711,8 +839,8 @@
       "index": "0011",
       "id": "escanor",
       "sourcePath": "Assets/model/escanor",
-      "fileCount": 87,
-      "totalBytes": 22695071,
+      "fileCount": 88,
+      "totalBytes": 26215732,
       "assets": {
         "hair": "Assets/model/escanor/Escanor-hair.png",
         "skin": "Assets/model/escanor/Escanor-model-mustache.png",
@@ -906,7 +1034,8 @@
           "Assets/model/escanor/Escanor-mustache.png",
           "Assets/model/escanor/Escanor-skin-model.png",
           "Assets/model/escanor/Escanor-Sun-Explosion-Sprite-Sheet.png",
-          "Assets/model/escanor/Escanor-Weapon.png"
+          "Assets/model/escanor/Escanor-Weapon.png",
+          "Assets/model/escanor/escanor_ultimate_arena_overlay.png"
         ]
       }
     },
@@ -1296,6 +1425,23 @@
     },
     {
       "index": "0016",
+      "id": "goku",
+      "sourcePath": "Assets/model/goku",
+      "fileCount": 2,
+      "totalBytes": 1308508,
+      "assets": {
+        "hair": "Assets/model/goku/Goku-hair.png",
+        "skin": null,
+        "weapons": [],
+        "animations": {},
+        "allFiles": [
+          "Assets/model/goku/Goku-hair.png",
+          "Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png"
+        ]
+      }
+    },
+    {
+      "index": "0017",
       "id": "gunslinger",
       "sourcePath": "Assets/model/gunslinger",
       "fileCount": 1,
@@ -1313,7 +1459,7 @@
       }
     },
     {
-      "index": "0017",
+      "index": "0018",
       "id": "guts",
       "sourcePath": "Assets/model/guts",
       "fileCount": 8,
@@ -1340,7 +1486,7 @@
       }
     },
     {
-      "index": "0018",
+      "index": "0019",
       "id": "ichigo",
       "sourcePath": "Assets/model/ichigo",
       "fileCount": 48,
@@ -1458,7 +1604,7 @@
       }
     },
     {
-      "index": "0019",
+      "index": "0020",
       "id": "johnWick",
       "sourcePath": "Assets/model/johnWick",
       "fileCount": 4,
@@ -1477,7 +1623,7 @@
       }
     },
     {
-      "index": "0020",
+      "index": "0021",
       "id": "knight",
       "sourcePath": "Assets/model/knight",
       "fileCount": 10,
@@ -1507,7 +1653,7 @@
       }
     },
     {
-      "index": "0021",
+      "index": "0022",
       "id": "mahito",
       "sourcePath": "Assets/model/mahito",
       "fileCount": 2,
@@ -1526,7 +1672,7 @@
       }
     },
     {
-      "index": "0022",
+      "index": "0023",
       "id": "mahoraga",
       "sourcePath": "Assets/model/mahoraga",
       "fileCount": 14,
@@ -1574,7 +1720,7 @@
       }
     },
     {
-      "index": "0023",
+      "index": "0024",
       "id": "maki",
       "sourcePath": "Assets/model/maki",
       "fileCount": 2,
@@ -1593,7 +1739,7 @@
       }
     },
     {
-      "index": "0024",
+      "index": "0025",
       "id": "makima",
       "sourcePath": "Assets/model/makima",
       "fileCount": 4,
@@ -1617,7 +1763,7 @@
       }
     },
     {
-      "index": "0025",
+      "index": "0026",
       "id": "megumin",
       "sourcePath": "Assets/model/megumin",
       "fileCount": 1,
@@ -1633,7 +1779,7 @@
       }
     },
     {
-      "index": "0026",
+      "index": "0027",
       "id": "namelessDeity",
       "sourcePath": "Assets/model/namelessDeity",
       "fileCount": 177,
@@ -1838,7 +1984,7 @@
       }
     },
     {
-      "index": "0027",
+      "index": "0028",
       "id": "nanami",
       "sourcePath": "Assets/model/nanami",
       "fileCount": 4,
@@ -1859,23 +2005,25 @@
       }
     },
     {
-      "index": "0028",
+      "index": "0029",
       "id": "naoya",
       "sourcePath": "Assets/model/naoya",
-      "fileCount": 1,
-      "totalBytes": 1039422,
+      "fileCount": 3,
+      "totalBytes": 4106802,
       "assets": {
         "hair": "Assets/model/naoya/Naoya_hair.png",
         "skin": null,
         "weapons": [],
         "animations": {},
         "allFiles": [
+          "Assets/model/naoya/Naoya-curse-form.png",
+          "Assets/model/naoya/Naoya_arena_overlay.png",
           "Assets/model/naoya/Naoya_hair.png"
         ]
       }
     },
     {
-      "index": "0029",
+      "index": "0030",
       "id": "nezuko",
       "sourcePath": "Assets/model/nezuko",
       "fileCount": 1,
@@ -1891,7 +2039,7 @@
       }
     },
     {
-      "index": "0030",
+      "index": "0031",
       "id": "pacman",
       "sourcePath": "Assets/model/pacman",
       "fileCount": 3,
@@ -1909,7 +2057,7 @@
       }
     },
     {
-      "index": "0031",
+      "index": "0032",
       "id": "power",
       "sourcePath": "Assets/model/power",
       "fileCount": 3,
@@ -1927,7 +2075,7 @@
       }
     },
     {
-      "index": "0032",
+      "index": "0033",
       "id": "reze",
       "sourcePath": "Assets/model/reze",
       "fileCount": 29,
@@ -2010,7 +2158,7 @@
       }
     },
     {
-      "index": "0033",
+      "index": "0034",
       "id": "sans",
       "sourcePath": "Assets/model/sans",
       "fileCount": 101,
@@ -2241,11 +2389,11 @@
       }
     },
     {
-      "index": "0034",
+      "index": "0035",
       "id": "shiro",
       "sourcePath": "Assets/model/shiro",
-      "fileCount": 3,
-      "totalBytes": 3131415,
+      "fileCount": 4,
+      "totalBytes": 4727668,
       "assets": {
         "hair": "Assets/model/shiro/shiro-hair.png",
         "skin": null,
@@ -2259,12 +2407,13 @@
         "allFiles": [
           "Assets/model/shiro/Pixel Chess Set Sprite Sheet.png",
           "Assets/model/shiro/shiro-hair.png",
-          "Assets/model/shiro/shiro_crown.png"
+          "Assets/model/shiro/shiro_crown.png",
+          "Assets/model/shiro/Shiro_hair.png"
         ]
       }
     },
     {
-      "index": "0035",
+      "index": "0036",
       "id": "sora",
       "sourcePath": "Assets/model/sora",
       "fileCount": 1,
@@ -2280,7 +2429,7 @@
       }
     },
     {
-      "index": "0036",
+      "index": "0037",
       "id": "spartan",
       "sourcePath": "Assets/model/spartan",
       "fileCount": 6,
@@ -2304,7 +2453,7 @@
       }
     },
     {
-      "index": "0037",
+      "index": "0038",
       "id": "sukuna",
       "sourcePath": "Assets/model/sukuna",
       "fileCount": 33,
@@ -2391,7 +2540,7 @@
       }
     },
     {
-      "index": "0038",
+      "index": "0039",
       "id": "tanjiro",
       "sourcePath": "Assets/model/tanjiro",
       "fileCount": 2,
@@ -2408,7 +2557,7 @@
       }
     },
     {
-      "index": "0039",
+      "index": "0040",
       "id": "todo",
       "sourcePath": "Assets/model/todo",
       "fileCount": 1,
@@ -2424,24 +2573,29 @@
       }
     },
     {
-      "index": "0040",
+      "index": "0041",
       "id": "toji",
       "sourcePath": "Assets/model/toji",
-      "fileCount": 2,
-      "totalBytes": 611663,
+      "fileCount": 4,
+      "totalBytes": 2783613,
       "assets": {
         "hair": "Assets/model/toji/toji-hair.png",
         "skin": "Assets/model/toji/Toji-skin.png",
-        "weapons": [],
+        "weapons": [
+          "Assets/model/toji/toji_pistol.jpg",
+          "Assets/model/toji/toji_pistol.png"
+        ],
         "animations": {},
         "allFiles": [
           "Assets/model/toji/toji-hair.png",
-          "Assets/model/toji/Toji-skin.png"
+          "Assets/model/toji/Toji-skin.png",
+          "Assets/model/toji/toji_pistol.jpg",
+          "Assets/model/toji/toji_pistol.png"
         ]
       }
     },
     {
-      "index": "0041",
+      "index": "0042",
       "id": "ulquiorra",
       "sourcePath": "Assets/model/ulquiorra",
       "fileCount": 1,
@@ -2459,7 +2613,7 @@
       }
     },
     {
-      "index": "0042",
+      "index": "0043",
       "id": "unarmed",
       "sourcePath": "Assets/model/unarmed",
       "fileCount": 1,
@@ -2475,7 +2629,7 @@
       }
     },
     {
-      "index": "0043",
+      "index": "0044",
       "id": "uryu",
       "sourcePath": "Assets/model/uryu",
       "fileCount": 9,
@@ -2504,7 +2658,23 @@
       }
     },
     {
-      "index": "0044",
+      "index": "0045",
+      "id": "vegeta",
+      "sourcePath": "Assets/model/vegeta",
+      "fileCount": 1,
+      "totalBytes": 608,
+      "assets": {
+        "hair": "Assets/model/vegeta/Vegeta-hair.png",
+        "skin": null,
+        "weapons": [],
+        "animations": {},
+        "allFiles": [
+          "Assets/model/vegeta/Vegeta-hair.png"
+        ]
+      }
+    },
+    {
+      "index": "0046",
       "id": "yuji",
       "sourcePath": "Assets/model/yuji",
       "fileCount": 2,
@@ -2521,7 +2691,7 @@
       }
     },
     {
-      "index": "0045",
+      "index": "0047",
       "id": "yuta",
       "sourcePath": "Assets/model/yuta",
       "fileCount": 42,
@@ -2633,7 +2803,7 @@
       }
     },
     {
-      "index": "0046",
+      "index": "0048",
       "id": "zenitsu",
       "sourcePath": "Assets/model/zenitsu",
       "fileCount": 23,
@@ -2703,7 +2873,7 @@
       }
     },
     {
-      "index": "0047",
+      "index": "0049",
       "id": "zeus",
       "sourcePath": "Assets/model/zeus",
       "fileCount": 23,
@@ -2773,7 +2943,7 @@
       }
     },
     {
-      "index": "0048",
+      "index": "0050",
       "id": "zombie",
       "sourcePath": "Assets/model/zombie",
       "fileCount": 12,

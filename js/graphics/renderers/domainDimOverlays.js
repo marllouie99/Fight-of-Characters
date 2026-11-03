@@ -1001,6 +1001,238 @@ export function drawMahitoDomainDimScreen() {
   state.globalDimEdgeColor = `rgba(3, 0, 5, ${(opacity * 0.98).toFixed(3)})`;
 }
 
+// ──────────────────────────────────────────
+// NAOYA ZENIN — TIME CELL MOON PALACE DOMAIN ATMOSPHERE
+// Authentic cosmological split: Deep abyssal black void,
+// left atmospheric cosmic teal nebula dust & twinkling stardust,
+// right rising fiery copper and amber glowing embers.
+// ──────────────────────────────────────────
+let currentNaoyaDomainDimOpacity = 0;
+let naoyaCelestialStars = [];
+let naoyaCopperEmbers = [];
+
+export function resetNaoyaDomainDimOpacity() {
+  currentNaoyaDomainDimOpacity = 0;
+  naoyaCelestialStars = [];
+  naoyaCopperEmbers = [];
+}
+
+export function getNaoyaDomainDimOpacity() {
+  return currentNaoyaDomainDimOpacity;
+}
+
+/**
+ * Draws a dark cursed teal-black cosmic void dim screen and living iris atmosphere
+ * when Naoya's Domain Expansion (時胞月宮殿 — Time Cell Moon Palace) is active or channeling.
+ */
+export function drawNaoyaDomainDimScreen() {
+  if (typeof state !== 'undefined' && state.disableDimEffects) return;
+  const { ctx, canvas } = state;
+  if (!ctx || !canvas) return;
+
+  const naoyaFighter = state.fighters?.find(f =>
+    f && f.hp > 0 &&
+    (f.characterId === 'naoya' || f.type === 'naoya' || f._def?.id === 'naoya' || f._def?.type === 'naoya') &&
+    (f.domainActive || f.isDomainActive || f.isChannelingDomainExpansion)
+  );
+
+  let targetOpacity = 0;
+  if (naoyaFighter) {
+    if (naoyaFighter.domainActive || naoyaFighter.isDomainActive) {
+      targetOpacity = 0.95;
+    } else if (naoyaFighter.isChannelingDomainExpansion) {
+      const chargeMax = naoyaFighter.domainChargeMax || 120;
+      const progress = Math.min(1.0, (naoyaFighter.domainChargeTimer || 0) / Math.max(1, chargeMax));
+      targetOpacity = 0.35 + progress * 0.55;
+    }
+  }
+
+  if (targetOpacity > currentNaoyaDomainDimOpacity) {
+    currentNaoyaDomainDimOpacity += (targetOpacity - currentNaoyaDomainDimOpacity) * 0.08;
+  } else {
+    currentNaoyaDomainDimOpacity += (targetOpacity - currentNaoyaDomainDimOpacity) * 0.06;
+  }
+
+  if (currentNaoyaDomainDimOpacity < 0.01) {
+    currentNaoyaDomainDimOpacity = 0;
+    return;
+  }
+
+  const opacity = currentNaoyaDomainDimOpacity;
+  const w = (canvas && Number.isFinite(canvas.width) && canvas.width > 0) ? canvas.width : 540;
+  const h = (canvas && Number.isFinite(canvas.height) && canvas.height > 0) ? canvas.height : 960;
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // 1. Deep Abyssal Cosmic Void Base (Pitch black void matching reference image)
+  ctx.fillStyle = `rgba(1, 3, 5, ${(opacity * 0.98).toFixed(3)})`;
+  ctx.fillRect(0, 0, w, h);
+
+  // 2. Left Cosmic Teal Nebula Dust & Atmospheric Gas Clouds
+  const leftNebulaDiscs = [
+    { x: w * 0.12, y: h * 0.36, r: 230, col: `rgba(0, 160, 175, ${(opacity * 0.14).toFixed(3)})` },
+    { x: w * 0.16, y: h * 0.68, r: 210, col: `rgba(0, 130, 145, ${(opacity * 0.12).toFixed(3)})` },
+    { x: w * 0.06, y: h * 0.50, r: 170, col: `rgba(56, 225, 230, ${(opacity * 0.08).toFixed(3)})` },
+    { x: w * 0.24, y: h * 0.18, r: 160, col: `rgba(0, 120, 130, ${(opacity * 0.09).toFixed(3)})` }
+  ];
+  for (const neb of leftNebulaDiscs) {
+    const nebGrad = createSafeRadialGradient(ctx, neb.x, neb.y, 0, neb.x, neb.y, neb.r);
+    if (nebGrad) {
+      nebGrad.addColorStop(0.0, neb.col);
+      nebGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = nebGrad;
+      ctx.beginPath();
+      ctx.arc(neb.x, neb.y, neb.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 3. Right Warm Fiery Amber / Copper Atmospheric Radiance
+  const rightWarmDiscs = [
+    { x: w * 0.88, y: h * 0.52, r: 260, col: `rgba(255, 80, 10, ${(opacity * 0.10).toFixed(3)})` },
+    { x: w * 0.92, y: h * 0.76, r: 220, col: `rgba(230, 95, 20, ${(opacity * 0.09).toFixed(3)})` },
+    { x: w * 0.82, y: h * 0.28, r: 180, col: `rgba(200, 60, 10, ${(opacity * 0.07).toFixed(3)})` }
+  ];
+  for (const warm of rightWarmDiscs) {
+    const warmGrad = createSafeRadialGradient(ctx, warm.x, warm.y, 0, warm.x, warm.y, warm.r);
+    if (warmGrad) {
+      warmGrad.addColorStop(0.0, warm.col);
+      warmGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = warmGrad;
+      ctx.beginPath();
+      ctx.arc(warm.x, warm.y, warm.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 4. Left Celestial Stardust & Micro-Stars (Pure discrete circular specks without cross arms)
+  if (naoyaCelestialStars.length === 0) {
+    const palette = ['#FFFFFF', '#5CE1E6', '#00F2FE', '#A8FFD0', '#76E042', '#B2EBF2'];
+    for (let i = 0; i < 75; i++) {
+      const sx = Math.random() * (w * 0.48);
+      const sy = Math.random() * h;
+      const rand = Math.random();
+      const sr = (rand < 0.70) ? (0.6 + Math.random() * 0.9) : ((rand < 0.92) ? (1.5 + Math.random() * 0.8) : (2.4 + Math.random() * 0.8));
+      const sc = palette[Math.floor(Math.random() * palette.length)];
+      naoyaCelestialStars.push({
+        x: sx,
+        y: sy,
+        r: sr,
+        baseAlpha: 0.35 + Math.random() * 0.55,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.0018 + Math.random() * 0.0032,
+        color: sc,
+        hasHalo: sr >= 2.0
+      });
+    }
+  }
+
+  for (const star of naoyaCelestialStars) {
+    const starAlpha = star.baseAlpha * (0.35 + 0.65 * Math.sin(now * star.speed + star.phase)) * opacity;
+    if (starAlpha <= 0.02) continue;
+
+    if (star.hasHalo) {
+      ctx.fillStyle = star.color;
+      ctx.globalAlpha = starAlpha * 0.30;
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = star.color;
+    ctx.globalAlpha = starAlpha;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 5. Right Half Rising Fiery Amber / Copper / Molten Embers (Floating upward)
+  if (naoyaCopperEmbers.length === 0) {
+    const emberPalette = ['#FF4500', '#FF6B1A', '#FF9E3B', '#FFD269', '#FFE4A0', '#FF5E13', '#FFFFFF'];
+    for (let i = 0; i < 65; i++) {
+      const isBokeh = (Math.random() < 0.10);
+      const er = isBokeh ? (4.5 + Math.random() * 3.5) : (0.8 + Math.random() * 2.4);
+      naoyaCopperEmbers.push({
+        x: w * 0.46 + Math.random() * (w * 0.54),
+        y: Math.random() * (h + 30),
+        r: er,
+        vy: -(0.65 + Math.random() * 1.05),
+        vx: 0.10 + Math.random() * 0.25,
+        swayAmp: isBokeh ? 6 : (8 + Math.random() * 18),
+        swayFreq: 0.0016 + Math.random() * 0.0024,
+        phase: Math.random() * Math.PI * 2,
+        color: emberPalette[Math.floor(Math.random() * emberPalette.length)],
+        baseAlpha: isBokeh ? (0.18 + Math.random() * 0.16) : (0.50 + Math.random() * 0.50),
+        isBokeh
+      });
+    }
+  }
+
+  for (const ember of naoyaCopperEmbers) {
+    ember.y += ember.vy;
+    ember.x += ember.vx;
+    if (ember.y < -20) {
+      ember.y = h + 15;
+      ember.x = w * 0.46 + Math.random() * (w * 0.54);
+    }
+    if (ember.x > w + 20) {
+      ember.x = w * 0.46;
+    }
+    const currentX = ember.x + Math.sin(now * ember.swayFreq + ember.phase) * ember.swayAmp;
+    const emberAlpha = ember.baseAlpha * (0.65 + 0.35 * Math.sin(now * 0.004 + ember.phase)) * opacity;
+    if (emberAlpha <= 0.02) continue;
+
+    if (ember.isBokeh) {
+      // Large soft background bokeh orb
+      ctx.fillStyle = ember.color;
+      ctx.globalAlpha = emberAlpha;
+      ctx.beginPath();
+      ctx.arc(currentX, ember.y, ember.r, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Outer soft glow disc
+      ctx.fillStyle = ember.color;
+      ctx.globalAlpha = emberAlpha * 0.35;
+      ctx.beginPath();
+      ctx.arc(currentX, ember.y, ember.r * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Solid radiant core
+      ctx.globalAlpha = emberAlpha;
+      ctx.beginPath();
+      ctx.arc(currentX, ember.y, ember.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1.0;
+
+  // 6. Cinematic Screen Edge Vignette (Keeps corners deep and dark)
+  const cornerR0 = Math.max(0, Math.min(w, h) * 0.38);
+  const cornerR1 = Math.max(cornerR0 + 1, Math.max(w, h) * 0.90);
+  const cornerGrad = createSafeRadialGradient(ctx, w / 2, h / 2, cornerR0, w / 2, h / 2, cornerR1);
+  if (cornerGrad) {
+    cornerGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
+    cornerGrad.addColorStop(0.65, `rgba(1, 3, 5, ${(opacity * 0.40).toFixed(3)})`);
+    cornerGrad.addColorStop(1.0, `rgba(0, 1, 3, ${(opacity * 0.90).toFixed(3)})`);
+    ctx.fillStyle = cornerGrad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // 7. Clear Arena Interior in WebGL mode
+  if (naoyaFighter && (naoyaFighter.domainActive || naoyaFighter.isDomainActive)) {
+    applyDomainArenaVignetteCutout(ctx);
+  }
+
+  // 8. Exclude Gojo Limitless Infinity Barrier from full-screen dimming
+  excludeGojoInfinityFromDim(ctx);
+
+  ctx.restore();
+
+  state.globalDimEdgeColor = `rgba(1, 3, 5, ${(opacity * 0.98).toFixed(3)})`;
+}
+
 let currentTojiUltimateOpacity = 0;
 let currentNanamiOvertimeOpacity = 0;
 let currentGenosUltimateOpacity = 0;

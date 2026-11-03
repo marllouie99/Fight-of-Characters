@@ -4,6 +4,7 @@ import { renderGojoDomainBackground, renderRubbickDomainBackground } from '../..
 import { renderSukunaDomainBackground } from '../../entities/fighters/sukuna/sukunaDomainVisuals.js';
 import { renderYutaDomainBackground, renderYutaSukunaDomainClashRift } from '../../entities/fighters/yuta/yutaDomainVisuals.js';
 import { renderMahitoDomainBackground, renderCjBaguvixBackground } from './environmentalRenderer.js';
+import { renderNaoyaDomainBackground } from '../weapons/naoyaWeaponGraphics.js';
 import { drawLaylaMaleficSurgeGrid } from '../../entities/fighters/LaylaFighter.js';
 import { drawCronosSphereVisual } from '../draw.js';
 import { isTodoTakadaOverlayActive } from './specialOverlayRenderer.js';
@@ -439,6 +440,22 @@ function getCjBaguvixDomainHybridData() {
   return cjBaguvixDomainHybridData;
 }
 
+let naoyaDomainHybridData = null;
+let naoyaArenaMask = null;
+function getNaoyaDomainHybridData() {
+  if (!naoyaDomainHybridData) {
+    const canvas = document.createElement('canvas');
+    canvas.width = state.canvas ? state.canvas.width : 1920;
+    canvas.height = state.canvas ? state.canvas.height : 1080;
+    const ctx = canvas.getContext('2d');
+    const texture = window.PIXI.Texture.from(canvas);
+    const sprite = new window.PIXI.Sprite(texture);
+    naoyaDomainHybridData = { canvas, ctx, texture, sprite };
+  }
+  syncDomainHybridDataSize(naoyaDomainHybridData);
+  return naoyaDomainHybridData;
+}
+
 export function updateHybridEnvironment() {
   if (!state.pixiApp || !state.pixiLayers?.environment || !state.pixiLayers?.effects) return;
 
@@ -478,6 +495,12 @@ export function updateHybridEnvironment() {
       cjBaguvixArenaMask = null;
       cjBaguvixDomainHybridData.sprite.mask = null;
       cjBaguvixDomainHybridData.sprite.parent.removeChild(cjBaguvixDomainHybridData.sprite);
+    }
+    if (naoyaDomainHybridData?.sprite?.parent) {
+      if (naoyaArenaMask?.parent) naoyaArenaMask.parent.removeChild(naoyaArenaMask);
+      naoyaArenaMask = null;
+      naoyaDomainHybridData.sprite.mask = null;
+      naoyaDomainHybridData.sprite.parent.removeChild(naoyaDomainHybridData.sprite);
     }
     if (furnaceDimSprite?.parent) furnaceDimSprite.parent.removeChild(furnaceDimSprite);
     if (purpleDimSprite?.parent) purpleDimSprite.parent.removeChild(purpleDimSprite);
@@ -521,12 +544,13 @@ export function updateHybridEnvironment() {
   const sukuna = state.fighters?.find(f => f && (f.characterId === 'sukuna' || f.type === 'sukuna' || f._def?.type === 'sukuna') && f.domainActive && f.hp > 0);
   const yuta = state.fighters?.find(f => f && (f.characterId === 'yuta' || f.type === 'yuta' || f._def?.type === 'yuta') && f.domainActive && f.hp > 0);
   const mahito = state.fighters?.find(f => f && (f.characterId === 'mahito' || f.type === 'mahito') && (f.domainActive || f._mahitoDomainActive) && f.hp > 0);
+  const naoya = state.fighters?.find(f => f && (f.characterId === 'naoya' || f.type === 'naoya' || f._def?.id === 'naoya' || f._def?.type === 'naoya') && (f.domainActive || f.isDomainActive) && f.hp > 0);
   const rubbick = state.fighters?.find(f => f && 
     (f.characterId === 'rubbick' || f.type === 'rubbick' || f.characterId === 'trickster' || f.type === 'trickster' || f._def?.id === 'rubbick' || f._def?.id === 'trickster') && 
     (f.stolenDomainActive || (f.domainActive && f.stolenType === 'gojo_domain') || (f.stolenType === 'gojo_domain' && f.stolenWindUpTimer > 0)) && 
     f.hp > 0
   );
-  const isMultiDomain = (state.fighters && state.fighters.filter(f => f && (f.domainActive || f.stolenDomainActive || (f.stolenType === 'gojo_domain' && f.stolenWindUpTimer > 0)) && f.hp > 0).length > 1);
+  const isMultiDomain = (state.fighters && state.fighters.filter(f => f && (f.domainActive || f.isDomainActive || f.stolenDomainActive || (f.stolenType === 'gojo_domain' && f.stolenWindUpTimer > 0)) && f.hp > 0).length > 1);
 
   domainUpdateTick++;
   
@@ -541,6 +565,7 @@ export function updateHybridEnvironment() {
   const updateSukuna = (domainUpdateTick % updateInterval === Math.floor(updateInterval / 3));
   const updateYuta = (domainUpdateTick % updateInterval === Math.floor(updateInterval * 2 / 3));
   const updateMahito = (domainUpdateTick % updateInterval === Math.floor(updateInterval / 2));
+  const updateNaoya = (domainUpdateTick % updateInterval === Math.floor(updateInterval / 4));
 
   if (gojo) {
     const data = getGojoDomainHybridData();
@@ -872,12 +897,69 @@ export function updateHybridEnvironment() {
     }
   }
 
+  // 0.7 Naoya Zenin Domain Expansion: Time Cell Moon Palace (Assets/model/naoya/Naoya_arena_overlay.png)
+  if (naoya) {
+    const data = getNaoyaDomainHybridData();
+    if (!data.sprite.parent) layer.addChild(data.sprite);
+    data.sprite.x = 0;
+    data.sprite.y = 0;
+    data.sprite.width = state.canvas.width;
+    data.sprite.height = state.canvas.height;
+
+    if (state.arena) {
+      if (!naoyaArenaMask) {
+        naoyaArenaMask = new window.PIXI.Graphics();
+        layer.addChild(naoyaArenaMask);
+      }
+      naoyaArenaMask.clear();
+      naoyaArenaMask.beginFill(0xFFFFFF);
+      const arena = state.arena;
+      const ww = (arena.wallWidth !== undefined) ? arena.wallWidth : 4;
+      if (arena.shape === 'circle') {
+        const acx = arena.x + arena.width / 2;
+        const acy = arena.y + arena.height / 2;
+        const ar = Math.max(0, (arena.radius !== undefined ? arena.radius : (arena.width / 2)) - ww);
+        naoyaArenaMask.drawCircle(acx, acy, ar);
+      } else {
+        naoyaArenaMask.drawRect(arena.x + ww, arena.y + ww, arena.width - ww * 2, arena.height - ww * 2);
+      }
+      naoyaArenaMask.endFill();
+      data.sprite.mask = naoyaArenaMask;
+    } else if (data.sprite.mask) {
+      data.sprite.mask = null;
+    }
+
+    if (updateNaoya || !naoya._naoyaDomainHybridReady) {
+      naoya._naoyaDomainHybridReady = true;
+      data.ctx.clearRect(0, 0, data.canvas.width, data.canvas.height);
+      renderNaoyaDomainBackground(naoya, data.ctx, isMultiDomain && naoya !== state.fighters.find(f => f.domainActive || f.isDomainActive));
+      data.texture.update();
+    }
+  } else {
+    if (naoyaArenaMask && naoyaArenaMask.parent) {
+      naoyaArenaMask.parent.removeChild(naoyaArenaMask);
+      naoyaArenaMask = null;
+    }
+    if (naoyaDomainHybridData && naoyaDomainHybridData.sprite.parent) {
+      naoyaDomainHybridData.sprite.mask = null;
+      naoyaDomainHybridData.sprite.parent.removeChild(naoyaDomainHybridData.sprite);
+    }
+    if (state.fighters) {
+      for (const f of state.fighters) {
+        if (f && (f.characterId === 'naoya' || f.type === 'naoya')) {
+          f._naoyaDomainHybridReady = false;
+        }
+      }
+    }
+  }
+
   // Enforce deterministic domain Z-order sorting:
-  // Sukuna Background Dim/Floor (bottom) -> Gojo Background (middle) -> Rubbick Emerald Void -> Mahito Background/Hands (overlays Sukuna Dim, underneath Shrine) -> CJ BAGUVIX Overlay -> Yuta Background/Crosses (top)
+  // Sukuna Background Dim/Floor (bottom) -> Gojo Background (middle) -> Rubbick Emerald Void -> Mahito Background/Hands (overlays Sukuna Dim, underneath Shrine) -> Naoya Time Cell Moon Palace -> CJ BAGUVIX Overlay -> Yuta Background/Crosses (top)
   if (sukunaDomainHybridData && sukunaDomainHybridData.sprite.parent === layer) layer.addChild(sukunaDomainHybridData.sprite);
   if (gojoDomainHybridData && gojoDomainHybridData.sprite.parent === layer) layer.addChild(gojoDomainHybridData.sprite);
   if (rubbickDomainHybridData && rubbickDomainHybridData.sprite.parent === layer) layer.addChild(rubbickDomainHybridData.sprite);
   if (mahitoDomainHybridData && mahitoDomainHybridData.sprite.parent === layer) layer.addChild(mahitoDomainHybridData.sprite);
+  if (naoyaDomainHybridData && naoyaDomainHybridData.sprite.parent === layer) layer.addChild(naoyaDomainHybridData.sprite);
   if (cjBaguvixDomainHybridData && cjBaguvixDomainHybridData.sprite.parent === layer) layer.addChild(cjBaguvixDomainHybridData.sprite);
   if (yutaDomainHybridData && yutaDomainHybridData.sprite.parent === layer) layer.addChild(yutaDomainHybridData.sprite);
   

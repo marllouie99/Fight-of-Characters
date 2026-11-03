@@ -12316,7 +12316,143 @@ async function main() {
       throw new Error('Ender Dragon does not have at least 3 skills registered');
     }
 
-    console.log('✅ [Ender Dragon Test] Successfully verified model, 8-directional movement flight, skills, and 100% balanced Canvas 2D stacks!');
+    // 4. Verify Divebomb Wall Slam, Corridor Anti-Snap & Arena Perimeter Clamping
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+
+    // 4a. Verify Anti-Snap: Entities outside the strike corridor or behind the dragon NEVER snap or get caught
+    dragonInstance.x = 250;
+    dragonInstance.y = 465;
+    dragonInstance.divebombAngle = 0; // Heading directly right (east)
+    dragonInstance.aiState = 'DIVEBOMB_STRIKE';
+    dragonInstance.isDivebombing = true;
+    dragonInstance.stateTimer = 22;
+    dragonInstance.draggedVictims.clear();
+    dragonInstance.divebombHitFighters.clear();
+
+    const flankOpponent = new EnderDragonClass({ x: 250, y: 350, color: '#FFFFFF', controls: {} });
+    const behindOpponent = new EnderDragonClass({ x: 180, y: 465, color: '#FFFFFF', controls: {} });
+    dragonInstance._updateDivebombStrike(flankOpponent, testArena, dragonInstance._getConfig());
+    dragonInstance._updateDivebombStrike(behindOpponent, testArena, dragonInstance._getConfig());
+    if (dragonInstance.draggedVictims.has(flankOpponent)) {
+      throw new Error('Anti-Snap Violation: Flank entity outside corridor was caught by divebomb suction!');
+    }
+    if (flankOpponent.y !== 350 || flankOpponent.x !== 250) {
+      throw new Error(`Anti-Snap Violation: Flank entity snapped coordinates! pos=(${flankOpponent.x}, ${flankOpponent.y})`);
+    }
+    if (dragonInstance.draggedVictims.has(behindOpponent)) {
+      throw new Error('Anti-Snap Violation: Entity behind dragon was caught by divebomb suction!');
+    }
+    if (behindOpponent.x !== 180 || behindOpponent.y !== 465) {
+      throw new Error(`Anti-Snap Violation: Behind entity snapped coordinates! pos=(${behindOpponent.x}, ${behindOpponent.y})`);
+    }
+
+    // 4b. Verify In-Path Corridor Capture, Smooth Push, and Wall Slam
+    const dummyOpponent = new EnderDragonClass({ x: 270, y: 465, color: '#FFFFFF', controls: {} });
+    dragonInstance.draggedVictims.clear();
+    dragonInstance.divebombHitFighters.clear();
+
+    // Trigger strike update to catch reachable dummyOpponent in flight path
+    dragonInstance._updateDivebombStrike(dummyOpponent, testArena, dragonInstance._getConfig());
+    if (!dragonInstance.draggedVictims.has(dummyOpponent)) {
+      throw new Error('Ender Dragon failed to catch reachable victim in divebomb strike corridor');
+    }
+    if (!dummyOpponent.isDraggedByDragon) {
+      throw new Error('Caught victim missing isDraggedByDragon flag during drag');
+    }
+    if (dummyOpponent.y !== 465) {
+      throw new Error(`Anti-Snap Violation: Caught victim snapped laterally! y=${dummyOpponent.y} != 465`);
+    }
+
+    // Advance dragon past the right arena boundary
+    for (let f = 0; f < 15; f++) {
+      dragonInstance.x += 24.5;
+      dragonInstance._updateDivebombStrike(dummyOpponent, testArena, dragonInstance._getConfig());
+    }
+
+    // Verify victim was wall-slammed, released, and safely clamped inside the arena perimeter
+    const maxAllowedX = testArena.x + testArena.width - dummyOpponent.r;
+    const minAllowedX = testArena.x + dummyOpponent.r;
+    if (dummyOpponent.x > maxAllowedX || dummyOpponent.x < minAllowedX) {
+      throw new Error(`Victim breached arena boundary! x=${dummyOpponent.x}, allowed=[${minAllowedX}, ${maxAllowedX}]`);
+    }
+    if (dummyOpponent.isDraggedByDragon) {
+      throw new Error('Victim was not released from drag upon wall impact');
+    }
+    if (dragonInstance.draggedVictims.has(dummyOpponent)) {
+      throw new Error('Victim still present in draggedVictims after wall slam');
+    }
+    if (!dummyOpponent.slowTimer || dummyOpponent.slowTimer <= 0) {
+      throw new Error('Victim missing slow debuff after divebomb hit!');
+    }
+    if (dummyOpponent.slowMultiplier > 0.45) {
+      throw new Error(`Victim slowMultiplier was not properly reduced! slowMultiplier=${dummyOpponent.slowMultiplier}`);
+    }
+
+    // 5. Verify 4 Corner End Crystals in non-boss fighter matches
+    const { EndCrystalEntity, getCornerEndCrystals } = await import('../js/entities/EndCrystalEntity.js');
+    dragonInstance.reset();
+    dragonInstance.hp = 120; // Depleted HP below max to verify healing
+    state.mode = '1v1';
+    state.gameState = 'playing';
+    state.fighters = [dragonInstance, dummyOpponent];
+    state.arena = testArena;
+
+    // Initial update spawns the 4 corner crystals
+    dragonInstance.update(dummyOpponent, 0, testArena);
+    const crystals = state.fighters.filter(f => f && f.isEndCrystal);
+    if (crystals.length !== 4) {
+      throw new Error(`Expected exactly 4 corner End Crystals in state.fighters, got ${crystals.length}`);
+    }
+
+    // Verify coordinates match arena corners (margin = 46)
+    const expectedCorners = getCornerEndCrystals(testArena);
+    for (let i = 0; i < 4; i++) {
+      const c = crystals[i];
+      const exp = expectedCorners[i];
+      if (Math.abs(c.x - exp.x) > 1 || Math.abs(c.y - exp.y) > 1) {
+        throw new Error(`Crystal #${i} position mismatch: got (${c.x}, ${c.y}), expected (${exp.x}, ${exp.y})`);
+      }
+    }
+
+    // 5b. Verify Crystal Tethering & Periodic Healing
+    const topLeftCrystal = crystals[0];
+    dragonInstance.x = topLeftCrystal.x + 50;
+    dragonInstance.y = topLeftCrystal.y + 50;
+    topLeftCrystal.healTimer = 44; // Trigger heal on next update (interval is 45)
+    const hpBeforeHeal = dragonInstance.hp;
+    topLeftCrystal.update(dragonInstance, 0, testArena);
+    if (!topLeftCrystal.isTethered || topLeftCrystal.tetherTarget !== dragonInstance) {
+      throw new Error('Top-left End Crystal failed to tether to nearby Ender Dragon');
+    }
+    if (dragonInstance.hp <= hpBeforeHeal) {
+      throw new Error(`End Crystal failed to heal dragon: hpBefore=${hpBeforeHeal}, hpAfter=${dragonInstance.hp}`);
+    }
+
+    // 5c. Verify Backlash Damage upon Crystal Destruction
+    const hpBeforeBacklash = dragonInstance.hp;
+    topLeftCrystal.takeDamage(100, dummyOpponent);
+    if (!topLeftCrystal.isDead) {
+      throw new Error('End Crystal is not marked dead after taking lethal damage');
+    }
+    if (dragonInstance.hp !== hpBeforeBacklash - 60) {
+      throw new Error(`Dragon backlash damage mismatch: expected ${hpBeforeBacklash - 60}, got ${dragonInstance.hp}`);
+    }
+
+    // 5d. Verify 12-Frame Animation Strip & Canvas 2D Stack Integrity with Crystals and Tether Beams
+    const { getEndCrystal12FrameStrip, drawCrystalHealingTetherBeams: drawTetherBeams } = await import('../js/entities/EndCrystalEntity.js');
+    const stripImg = getEndCrystal12FrameStrip();
+    if (!stripImg || !stripImg.src || !stripImg.src.includes('end_crystal-b.png')) {
+      throw new Error('End Crystal 12-frame strip failed to load or has invalid src');
+    }
+    mockCtx.resetStackDepth();
+    crystals[1].draw(mockCtx);
+    dragonInstance.draw(mockCtx);
+    drawTetherBeams(mockCtx, dragonInstance);
+    if (mockCtx.getStackDepth() !== 0) {
+      throw new Error(`[CANVAS STACK LEAK] Dragon & Crystal draw stackDepth=${mockCtx.getStackDepth()} != 0`);
+    }
+
+    console.log('✅ [Ender Dragon Test] Successfully verified model, 8-directional movement flight, skills, divebomb anti-snap corridor collision, slow debuff application, wall slam containment, 4 corner End Crystals (tether healing & backlash damage), and 100% balanced Canvas 2D stacks!');
   } catch (err) {
     console.error('❌ [ENDER DRAGON TEST ERROR]:', err.message || err);
     errors++;

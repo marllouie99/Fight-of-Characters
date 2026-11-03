@@ -2503,12 +2503,94 @@ export const HUD_SKILL_PROVIDERS = {
   },
 
   // ─────────────────────────────────────────────
-  // NAOYA ZENIN (24 FPS Projection Sorcery)
+  // NAOYA ZENIN (24 FPS Projection Sorcery & Vengeful Cursed Spirit)
   // ─────────────────────────────────────────────
   naoya(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
     const themeColor = f.color || cfg.themeColor || '#76E042';
     const skills = [];
+
+    if (f.isCurseForm) {
+      // 1. Mach 3 Propulsion & Flight (Mach Gauge / Overdrive)
+      if (isSkillEnabled(cfg.enableMachGauge, true)) {
+        if (f.isMachOverdrive) {
+          const maxDur = cfg.machOverdriveDurationFrames || cfg.machOverdriveDuration || 180;
+          const rem = Math.max(0, f.machOverdriveTimer || 0);
+          const pct = Math.max(0, Math.min(100, (rem / maxDur) * 100));
+          skills.push({
+            id: 'mach_gauge',
+            pct,
+            ready: true,
+            color: themeColor,
+            label: `MACH 3 OVERDRIVE (${(rem / 60).toFixed(1)}S)`
+          });
+        } else {
+          const gauge = Math.max(0, Math.min(100, f.machGauge || 0));
+          const machVal = (1.0 + (gauge / 100) * 2.0).toFixed(1);
+          skills.push({
+            id: 'mach_gauge',
+            pct: gauge,
+            ready: gauge >= 99,
+            color: themeColor,
+            label: `MACH ${machVal}`
+          });
+        }
+      }
+
+      // 2. Mach 3 Propulsion Ramjet (Chōsoku Ramjet)
+      if (isSkillEnabled(cfg.enableCurseRamjet, true)) {
+        const ramjetMax = f.skill1CooldownMax || f.curseRamjetCooldownMax || cfg.curseSkill1Cooldown || 300;
+        const ramjetTimer = f.skill1Cooldown !== undefined ? f.skill1Cooldown : (f.curseRamjetCooldown || 0);
+        const ramjetPct = Math.max(0, Math.min(100, (1 - (ramjetTimer / ramjetMax)) * 100));
+        skills.push({
+          id: 'curse_ramjet',
+          pct: ramjetPct,
+          ready: ramjetPct >= 99 && ramjetTimer <= 0,
+          color: themeColor,
+          label: 'MACH 3 RAMJET'
+        });
+      }
+
+      // 3. Air Compression Attacks (Explosive Air Bursts)
+      if (isSkillEnabled(cfg.enableCurseTurbineCannon, true)) {
+        const cannonMax = f.skill2CooldownMax || f.curseTurbineCannonCooldownMax || cfg.curseSkill2Cooldown || 390;
+        const cannonTimer = f.skill2Cooldown !== undefined ? f.skill2Cooldown : (f.curseTurbineCannonCooldown || 0);
+        const cannonPct = Math.max(0, Math.min(100, (1 - (cannonTimer / cannonMax)) * 100));
+        skills.push({
+          id: 'air_burst',
+          pct: cannonPct,
+          ready: cannonPct >= 99 && cannonTimer <= 0,
+          color: themeColor,
+          label: 'AIR COMPRESSION'
+        });
+      }
+
+      // 4. Domain Expansion: Time Cell Moon Palace
+      if (isSkillEnabled(cfg.enableCurseDomain, true)) {
+        const domainMax = f.ultCooldownMax || f.curseDomainCooldownMax || cfg.curseUltCooldown || 1200;
+        const domainTimer = f.ultCooldown !== undefined ? f.ultCooldown : (f.curseDomainCooldown || 0);
+        let domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
+        let label = 'TIME CELL PALACE';
+        if (f.isDomainActive) {
+          const rem = Math.max(0, f.domainTimer || 0);
+          const maxDur = f.domainMaxTimer || cfg.curseDomainDurationFrames || cfg.curseDomainDuration || 480;
+          domainPct = Math.max(0, Math.min(100, (rem / maxDur) * 100));
+          label = `TIME CELL PALACE (${(rem / 60).toFixed(1)}S)`;
+        }
+        skills.push({
+          id: 'time_cell_moon_palace',
+          pct: domainPct,
+          ready: (domainPct >= 99 && domainTimer <= 0) || Boolean(f.isDomainActive),
+          color: themeColor,
+          label,
+          isUltimate: true,
+          isSignature: true,
+          signature: true
+        });
+      }
+
+      return skills;
+    }
 
     // 1. Permanent Stacking Speed Boost (SPD) — Uncapped
     if (isSkillEnabled(cfg.enableProjectionSorcery, true)) {
@@ -2535,7 +2617,7 @@ export const HUD_SKILL_PROVIDERS = {
       const kickMax = f.skill2CooldownMax || cfg.skill2Cooldown || 480;
       const kickTimer = f.skill2Cooldown !== undefined ? f.skill2Cooldown : 0;
       const kickPct = Math.max(0, Math.min(100, (1 - (kickTimer / kickMax)) * 100));
-      skills.push({ id: 'sonic_kick', pct: kickPct, ready: kickPct >= 99 && (f.skill2Cooldown || 0) <= 0, color: '#C8E64A', label: 'SONIC REBOUND' });
+      skills.push({ id: 'sonic_kick', pct: kickPct, ready: kickPct >= 99 && (f.skill2Cooldown || 0) <= 0, color: themeColor, label: 'SONIC REBOUND' });
     }
 
     // 4. Ultimate / Signature Skill: 24 FPS Mach 3 Runway Breach (Toggle: enableUltimate)
@@ -2552,7 +2634,7 @@ export const HUD_SKILL_PROVIDERS = {
         id: 'shutter_exec',
         pct: ultPct,
         ready: isReady,
-        color: '#00F2FE',
+        color: themeColor,
         label: label,
         isUltimate: true,
         isSignature: true,
@@ -3569,7 +3651,7 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     yuji: ['bf_threshold', 'black_flash', 'BLACK FLASH'],
     todo: ['clap', 'boogie', 'BOOGIE'],
     nanami: ['lunge', 'decisive', 'DECISIVE'],
-    naoya: ['shutter_exec', 'shutter', 'execution', 'mach 3', 'MACH 3 BREACH', 'MACH 3', 'SHUTTER EXECUTION'],
+    naoya: ['shutter_exec', 'shutter', 'execution', 'mach 3', 'MACH 3 BREACH', 'MACH 3', 'SHUTTER EXECUTION', 'time_cell_moon_palace', 'TIME CELL PALACE', 'TIME CELL MOON PALACE'],
     mahoraga: ['wheel', 'adaptation', 'WHEEL', 'ADAPTATION', 'WOA'],
     cj: ['baguvix', 'godmode', 'BAGUVIX', 'GODMODE'],
     engineer: ['turret', 'sentry', 'SENTRY', 'TURRET'],

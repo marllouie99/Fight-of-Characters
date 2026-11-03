@@ -262,6 +262,7 @@ export function cleanupDeadFightersDomains(state) {
   for (let i = 0; i < state.fighters.length; i++) {
     const f = state.fighters[i];
     if (f && (f.hp <= 0 || f.isDead)) {
+      if (f.isCurseWomb) continue; // Do not clear domain during Cursed Womb cocoon transformation
       if (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive || f.sphereActive || f.isChannelingDomain || f.isChannelingDomainExpansion || f.stormActive || f.isChargingStorm) {
         clearFighterDomain(f, state);
       }

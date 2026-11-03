@@ -2034,6 +2034,17 @@ export class Fighter {
       this._getsugaDragDuration = 0;
     }
 
+    // Auto-clear orphaned Ender Dragon drag flags after safety timeout (60 frames)
+    if (this.isDraggedByDragon) {
+      this._dragonDragDuration = (this._dragonDragDuration || 0) + 1;
+      if (this._dragonDragDuration > 60) {
+        this.isDraggedByDragon = false;
+        this._dragonDragDuration = 0;
+      }
+    } else {
+      this._dragonDragDuration = 0;
+    }
+
     if (this.areAttackEffectsSuppressed()) {
       if (this._hitByGetsugaTimer > 0) this._hitByGetsugaTimer--;
       if (this._hitByFugaTimer > 0) this._hitByFugaTimer--;
@@ -3544,7 +3555,8 @@ export class Fighter {
     const isCruelSunDragged = Boolean(this._draggedByCruelSun || this.isCaughtInCruelSun);
     const isStationaryHover = ((this.purpleRecoveryTimer || 0) > 0) || this.isChannelingPurple || this.isChannelingDomainExpansion;
     const isGetsugaDragged = Boolean(this.isDraggedByGetsuga);
-    const isBeamTrapped = (typeof this.isCaughtInBeam === 'function' && this.isCaughtInBeam()) || (typeof this.isPulledOrDragged === 'function' && this.isPulledOrDragged()) || isGenosTrapped || this.preventKnockbackBounce || isGetsugaDragged || isSaitamaHit || isMakimaPinned || isEscanorHit || isEscanorPinned || isNaoyaPinned || isCruelSunDragged || isStationaryHover;
+    const isDragonDragged = Boolean(this.isDraggedByDragon);
+    const isBeamTrapped = (typeof this.isCaughtInBeam === 'function' && this.isCaughtInBeam()) || (typeof this.isPulledOrDragged === 'function' && this.isPulledOrDragged()) || isGenosTrapped || this.preventKnockbackBounce || isGetsugaDragged || isDragonDragged || isSaitamaHit || isMakimaPinned || isEscanorHit || isEscanorPinned || isNaoyaPinned || isCruelSunDragged || isStationaryHover;
     if (isBeamTrapped) {
       // Pin trapped target against wall bounds without bouncing back or adding random angle jitter
       let clamped = false;

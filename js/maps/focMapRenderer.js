@@ -6,6 +6,7 @@
 
 import { state } from '../core/state.js';
 import { audioSystem } from '../systems/audioSystem.js';
+import { drawCrystalHealingTetherBeams } from '../entities/EndCrystalEntity.js';
 
 // Pre-computed default frame bounding boxes (420x420) from Bush- Rustling Pixel Bush Sprite Sheet.png
 const DEFAULT_BUSH_FRAME_RECTS = [
@@ -443,7 +444,7 @@ function _drawEnderDragonMap(ctx, map) {
   _drawBedrockPortalFountain(ctx, center.x, center.y, center.radius);
 
   // 2. Glowing Amethyst Crystal Healing Tether Beams
-  _drawCrystalHealingTetherBeams(ctx, map);
+  drawCrystalHealingTetherBeams(ctx);
 }
 
 /**
@@ -495,71 +496,6 @@ function _drawBedrockPortalFountain(ctx, cx, cy, r) {
   }
 
   ctx.restore();
-}
-
-/**
- * Draws the Animated Glowing Amethyst Healing Tether Beams
- */
-function _drawCrystalHealingTetherBeams(ctx, map) {
-  if (typeof state === 'undefined' || !state.fighters) return;
-
-  const dragon = state.fighters.find(f => f && (f.characterId === 'ender_dragon' || f.type === 'ender_dragon') && f.hp > 0);
-  if (!dragon) return;
-
-  const crystals = state.fighters.filter(f => f && f.isEndCrystal && f.hp > 0 && f.isTetheredToDragon);
-  if (crystals.length === 0) return;
-
-  const time = state.frameCount || 0;
-
-  for (let crystal of crystals) {
-    const startX = crystal.x;
-    const startY = crystal.y + (crystal._visualBobY || 0) - 12; // Beam emerges from floating crystal core
-    const endX = dragon.x;
-    const endY = dragon.y - (dragon.z || 0);
-
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 10) continue;
-
-    const angle = Math.atan2(dy, dx);
-    const perpAngle = angle + Math.PI / 2;
-
-    ctx.save();
-
-    // 1. Outer Amethyst Corona Beam
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    const segments = 8;
-    for (let s = 1; s < segments; s++) {
-      const t = s / segments;
-      const wave = Math.sin(time * 0.25 + s * 1.2) * 5.0 * Math.sin(t * Math.PI);
-      const px = startX + dx * t + Math.cos(perpAngle) * wave;
-      const py = startY + dy * t + Math.sin(perpAngle) * wave;
-      ctx.lineTo(px, py);
-    }
-    ctx.lineTo(endX, endY);
-    ctx.strokeStyle = 'rgba(217, 70, 239, 0.45)';
-    ctx.lineWidth = 4.0;
-    ctx.stroke();
-
-    // 2. White-Hot Core Filament
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    for (let s = 1; s < segments; s++) {
-      const t = s / segments;
-      const wave = Math.sin(time * 0.25 + s * 1.2) * 2.5 * Math.sin(t * Math.PI);
-      const px = startX + dx * t + Math.cos(perpAngle) * wave;
-      const py = startY + dy * t + Math.sin(perpAngle) * wave;
-      ctx.lineTo(px, py);
-    }
-    ctx.lineTo(endX, endY);
-    ctx.strokeStyle = '#F5D0FE';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
-    ctx.restore();
-  }
 }
 
 /**
