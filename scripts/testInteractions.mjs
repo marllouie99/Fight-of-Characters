@@ -16043,6 +16043,41 @@ async function runInteractionTests() {
     console.log('      ✅ Pac-Man Power Pellet vs Crazy Dave plants (immovable ghost state & 1-hit kill) verified.');
   }
 
+  // ── TEST 123: No Tiles Arena Floor Suppresses Extra Inner Border & Corner Brackets ──
+  console.log('🧪 Test 123: Arena Floor "NO TILES" Suppresses Extra Inner Border & Brackets...');
+  {
+    const { setSelectedArenaFloor, getSelectedArenaFloor } = await import('../js/systems/arenaTileSystem.js');
+    const { drawArenaBorder } = await import('../js/graphics/renderers/arenaRenderer.js');
+
+    const originalHudLayout = CONFIG.hudLayoutStyle;
+    CONFIG.hudLayoutStyle = 'classic';
+    state.arena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+
+    // 1. Verify 'classic_clean' generates a border canvas that includes the inner frame key
+    setSelectedArenaFloor('classic_clean');
+    state._arenaBorderCanvas = null;
+    drawArenaBorder(mockCtx, true);
+    assert(state._arenaBorderCanvas !== null, 'Border canvas must be generated for classic_clean');
+    const classicKey = state._arenaBorderCanvas._key;
+    assert(classicKey.includes('classic_clean'), `classic_clean border key must include floorId (got ${classicKey})`);
+
+    // 2. Select 'none' (NO TILES) and verify border canvas updates cleanly
+    setSelectedArenaFloor('none');
+    assert(getSelectedArenaFloor() === 'none', 'Active arena floor must be "none"');
+    assert(state._arenaBorderCanvas === null, 'setSelectedArenaFloor must invalidate cached border canvas');
+
+    drawArenaBorder(mockCtx, true);
+    assert(state._arenaBorderCanvas !== null, 'Border canvas must be regenerated for "none"');
+    const noTilesKey = state._arenaBorderCanvas._key;
+    assert(noTilesKey.includes('none'), `NO TILES border key must reflect "none" floor (got ${noTilesKey})`);
+    assert(noTilesKey !== classicKey, 'NO TILES border key must differ from classic_clean key');
+
+    // Restore original configuration & clean up
+    CONFIG.hudLayoutStyle = originalHudLayout;
+    setSelectedArenaFloor('classic_clean');
+    console.log('      ✅ Arena floor "NO TILES" extra inner border suppression verified cleanly.');
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');

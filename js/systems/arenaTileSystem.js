@@ -159,6 +159,10 @@ export function setSelectedArenaFloor(floorId) {
   _selectedArenaFloor = floorId;
   if (typeof state !== 'undefined') {
     state.selectedArenaFloor = floorId;
+    if (state._arenaFloorCanvasCache) {
+      state._arenaFloorCanvasCache = {};
+    }
+    state._arenaBorderCanvas = null;
   }
   try {
     localStorage.setItem(ARENA_FLOOR_STORAGE_KEY, floorId);

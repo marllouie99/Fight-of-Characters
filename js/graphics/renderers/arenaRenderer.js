@@ -5,7 +5,7 @@ import { applyCameraToCtx, worldToScreen } from '../../systems/cameraSystem.js';
 import { updateSaitamaWallShatters, drawSaitamaWallShatters } from '../particles/saitamaWallShatter.js';
 import { drawTopHudNameShatters } from '../particles/hudShatterEffect.js';
 import { isCrazyDavePresent, renderCrazyDaveGrassFloor, loadGrassTileSpriteSheet, getGrassTileSpriteSheet } from './grassFloorRenderer.js';
-import { renderActiveArenaFloor } from '../../systems/arenaTileSystem.js';
+import { renderActiveArenaFloor, resolveActiveFloorId } from '../../systems/arenaTileSystem.js';
 import { drawHorizontalMapFeatures } from '../../systems/horizontalMapSystem.js';
 import { drawHorizontalFighterDolls } from './horizontalDollRenderer.js';
 import { drawCenterPlusObstacle } from '../../systems/arenaObstacleSystem.js';
@@ -709,8 +709,10 @@ function _renderComicArenaBorder(oc, padding, arena, isDark) {
 /**
  * Renders the classic minimalist pixel arena border frame (outer 2.5px mitered border,
  * inner 2px slate frame, and 4 stepped L-brackets in the corners) onto an offscreen canvas.
+ * Note: The inner 2px frame and corner brackets are exclusive to 'classic_clean' (Pixel Tournament);
+ * when 'none' (NO TILES) or other floors are selected, the inner frame is suppressed to avoid extra borders.
  */
-function _renderClassicArenaBorder(oc, padding, arena, isDark) {
+function _renderClassicArenaBorder(oc, padding, arena, isDark, activeFloor = 'classic_clean') {
   const shape = arena.shape || 'rect';
   const x = padding;
   const y = padding;
@@ -731,40 +733,45 @@ function _renderClassicArenaBorder(oc, padding, arena, isDark) {
     oc.arc(cx, cy, ar, 0, Math.PI * 2);
     oc.stroke();
   } else {
-    // 1. Inner 2px frame at pad = 6
-    const frameColor = isDark ? '#334155' : '#cbd5e1';
-    const bracketColor = isDark ? '#64748b' : '#475569';
-    const pad = 6;
-    oc.fillStyle = frameColor;
-    oc.fillRect(Math.round(x + pad), Math.round(y + pad), Math.round(w - pad * 2), 2);
-    oc.fillRect(Math.round(x + pad), Math.round(y + h - pad - 2), Math.round(w - pad * 2), 2);
-    oc.fillRect(Math.round(x + pad), Math.round(y + pad), 2, Math.round(h - pad * 2));
-    oc.fillRect(Math.round(x + w - pad - 2), Math.round(y + pad), 2, Math.round(h - pad * 2));
+    // Only render inner frame & corner L-brackets if the active floor is 'classic_clean' (Pixel Tournament)
+    // When 'none' (NO TILES) or other custom floors are selected, suppress the extra inner border & brackets completely!
+    const showInnerFrame = (activeFloor === 'classic_clean');
+    if (showInnerFrame) {
+      // 1. Inner 2px frame at pad = 6
+      const frameColor = isDark ? '#334155' : '#cbd5e1';
+      const bracketColor = isDark ? '#64748b' : '#475569';
+      const pad = 6;
+      oc.fillStyle = frameColor;
+      oc.fillRect(Math.round(x + pad), Math.round(y + pad), Math.round(w - pad * 2), 2);
+      oc.fillRect(Math.round(x + pad), Math.round(y + h - pad - 2), Math.round(w - pad * 2), 2);
+      oc.fillRect(Math.round(x + pad), Math.round(y + pad), 2, Math.round(h - pad * 2));
+      oc.fillRect(Math.round(x + w - pad - 2), Math.round(y + pad), 2, Math.round(h - pad * 2));
 
-    // 2. 4 Corner L-Brackets at pad + 2 = 8
-    const bLen = 14;
-    const bThick = 3;
-    const drawLBracket = (bx, by, dirX, dirY) => {
-      bx = Math.round(bx);
-      by = Math.round(by);
-      oc.fillStyle = bracketColor;
-      if (dirX > 0) {
-        oc.fillRect(bx, by, bLen, bThick);
-      } else {
-        oc.fillRect(bx - bLen + bThick, by, bLen, bThick);
-      }
-      if (dirY > 0) {
-        oc.fillRect(bx, by, bThick, bLen);
-      } else {
-        oc.fillRect(bx, by - bLen + bThick, bThick, bLen);
-      }
-    };
-    drawLBracket(x + pad + 2, y + pad + 2, 1, 1);
-    drawLBracket(x + w - pad - 2 - bThick, y + pad + 2, -1, 1);
-    drawLBracket(x + pad + 2, y + h - pad - 2 - bThick, 1, -1);
-    drawLBracket(x + w - pad - 2 - bThick, y + h - pad - 2 - bThick, -1, -1);
+      // 2. 4 Corner L-Brackets at pad + 2 = 8
+      const bLen = 14;
+      const bThick = 3;
+      const drawLBracket = (bx, by, dirX, dirY) => {
+        bx = Math.round(bx);
+        by = Math.round(by);
+        oc.fillStyle = bracketColor;
+        if (dirX > 0) {
+          oc.fillRect(bx, by, bLen, bThick);
+        } else {
+          oc.fillRect(bx - bLen + bThick, by, bLen, bThick);
+        }
+        if (dirY > 0) {
+          oc.fillRect(bx, by, bThick, bLen);
+        } else {
+          oc.fillRect(bx, by - bLen + bThick, bThick, bLen);
+        }
+      };
+      drawLBracket(x + pad + 2, y + pad + 2, 1, 1);
+      drawLBracket(x + w - pad - 2 - bThick, y + pad + 2, -1, 1);
+      drawLBracket(x + pad + 2, y + h - pad - 2 - bThick, 1, -1);
+      drawLBracket(x + w - pad - 2 - bThick, y + h - pad - 2 - bThick, -1, -1);
+    }
 
-    // 3. Outer 2.5px crisp mitered border
+    // 3. Outer 2.5px crisp mitered border (The actual arena wall boundary)
     oc.strokeStyle = borderColor;
     oc.lineWidth = 2.5;
     oc.lineJoin = 'miter';
@@ -793,7 +800,8 @@ export function drawArenaBorder(ctx = state.ctx, alreadyInCameraSpace = false) {
 
   const shape = arena.shape || 'rect';
   const isClassic = typeof CONFIG !== 'undefined' && CONFIG.hudLayoutStyle === 'classic';
-  const borderKey = `${arena.width}_${arena.height}_${shape}_${isDark ? 'dark' : 'light'}_${isClassic ? 'classic' : 'comic'}_v2`;
+  const activeFloor = (typeof resolveActiveFloorId === 'function') ? resolveActiveFloorId() : (state.selectedArenaFloor || 'classic_clean');
+  const borderKey = `${arena.width}_${arena.height}_${shape}_${isDark ? 'dark' : 'light'}_${isClassic ? 'classic' : 'comic'}_${activeFloor}_v3`;
   if (!state._arenaBorderCanvas || state._arenaBorderCanvas._key !== borderKey) {
     const padding = 60;
     const offCanvas = document.createElement('canvas');
@@ -801,7 +809,7 @@ export function drawArenaBorder(ctx = state.ctx, alreadyInCameraSpace = false) {
     offCanvas.height = arena.height + padding * 2;
     const oc = offCanvas.getContext('2d');
     if (isClassic) {
-      _renderClassicArenaBorder(oc, padding, arena, isDark);
+      _renderClassicArenaBorder(oc, padding, arena, isDark, activeFloor);
     } else {
       _renderComicArenaBorder(oc, padding, arena, isDark);
     }
