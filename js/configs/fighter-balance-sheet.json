@@ -960,6 +960,21 @@
         "knockback": 1,
         "cooldown": 1
       }
+    },
+    "isagi": {
+      "name": "Isagi Yoichi",
+      "archetype": "ranged",
+      "color": "#00F0FF",
+      "hp": 420,
+      "speed": 5.2,
+      "baseRange": 320,
+      "baseDamage": 24,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
     }
   }
 }

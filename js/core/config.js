@@ -73,6 +73,7 @@ import { pacmanConfig } from '../configs/characters/pacmanConfig.js';
 import { creeperConfig } from '../configs/characters/creeperConfig.js';
 import { gokuConfig } from '../configs/characters/gokuConfig.js';
 import { vegetaConfig } from '../configs/characters/vegetaConfig.js';
+import { isagiConfig } from '../configs/characters/isagiConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -101,6 +102,9 @@ export const CONFIG = {
   vegeta: vegetaConfig,
   Vegeta: vegetaConfig,
   VEGETA: vegetaConfig,
+  isagi: isagiConfig,
+  Isagi: isagiConfig,
+  ISAGI: isagiConfig,
   genos: genosConfig,
   mahito: mahitoConfig,
   nanami: nanamiConfig,
@@ -2000,6 +2004,31 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: 1.0,
     ability: vegetaConfig.ability || 'Royal Saiyan Martial Arts, Big Bang & Final Flash',
     desc: vegetaConfig.desc,
+  },
+  {
+    id: 70,
+    name: isagiConfig.name || 'ISAGI',
+    grade: isagiConfig.grade ?? DEFAULT_GRADE,
+    displayName: isagiConfig.displayName || isagiConfig.name || 'Isagi Yoichi',
+    category: 'Anime',
+    color: isagiConfig.color || '#00F0FF',
+    themeColor: isagiConfig.themeColor || '#00F0FF',
+    secondaryColor: isagiConfig.secondaryColor || '#111827',
+    startX: 300,
+    startY: 250,
+    startVx: 1.0,
+    startVy: 1.0,
+    radius: isagiConfig.radius || isagiConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'isagi',
+    hp: isagiConfig.hp || 420,
+    damage: isagiConfig.damage || 24,
+    cooldown: isagiConfig.cooldown || 36,
+    moveSpeed: isagiConfig.moveSpeed || isagiConfig.speed || 5.2,
+    projectileSpeedMultiplier: 1.0,
+    ability: isagiConfig.ability || 'Metavision & Direct Volley',
+    desc: isagiConfig.desc,
   }
 ];
 

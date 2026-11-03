@@ -3541,6 +3541,75 @@ export const HUD_SKILL_PROVIDERS = {
 
     return skills;
   },
+
+  isagi(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.isagi) ? CONFIG.isagi : {};
+    const themeColor = f.color || cfg.themeColor || '#00F0FF';
+    const skills = [];
+
+    // Skill 1: Metavision Slip
+    if (isSkillEnabled(cfg.enableMetavision, true)) {
+      const cdMax = cfg.metavisionCooldown || 480;
+      const cdTimer = f.metavisionCooldownTimer || 0;
+      let pct = 100;
+      let ready = true;
+      let label = 'METAVISION';
+
+      if (f.isFlowStateActive && (f.flowStateTimer || 0) > 0) {
+        pct = Math.max(0, Math.min(100, ((f.flowStateTimer || 0) / (cfg.metavisionFlowDuration || 180)) * 100));
+        ready = true;
+        label = `FLOW STATE (${((f.flowStateTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `METAVISION (${(cdTimer / 60).toFixed(1)}S)`;
+      }
+
+      skills.push({
+        id: 'metavision',
+        pct,
+        ready,
+        color: themeColor,
+        label
+      });
+    }
+
+    // Skill 2: Direct Volley (Ultimate Finisher)
+    if (isSkillEnabled(cfg.enableDirectVolley, true)) {
+      const cdMax = cfg.directVolleyCooldown || 1080;
+      const cdTimer = f.directVolleyCooldownTimer || 0;
+      let pct = 100;
+      let ready = false;
+      let label = 'DIRECT VOLLEY';
+
+      if (f.isDirectVolleyWindingUp) {
+        pct = 100;
+        ready = true;
+        label = 'DIRECT VOLLEY';
+      } else if (cdTimer <= 0) {
+        pct = 100;
+        ready = true;
+        label = 'DIRECT VOLLEY';
+      } else {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `DIRECT VOLLEY (${(cdTimer / 60).toFixed(1)}S)`;
+      }
+
+      skills.push({
+        id: 'direct_volley',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
+    }
+
+    return skills;
+  },
 };
 
 /**
@@ -3674,7 +3743,8 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     eye_of_cthulhu: ['servants', 'servants_of_cthulhu', 'SERVANTS OF CTHULHU', 'SERVANTS', 'SERVANT OF CTHULHU', 'SERVANT', 'chain_dash', 'BERSERK RAM'],
     eyeofcthulhu: ['servants', 'servants_of_cthulhu', 'SERVANTS OF CTHULHU', 'SERVANTS', 'SERVANT OF CTHULHU', 'SERVANT', 'chain_dash', 'BERSERK RAM'],
     goku: ['kamehameha', 'super_kamehameha', 'SUPER KAMEHAMEHA', 'KAMEHAMEHA', 'super_saiyan', 'SUPER SAIYAN'],
-    vegeta: ['final_flash', 'finalflash', 'FINAL FLASH', 'super_saiyan', 'SUPER SAIYAN']
+    vegeta: ['final_flash', 'finalflash', 'FINAL FLASH', 'super_saiyan', 'SUPER SAIYAN'],
+    isagi: ['direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION']
   };
 
   const keys = signatureMap[fId];

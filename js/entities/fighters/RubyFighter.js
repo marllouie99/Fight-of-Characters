@@ -5,6 +5,7 @@ import { audioSystem } from '../../systems/audioSystem.js';
 import { getBasicAttackSound } from '../../soundEffects/basicAttackSounds.js';
 import { getSkillSound } from '../../soundEffects/skillSounds.js';
 import { drawRubyScythe } from '../../graphics/weapons/rubyWeaponGraphics.js';
+import { drawRubySkin } from '../../graphics/fighters/rubySkin.js';
 import { spawnSparks, spawnImpactFlash } from '../../graphics/particles/sparkEffect.js';
 import { spawnBloodEffect } from '../../graphics/particles/bloodEffect.js';
 
@@ -518,7 +519,7 @@ export class RubyFighter extends Fighter {
       }
     }
     
-    super.drawBody(ctx);
+    drawRubySkin(ctx, this);
   }
 
   drawOutline(ctx) {

@@ -8,6 +8,11 @@ export const rubyConfig = {
   displayName: 'Ruby',
   grade: 'B',                 // Fighter Grade: 'B' | 'A' | 'S' | 'SS' (cosmetic — see js/configs/gradeConfig.js)
 
+  // Registered Assets (Rule 22 Compliant)
+  assets: {
+    hair: 'Assets/model/ruby/Ruby-hair.png',
+  },
+
   // Baseline Attributes
   category: 'Fantasy & Magic',
   color: '#E0115F',

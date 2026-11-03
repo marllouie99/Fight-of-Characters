@@ -16078,6 +16078,203 @@ async function runInteractionTests() {
     console.log('      ✅ Arena floor "NO TILES" extra inner border suppression verified cleanly.');
   }
 
+  // ── TEST 124: Isagi Yoichi (Blue Lock) Soccer Ball Ricochet, Metavision Slip & Direct Volley ──
+  console.log('🧪 Test 124: Isagi Yoichi (Blue Lock) Soccer Ball Ricochet, Metavision Slip & Direct Volley Finisher...');
+  {
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const { FIGHTER_DEFS } = await import('../js/core/config.js');
+    const IsagiClass = FIGHTER_CLASS_MAP['isagi'];
+    assert(typeof IsagiClass === 'function', 'Isagi fighter class must be registered in FIGHTER_CLASS_MAP');
+
+    const isagiDef = FIGHTER_DEFS.find(d => d.type === 'isagi') || { id: 70, type: 'isagi', name: 'ISAGI', r: 25, radius: 25, hp: 420, themeColor: '#00F0FF' };
+    const isagi = new IsagiClass(isagiDef);
+    assert(isagi.characterId === 'isagi', 'isagi.characterId must be "isagi"');
+    assert(isagi.hp > 0, 'isagi.hp must be positive');
+    assert(CONFIG.isagi.hp === 420, 'CONFIG.isagi.hp must be 420');
+    assert(isagi.r === 25, 'isagi.r must adhere to Rule 24 standard 25px radius');
+    assert(isagi.themeColor === '#00F0FF', 'isagi.themeColor must be #00F0FF');
+
+    const dummy = {
+      x: 300,
+      y: 250,
+      r: 25,
+      hp: 100,
+      maxHp: 100,
+      vx: 0,
+      vy: 0,
+      isDead: false,
+      takeDamage(d) { this.hp -= d; },
+      applyParalyze(d) { this.paralyzeTimer = d; },
+      applyHitStun(d) { this.hitStunTimer = d; }
+    };
+    const arena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    state.mode = '1v1';
+    state.getFighterTeam = (idx) => (idx === 0 ? 0 : 1);
+    state.fighters = [isagi, dummy];
+
+    // 1. Single Persistent Soccer Ball Standard
+    assert(isagi.soccerBall !== null && typeof isagi.soccerBall === 'object', 'Isagi must have exactly ONE persistent active soccer ball');
+    assert(isagi._hasSoccerBall() === true, 'Isagi must start with the ball at his feet in kicking range');
+    assert(isagi.soccerBalls === undefined || isagi.soccerBalls.length === 0, 'No multiple soccer ball arrays permitted');
+
+    // 2. Kicking the Ball Directed Straight Towards the Enemy
+    const ball = isagi.soccerBall;
+    ball.x = isagi.x + 20;
+    ball.y = isagi.y;
+    dummy.x = isagi.x + 150;
+    dummy.y = isagi.y;
+    isagi.aim(dummy); // Calling aim must prioritize the opponent!
+    assert(Math.abs(isagi.gunAngle - 0) < 0.05, `Isagi aim must lock on the enemy (got gunAngle=${isagi.gunAngle})`);
+
+    isagi._fireEgoShot(dummy, CONFIG.isagi);
+    const kickSpeed = Math.hypot(ball.vx, ball.vy);
+    assert(kickSpeed >= 12, `Kicking the ball must propel it with high velocity (got ${kickSpeed})`);
+    assert(ball.vx > 10, `Ball must launch straight towards the enemy (got vx=${ball.vx})`);
+    assert(isagi.activeKickImpacts.length > 0, '12-frame kick impact animation must spawn upon kicking');
+    assert(CONFIG.isagi.assets.kickImpact === 'Assets/model/isagi/kick_impact/kick_impact-b.png', 'Kick impact asset path registered in config');
+
+    // 3. Wall Ricochet on the Single Ball
+    dummy.x = arena.x + 100;
+    dummy.y = arena.y + arena.height / 2;
+    ball.x = arena.x + arena.width - 1; // trigger wall bounce
+    ball.y = arena.y + arena.height / 2;
+    isagi._updateSoccerBallPhysics(dummy, arena);
+    assert(ball.isRebound === true, 'Single ball must be marked as isRebound after hitting wall');
+    assert(ball.vx < 0, 'Ball velocity must reflect off arena wall');
+
+    // 4. Ball Away & Natural Movement (ZERO Artificial Ball Seeking)
+    ball.x = 420;
+    ball.y = 420;
+    assert(isagi._hasSoccerBall() === false, 'Isagi must not possess ball when it is far away');
+
+    // Verify Isagi maintains natural velocity and does NOT steer towards (420, 420)
+    const initialVx = isagi.vx;
+    const initialVy = isagi.vy;
+    isagi.update(dummy, 0, arena);
+    // Isagi's movement angle must not artificially snap toward the distant ball
+    const angleToBall = Math.atan2(ball.y - isagi.y, ball.x - isagi.x);
+    const velAngle = Math.atan2(isagi.vy, isagi.vx);
+    assert(Math.abs(angleToBall - velAngle) > 0.05, 'Isagi must not artificially steer towards the ball');
+
+    // 5. Skill 1: Metavision Slip (Activates ONLY when close to the ball, dashing towards it)
+    isagi.metavisionCooldownTimer = 0;
+    isagi.isMetavisionDashing = false;
+    // Taking damage must NOT activate Metavision Slip (only ball proximity triggers it)
+    const hpBeforeAttack = isagi.hp;
+    isagi.takeDamage(40, dummy);
+    assert(isagi.hp < hpBeforeAttack, 'Metavision must NOT trigger on damage; it only activates on ball proximity');
+    assert(isagi.isMetavisionDashing === false, 'Taking damage must not activate Metavision dash');
+
+    // 5b. Metavision Slip: Activates when close to loose soccer ball and dashes towards it
+    isagi.metavisionCooldownTimer = 0; // ready skill
+    ball.x = isagi.x + 90; // close to ball (90px away, within 160px interception range)
+    ball.y = isagi.y;
+    ball.vx = 0;
+    ball.vy = 0;
+    isagi.update(dummy, 0, arena);
+    assert(isagi.isMetavisionDashing === true, 'Metavision Slip must activate when Isagi is close to the soccer ball');
+    assert(isagi.vx > 8, `Isagi must dash directly towards the soccer ball (got vx=${isagi.vx})`);
+    assert(isagi.isFlowStateActive === true, 'Isagi must enter Flow State upon activating Metavision Slip');
+    assert(isagi.metavisionCooldownTimer > 0, 'Metavision cooldown must start after dashing to the ball');
+
+    // 5c. Dash Settles Upon Kicking: Zero dashing as he kicks the ball, brief slow movement applied
+    ball.x = isagi.x + 20; // ball reaches kicking range
+    ball.y = isagi.y;
+    isagi._fireEgoShot(dummy, CONFIG.isagi);
+    assert(isagi.isMetavisionDashing === false, 'Isagi must stop dashing immediately upon kicking the ball');
+    assert(isagi.kickSlowTimer > 0, 'Isagi must receive brief slow movement upon kicking the ball');
+    assert(isagi.kickSlowMultiplier < 0.5, 'Kick slow multiplier must be a very slow crawl (< 0.5)');
+
+    // 6. Direct Volley Finisher (Instant in-stride volley with ZERO pause delay & brief slow recovery)
+    // Place ball back in natural meeting range
+    ball.x = isagi.x + 20;
+    ball.y = isagi.y;
+    ball.vx = 0;
+    ball.vy = 0;
+    isagi.vx = 0;
+    isagi.vy = 0;
+    isagi.kickSlowTimer = 0;
+    isagi.directVolleyCooldownTimer = 0;
+    isagi._startDirectVolleyWindup(dummy, arena);
+    assert(isagi.soccerBall.isDirectVolley === true, 'Single ball must be energized as Direct Volley immediately with zero pause');
+    assert(isagi.shockwaves.length > 0, 'Supersonic shockwave must be generated (Rule 26)');
+    assert(isagi.activeKickImpacts.some(i => i.isDirectVolley === true), 'Direct Volley must spawn supersonic 12-frame kick impact');
+    assert(isagi.isMetavisionDashing === false, 'Isagi must not be dashing when executing Direct Volley');
+    assert(isagi.kickSlowTimer > 0, 'Isagi must receive brief slow movement upon executing Direct Volley');
+
+    // 6b. Verify Damage & Stun Debuff on Direct Volley Impact ONLY When Kicked by Isagi
+    dummy.x = isagi.x + 40;
+    dummy.y = isagi.y;
+    ball.x = dummy.x - 2;
+    ball.y = dummy.y;
+    ball.vx = 20;
+    ball.vy = 0;
+    ball.isDirectVolley = true;
+    ball.isKickedByIsagi = true; // Actively from Isagi's kick
+    dummy._isagiBallHitCooldown = 0;
+    dummy.paralyzeTimer = 0;
+    const hpBeforeVolley = dummy.hp;
+    isagi._updateSoccerBallPhysics(dummy, arena);
+    assert(isagi.active16BitHits.length > 0, 'Hardcoded 16-bit hit impact effect must spawn when the ball hits an enemy');
+    assert(dummy.paralyzeTimer >= 40, `Direct Volley must apply stun/paralyze debuff to enemy (got ${dummy.paralyzeTimer})`);
+    assert(dummy.hp < hpBeforeVolley, 'Ball must deal damage when kicked by Isagi');
+    assert(ball.isKickedByIsagi === false, 'Ball must clear isKickedByIsagi immediately after impact so it cannot deal damage on rebounds');
+
+    // 6c. Verify Non-Kicked Ball (Bounced/Rolling/Deflected) DEALS ZERO DAMAGE
+    dummy.x = isagi.x + 40;
+    dummy.y = isagi.y;
+    ball.x = dummy.x - 2;
+    ball.y = dummy.y;
+    ball.vx = 15; // Traveling fast (15 px/f)
+    ball.vy = 0;
+    ball.isKickedByIsagi = false; // NOT an active kick from Isagi
+    dummy._isagiBallHitCooldown = 0;
+    const hpBeforeInertHit = dummy.hp;
+    isagi._updateSoccerBallPhysics(dummy, arena);
+    assert(dummy.hp === hpBeforeInertHit, 'Ball must NOT deal damage when it does not come from a kick by Isagi');
+
+    // 7. Elastic Deflection When On Cooldown
+    dummy.x = isagi.x + 200;
+    isagi.shootCooldown = 25; // on cooldown
+    ball.x = isagi.x + 10;
+    ball.y = isagi.y;
+    ball.vx = 0;
+    ball.vy = 0;
+    isagi._handleCombatAndBallMeeting(dummy, arena, CONFIG.isagi);
+    assert(ball.x > isagi.x + 25, 'Ball must elastically deflect and separate from Isagi body when on cooldown');
+
+    // 8. One-Two Rebound Mechanics (Chance to Bounce Back Right to Isagi)
+    isagi.x = 150;
+    isagi.y = 350;
+    dummy.x = 250;
+    dummy.y = 350;
+    ball.x = dummy.x - 5;
+    ball.y = 350;
+    ball.vx = 8;
+    ball.vy = 0;
+    ball.isKickedByIsagi = true;
+    ball.shouldBounceBackToIsagi = true;
+    dummy._isagiBallHitCooldown = 0;
+    isagi.shootCooldown = 25;
+    isagi._updateSoccerBallPhysics(dummy, arena);
+    // Ball should now be heading back towards Isagi (leftwards, vx < 0)
+    assert(ball.vx < 0, `Ball must rebound back toward Isagi (got vx=${ball.vx})`);
+    assert(isagi.shootCooldown === 0, 'shootCooldown must be primed to 0 for incoming return volley');
+    assert(ball.isRebound === true, 'Ball must be marked as isRebound');
+
+    // 9. HUD Provider Validation
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const hudSkills = getSkillDataForFighter(isagi, () => []);
+    assert(Array.isArray(hudSkills) && hudSkills.length === 2, 'Isagi must export 2 HUD skills (Metavision & Direct Volley)');
+    assert(hudSkills[0].color === '#00F0FF' && hudSkills[1].color === '#00F0FF', 'All HUD skill bars must use unified themeColor (Rule 18)');
+    assert(hudSkills[1].isSignature === true, 'Direct Volley must declare isSignature: true (Rule 18)');
+
+    // Clean up
+    state.fighters = [];
+    delete state.getFighterTeam;
+    console.log('      ✅ Isagi Yoichi (Blue Lock) natural circle movement, physical kicks upon meeting, elastic deflection, One-Two bounce backs & Direct Volley verified.');
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');

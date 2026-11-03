@@ -351,14 +351,14 @@ export function drawShiroSkin(ctx, fighter) {
   ctx.save();
   ctx.translate(fighter.x, fighter.y - (fighter.z || 0));
 
-  // Front POV angle rotation (Rule 19)
-  const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle || 0);
-  ctx.rotate(angle);
+  // Front POV orientation (Strictly Upright - Zero Body Rotation)
+  const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
+  const normAngle = Math.atan2(Math.sin(angle), Math.cos(angle));
+  const facingLeft = Math.abs(normAngle) > Math.PI / 2;
 
-  // Vertical scale flip when facing left so hair stays on -Y (Rule 19)
-  const facingLeft = Math.abs(angle) > Math.PI / 2;
+  // Stays strictly upright with ZERO body rotation (no ctx.rotate); flips horizontally when facing left
   if (facingLeft) {
-    ctx.scale(1, -1);
+    ctx.scale(-1, 1);
   }
 
   // Calculate dynamic hair & crown motion inertia (inertial drag, tilt & idle floating sway)
@@ -369,11 +369,8 @@ export function drawShiroSkin(ctx, fighter) {
   if (!isStaticPreview) {
     const vx = fighter.vx || 0;
     const vy = fighter.vy || 0;
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
-    let localVx = vx * cosA + vy * sinA;
-    let localVy = -vx * sinA + vy * cosA;
-    if (facingLeft) localVy = -localVy;
+    let localVx = facingLeft ? -vx : vx;
+    let localVy = vy;
 
     // Movement inertia drag & tilt
     const dragX = Math.max(-r * 0.35, Math.min(r * 0.35, -localVx * 0.65));
