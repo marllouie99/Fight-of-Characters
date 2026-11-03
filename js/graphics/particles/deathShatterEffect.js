@@ -1700,6 +1700,15 @@ export function playMinecraftXPChime() {
   }
   _lastXpPickupFrame = nowFrame;
 
+  // Minecraft XP pickup chime pitch scale: starts at 1.0x and climbs up the chromatic scale
+  const pitchMult = Math.pow(2, _xpPickupStreak / 12);
+  const sfxVol = (typeof state !== 'undefined' && state.sfxVolume !== undefined) ? state.sfxVolume : 0.85;
+
+  if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
+    audioSystem.playSFX('Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg', sfxVol * 0.90, pitchMult);
+    return;
+  }
+
   if (typeof window === 'undefined') return;
 
   try {

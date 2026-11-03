@@ -125,10 +125,11 @@ Creeper's body model, pixel camouflage grid, iconic frowning face, and four stub
 ---
 
 ## 🔊 Audio & Sound FX Integration
-1. **Fuse Hiss**: Authentic Minecraft `"Tssssssss...!"` fuse sound on proximity contact (`creeper_fuse`).
-2. **Explosion Blast**: Low-frequency concussive blast with high-frequency dirt debris crumble (`creeper_explode`).
-3. **Lightning Strike**: Dramatic thunder crack (`thunderstrike.mp3`) on Ultimate awakening.
-4. **Defuse Fading**: Subtle hiss fizzle when the opponent escapes out of range.
+1. **Fuse Hiss**: Authentic Minecraft `"Tssssssss...!"` fuse sound on proximity contact (`Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg`).
+2. **Explosion Blasts**: Authentic Minecraft explosion variations (`Assets/Sound Effects/CreeperSFX/Explosion1..4.ogg`).
+3. **Hurt Grunts**: Authentic Minecraft Creeper damage grunts on hit (`Assets/Sound Effects/CreeperSFX/Creeper_hurt1..4.ogg`).
+4. **Death Hiss / Collapse**: Authentic Minecraft Creeper death sound on match defeat (`Assets/Sound Effects/CreeperSFX/Creeper_death.ogg`), with announcer faah suppression.
+5. **Lightning Strike**: Dramatic celestial thunderbolt (`thunderstrike.mp3`) on Charged Creeper Ultimate awakening.
 
 ---
 

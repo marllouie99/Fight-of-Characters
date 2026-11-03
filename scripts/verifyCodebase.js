@@ -610,6 +610,126 @@ async function verifyAll() {
     console.log(`✅ Verified palette health and zero rogue pixels across ${scannedSheetCount} themed sprite sheets!`);
   }
 
+  // 2f. JSON Integrity Scanner (Detect duplicate keys in all workspace JSON files)
+  console.log('🔍 [JSON Integrity Scanner] Checking all workspace JSON files for duplicate object keys...');
+  function getAllJsonFiles(dir) {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      if (ent.name === 'node_modules' || ent.name === '.git' || ent.name === 'dist' || ent.name === '_archive') continue;
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        results = results.concat(getAllJsonFiles(full));
+      } else if (ent.name.endsWith('.json')) {
+        results.push(full);
+      }
+    }
+    return results;
+  }
+
+  function detectJsonDuplicateKeys(content) {
+    let line = 1, col = 1, inString = false, escape = false, currentStr = '', isKey = false;
+    const objStack = [];
+    const duplicates = [];
+
+    for (let i = 0; i < content.length; i++) {
+      const ch = content[i];
+      if (ch === '\n') {
+        line++;
+        col = 1;
+        continue;
+      } else {
+        col++;
+      }
+
+      if (escape) {
+        escape = false;
+        if (inString && isKey) currentStr += ch;
+        continue;
+      }
+      if (ch === '\\' && inString) {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        if (inString) {
+          currentStr = '';
+          const parent = objStack[objStack.length - 1];
+          if (parent && parent.type === 'object' && parent.expectingKey) {
+            isKey = true;
+            parent.keyLine = line;
+            parent.keyCol = col - 1;
+          } else {
+            isKey = false;
+          }
+        } else {
+          if (isKey) {
+            const parent = objStack[objStack.length - 1];
+            if (parent && parent.type === 'object') {
+              if (parent.keys.has(currentStr)) {
+                duplicates.push({ key: currentStr, line: parent.keyLine, col: parent.keyCol });
+              } else {
+                parent.keys.add(currentStr);
+              }
+              parent.expectingKey = false;
+            }
+            isKey = false;
+          }
+        }
+        continue;
+      }
+
+      if (inString) {
+        if (isKey) currentStr += ch;
+        continue;
+      }
+
+      if (ch === '{') {
+        objStack.push({ type: 'object', keys: new Set(), expectingKey: true });
+      } else if (ch === '}') {
+        objStack.pop();
+        const parent = objStack[objStack.length - 1];
+        if (parent && parent.type === 'object') parent.expectingKey = false;
+      } else if (ch === '[') {
+        objStack.push({ type: 'array' });
+      } else if (ch === ']') {
+        objStack.pop();
+        const parent = objStack[objStack.length - 1];
+        if (parent && parent.type === 'object') parent.expectingKey = false;
+      } else if (ch === ',') {
+        const parent = objStack[objStack.length - 1];
+        if (parent && parent.type === 'object') parent.expectingKey = true;
+      }
+    }
+    return duplicates;
+  }
+
+  let totalJsonDuplicates = 0;
+  const jsonFiles = getAllJsonFiles(process.cwd());
+  for (const jsonPath of jsonFiles) {
+    const relPath = path.relative(process.cwd(), jsonPath).replace(/\\/g, '/');
+    try {
+      const text = fs.readFileSync(jsonPath, 'utf8');
+      const dups = detectJsonDuplicateKeys(text);
+      if (dups.length > 0) {
+        for (const d of dups) {
+          console.error(`❌ [DUPLICATE OBJECT KEY in ${relPath}]: Duplicate key "${d.key}" at line ${d.line}, column ${d.col}`);
+          totalJsonDuplicates++;
+          hasErrors = true;
+        }
+      }
+    } catch (err) {
+      console.error(`❌ [JSON READ/PARSE ERROR in ${relPath}]: ${err.message}`);
+      hasErrors = true;
+    }
+  }
+
+  if (totalJsonDuplicates === 0) {
+    console.log(`✅ Verified 0 duplicate keys across ${jsonFiles.length} JSON files!`);
+  }
+
   console.log('───────────────────────────────────────────────────────');
   if (hasErrors) {
     console.error(`🚨 Verification failed: ${totalSyntaxErrors} syntax errors, ${totalDuplicates} duplicates, ${missingAssetsCount} broken assets, ${invalidAudioCount} invalid audio volumes.`);

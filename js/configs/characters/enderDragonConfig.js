@@ -196,6 +196,7 @@ export const enderDragonConfig = {
     explosion2: 'Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg',
     explosion3: 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg',
     explosion4: 'Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg',
+    xpPickup: 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg',
   },
   soundVolumes: {
     roar: 1.0,
@@ -217,5 +218,6 @@ export const enderDragonConfig = {
     explosion2: 0.90,
     explosion3: 0.90,
     explosion4: 0.90,
+    xpPickup: 0.90,
   }
 };

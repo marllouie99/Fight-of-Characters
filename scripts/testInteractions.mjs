@@ -13033,7 +13033,19 @@ async function runInteractionTests() {
     creeper.draw(mockCtx, enemy);
     assert(mockCtx.getStackDepth() === 0, 'drawCreeperSkin with Charged Minecraft Electric Armor and Body Swirl corrupted canvas stack depth');
 
-    console.log('      ✅ Creeper (zero basic attack damage/projectiles, self-detonation HP cost, hidden hands, Charged Minecraft Electric Armor, Rule 18 HUD & 100% stack balance) verified.');
+    // 7. Verify Minecraft Experience Orb Pickup Sound (Successful_hit.ogg)
+    const { playMinecraftXPChime } = await import('../js/graphics/particles/deathShatterEffect.js');
+    const { audioSystem } = await import('../js/systems/audioSystem.js');
+    let lastXpSfx = null;
+    const origPlaySFX = audioSystem.playSFX;
+    audioSystem.playSFX = (src, vol, speed) => {
+      lastXpSfx = { src, vol, speed };
+    };
+    playMinecraftXPChime();
+    assert(lastXpSfx && lastXpSfx.src === 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg', 'playMinecraftXPChime must play Successful_hit.ogg on experience orb pickup');
+    audioSystem.playSFX = origPlaySFX;
+
+    console.log('      ✅ Creeper (zero basic attack damage/projectiles, self-detonation HP cost, hidden hands, Charged Minecraft Electric Armor, Rule 18 HUD & 100% stack balance) and Minecraft Experience Orb Successful_hit audio verified.');
   }
 
   // 🛡️ 105. Testing Ash Ketchum Post-Summon Sideline Repositioning (Top/Left/Right Edge & Barrier) 🛡️
@@ -14216,6 +14228,8 @@ async function runInteractionTests() {
     pacman.x = zenitsu.x;
     pacman.y = zenitsu.y;
     pacman.chompAttackCooldown = 0;
+    pacman.isChompModeActive = true;
+    pacman.chompModeDurationTimer = 300;
     const hpBeforeSwallow = zenitsu.hp;
     const swallowed = pacman._executeChompAttack(zenitsu);
     assert(swallowed === true, 'Chomp attack must successfully execute against ghosted enemy');
@@ -15988,8 +16002,14 @@ async function runInteractionTests() {
     const initialGhostTimer = peashooter.pacmanGhostTimer;
 
     // Subtest 3: Run update steps — verify plants remain 100% stationary and do not move or drift!
+    pacman.x = 40;
+    pacman.vx = 0;
+    pacman.vy = 0;
     for (let f = 0; f < 10; f++) {
       state.frameCount = (state.frameCount || 0) + 1;
+      pacman.x = 40;
+      pacman.vx = 0;
+      pacman.vy = 0;
       updateFighters();
     }
 

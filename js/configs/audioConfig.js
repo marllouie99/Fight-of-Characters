@@ -315,7 +315,9 @@ export const AUDIO_CONFIG = {
   'minecraft_explosion1': 'Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg',
   'minecraft_explosion2': 'Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg',
   'minecraft_explosion3': 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg',
-  'minecraft_explosion4': 'Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg'
+  'minecraft_explosion4': 'Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg',
+  'minecraft_xp_pickup': 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg',
+  'minecraft_successful_hit': 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg'
 };
 
 

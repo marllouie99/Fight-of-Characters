@@ -97,6 +97,11 @@ export class CreeperFighter extends Fighter {
     this.activeVisualExplosions = [];
     this.activeVisualEffects = [];
 
+    // Audio Customization & Announcer Faah Suppression
+    this.suppressFaahDeathSound = true;
+    this.suppressFaahOnDeath = true;
+    this._hurtSoundCooldown = 0;
+
     // Register skills with universal SkillManager
     this._registerSkills();
   }
@@ -215,6 +220,40 @@ export class CreeperFighter extends Fighter {
     // Intentionally empty: Creeper has no basic attack or projectile shooting per Minecraft lore.
   }
 
+  // ── Audio Helpers & Sound Effects Integration ──
+  _playAudio(key, fallbackPath, vol = 1.0) {
+    if (typeof audioSystem === 'undefined' || !audioSystem.playSFX) return;
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.creeper) ? CONFIG.creeper : creeperConfig;
+    const sfxPath = cfg?.sounds?.[key] || fallbackPath;
+    const volume = (cfg?.soundVolumes?.[key] !== undefined) ? cfg.soundVolumes[key] : vol;
+    audioSystem.playSFX(sfxPath, volume);
+  }
+
+  _playRandomHurtAudio(vol = 0.80) {
+    if (this._hurtSoundCooldown > 0) return;
+    this._hurtSoundCooldown = 18; // ~0.3s debounced cooldown
+    const hurtIdx = Math.floor(Math.random() * 4) + 1;
+    this._playAudio(`hurt${hurtIdx}`, `Assets/Sound Effects/CreeperSFX/Creeper_hurt${hurtIdx}.ogg`, vol);
+  }
+
+  _playRandomExplosionAudio(vol = 0.95) {
+    const expIdx = Math.floor(Math.random() * 4) + 1;
+    this._playAudio(`explosion${expIdx}`, `Assets/Sound Effects/CreeperSFX/Explosion${expIdx}.ogg`, vol);
+  }
+
+  takeDamage(amount, attacker, opts) {
+    const finalDmg = super.takeDamage(amount, attacker, opts);
+    if (finalDmg > 0 && this.hp > 0) {
+      this._playRandomHurtAudio(0.80);
+    }
+    return finalDmg;
+  }
+
+  onDeath(killer) {
+    this._playAudio('death', 'Assets/Sound Effects/CreeperSFX/Creeper_death.ogg', 1.0);
+    super.onDeath(killer);
+  }
+
   /**
    * Skill 1: Manual Prime Detonation Trigger ("Tssssss...!")
    */
@@ -225,7 +264,7 @@ export class CreeperFighter extends Fighter {
     this.fuseTimer = Math.max(this.fuseTimer, 12);
 
     // Sizzling fuse hiss audio trigger
-    audioSystem.playSFX('creeper_fuse', 0.85);
+    this._playAudio('fuse', 'Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg', 0.85);
     this._fuseHissSoundTimer = 24;
     spawnFloatingText(this.x, this.y - this.r - 20, 'Tssssssss...!', this.themeColor);
     return true;
@@ -290,9 +329,7 @@ export class CreeperFighter extends Fighter {
       isCharged
     });
     triggerGlobalScreenShake(isCharged ? 8.0 : 5.0, 10);
-    if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
-      audioSystem.playSFX('creeper_explode', 0.9);
-    }
+    this._playRandomExplosionAudio(0.9);
   }
 
   /**
@@ -315,7 +352,7 @@ export class CreeperFighter extends Fighter {
 
     // 2. Audio & Impact Screen Rumble
     triggerGlobalScreenShake(isCharged ? 10.0 : 7.0, isCharged ? 18 : 12);
-    audioSystem.playSFX('creeper_explode', 1.0);
+    this._playRandomExplosionAudio(1.0);
 
     // 3. Area of Effect damage & heavy knockback to all valid enemies
     const targets = (state.fighters || []).concat(state.illusions || []);
@@ -367,7 +404,7 @@ export class CreeperFighter extends Fighter {
         this.vx = 0;
         this.vy = 0;
         this.lightningAwakenTimer = 0;
-        audioSystem.playSFX('creeper_fuse', 0.85);
+        this._playAudio('fuse', 'Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg', 0.85);
       }
     }
 
@@ -408,7 +445,7 @@ export class CreeperFighter extends Fighter {
 
       // Periodic fuse hiss sound
       if (this._fuseHissSoundTimer <= 0) {
-        audioSystem.playSFX('creeper_fuse', 0.85);
+        this._playAudio('fuse', 'Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg', 0.85);
         this._fuseHissSoundTimer = 24;
       }
 
@@ -446,7 +483,7 @@ export class CreeperFighter extends Fighter {
         this.vx *= 0.35;
         this.vy *= 0.35;
         if (this._fuseHissSoundTimer <= 0) {
-          audioSystem.playSFX('creeper_fuse', 0.85);
+          this._playAudio('fuse', 'Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg', 0.85);
           this._fuseHissSoundTimer = 24;
         }
         if (this.fuseTimer >= this.maxPrimeTimer) {
@@ -503,6 +540,9 @@ export class CreeperFighter extends Fighter {
         this.activeVisualEffects.splice(i, 1);
       }
     }
+    if (this._hurtSoundCooldown > 0) {
+      this._hurtSoundCooldown--;
+    }
   }
 
   update(opponent, ownerIndex, arena) {
@@ -523,7 +563,7 @@ export class CreeperFighter extends Fighter {
         this.vx = 0;
         this.vy = 0;
         this.lightningAwakenTimer = 0;
-        audioSystem.playSFX('creeper_fuse', 0.85);
+        this._playAudio('fuse', 'Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg', 0.85);
       }
       this.deathDetonationTimer--;
       if (this.deathDetonationTimer <= 0) {

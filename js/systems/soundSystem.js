@@ -95,6 +95,8 @@ export function isProtectedVoiceOrAnnouncerSound(src) {
          s.includes('zenitsu') ||
          s.includes('sansspeak') ||
          s.includes('sans') ||
+         s.includes('successful_hit') ||
+         s.includes('xp') ||
          s.includes('ui');
 }
 

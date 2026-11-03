@@ -177,6 +177,7 @@ All sound effects, audio paths, and playback volumes are strictly configured in 
 | `death` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg` | `1.00` | Authentic Minecraft Ender Dragon death screech |
 | `hurt1..4` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1..4.ogg` | `0.85` | Authentic Minecraft dragon hurt grunts |
 | `explosion1..4` | `Assets/Sound Effects/EnderdragonSFX/Explosion1..4.ogg` | `0.90` | Authentic Minecraft explosion blast variations |
+| `xpPickup` | `Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg` | `0.90` | Authentic Minecraft experience orb pickup chime |
 
 ---
 
