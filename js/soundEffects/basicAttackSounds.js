@@ -964,17 +964,17 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
 
   // Ender Dragon — Ruler of The End
   'ender_dragon': {
-    src: 'Assets/Sound Effects/Skills/redblast.mp3',
+    src: 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg',
     volume: 0.85,
     delay: 0,
   },
   'enderdragon': {
-    src: 'Assets/Sound Effects/Skills/redblast.mp3',
+    src: 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg',
     volume: 0.85,
     delay: 0,
   },
   'ender dragon': {
-    src: 'Assets/Sound Effects/Skills/redblast.mp3',
+    src: 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg',
     volume: 0.85,
     delay: 0,
   },

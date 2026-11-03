@@ -17,7 +17,7 @@ import { creeperConfig } from '../../configs/characters/creeperConfig.js';
 import { spawnFloatingText, triggerGlobalScreenShake, state } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { drawCreeperSkin } from '../../graphics/fighters/creeperSkin.js';
-import { drawMinecraftTntBlock, drawCreeperExplosion } from '../../graphics/weapons/creeperWeaponGraphics.js';
+import { drawCreeperExplosion } from '../../graphics/weapons/creeperWeaponGraphics.js';
 import { drawZeusThunderstrike } from '../../graphics/weapons/zeusWeaponGraphics.js';
 
 export class CreeperFighter extends Fighter {
@@ -62,21 +62,21 @@ export class CreeperFighter extends Fighter {
     this.basicAttackReach = 0;
     this.basicAttackKnockback = 0;
 
-    // Skill 1: "Tssssss..." (Primed Detonation — Main Offensive Mechanism)
-    this.detonationCooldownMax = cfg.detonationCooldown || 210;
-    this.detonationCooldownTimer = cfg.detonationInitialCooldown || 60;
+    // Skill 1: "Tssssss..." (Proximity Fuse Detonation — Canonical Minecraft Mechanic)
+    this.detonationCooldownMax = cfg.detonationCooldown || 180;
+    this.detonationCooldownTimer = cfg.detonationInitialCooldown || 40;
+    this.fuseTriggerDistance = cfg.fuseTriggerDistance || 88;
+    this.fuseCancelDistance = cfg.fuseCancelDistance || 120;
+    this.maxPrimeTimer = cfg.primeDurationFrames || 50;
+    this.fuseTimer = 0;
     this.isPrimingDetonation = false;
-    this.primeDetonationTimer = 0;
-    this.maxPrimeTimer = cfg.primeDurationFrames || 55;
     this.baseBlastRadius = cfg.baseBlastRadius || 135;
-    this.baseBlastDamage = cfg.baseBlastDamage || 90;
+    this.baseBlastDamage = cfg.baseBlastDamage || 95;
     this.selfDetonationHpCost = cfg.selfDetonationHpCost || 65;
     this.blastKnockback = cfg.blastKnockback || 18;
-
-    // Skill 2: Primed TNT Block Toss
-    this.tntCooldownMax = cfg.tntCooldown || 450;
-    this.tntCooldownTimer = cfg.tntInitialCooldown || 180;
-    this.activeTntBlocks = [];
+    this._fuseHissSoundTimer = 0;
+    this._lastHissTextFrame = -999;
+    this._lastDefuseTextFrame = -999;
 
     // Ultimate: Charged Creeper (Lightning Awakening)
     this.chargedCooldownMax = cfg.chargedCooldown || 1800;
@@ -101,11 +101,11 @@ export class CreeperFighter extends Fighter {
     this._registerSkills();
   }
 
-  // ── Backward-compatible getters & setters for SkillManager ──
+  // ── Backward-compatible getters & setters for SkillManager & external probes ──
   get detonationCooldown() { return this.detonationCooldownMax; }
   set detonationCooldown(val) { if (typeof val === 'number') this.detonationCooldownMax = val; }
-  get tntCooldown() { return this.tntCooldownMax; }
-  set tntCooldown(val) { if (typeof val === 'number') this.tntCooldownMax = val; }
+  get primeDetonationTimer() { return this.fuseTimer; }
+  set primeDetonationTimer(val) { if (typeof val === 'number') this.fuseTimer = val; }
   get chargedCooldown() { return this.chargedCooldownMax; }
   set chargedCooldown(val) { if (typeof val === 'number') this.chargedCooldownMax = val; }
 
@@ -116,7 +116,7 @@ export class CreeperFighter extends Fighter {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.creeper) ? CONFIG.creeper : creeperConfig;
     const skills = [];
 
-    // Passive: Silent Stalker & Core
+    // Passive: Silent Stalker & Gunpowder Core
     skills.push({
       id: 'silent_stalker',
       name: 'Silent Stalker',
@@ -125,7 +125,7 @@ export class CreeperFighter extends Fighter {
       description: 'Silent footwork and gunpowder regeneration core.'
     });
 
-    // Skill 1: "Tssss!" (Primed Detonation)
+    // Skill 1: "Tssss!" (Proximity Fuse Detonation)
     if (this.isSkillEnabled(cfg.enablePrimedDetonation, true)) {
       skills.push({
         id: 'detonation',
@@ -135,19 +135,6 @@ export class CreeperFighter extends Fighter {
         cooldownMaxKey: 'detonationCooldownMax',
         color: this.themeColor,
         onActivate: () => this.primeDetonation()
-      });
-    }
-
-    // Skill 2: TNT Toss
-    if (this.isSkillEnabled(cfg.enableTntToss, true)) {
-      skills.push({
-        id: 'tnt_toss',
-        name: 'TNT Toss',
-        type: 'active',
-        cooldownKey: 'tntCooldownTimer',
-        cooldownMaxKey: 'tntCooldownMax',
-        color: this.themeColor,
-        onActivate: (fighter, opponent) => this.tossTntBlock(opponent)
       });
     }
 
@@ -186,92 +173,61 @@ export class CreeperFighter extends Fighter {
     this.speed = this.baseSpeed;
     this.hideHands = true;
     this.isPrimingDetonation = false;
-    this.primeDetonationTimer = 0;
+    this.fuseTimer = 0;
+    this._fuseHissSoundTimer = 0;
+    this._lastHissTextFrame = -999;
+    this._lastDefuseTextFrame = -999;
     this.isChargedCreeper = false;
     this.chargedCreeperTimer = 0;
     this.deathDetonationTimer = 0;
     this.hasDeathExploded = false;
     this.selfDetonationHpCost = cfg.selfDetonationHpCost || 65;
-    this.detonationCooldownTimer = cfg.detonationInitialCooldown || 60;
-    this.tntCooldownTimer = cfg.tntInitialCooldown || 180;
+    this.detonationCooldownTimer = cfg.detonationInitialCooldown || 40;
     this.chargedCooldownTimer = cfg.chargedInitialCooldown || 1080;
     this.lightningAwakenTimer = 0;
     if (this.activeThunderstrikes) this.activeThunderstrikes.length = 0; else this.activeThunderstrikes = [];
-    if (this.activeTntBlocks) this.activeTntBlocks.length = 0; else this.activeTntBlocks = [];
     if (this.activeVisualExplosions) this.activeVisualExplosions.length = 0; else this.activeVisualExplosions = [];
     if (this.activeVisualEffects) this.activeVisualEffects.length = 0; else this.activeVisualEffects = [];
   }
 
   /**
    * Interrupt and cancel active actions.
+   * If Creeper was hissing, knockback interrupts the prime and starts defusing!
    */
   interruptAttacks(forceCancelAll = false) {
     super.interruptAttacks?.(forceCancelAll);
     if (this.isPrimingDetonation) {
       this.isPrimingDetonation = false;
-      this.primeDetonationTimer = 0;
+      // Allow fuseTimer to begin smoothly deflating
     }
     if (forceCancelAll) {
       if (this.activeThunderstrikes) this.activeThunderstrikes.length = 0;
       this.lightningAwakenTimer = 0;
+      this.fuseTimer = 0;
     }
   }
 
   /**
    * Rule 23: Mandatory Basic Projectile Suppression
-   * Creeper has NO basic attack. His offensive mechanism is strictly self-detonation.
+   * Creeper has NO basic attack. His offensive mechanism is strictly proximity self-detonation.
    */
   shoot(ownerIndex, opponent) {
     // Intentionally empty: Creeper has no basic attack or projectile shooting per Minecraft lore.
   }
 
   /**
-   * Skill 1: Prime Concussive Detonation ("Tssssss...!")
+   * Skill 1: Manual Prime Detonation Trigger ("Tssssss...!")
    */
   primeDetonation() {
-    if (this.isPrimingDetonation || this.detonationCooldownTimer > 0 || this.deathDetonationTimer > 0) return false;
+    if (this.detonationCooldownTimer > 0 || this.deathDetonationTimer > 0) return false;
 
     this.isPrimingDetonation = true;
-    this.primeDetonationTimer = this.maxPrimeTimer;
-    this.detonationCooldownTimer = this.detonationCooldownMax;
+    this.fuseTimer = Math.max(this.fuseTimer, 12);
 
     // Sizzling fuse hiss audio trigger
-    audioSystem.playSFX('bomberman_kick', 0.7);
+    audioSystem.playSFX('creeper_fuse', 0.85);
+    this._fuseHissSoundTimer = 24;
     spawnFloatingText(this.x, this.y - this.r - 20, 'Tssssssss...!', this.themeColor);
-    return true;
-  }
-
-  /**
-   * Skill 2: Primed TNT Block Toss
-   */
-  tossTntBlock(opponent = null) {
-    if (this.tntCooldownTimer > 0 || this.isPrimingDetonation || this.deathDetonationTimer > 0) return false;
-
-    this.tntCooldownTimer = this.tntCooldownMax;
-    const angle = (opponent && typeof opponent.x === 'number')
-      ? Math.atan2(opponent.y - this.y, opponent.x - this.x)
-      : (this.gunAngle || 0);
-
-    const speed = 7.5;
-    const tnt = {
-      x: this.x + Math.cos(angle) * (this.r + 14),
-      y: this.y + Math.sin(angle) * (this.r + 14),
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      fuseTimer: 135,
-      maxFuseTimer: 135,
-      bouncesLeft: 2,
-      bouncesRemaining: 2,
-      rotation: 0,
-      size: 22,
-      radius: this.isChargedCreeper ? 160 : 110,
-      damage: this.isChargedCreeper ? 130 : 65,
-      isCharged: this.isChargedCreeper
-    };
-
-    this.activeTntBlocks.push(tnt);
-    spawnFloatingText(this.x, this.y - this.r - 16, 'TNT TOSS!', '#EF4444');
-    audioSystem.playSFX('bomberman_place_bomb', 0.85);
     return true;
   }
 
@@ -322,7 +278,7 @@ export class CreeperFighter extends Fighter {
   }
 
   /**
-   * Unleashes the massive concussive explosion.
+   * Unleashes a concussive explosion at designated coordinates.
    */
   _triggerExplosion(x, y, radius = 80, damage = 50, isCharged = false, arena = state.arena) {
     this.activeVisualExplosions.push({
@@ -335,17 +291,13 @@ export class CreeperFighter extends Fighter {
     });
     triggerGlobalScreenShake(isCharged ? 8.0 : 5.0, 10);
     if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
-      audioSystem.playSFX('attack_explosion', 0.9);
-    }
-    for (let t = 0; t < this.activeTntBlocks.length; t++) {
-      const b = this.activeTntBlocks[t];
-      const dist = Math.hypot(b.x - x, b.y - y);
-      if (dist <= radius + (b.size || 22)) {
-        b.fuseTimer = 0;
-      }
+      audioSystem.playSFX('creeper_explode', 0.9);
     }
   }
 
+  /**
+   * Executes Creeper's devastating self-detonation blast.
+   */
   _executeDetonation(isDeathNuke = false) {
     const isCharged = this.isChargedCreeper || isDeathNuke;
     const blastR = (isCharged ? this.baseBlastRadius * 1.85 : this.baseBlastRadius) * (isDeathNuke ? 1.2 : 1.0);
@@ -363,7 +315,7 @@ export class CreeperFighter extends Fighter {
 
     // 2. Audio & Impact Screen Rumble
     triggerGlobalScreenShake(isCharged ? 10.0 : 7.0, isCharged ? 18 : 12);
-    audioSystem.playSFX('attack_explosion', 1.0);
+    audioSystem.playSFX('creeper_explode', 1.0);
 
     // 3. Area of Effect damage & heavy knockback to all valid enemies
     const targets = (state.fighters || []).concat(state.illusions || []);
@@ -387,16 +339,7 @@ export class CreeperFighter extends Fighter {
       }
     }
 
-    // 4. Detonate any nearby TNT blocks instantly (Chain Reaction!)
-    for (let t = 0; t < this.activeTntBlocks.length; t++) {
-      const b = this.activeTntBlocks[t];
-      const distToTnt = Math.hypot(b.x - this.x, b.y - this.y);
-      if (distToTnt <= blastR + (b.size || 22)) {
-        b.fuseTimer = 0; // Trigger instant detonation!
-      }
-    }
-
-    // Recoil Creeper backwards slightly from blast pressure
+    // 4. Recoil Creeper backwards slightly from blast pressure
     if (!isDeathNuke && this.aimTarget) {
       const oppAngle = Math.atan2(this.aimTarget.y - this.y, this.aimTarget.x - this.x);
       this.vx = -Math.cos(oppAngle) * 6;
@@ -415,97 +358,102 @@ export class CreeperFighter extends Fighter {
         spawnFloatingText(this.x, this.y - this.r - 18, `-${actualLost} HP`, '#EF4444');
       }
 
+      // Enter detonation cooldown between explosions
+      this.detonationCooldownTimer = this.detonationCooldownMax;
+
       // If self-detonation depletes remaining HP to 0, trigger final death detonation
       if (this.hp <= 0 && this.enableDeathDetonation && !this.hasDeathExploded) {
         this.deathDetonationTimer = 45;
         this.vx = 0;
         this.vy = 0;
         this.lightningAwakenTimer = 0;
-        if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
-          audioSystem.playSFX('bomberman_kick', 0.8);
-        }
+        audioSystem.playSFX('creeper_fuse', 0.85);
       }
     }
 
     this.isPrimingDetonation = false;
-    this.primeDetonationTimer = 0;
+    this.fuseTimer = 0;
   }
 
   /**
-   * Updates primed detonation countdown and triggers blast upon completion.
+   * Updates proximity fuse state machine:
+   * - In close proximity (< fuseTriggerDistance) & off cooldown: stops, hisses, swells, advances fuse.
+   * - Retreated / knocked back (> fuseCancelDistance): defuses, cancels hissing, deflates back to normal.
    */
-  _updatePrimedDetonation(opponent = null, arena = state.arena) {
-    if (!this.isPrimingDetonation) return;
-    this.primeDetonationTimer--;
-    this.vx *= 0.5;
-    this.vy *= 0.5;
-    if (this.primeDetonationTimer <= 0) {
-      this._executeDetonation(false);
+  _updateProximityFuse(opponent) {
+    if (this.hp <= 0 || this.deathDetonationTimer > 0) return;
+
+    if (this._fuseHissSoundTimer > 0) {
+      this._fuseHissSoundTimer--;
     }
-  }
 
-  /**
-   * Updates traveling and bouncing TNT blocks.
-   */
-  _updateTntBlocks(arena) {
-    for (let i = this.activeTntBlocks.length - 1; i >= 0; i--) {
-      const tnt = this.activeTntBlocks[i];
-      tnt.fuseTimer--;
+    if (!opponent || opponent.hp <= 0) {
+      if (this.fuseTimer > 0) {
+        this.fuseTimer = Math.max(0, this.fuseTimer - 1.5);
+        this.isPrimingDetonation = false;
+      }
+      return;
+    }
 
-      // Movement & Wall Bounce Physics
-      tnt.x += tnt.vx;
-      tnt.y += tnt.vy;
-      tnt.rotation = (tnt.rotation || 0) + 0.12;
+    const dist = Math.hypot(opponent.x - this.x, opponent.y - this.y);
 
-      // Friction
-      tnt.vx *= 0.96;
-      tnt.vy *= 0.96;
+    // 1. Proximity Stalking Contact -> Start / Advance Fuse & Hiss
+    if (dist <= this.fuseTriggerDistance && this.detonationCooldownTimer <= 0) {
+      this.isPrimingDetonation = true;
+      this.fuseTimer = Math.min(this.maxPrimeTimer, this.fuseTimer + 1);
 
-      if (arena) {
-        const half = (tnt.size || 22) * 0.5;
-        if (tnt.x - half < arena.x) {
-          tnt.x = arena.x + half;
-          tnt.vx = Math.abs(tnt.vx) * 0.75;
-        } else if (tnt.x + half > arena.x + arena.width) {
-          tnt.x = arena.x + arena.width - half;
-          tnt.vx = -Math.abs(tnt.vx) * 0.75;
-        }
-        if (tnt.y - half < arena.y) {
-          tnt.y = arena.y + half;
-          tnt.vy = Math.abs(tnt.vy) * 0.75;
-        } else if (tnt.y + half > arena.y + arena.height) {
-          tnt.y = arena.y + arena.height - half;
-          tnt.vy = -Math.abs(tnt.vy) * 0.75;
-        }
+      // Stalling / halt in place while hissing (authentic Minecraft behavior)
+      this.vx *= 0.25;
+      this.vy *= 0.25;
+
+      // Periodic fuse hiss sound
+      if (this._fuseHissSoundTimer <= 0) {
+        audioSystem.playSFX('creeper_fuse', 0.85);
+        this._fuseHissSoundTimer = 24;
       }
 
-      // Detonate upon fuse expiration
-      if (tnt.fuseTimer <= 0) {
-        this.activeTntBlocks.splice(i, 1);
-        this.activeVisualExplosions.push({
-          x: tnt.x,
-          y: tnt.y,
-          radius: tnt.radius,
-          timer: 26,
-          maxTimer: 26,
-          isCharged: tnt.isCharged
-        });
-        audioSystem.playSFX('attack_explosion', 0.9);
-        triggerGlobalScreenShake(6.0, 10);
+      // Floating text feedback (debounced)
+      const frame = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : 0;
+      if (frame - this._lastHissTextFrame > 50) {
+        spawnFloatingText(this.x, this.y - this.r - 20, 'Tssssssss...!', this.themeColor);
+        this._lastHissTextFrame = frame;
+      }
 
-        // Apply blast damage to targets
-        const targets = (state.fighters || []).concat(state.illusions || []);
-        for (let k = 0; k < targets.length; k++) {
-          const tgt = targets[k];
-          if (!tgt || tgt.hp <= 0) continue;
-          const d = Math.hypot(tgt.x - tnt.x, tgt.y - tnt.y);
-          if (d <= tnt.radius + (tgt.r || 25)) {
-            const kbAngle = Math.atan2(tgt.y - tnt.y, tgt.x - tnt.x);
-            tgt.takeDamage?.(tnt.damage, this);
-            tgt.vx = (tgt.vx || 0) + Math.cos(kbAngle) * 14;
-            tgt.vy = (tgt.vy || 0) + Math.sin(kbAngle) * 14;
-          }
+      // Detonate upon fuse completion
+      if (this.fuseTimer >= this.maxPrimeTimer) {
+        this._executeDetonation(false);
+      }
+    }
+    // 2. Beyond Cancel Distance -> Abort & Defuse! (Canonical Minecraft Defuse Rule)
+    else if (dist > this.fuseCancelDistance) {
+      if (this.isPrimingDetonation) {
+        this.isPrimingDetonation = false;
+        const frame = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : 0;
+        if (frame - this._lastDefuseTextFrame > 60 && this.fuseTimer > 10) {
+          spawnFloatingText(this.x, this.y - this.r - 18, 'Defused!', '#94A3B8');
+          this._lastDefuseTextFrame = frame;
         }
+      }
+      // Fuse smoothly deflates back to zero
+      if (this.fuseTimer > 0) {
+        this.fuseTimer = Math.max(0, this.fuseTimer - 1.5);
+      }
+    }
+    // 3. Hysteresis Buffer Zone (fuseTriggerDistance < dist <= fuseCancelDistance)
+    else {
+      if (this.isPrimingDetonation && this.detonationCooldownTimer <= 0) {
+        this.fuseTimer = Math.min(this.maxPrimeTimer, this.fuseTimer + 1);
+        this.vx *= 0.35;
+        this.vy *= 0.35;
+        if (this._fuseHissSoundTimer <= 0) {
+          audioSystem.playSFX('creeper_fuse', 0.85);
+          this._fuseHissSoundTimer = 24;
+        }
+        if (this.fuseTimer >= this.maxPrimeTimer) {
+          this._executeDetonation(false);
+        }
+      } else if (this.fuseTimer > 0) {
+        this.fuseTimer = Math.max(0, this.fuseTimer - 1.5);
       }
     }
   }
@@ -560,7 +508,6 @@ export class CreeperFighter extends Fighter {
   update(opponent, ownerIndex, arena) {
     // 0. Update visual effects & transient particle lifecycles before freeze guard (Rule 25)
     this._updateVisualExplosions();
-    this._updateTntBlocks(arena);
 
     // 1. Mandatory freeze / time-stop guard (Rule 1.1)
     const isFrozen = this._handleTimeStop();
@@ -576,7 +523,7 @@ export class CreeperFighter extends Fighter {
         this.vx = 0;
         this.vy = 0;
         this.lightningAwakenTimer = 0;
-        audioSystem.playSFX('bomberman_kick', 0.8);
+        audioSystem.playSFX('creeper_fuse', 0.85);
       }
       this.deathDetonationTimer--;
       if (this.deathDetonationTimer <= 0) {
@@ -614,7 +561,6 @@ export class CreeperFighter extends Fighter {
     // 3. Skill & Ability Timers Decay
     if (this.basicAttackCooldownTimer > 0) this.basicAttackCooldownTimer--;
     if (this.detonationCooldownTimer > 0 && !this.isPrimingDetonation) this.detonationCooldownTimer--;
-    if (this.tntCooldownTimer > 0) this.tntCooldownTimer--;
 
     // Charged Creeper Lifetime Drain
     if (this.chargedCreeperTimer > 0) {
@@ -631,29 +577,14 @@ export class CreeperFighter extends Fighter {
       this.chargedCooldownTimer--;
     }
 
-    // 4. Priming Detonation Execution
-    if (this.isPrimingDetonation) {
-      this._updatePrimedDetonation(opponent, arena);
-      return;
-    }
+    // 4. Proximity Fuse State Machine (Automatic Stalking Hiss & Defuse)
+    this._updateProximityFuse(opponent);
 
     // 5. AI Decision Matrix
     if (opponent && opponent.hp > 0) {
-      const dist = Math.hypot(opponent.x - this.x, opponent.y - this.y);
-
       // AI: Activate Charged Creeper when off cooldown
       if (this.chargedCooldownTimer <= 0) {
         this.activateChargedCreeper();
-      }
-
-      // AI: Throw TNT block when at medium range (if enabled)
-      if (this.tntCooldownTimer <= 0 && dist >= 120 && dist <= 260) {
-        this.tossTntBlock(opponent);
-      }
-
-      // AI: Prime self-detonation when close enough (Sole Offensive Mechanism)
-      if (this.detonationCooldownTimer <= 0 && dist <= 110) {
-        this.primeDetonation();
       }
     }
 
@@ -674,22 +605,17 @@ export class CreeperFighter extends Fighter {
 
   /**
    * Rule 21: Custom fighter draw pipeline.
-   * Renders active TNT blocks, explosions, Creeper's body, and MANDATORY overhead HP.
+   * Renders explosions, lightning awakening thunderstrikes, Creeper's body, and MANDATORY overhead HP.
    */
   draw(ctx, opponent) {
     if (!ctx) return;
 
-    // 1. Draw active TNT blocks on the floor
-    for (let i = 0; i < this.activeTntBlocks.length; i++) {
-      drawMinecraftTntBlock(ctx, this.activeTntBlocks[i]);
-    }
-
-    // 2. Draw concussive Minecraft explosions & water-ripple shockwaves
+    // 1. Draw concussive Minecraft explosions & water-ripple shockwaves
     for (let i = 0; i < this.activeVisualExplosions.length; i++) {
       drawCreeperExplosion(ctx, this.activeVisualExplosions[i]);
     }
 
-    // 2.5. Draw Zeus Thunderstrike Awakening Animation (Ground fractures, sky lightning bolt, shine bloom, embers)
+    // 2. Draw Zeus Thunderstrike Awakening Animation (Ground fractures, sky lightning bolt, shine bloom, embers)
     if (this.activeThunderstrikes && this.activeThunderstrikes.length > 0) {
       for (let i = 0; i < this.activeThunderstrikes.length; i++) {
         drawZeusThunderstrike(ctx, this.activeThunderstrikes[i]);

@@ -1948,8 +1948,8 @@ export const FIGHTER_DEFS = [
     cooldown: creeperConfig.basicAttackCooldown || 65,
     moveSpeed: creeperConfig.moveSpeed || creeperConfig.speed || 4.2,
     projectileSpeedMultiplier: 1.0,
-    ability: 'Tssssss..., TNT Toss & Charged Creeper',
-    desc: creeperConfig.description || 'Iconic silent Minecraft stalker that sneaks up on targets, primes a devastating white-flashing concussive explosion with its signature hiss, tosses volatile bouncing TNT blocks, and channels celestial lightning to awaken as Charged Creeper.',
+    ability: 'Tssssss... (Proximity Fuse) & Charged Creeper',
+    desc: creeperConfig.description || 'Iconic silent Minecraft stalker that sneaks up on targets, primes a devastating white-flashing concussive explosion with its signature fuse hiss upon reaching close proximity (with authentic defuse mechanics if the opponent retreats), sacrificing HP per detonation, and channels celestial lightning to awaken as Charged Creeper.',
   },
   {
     id: 68,

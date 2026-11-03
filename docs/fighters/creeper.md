@@ -3,7 +3,7 @@
 **Category:** Gaming & Sandbox Icon (*Minecraft* by Mojang Studios)  
 **Character ID:** `creeper`  
 **Theme Color:** Foliage Green (`#22C55E`) & Moss Camo (`#15803D`)  
-**Secondary Accents:** Charcoal Frown (`#0F172A`), Charged Plasma Cyan (`#38BDF8`), Gunpowder Slate (`#334155`), TNT Crimson (`#EF4444`), Manga Ink (`#0E0F14`)  
+**Secondary Accents:** Charcoal Frown (`#0F172A`), Charged Plasma Cyan (`#38BDF8`), Gunpowder Slate (`#334155`), Manga Ink (`#0E0F14`)  
 **Role:** Stealth Ambush Nuker, Volatile Area Denier, Supercharged High-Risk Finisher  
 
 ---
@@ -14,7 +14,7 @@
 
 Born from an accidental coding glitch by Notch in 2009 while attempting to model a pig, the **Creeper** has evolved into one of the most feared and recognizable mascots in all of gaming history. Silent, patient, and camouflaged in the verdant hues of the Minecraft overworld, the Creeper stalks its prey with absolute stealth—only breaking silence with the dread-inducing *"Tssssssss..."* of a burning fuse before unleashing a catastrophic explosion.
 
-In the *Circle Mini-Battle* arena, the **Creeper** brings Minecraft's signature ambush tension to fast-paced 60 FPS fighting. Rather than being a one-and-done suicide mob, the Creeper possesses a regenerative **Gunpowder Core**: it can prime and detonate concussive shockwaves repeatedly, throw primed **TNT Blocks** to set up chain reactions, and channel celestial wrath to transform into the legendary **Charged Creeper** when struck by lightning.
+In the *Circle Mini-Battle* arena, the **Creeper** brings Minecraft's authentic proximity ambush tension to fast-paced 60 FPS fighting. Rather than being a one-and-done suicide mob, the Creeper possesses a regenerative **Gunpowder Core**: it stalks targets silently, primes its fuse upon entering close proximity while swelling and white-flashing, defuses if the target escapes or knocks it back, and channels celestial wrath to transform into the legendary **Charged Creeper** when struck by lightning.
 
 ---
 
@@ -40,17 +40,17 @@ Creeper's body model, pixel camouflage grid, iconic frowning face, and four stub
 
 ### 2. Canonical Hands / Stubby Paws (Rule 20 Standard)
 - Creeper has no humanoid arms; its two front stubby feet double as canonical combat extremities positioned symmetrically at `(x: ±r * 0.82, y: +r * 0.38)`.
-- Rendered with `drawPixelHand` using `#22C55E` fill and `#0E0F14` black outline.
+- Rendered with `drawPixelHand` using `#22C55E` fill and `#0E0F14` black outline (`hideHands: true`).
 
-### 3. Priming Inflation & White Flash Animation (Rule 31 Compliant)
-- When priming an explosion, Creeper expands exponentially ($1.0 \to 1.30\times$ visual scale) while flashing solid white (`#FFFFFF`) with escalating frequency ($4\text{Hz} \to 20\text{Hz}$).
-- Smoke and gunpowder particles emit from the crown and feet before detonation.
+### 3. Priming Inflation & Accelerating White Flash Animation (Rule 31 Compliant)
+- When fuse is active, Creeper expands exponentially ($1.0 \to 1.35\times$ visual scale) while flashing solid white (`#FFFFFF`) with accelerating frequency ($4\text{Hz} \to 24\text{Hz}$).
+- Defuses smoothly back down to $1.0\times$ scale if the target escapes or knocks Creeper away.
 
 ### 4. Charged Creeper Electric Aura (Rule 11 & Rule 26 Compliant)
 - When in **Charged State** (Ultimate), Creeper is enveloped in a dynamic electric plasma shield:
   - Concentric translucent cyan discs (`rgba(56, 189, 248, 0.22)`).
   - Rotating polygonal electric arc bands with zero `ctx.shadowBlur` (Rule 11 compliant).
-  - 4 discrete orbiting spark motes following a continuous power curve.
+  - Discrete orbiting spark motes following a continuous power curve.
 
 ---
 
@@ -58,14 +58,14 @@ Creeper's body model, pixel camouflage grid, iconic frowning face, and four stub
 
 | Attribute | Base Value | Charged State Value | Notes |
 | :--- | :--- | :--- | :--- |
-| **HP** | `380` | `380` | Resilient, tanky explosive combatant |
+| **HP** | `380` | `380` | Resilient explosive combatant |
 | **Base Speed** | `4.2` | `5.4` (+`28%`) | Silent stalking pace, surges when charged |
 | **Body Radius ($r$)** | `25px` | `25px` | Universal humanoid collision boundary (Rule 24) |
-| **Basic Attack** | **None (`0`)** | **None (`0`)** | **Suppressed (Rule 23): Sole offensive mechanic is self-detonation** |
+| **Basic Attack** | **None (`0`)** | **None (`0`)** | **Suppressed (Rule 23): Sole offensive mechanic is proximity detonation** |
 | **Self-Detonation HP Cost** | **`65 HP`** | **`75 HP`** | **Creeper sacrifices HP on every concussive self-detonation** |
-| **Explosion Reach** | `135px` | `240px` ($1.85\times$) | Concussive 360° spherical blast |
-| **Explosion Damage** | `90` | `210` ($2.47\times$) | Devastating point-blank nuke with heavy knockback |
-| **TNT Block Damage** | `65` | `130` | Bouncing red-and-white Minecraft hazard |
+| **Explosion Reach** | `135px` | `250px` ($1.85\times$) | Concussive 360° spherical blast |
+| **Explosion Damage** | `95` | `235` ($2.47\times$) | Devastating point-blank nuke with heavy knockback |
+| **Proximity Trigger** | `88px` | `88px` | Begins fuse hiss; defuses if target retreats >120px |
 | **Ultimate Duration** | — | **`20.0s` (`1200 frames`)** | Charged Creeper lightning transformation |
 
 ---
@@ -77,14 +77,22 @@ Creeper's body model, pixel camouflage grid, iconic frowning face, and four stub
                         │          CREEPER ARSENAL KIT             │
                         └────────────────────┬─────────────────────┘
                                              │
-       ┌───────────────────────┬─────────────┴───────────────┬───────────────────────┐
-       ▼                       ▼                             ▼                       ▼
-┌───────────┐           ┌───────────┐                 ┌───────────┐           ┌───────────┐
-│  PASSIVE  │           │  SKILL 1  │                 │  SKILL 2  │           │ ULTIMATE  │
-│  Silent   │           │ "Tssss!"  │                 │ TNT Block │           │  Charged  │
-│  Stalker  │           │ Primed    │                 │   Toss    │           │  Creeper  │
-│  & Core   │           │ Detonation│                 │  Hazard   │           │ Lightning │
-└───────────┘           └───────────┘                 └───────────┘           └───────────┘
+                       ┌─────────────────────┴─────────────────────┐
+                       ▼                                           ▼
+                ┌───────────┐                               ┌───────────┐
+                │  PASSIVE  │                               │ ULTIMATE  │
+                │  Silent   │                               │  Charged  │
+                │  Stalker  │                               │  Creeper  │
+                │  & Core   │                               │ Lightning │
+                └─────┬─────┘                               └───────────┘
+                      │
+                      ▼
+                ┌───────────┐
+                │  SKILL 1  │
+                │ "Tssss!"  │
+                │ Proximity │
+                │   Fuse    │
+                └───────────┘
 ```
 
 ### 1. Passive: Silent Stalker & Gunpowder Regeneration
@@ -94,48 +102,40 @@ Creeper's body model, pixel camouflage grid, iconic frowning face, and four stub
   - **Self-Detonation Vitality Cost**: Every time Creeper explodes himself, he loses **65 HP** (75 HP if Charged).
   - **Death Detonation (Final Retaliation)**: If Creeper's HP drops to 0 (either from enemy damage or self-detonation costs), it enters a 0.75-second uninterruptible hyper-flash and unleashes one last colossal retaliatory explosion before dying!
 
-### 2. Skill 1: "Tssssss..." (Primed Detonation — Sole Offensive Mechanism)
-- **Cooldown**: `3.5s` (`210 frames`)
-- **Execution**:
-  - Creeper halts and coils into tension, rapidly expanding by $+28\%$ while flashing bright white.
+### 2. Skill 1: "Tssssss..." (Proximity Fuse Detonation — Canonical Minecraft Stalking)
+- **Cooldown**: `3.0s` (`180 frames`) between detonations
+- **Trigger Range**: `88px` (~3.5 Minecraft blocks) | **Defuse Range**: `120px` (~4.8 Minecraft blocks)
+- **Fuse Execution**:
+  - Upon closing into proximity (`<= 88px`), Creeper automatically halts, coils into tension, begins swelling ($1.0 \to 1.35\times$), and flashes white with escalating cadence.
   - Plays the iconic *"Tssssssss...!"* fuse hiss audio.
-  - After $0.9\text{s}$ (55 frames), unleashes a massive $135\text{px}$ 360° explosion with heavy directional impulse ($18\text{px/f}$ knockback), screen shake, and dirty gray Minecraft smoke clouds.
-  - Deals $90$ damage to enemies caught in the blast and costs Creeper $65\text{ HP}$ in recoil vitality.
+  - **Authentic Minecraft Defuse / Abort**: If the opponent knocks Creeper back or flees beyond `120px`, **the fuse defuses**! The hiss stops, the body smoothly deflates back to normal size, and Creeper resumes stalking.
+  - If the fuse completes ($0.83\text{s}$ / 50 frames), Creeper unleashes a massive $135\text{px}$ 360° explosion with heavy directional impulse ($18\text{px/f}$ knockback), screen shake, and dirty gray Minecraft smoke clouds.
+  - Deals $95$ damage to enemies caught in the blast and costs Creeper $65\text{ HP}$ in recoil vitality.
 
-### 3. Skill 2: Primed TNT Block Toss
-- **Cooldown**: `7.5s` (`450 frames`)
-- **Execution**:
-  - Creeper launches a red-and-white Minecraft TNT block forward along its aim angle.
-  - The TNT block bounces twice on the arena floor, flashing white with an active fuse timer of 2.2 seconds.
-  - **Chain Reaction**: If the TNT block is caught inside Creeper's own Skill 1 explosion or another blast, it detonates **instantly**, triggering a devastating chained double-nuke!
-
-### 4. Ultimate: Charged Creeper (Lightning Strike Awakening)
-- **Initial Cooldown**: `18.0s` (`1080 frames`) | **Cooldown**: `30.0s`
+### 3. Ultimate: Charged Creeper (Lightning Strike Awakening)
+- **Initial Cooldown**: `18.0s` (`1080 frames`) | **Cooldown**: `30.0s` (`1800 frames`)
 - **Execution**:
   - Creeper raises its head as dark storm clouds gather; a celestial bolt of blue lightning (`thunderstrike.mp3`) blasts directly into its crown!
   - Creeper awakens into **Charged Creeper** for **20 seconds**:
     - Enveloped in the iconic rotating cyan electric plasma matrix (`#38BDF8`).
     - Movement speed increased by $+28\%$.
-    - Skill 1 explosion radius increases to a colossal $240\text{px}$ with supersonic Mach rings (Rule 26) and $210$ damage!
-    - TNT blocks thrown during Charged State become Supercharged Blue TNT with double explosion reach.
+    - Proximity explosion radius increases to a colossal $250\text{px}$ with supersonic Mach rings (Rule 26) and $235$ damage!
     - Enemies within touching proximity take continuous electric arc shock damage.
 
 ---
 
 ## 🔊 Audio & Sound FX Integration
-1. **Fuse Hiss**: Authentic Minecraft `"Tssssssss...!"` fuse sound on Skill 1.
-2. **Explosion Blast**: Low-frequency concussive blast with high-frequency dirt debris crumble.
+1. **Fuse Hiss**: Authentic Minecraft `"Tssssssss...!"` fuse sound on proximity contact (`creeper_fuse`).
+2. **Explosion Blast**: Low-frequency concussive blast with high-frequency dirt debris crumble (`creeper_explode`).
 3. **Lightning Strike**: Dramatic thunder crack (`thunderstrike.mp3`) on Ultimate awakening.
-4. **TNT Bounce**: Crisp wooden block thud on TNT arena impact.
-5. **Melee Headbutt**: Blunt punch impact (`fleshhit.mp3` + `heavypunch2.mp3`).
+4. **Defuse Fading**: Subtle hiss fizzle when the opponent escapes out of range.
 
 ---
 
 ## 📋 File Architecture & Scaffolding Checklist
-- [ ] `js/configs/characters/creeperConfig.js` — Base stats, skill timings, damage, radii, toggles.
-- [ ] `js/entities/fighters/CreeperFighter.js` — Class definition extending `Fighter`, SkillManager registration, detonation physics, TNT block management, Charged Creeper state machine.
-- [ ] `js/graphics/fighters/creeperSkin.js` — Upright Minecraft camo pixel body, frowning face, 4 stubby feet, Layer 1.5 black outline, Charged electric matrix.
-- [ ] `js/graphics/weapons/creeperWeaponGraphics.js` — Primed TNT block rendering, bouncing physics, Minecraft puff particles, Mach shockwaves.
-- [ ] `js/graphics/ui/hudSkillProviders.js` — Rule 18 unified theme color HUD skill bars (`creeper`).
-- [ ] `js/core/config.js` & `js/core/modeConfig.js` — Registration in `FIGHTER_DEFS`, default selection, and character index.
-- [ ] `scripts/testInteractions.mjs` — Test 103 covering Creeper mechanics (detonation, TNT chain reaction, Charged Creeper ultimate, Canvas stack depth).
+- [x] `js/configs/characters/creeperConfig.js` — Base stats, proximity fuse timings, damage, radii, toggles.
+- [x] `js/entities/fighters/CreeperFighter.js` — Class definition extending `Fighter`, SkillManager registration, proximity fuse & defuse state machine, Charged Creeper state machine.
+- [x] `js/graphics/fighters/creeperSkin.js` — Upright Minecraft camo pixel body, frowning face, 4 stubby feet, Layer 1.5 black outline, dynamic swelling & accelerating white flash, Charged electric matrix.
+- [x] `js/graphics/ui/hudSkillProviders.js` — Rule 18 unified theme color HUD skill bars (`creeper`: Silent Stalker, Detonation/Fuse, Charged Creeper).
+- [x] `js/core/config.js` & `js/core/modeConfig.js` — Registration in `FIGHTER_DEFS`, default selection, and character index.
+- [x] `scripts/testInteractions.mjs` — Test 104 covering Creeper mechanics (proximity fuse, defuse/abort on range, detonation, Charged Creeper ultimate, Canvas stack depth).

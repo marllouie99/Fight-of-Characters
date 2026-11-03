@@ -337,14 +337,16 @@ export function drawCreeperSkin(ctx, fighter) {
     _drawChargedMinecraftElectricArmor(ctx, r, fighter);
   }
 
-  // Priming Detonation Visual Inflation (1.0 -> 1.28x)
+  // Priming Detonation Visual Inflation (1.0 -> 1.35x based on fuse progress)
   let inflationScale = 1.0;
-  if (fighter.isPrimingDetonation || fighter.primeDetonationTimer > 0) {
-    const primeP = 1.0 - Math.max(0, (fighter.primeDetonationTimer || 0) / Math.max(1, fighter.maxPrimeTimer || 60));
-    inflationScale = 1.0 + primeP * 0.28;
+  const currentFuse = fighter.fuseTimer !== undefined ? fighter.fuseTimer : (fighter.primeDetonationTimer || 0);
+  const fuseP = Math.max(0, Math.min(1.0, currentFuse / Math.max(1, fighter.maxPrimeTimer || 50)));
+
+  if (fuseP > 0) {
+    inflationScale = 1.0 + fuseP * 0.35;
   } else if (fighter.deathDetonationTimer > 0) {
     const deathP = 1.0 - (fighter.deathDetonationTimer / 45);
-    inflationScale = 1.0 + deathP * 0.32;
+    inflationScale = 1.0 + deathP * 0.35;
   }
   if (inflationScale !== 1.0) {
     ctx.scale(inflationScale, inflationScale);
@@ -394,12 +396,19 @@ export function drawCreeperSkin(ctx, fighter) {
   }
 
   // Priming White Flash Overlay (Iconic Minecraft Blinking White Prime)
-  if (!fighter._isSilhouettePass && (fighter.isPrimingDetonation || fighter.primeDetonationTimer > 0 || fighter.deathDetonationTimer > 0)) {
-    const timer = fighter.primeDetonationTimer || fighter.deathDetonationTimer || 0;
-    const flashTick = Math.sin(timer * 0.45);
+  const isPrimingOrDefusing = fuseP > 0 || fighter.isPrimingDetonation || (fighter.deathDetonationTimer || 0) > 0;
+  if (!fighter._isSilhouettePass && isPrimingOrDefusing) {
+    const flashProgress = (fighter.deathDetonationTimer || 0) > 0
+      ? (1.0 - (fighter.deathDetonationTimer / 45))
+      : fuseP;
+
+    // Accelerating flash frequency as detonation draws near
+    const flashFreq = 4 + flashProgress * 22;
+    const flashTick = Math.sin(flashProgress * Math.PI * flashFreq);
     if (flashTick > 0) {
       ctx.save();
-      ctx.fillStyle = `rgba(255, 255, 255, ${(flashTick * 0.82).toFixed(2)})`;
+      const flashAlpha = Math.min(0.92, (0.45 + flashProgress * 0.50) * flashTick);
+      ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha.toFixed(2)})`;
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();

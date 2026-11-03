@@ -2,11 +2,11 @@
   "project": "Circle Mini-Battle (Fight of Larpers 101)",
   "schemaVersion": "1.0.0",
   "summary": {
-    "totalFiles": 2033,
-    "totalSizeMB": 399.49,
+    "totalFiles": 2056,
+    "totalSizeMB": 399.52,
     "fighterCount": 50,
     "imageFiles": 1390,
-    "audioFiles": 614,
+    "audioFiles": 637,
     "fontFiles": 4
   },
   "fighters": [
@@ -2009,7 +2009,7 @@
       "id": "naoya",
       "sourcePath": "Assets/model/naoya",
       "fileCount": 3,
-      "totalBytes": 4106802,
+      "totalBytes": 3530484,
       "assets": {
         "hair": "Assets/model/naoya/Naoya_hair.png",
         "skin": null,
@@ -3715,6 +3715,22 @@
           "Assets/Sound Effects/BombermanSFX/Walking 1.wav"
         ]
       },
+      "Creeper": {
+        "folder": "Assets/Sound Effects/CreeperSFX",
+        "count": 10,
+        "files": [
+          "Assets/Sound Effects/CreeperSFX/Creeper_death.ogg",
+          "Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg",
+          "Assets/Sound Effects/CreeperSFX/Creeper_hurt1.ogg",
+          "Assets/Sound Effects/CreeperSFX/Creeper_hurt2.ogg",
+          "Assets/Sound Effects/CreeperSFX/Creeper_hurt3.ogg",
+          "Assets/Sound Effects/CreeperSFX/Creeper_hurt4.ogg",
+          "Assets/Sound Effects/CreeperSFX/Explosion1.ogg",
+          "Assets/Sound Effects/CreeperSFX/Explosion2.ogg",
+          "Assets/Sound Effects/CreeperSFX/Explosion3.ogg",
+          "Assets/Sound Effects/CreeperSFX/Explosion4.ogg"
+        ]
+      },
       "Denji": {
         "folder": "Assets/Sound Effects/DenjiSFX",
         "count": 4,
@@ -3723,6 +3739,25 @@
           "Assets/Sound Effects/DenjiSFX/Denji_chainsaw_engine_noise.mp3",
           "Assets/Sound Effects/DenjiSFX/Denji_chainsaw_shred_noise.mp3",
           "Assets/Sound Effects/DenjiSFX/Denji_dash_vocal_noise.mp3"
+        ]
+      },
+      "Enderdragon": {
+        "folder": "Assets/Sound Effects/EnderdragonSFX",
+        "count": 13,
+        "files": [
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt2.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt3.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt4.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg",
+          "Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg"
         ]
       },
       "Escanor": {

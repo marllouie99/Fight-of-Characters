@@ -165,14 +165,18 @@ All sound effects, audio paths, and playback volumes are strictly configured in 
 | Key | File Path | Default Vol | Usage / Event |
 |---|---|---|---|
 | `roar` | `Assets/Sound Effects/Skills/ragescream.mp3` | `1.00` | Void Cataclysm ultimate roar & boss entrance |
-| `fireball` | `Assets/Sound Effects/Skills/redblast.mp3` | `0.85` | Dragon Fireball launch |
-| `fireballImpact` | `Assets/Sound Effects/Skills/purpledeploy.mp3` | `0.90` | Fireball detonation & acid pool deployment |
-| `wingFlap` | `Assets/Sound Effects/Skills/woosh.mp3` | `0.65` | Wing flap acoustic sweep |
-| `swoop` | `Assets/Sound Effects/Skills/dash2.mp3` | `0.90` | Wing Buffet high-speed rushdown |
-| `swoopHit` | `Assets/Sound Effects/Attacks/heavypunch1.mp3` | `0.95` | Heavy kinetic collision on opponent |
+| `fireball` | `Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg` | `0.85` | Authentic Dragon Fireball launch |
+| `fireballImpact` | `Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg` | `0.90` | Fireball detonation & acid pool deployment |
+| `wingFlap` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg` | `0.70` | Wing flap acoustic sweep (primary) |
+| `wingFlap2` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg` | `0.70` | Wing flap acoustic sweep (alternate) |
+| `swoop` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg` | `0.90` | Wing Buffet high-speed rushdown |
+| `swoopHit` | `Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg` | `0.95` | Heavy kinetic collision on opponent |
 | `acidTick` | `Assets/Sound Effects/Attacks/fleshhit.mp3` | `0.50` | Lingering Dragon Breath acid tick |
 | `lightning` | `Assets/Sound Effects/Skills/thunderstrike.mp3` | `0.85` | Void Cataclysm charging arc |
-| `disintegration` | `Assets/Sound Effects/Skills/purpledeploy.mp3` | `1.00` | Defeat sequence void beam explosion |
+| `disintegration` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg` | `1.00` | Defeat sequence void beam explosion |
+| `death` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg` | `1.00` | Authentic Minecraft Ender Dragon death screech |
+| `hurt1..4` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1..4.ogg` | `0.85` | Authentic Minecraft dragon hurt grunts |
+| `explosion1..4` | `Assets/Sound Effects/EnderdragonSFX/Explosion1..4.ogg` | `0.90` | Authentic Minecraft explosion blast variations |
 
 ---
 

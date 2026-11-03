@@ -65,6 +65,12 @@ export class EnderDragonFighter extends Fighter {
     this.immuneToPush = false;
     this.immuneToCC = false;
 
+    // Authentic Minecraft Ender Dragon SFX & Sound Hooks
+    this.suppressFaahDeathSound = true;
+    this.suppressFaahOnDeath = true;
+    this._hurtSoundCooldownTimer = 0;
+    this._wingFlapToggle = false;
+
     // ── General Movement Behavior State (Pillars 1-4) ──
     // Altitude & Simulated 3D Depth
     this.altitude = 1.0; // 0.0 = Grounded, 1.0 = Cruise, 1.7 = High Soaring
@@ -271,6 +277,29 @@ export class EnderDragonFighter extends Fighter {
     } catch (_) {}
   }
 
+  _playWingFlapAudio(defaultVol = 0.70) {
+    this._wingFlapToggle = !this._wingFlapToggle;
+    const key = this._wingFlapToggle ? 'wingFlap' : 'wingFlap2';
+    const fallback = this._wingFlapToggle
+      ? 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg'
+      : 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg';
+    this._playAudio(key, fallback, defaultVol);
+  }
+
+  _playRandomExplosionAudio(defaultVol = 0.90) {
+    const expIdx = Math.floor(Math.random() * 4) + 1;
+    const key = `explosion${expIdx}`;
+    const fallback = `Assets/Sound Effects/EnderdragonSFX/Explosion${expIdx}.ogg`;
+    this._playAudio(key, fallback, defaultVol);
+  }
+
+  _playRandomHurtAudio(defaultVol = 0.85) {
+    const hurtIdx = Math.floor(Math.random() * 4) + 1;
+    const key = `hurt${hurtIdx}`;
+    const fallback = `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt${hurtIdx}.ogg`;
+    this._playAudio(key, fallback, defaultVol);
+  }
+
   _registerSkills() {
     const cfg = this._getConfig();
     this.skills = [
@@ -384,6 +413,7 @@ export class EnderDragonFighter extends Fighter {
     // (Ensures active dragon breath acid pools & afterimages decay naturally when dragon is immobilized)
     this._updateAcidPools(validOpponent);
     this._updateAfterImages();
+    if (this._hurtSoundCooldownTimer > 0) this._hurtSoundCooldownTimer--;
 
     // Dynamic divebomb pushback and pull immunity sync
     const isDivebombActive = this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.isChannelingCataclysm || this.aiState === DRAGON_STATE.CATACLYSM_CHANNEL;
@@ -638,7 +668,7 @@ export class EnderDragonFighter extends Fighter {
 
     // Periodic wing flap sound
     if (Math.random() < 0.018) {
-      this._playAudio('wingFlap', 'Assets/Sound Effects/Skills/woosh.mp3', 0.55);
+      this._playWingFlapAudio(0.55);
     }
 
     // Evaluate Decision Matrix
@@ -737,7 +767,7 @@ export class EnderDragonFighter extends Fighter {
     this.aiState = DRAGON_STATE.PERCH_DESCENT;
     this.targetAltitude = 0.35; // Low skimming altitude
     this.stateTimer = 60;
-    this._playAudio('wingFlap', 'Assets/Sound Effects/Skills/woosh.mp3', 0.80);
+    this._playWingFlapAudio(0.80);
   }
 
   _updatePerchDescent(arena, cfg) {
@@ -817,7 +847,7 @@ export class EnderDragonFighter extends Fighter {
   }
 
   _exhalePerchBreath(opponent, cfg) {
-    this._playAudio('fireball', 'Assets/Sound Effects/Skills/redblast.mp3', 0.65);
+    this._playAudio('fireball', 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg', 0.65);
     const baseAngle = this.gunAngle || 0;
     const count = 3;
     const sourceFighter = this;
@@ -904,7 +934,7 @@ export class EnderDragonFighter extends Fighter {
 
     // Audio & Screen Feedback
     this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 0.95);
-    this._playAudio('wingFlap', 'Assets/Sound Effects/Skills/woosh.mp3', 0.90);
+    this._playWingFlapAudio(0.90);
     triggerGlobalScreenShake(8, 20);
     spawnImpactFlash(this.x, this.y, shockwaveR, '#F5D0FE');
     spawnSparks(this.x, this.y, '#C026D3', 24, 7.0);
@@ -993,7 +1023,7 @@ export class EnderDragonFighter extends Fighter {
 
     // Flap wings sound
     if (Math.random() < 0.02) {
-      this._playAudio('wingFlap', 'Assets/Sound Effects/Skills/woosh.mp3', 0.55);
+      this._playWingFlapAudio(0.55);
     }
 
     // Dynamic state transitions
@@ -1039,7 +1069,7 @@ export class EnderDragonFighter extends Fighter {
     const r = cfg.fireballRadius || 16;
     const sourceFighter = this;
 
-    this._playAudio('fireball', 'Assets/Sound Effects/Skills/redblast.mp3', 0.85);
+    this._playAudio('fireball', 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg', 0.85);
 
     // Spawn fireball projectile
     const proj = {
@@ -1083,7 +1113,7 @@ export class EnderDragonFighter extends Fighter {
         return false;
       },
       detonate() {
-        sourceFighter._playAudio('fireballImpact', 'Assets/Sound Effects/Skills/purpledeploy.mp3', 0.90);
+        sourceFighter._playRandomExplosionAudio(0.90);
         triggerGlobalScreenShake(6, 15);
         spawnImpactFlash(this.x, this.y, cfg.fireballDetonationRadius || 70, '#F5D0FE');
         spawnSparks(this.x, this.y, '#C026D3', 20, 5.0);
@@ -1454,7 +1484,7 @@ export class EnderDragonFighter extends Fighter {
     this.gunAngle = exitAngle;
     this.angle = exitAngle;
 
-    this._playAudio('wingFlap', 'Assets/Sound Effects/Skills/woosh.mp3', 0.85);
+    this._playWingFlapAudio(0.85);
   }
 
   _updateDivebombSetup(opponent, arena, cfg) {
@@ -1871,7 +1901,7 @@ export class EnderDragonFighter extends Fighter {
 
   _applyDivebombWallSlam(victim, damage, knockback, curArena, cfg) {
     this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 1.0);
-    this._playAudio('fireballImpact', 'Assets/Sound Effects/Skills/purpledeploy.mp3', 0.95);
+    this._playRandomExplosionAudio(0.95);
     triggerGlobalScreenShake(14, 26);
     spawnImpactFlash(victim.x, victim.y, 80, '#F5D0FE');
     spawnSparks(victim.x, victim.y, '#EF4444', 24, 9.0);
@@ -1915,7 +1945,7 @@ export class EnderDragonFighter extends Fighter {
 
   _applyDivebombHit(target, damage, knockback, curArena, cfg) {
     this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 1.0);
-    this._playAudio('fireballImpact', 'Assets/Sound Effects/Skills/purpledeploy.mp3', 0.90);
+    this._playRandomExplosionAudio(0.90);
     triggerGlobalScreenShake(10, 24);
     spawnImpactFlash(target.x, target.y, 65, '#F5D0FE');
     spawnSparks(target.x, target.y, '#EF4444', 20, 8.0);
@@ -1992,7 +2022,7 @@ export class EnderDragonFighter extends Fighter {
 
     // Periodic wing flap sound while banking
     if (this.stateTimer % 18 === 0) {
-      this._playAudio('wingFlap', 'Assets/Sound Effects/Skills/woosh.mp3', 0.65);
+      this._playWingFlapAudio(0.65);
     }
 
     // 3. Seamless handoff to patrol or hover
@@ -2024,8 +2054,20 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
+  takeDamage(amount, attacker, opts) {
+    const res = super.takeDamage(amount, attacker, opts);
+    if (res !== false && amount > 4 && this.hp > 0) {
+      if ((this._hurtSoundCooldownTimer || 0) <= 0) {
+        this._playRandomHurtAudio(0.85);
+        this._hurtSoundCooldownTimer = 18;
+      }
+    }
+    return res;
+  }
+
   onDeath() {
     this.interruptAttacks(true);
+    this._playAudio('death', 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg', 1.0);
     super.onDeath();
   }
 

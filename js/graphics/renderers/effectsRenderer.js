@@ -313,7 +313,8 @@ export function drawUltimateChannelingTexts() {
     ctx.font = 'bold 21px "Glast Blitch", Arial';
     ctx.textAlign = 'center';
     ctx.lineJoin = 'round';
-    const textY = -fighter.r - 42 - (Math.sin(now / 150) * 4);
+    const topRadius = fighter.isCurseForm ? (fighter.r || 25) * 2.72 : (fighter.r || 25);
+    const textY = -topRadius - 42 - (Math.sin(now / 150) * 4);
 
     if (outerGlowColor) {
       ctx.strokeStyle = outerGlowColor;
@@ -348,12 +349,17 @@ export function drawUltimateChannelingTexts() {
     const isSukuna = fighter.characterId === 'sukuna' || fighter.type === 'sukuna' || fighter._def?.id === 'sukuna';
     const isYuta = fighter.characterId === 'yuta' || fighter.type === 'yuta' || fighter._def?.id === 'yuta';
     const isMahito = fighter.characterId === 'mahito' || fighter.type === 'mahito' || fighter._def?.id === 'mahito';
+    const isNaoya = fighter.characterId === 'naoya' || fighter.type === 'naoya' || fighter._def?.id === 'naoya';
 
     if (isToji) {
       if ((fighter.ultimatePhase === 'CHANNELING' || (fighter.isChannelingDomain && !fighter.ultimateActive)) && (fighter.timeStopTimer || 0) <= 0) {
         const progress = Math.min(1.0, (fighter.ultimateChargeTimer || 0) / Math.max(1, fighter.ultimateChargeMax || 90));
         renderChannelingText(fighter, 'CURSE INVENTORY', `rgba(160, 64, 255, ${progress})`, progress);
       }
+    } else if (isNaoya && (fighter.isChannelingDomainExpansion || fighter.isChannelingDomain) && (fighter.timeStopTimer || 0) <= 0) {
+      const maxCharge = fighter.domainChargeMax || CONFIG.naoya?.curseDomainChannelFrames || 90;
+      const progress = Math.min(1.0, Math.max(0, (fighter.domainChargeTimer || 0) / Math.max(1, maxCharge)));
+      renderChannelingText(fighter, 'DOMAIN EXPANSION', `rgba(0, 242, 254, ${progress})`, progress, `rgba(118, 224, 66, ${progress * 0.55})`);
     } else if (isMahito && fighter.isChannelingDomainExpansion && (fighter.timeStopTimer || 0) <= 0) {
       const maxCharge = fighter.domainChargeMax || 120;
       const progress = Math.min(1.0, Math.max(0.0, 1.0 - ((fighter.domainChargeTimer || 0) / Math.max(1, maxCharge))));

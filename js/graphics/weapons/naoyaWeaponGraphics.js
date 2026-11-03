@@ -1658,6 +1658,218 @@ export function renderNaoyaDomainBackground(fighter, ctx, isClashSecondary = fal
 }
 
 /**
+ * Draws Gojo / Sukuna-style Domain Expansion Channeling Visual Effects for Curse Naoya
+ * when channeling "Time Cell Moon Palace" (isChannelingDomainExpansion):
+ * 1. Expanding Isometric Ground Summoning Ring + Rotating Dashed Inner Ring (Gojo Standard).
+ * 2. Flowing JJK Cursed Energy Flame Aura Silhouette with Black Ink Brush Contour & Magenta/Cyan/Lime Core (Gojo/Sukuna Standard).
+ * 3. Ascending Cursed Energy Embers & Calligraphy Ink Wisps.
+ * (Rule 11 & Rule 26 Compliant — Zero shadowBlur, Zero radial spokes/cobwebs).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} fighter
+ */
+export function drawCurseNaoyaDomainChannelVFX(ctx, fighter) {
+  if (!fighter || !fighter.isChannelingDomainExpansion) return;
+
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const chargeMax = Math.max(1, fighter.domainChargeMax || cfg.curseDomainChannelFrames || 90);
+  const progress = Math.max(0, Math.min(1.0, (fighter.domainChargeTimer || 0) / chargeMax));
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const isTimeStopped = (fighter.timeStopTimer || 0) > 0;
+  const r = fighter.r || 25;
+  const halfModelH = r * (cfg.curseFormModelLength ?? 5.44) * 0.5;
+
+  // Smooth fade-in and intensity ramp across the 90-frame channeling wind-up
+  const fadeAlpha = progress < 0.15
+    ? (progress / 0.15)
+    : (progress > 0.90 ? Math.max(0.25, 1.0 - (progress - 0.90) / 0.10) : 1.0);
+
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y);
+
+  // ── 1. ISOMETRIC GROUND SUMMONING RING (Gojo / Sukuna Channeling Standard) ──
+  ctx.save();
+  ctx.translate(0, halfModelH * 0.65);
+  ctx.scale(1, 0.40); // Isometric ground perspective matching GojoRenderer.draw
+
+  const ringRadius = 175 * progress;
+  const ringAlpha = Math.max(0, (1.0 - progress * 0.38) * fadeAlpha);
+
+  if (ringRadius > 2) {
+    // Outer soft luminous halo ring (Rule 11 simulated glow without shadowBlur)
+    ctx.strokeStyle = `rgba(0, 242, 254, ${(0.28 * ringAlpha).toFixed(3)})`;
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Primary crisp expanding cyan/lime summoning ring
+    ctx.strokeStyle = `rgba(118, 224, 66, ${(0.85 * ringAlpha).toFixed(3)})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Supersonic white core rim
+    ctx.strokeStyle = `rgba(255, 255, 255, ${(0.70 * ringAlpha).toFixed(3)})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner rotating dashed cursed energy ring (matching GojoRenderer lines 45-53)
+    ctx.save();
+    if (!isTimeStopped) {
+      ctx.rotate(now / 200);
+    }
+    ctx.strokeStyle = `rgba(214, 62, 158, ${(0.72 * fadeAlpha).toFixed(3)})`;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([15, 10]);
+    ctx.beginPath();
+    ctx.arc(0, 0, ringRadius * 0.70, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Counter-rotating inner cyan dashed ring
+    ctx.save();
+    if (!isTimeStopped) {
+      ctx.rotate(-now / 260);
+    }
+    ctx.strokeStyle = `rgba(0, 242, 254, ${(0.58 * fadeAlpha).toFixed(3)})`;
+    ctx.lineWidth = 2.0;
+    ctx.setLineDash([10, 12]);
+    ctx.beginPath();
+    ctx.arc(0, 0, ringRadius * 0.45, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // ── 2. JJK CURSED ENERGY FLAME AURA SILHOUETTE (Gojo / Sukuna Standard) ──
+  // Envelops Curse Naoya's elongated 16-bit biomechanical carapace with flowing black-ink-outlined cursed flames
+  const t = isTimeStopped ? 0 : now * 0.0048;
+  const scaleGrow = 0.86 + Math.sin(progress * Math.PI) * 0.24;
+  const baseRx = r * 1.48 * scaleGrow;
+  const baseRy = halfModelH * 1.06 * scaleGrow;
+  const numPts = 44;
+
+  const traceEllipticalFlamePath = (scaleX, scaleY, yOffset, timeOffset, turbAmp) => {
+    ctx.beginPath();
+    const pts = [];
+    for (let i = 0; i < numPts; i++) {
+      const a = (i / numPts) * Math.PI * 2;
+      const cosA = Math.cos(a);
+      const sinA = Math.sin(a);
+
+      // Upward-licking flame crown factor (strongest at top sinA = -1)
+      const upFactor = Math.max(0, -sinA);
+      const sideFactor = Math.abs(cosA);
+
+      const wave1 = Math.sin(a * 4 + (t + timeOffset) * 2.2) * (4.0 * turbAmp);
+      const wave2 = Math.cos(a * 7 - (t + timeOffset) * 3.1) * (2.6 * turbAmp) * (0.35 + upFactor * 0.85);
+      const wave3 = Math.sin(a * 11 + (t + timeOffset) * 4.4) * (1.5 * turbAmp) * upFactor;
+      const dr = wave1 + wave2 + wave3;
+
+      const flameLift = Math.pow(upFactor, 1.55) * (22 * scaleY) + sideFactor * upFactor * (8 * scaleY);
+      const pinch = Math.pow(upFactor, 2.2) * 0.26;
+
+      const px = cosA * (baseRx * scaleX + dr) * (1.0 - pinch);
+      const py = sinA * (baseRy * scaleY + dr * 1.15) - flameLift + yOffset;
+      pts.push({ x: px, y: py });
+    }
+
+    const firstMidX = (pts[numPts - 1].x + pts[0].x) * 0.5;
+    const firstMidY = (pts[numPts - 1].y + pts[0].y) * 0.5;
+    ctx.moveTo(firstMidX, firstMidY);
+    for (let i = 0; i < numPts; i++) {
+      const curr = pts[i];
+      const next = pts[(i + 1) % numPts];
+      const midX = (curr.x + next.x) * 0.5;
+      const midY = (curr.y + next.y) * 0.5;
+      ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
+    }
+    ctx.closePath();
+  };
+
+  // Layer 2A: Wide Outer Translucent Cursed Energy Halo Wash
+  ctx.save();
+  traceEllipticalFlamePath(1.24, 1.14, -4, 0.0, 1.25);
+  const outerHaloGrad = ctx.createRadialGradient(0, -8, r * 0.4, 0, -12, baseRy * 1.28);
+  if (outerHaloGrad) {
+    outerHaloGrad.addColorStop(0.0, `rgba(0, 242, 254, ${(0.38 * fadeAlpha).toFixed(3)})`);
+    outerHaloGrad.addColorStop(0.55, `rgba(214, 62, 158, ${(0.28 * fadeAlpha).toFixed(3)})`);
+    outerHaloGrad.addColorStop(1.0, 'rgba(118, 224, 66, 0.0)');
+    ctx.fillStyle = outerHaloGrad;
+  } else {
+    ctx.fillStyle = `rgba(0, 242, 254, ${(0.25 * fadeAlpha).toFixed(3)})`;
+  }
+  ctx.fill();
+  ctx.restore();
+
+  // Layer 2B: Solid Black Ink Outer Silhouette Contour (JJK Calligraphy Brush Border)
+  ctx.save();
+  traceEllipticalFlamePath(1.08, 1.05, -2, 0.35, 1.05);
+  ctx.fillStyle = `rgba(5, 7, 12, ${(0.88 * fadeAlpha).toFixed(3)})`;
+  ctx.fill();
+  ctx.lineWidth = 3.2;
+  ctx.strokeStyle = `rgba(0, 242, 254, ${(0.92 * fadeAlpha).toFixed(3)})`;
+  ctx.stroke();
+  ctx.restore();
+
+  // Layer 2C: Vibrant Cursed Energy Inner Flame Body (Cyan -> Lime -> Magenta-Violet)
+  ctx.save();
+  traceEllipticalFlamePath(0.95, 0.96, 0, 0.70, 0.90);
+  const coreGrad = ctx.createLinearGradient(0, -baseRy * 1.15, 0, baseRy * 0.95);
+  if (coreGrad) {
+    coreGrad.addColorStop(0.0, `rgba(0, 242, 254, ${(0.92 * fadeAlpha).toFixed(3)})`);
+    coreGrad.addColorStop(0.45, `rgba(118, 224, 66, ${(0.85 * fadeAlpha).toFixed(3)})`);
+    coreGrad.addColorStop(0.80, `rgba(214, 62, 158, ${(0.88 * fadeAlpha).toFixed(3)})`);
+    coreGrad.addColorStop(1.0, `rgba(14, 15, 20, ${(0.92 * fadeAlpha).toFixed(3)})`);
+    ctx.fillStyle = coreGrad;
+  } else {
+    ctx.fillStyle = `rgba(0, 242, 254, ${(0.85 * fadeAlpha).toFixed(3)})`;
+  }
+  ctx.fill();
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = `rgba(0, 0, 0, ${(0.95 * fadeAlpha).toFixed(3)})`;
+  ctx.stroke();
+  ctx.restore();
+
+  // Layer 2D: Rising Internal Black Ink Calligraphy Wisps & Cursed Sparks
+  ctx.save();
+  ctx.lineCap = 'round';
+  const wispCount = 8;
+  for (let i = 0; i < wispCount; i++) {
+    const phase = ((t * 1.1 + i * (1 / wispCount)) % 1.0);
+    const side = (i % 2 === 0 ? 1 : -1);
+    const radialFrac = 0.55 + (i % 3) * 0.18;
+    const wx = side * baseRx * radialFrac * Math.sin(phase * Math.PI);
+    const wy = baseRy * 0.65 - phase * (baseRy * 1.45);
+    const wispAlpha = Math.sin(phase * Math.PI) * fadeAlpha;
+
+    // Black ink brush stroke wisp
+    ctx.strokeStyle = `rgba(14, 15, 20, ${(0.85 * wispAlpha).toFixed(3)})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(wx, wy + 12);
+    ctx.quadraticCurveTo(wx + side * 6, wy, wx - side * 3, wy - 12);
+    ctx.stroke();
+
+    // Glowing cyan/lime cursed ember dot
+    ctx.fillStyle = i % 2 === 0
+      ? `rgba(0, 242, 254, ${(0.90 * wispAlpha).toFixed(3)})`
+      : `rgba(118, 224, 66, ${(0.90 * wispAlpha).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(wx - side * 2, wy - 14, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.restore();
+}
+
+/**
  * Draws the Mach 3 Speedometer / Overdrive Gauge HUD above Curse Naoya.
  */
 export function drawCurseMachGaugeHUD(ctx, fighter) {

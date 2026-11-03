@@ -6921,6 +6921,27 @@ async function runInteractionTests() {
     assert(testNaoyaObj.isCurseWomb === true, 'Object-based lethal damage ({ damage }) must trigger Cursed Womb cocoon transformation');
     assert(testNaoyaObj.isDead === false, 'Object-based lethal damage must not bypass rebirth');
 
+    // H. Curse Naoya Gojo/Sukuna-style Domain Expansion Channeling & VFX Verification
+    const { drawCurseNaoyaDomainChannelVFX } = await import('../js/graphics/weapons/naoyaWeaponGraphics.js');
+    const { drawUltimateChannelingTexts } = await import('../js/graphics/renderers/effectsRenderer.js');
+    testNaoya.ultCooldown = 0;
+    testNaoya._castTimeCellMoonPalace(gojo);
+    assert(testNaoya.isChannelingDomainExpansion === true, 'Curse Naoya must enter Domain Expansion channeling wind-up upon casting Time Cell Moon Palace');
+    assert(testNaoya.isDomainActive === false, 'Domain Expansion must not be active during channeling wind-up');
+    mockCtx.resetStackDepth();
+    drawCurseNaoyaDomainChannelVFX(mockCtx, testNaoya);
+    assert(mockCtx.getStackDepth() === 0, `drawCurseNaoyaDomainChannelVFX must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+    state.fighters = [testNaoya, gojo];
+    mockCtx.resetStackDepth();
+    drawUltimateChannelingTexts();
+    assert(mockCtx.getStackDepth() === 0, `drawUltimateChannelingTexts for Naoya must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+    for (let f = 0; f < 95; f++) {
+      testNaoya._updateTimeCellMoonPalace(gojo, state.arena);
+    }
+    assert(testNaoya.isChannelingDomainExpansion === false, 'Curse Naoya must finish channeling after curseDomainChannelFrames');
+    assert(testNaoya.isDomainActive === true, 'Curse Naoya Time Cell Moon Palace must unfurl (isDomainActive = true) after channeling completes');
+    testNaoya.isDomainActive = false;
+
     console.log('      ✅ Naoya Vengeful Curse Rebirth: Cursed Womb cocoon incubation & hatching into Awakened Jet Cursed Spirit verified.');
     console.log('      ✅ Naoya Domain Expansion: Time Cell Moon Palace arena PNG overlay and atmospheric void/corona render cleanly with balanced Canvas 2D stack depth across rect & circle arenas.');
     assert(naoya.domainActive === false, 'naoya.domainActive getter must be false after deactivating domain');
@@ -12967,6 +12988,23 @@ async function runInteractionTests() {
     const expectedHpCost = cfg.selfDetonationHpCost || 65;
     assert(creeper.hp === preDetHp - expectedHpCost, `Creeper must lose exactly ${expectedHpCost} HP upon self-detonation (expected ${preDetHp - expectedHpCost}, got ${creeper.hp})`);
     assert(enemy.hp < 1000, 'Enemy within blast radius must take explosion damage');
+
+    // 3.1 Verify Canonical Minecraft Proximity Fuse (< 88px) & Defuse/Abort (> 120px)
+    enemy.x = creeper.x + 60; // 60px distance (within 88px trigger range)
+    enemy.y = creeper.y;
+    creeper.detonationCooldownTimer = 0;
+    creeper.fuseTimer = 0;
+    creeper.isPrimingDetonation = false;
+    creeper._updateProximityFuse(enemy);
+    assert(creeper.isPrimingDetonation === true, 'Creeper must start priming fuse when enemy enters close proximity (<88px)');
+    assert(creeper.fuseTimer > 0, 'fuseTimer must advance while priming');
+
+    // Enemy escapes beyond cancel distance (> 120px)
+    enemy.x = creeper.x + 150; // 150px distance
+    const prevFuse = creeper.fuseTimer;
+    creeper._updateProximityFuse(enemy);
+    assert(creeper.isPrimingDetonation === false, 'Creeper must abort/defuse when enemy retreats beyond cancel distance (>120px)');
+    assert(creeper.fuseTimer < prevFuse, 'fuseTimer must smoothly decrease/deflate when defused');
 
     // 4. Verify Charged Creeper Lightning Awakening & Mode Activation
     creeper.chargedCooldownTimer = 0;

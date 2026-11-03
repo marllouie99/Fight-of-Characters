@@ -912,8 +912,8 @@ export function getCurseNaoyaCachedCanvas(r) {
   return _cachedCurseFighterCanvas;
 }
 
-// ── Curse Form Reference Model Sprite (Assets/model/naoya/Naoya-curse-form.png) ──
-const CURSE_FORM_SPRITE_PATH = 'Assets/model/naoya/Naoya-curse-form.png';
+// ── Curse Form 16-Bit Pixel Art Model Sprite (Assets/model/naoya/Naoya-curse-form.png) ──
+const CURSE_FORM_SPRITE_PATH = 'Assets/model/naoya/Naoya-curse-form.png?v=16bit';
 let _curseFormImage = null;
 let _curseFormImageLoading = false;
 let _curseFormScaledCanvas = null;
@@ -943,47 +943,33 @@ export function _getCurseFormImage() {
 if (typeof window !== 'undefined' && typeof Image !== 'undefined') _getCurseFormImage();
 
 /**
- * Returns a pre-downscaled (multi-step, high quality) copy of the curse form sprite,
- * cached per target size so no expensive large-image resampling happens per frame.
+ * Returns a nearest-neighbor cached 16-bit pixel-art canvas of the curse form sprite,
+ * preserving crisp square pixel blocks (imageSmoothingEnabled = false).
  */
 function _getCurseFormScaledCanvas(lengthPx) {
   const img = _getCurseFormImage();
   if (!img || !img.complete || !img.naturalWidth || typeof document === 'undefined') return null;
-  const targetH = Math.max(8, Math.round(lengthPx));
-  const targetW = Math.max(4, Math.round(targetH * (img.naturalWidth / img.naturalHeight)));
+  const P = 2;
+  const targetH = Math.max(8, Math.round(lengthPx / P) * P);
+  const targetW = Math.max(4, Math.round((targetH * (img.naturalWidth / img.naturalHeight)) / P) * P);
   const key = `${targetW}x${targetH}`;
   if (_curseFormScaledCanvas && _curseFormScaledKey === key) return _curseFormScaledCanvas;
 
-  // Step-down halving for clean anti-aliased line art
-  let src = img;
-  let sw = img.naturalWidth;
-  let sh = img.naturalHeight;
-  while (sw / 2 > targetW * 2) {
-    const step = document.createElement('canvas');
-    step.width = Math.round(sw / 2);
-    step.height = Math.round(sh / 2);
-    const sctx = step.getContext('2d');
-    if (!sctx) break;
-    sctx.imageSmoothingEnabled = true;
-    sctx.drawImage(src, 0, 0, step.width, step.height);
-    src = step; sw = step.width; sh = step.height;
-  }
   const out = document.createElement('canvas');
   out.width = targetW;
   out.height = targetH;
   const octx = out.getContext('2d');
   if (!octx) return null;
-  octx.imageSmoothingEnabled = true;
-  if ('imageSmoothingQuality' in octx) octx.imageSmoothingQuality = 'high';
-  octx.drawImage(src, 0, 0, targetW, targetH);
+  octx.imageSmoothingEnabled = false;
+  octx.drawImage(img, 0, 0, targetW, targetH);
   _curseFormScaledCanvas = out;
   _curseFormScaledKey = key;
   return out;
 }
 
 /**
- * Draws a translucent fading afterimage of Curse Naoya's upright magenta carapace
- * during Mach 3 Propulsion & Flight / Supersonic Ramjet dashes.
+ * Draws a translucent fading 16-bit pixel art afterimage of Curse Naoya's upright magenta carapace
+ * during Mach 3 Propulsion & Flight / Supersonic Ramjet dashes / Domain Flurry Barrages.
  */
 export function drawCurseNaoyaGhostModel(ctx, x, y, r = 25, alpha = 0.45) {
   if (!ctx || alpha <= 0.01) return;
@@ -994,18 +980,16 @@ export function drawCurseNaoyaGhostModel(ctx, x, y, r = 25, alpha = 0.45) {
   ctx.save();
   ctx.translate(x, y);
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.imageSmoothingEnabled = false;
 
   if (sprite) {
-    ctx.imageSmoothingEnabled = true;
-    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
+    ctx.drawImage(sprite, Math.round(-sprite.width / 2), Math.round(-sprite.height / 2));
   } else {
     getCurseNaoyaCachedCanvas(r);
     if (_cachedCurseFighterCanvas) {
       const w = _cachedCurseFighterCanvas.width;
       const h = _cachedCurseFighterCanvas.height;
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(_cachedCurseFighterCanvas, -w / 2, -h / 2, w, h);
+      ctx.drawImage(_cachedCurseFighterCanvas, Math.round(-w / 2), Math.round(-h / 2), w, h);
     } else {
       _renderCurseNaoyaPixelBodyToCanvas(ctx, r);
     }
@@ -1015,7 +999,7 @@ export function drawCurseNaoyaGhostModel(ctx, x, y, r = 25, alpha = 0.45) {
 }
 
 /**
- * Draws Curse Naoya (Awakened Vengeful Cursed Spirit Form) using the exact reference model
+ * Draws Curse Naoya (Awakened Vengeful Cursed Spirit Form) in crisp 16-bit pixel art style
  * (Assets/model/naoya/Naoya-curse-form.png): upright magenta segmented carapace, pointed hood,
  * recessed skull face with glowing eyes and left-eye light streak, dark central vertical cleft,
  * and tapered tail. No detached hands (Curse Naoya has no arms).
@@ -1030,11 +1014,10 @@ export function drawCurseNaoyaSkin(ctx, fighter) {
 
   ctx.save();
   ctx.translate(fighter.x, fighter.y - (fighter.z || 0));
+  ctx.imageSmoothingEnabled = false;
 
   if (sprite) {
-    ctx.imageSmoothingEnabled = true;
-    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
+    ctx.drawImage(sprite, Math.round(-sprite.width / 2), Math.round(-sprite.height / 2));
     ctx.restore();
     return;
   }
@@ -1044,8 +1027,7 @@ export function drawCurseNaoyaSkin(ctx, fighter) {
   if (_cachedCurseFighterCanvas) {
     const w = _cachedCurseFighterCanvas.width;
     const h = _cachedCurseFighterCanvas.height;
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(_cachedCurseFighterCanvas, -w / 2, -h / 2, w, h);
+    ctx.drawImage(_cachedCurseFighterCanvas, Math.round(-w / 2), Math.round(-h / 2), w, h);
   } else {
     _renderCurseNaoyaPixelBodyToCanvas(ctx, r);
   }

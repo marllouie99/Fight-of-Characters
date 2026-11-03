@@ -16,8 +16,8 @@ export const naoyaConfig = {
     curseForm: 'Assets/model/naoya/Naoya-curse-form.png'
   },
 
-  // Curse Form sprite model sizing (vertical height in multiples of r)
-  curseFormModelLength: 5.4,
+  // Curse Form sprite model sizing (vertical height in multiples of r; 25 * 5.44 = 136px = exact 1:1 16-bit grid height)
+  curseFormModelLength: 5.44,
 
   // Base Attributes
   hp: 190,
@@ -84,7 +84,7 @@ export const naoyaConfig = {
   flurryLungeSpeed: 2.5,
   punchDamage: 8,                  // Damage per flurry punch
   punchComboFinisherDamage: 18,    // Bonus damage on the final finisher punch
-  punchCooldown: 30,               // Low cooldown between full flurry bursts (~0.50s)
+  punchCooldown: 500,               // Low cooldown between full flurry bursts (~0.50s)
   punchKnockback: 16,              // Knockback applied ONLY on the final finisher punch
   tantoDamage: 8,                  // Backward compatibility alias
   tantoComboFinisherDamage: 30,
@@ -178,7 +178,7 @@ export const naoyaConfig = {
   cursePunchDamage: 9,
   cursePunchFinisherDamage: 22,
   cursePunchCooldown: 24,           // ⚡ Low cooldown (0.4s) between Curse Form flurry sequences
-  curseDomainFlurryCooldown: 12,    // ⚡ Ultra-low cooldown (0.2s) between flurry sequences inside Time Cell Moon Palace
+  curseDomainFlurryCooldown: 100,    // ⚡ Ultra-low cooldown (0.2s) between flurry sequences inside Time Cell Moon Palace
   curseDomainFlurryIntervalFrames: 5, // ⚡ Faster attack-teleport-attack cadence inside Domain Expansion
 
   // Awakened Skill 1: Mach 3 Propulsion & Flight (Chōsoku Ramjet)
@@ -202,6 +202,7 @@ export const naoyaConfig = {
   // Awakened Ultimate: Domain Expansion — Time Cell Moon Palace (時胞月宮殿 - Tokyū Gesshōkyū)
   enableCurseDomain: 1,
   curseDomainInitialCooldown: 240,   // ⚡ Initial cooldown (4.0s = 240 frames) when transforming into Curse Form before Domain can be opened
+  curseDomainChannelFrames: 90,      // ⚡ Domain Expansion channeling wind-up duration (1.5s = 90 frames, matching Gojo & Sukuna)
   curseUltCooldown: 1200,            // 20.0s (1200 frames)
   curseDomainDurationFrames: 480,    // 8.0s Domain duration
   curseDomainSpeed: 18.5,            // ⚡ Significant movement speed increase while inside Time Cell Moon Palace

@@ -2576,11 +2576,14 @@ export const HUD_SKILL_PROVIDERS = {
           const maxDur = f.domainMaxTimer || cfg.curseDomainDurationFrames || cfg.curseDomainDuration || 480;
           domainPct = Math.max(0, Math.min(100, (rem / maxDur) * 100));
           label = `TIME CELL PALACE (${(rem / 60).toFixed(1)}S)`;
+        } else if (f.isChannelingDomainExpansion) {
+          const chMax = Math.max(1, f.domainChargeMax || cfg.curseDomainChannelFrames || 90);
+          domainPct = Math.max(0, Math.min(100, ((f.domainChargeTimer || 0) / chMax) * 100));
         }
         skills.push({
           id: 'time_cell_moon_palace',
           pct: domainPct,
-          ready: (domainPct >= 99 && domainTimer <= 0) || Boolean(f.isDomainActive),
+          ready: (domainPct >= 99 && domainTimer <= 0) || Boolean(f.isDomainActive || f.isChannelingDomainExpansion),
           color: themeColor,
           label,
           isUltimate: true,
@@ -3193,23 +3196,25 @@ export const HUD_SKILL_PROVIDERS = {
       });
     }
 
-    // 2. Skill 1: "Tssssss..." (Primed Detonation)
+    // 2. Skill 1: "Tssssss..." (Proximity Fuse Detonation)
     if (isSkillEnabled(cfg.enablePrimedDetonation, true)) {
-      const cdMax = f.detonationCooldownMax || cfg.detonationCooldown || 540;
+      const cdMax = f.detonationCooldownMax || cfg.detonationCooldown || 180;
       const cdTimer = f.detonationCooldownTimer || 0;
-      const isPriming = (f.isPrimingDetonation || (f.primeDetonationTimer || 0) > 0);
-      const primeTimer = f.primeDetonationTimer || 0;
-      const primeMax = f.maxPrimeTimer || cfg.primeDurationFrames || 60;
+      const curFuse = f.fuseTimer !== undefined ? f.fuseTimer : (f.primeDetonationTimer || 0);
+      const isPriming = Boolean(f.isPrimingDetonation || curFuse > 0);
+      const primeMax = f.maxPrimeTimer || cfg.primeDurationFrames || 50;
 
       let pct = 100;
       let label = 'DETONATION';
       let ready = false;
 
       if (isPriming) {
-        pct = Math.max(0, Math.min(100, (1 - primeTimer / primeMax) * 100));
+        pct = Math.max(0, Math.min(100, (curFuse / primeMax) * 100));
         ready = true;
-        const primeSec = (primeTimer / 60).toFixed(1);
-        label = `DETONATION (${primeSec}S)`;
+        const secLeft = Math.max(0, (primeMax - curFuse) / 60).toFixed(1);
+        label = f.isPrimingDetonation
+          ? (Number(secLeft) > 0 ? `FUSE (${secLeft}S)` : 'FUSE')
+          : 'DEFUSING';
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
@@ -3230,25 +3235,7 @@ export const HUD_SKILL_PROVIDERS = {
       });
     }
 
-    // 3. Skill 2: Primed TNT Block Toss
-    if (isSkillEnabled(cfg.enableTntToss, true)) {
-      const tntCdMax = f.tntCooldownMax || cfg.tntCooldown || 450;
-      const tntTimer = f.tntCooldownTimer || 0;
-      const tntPct = Math.max(0, Math.min(100, (1 - tntTimer / tntCdMax) * 100));
-      const tntSecLeft = (tntTimer / 60).toFixed(1);
-      const ready = tntTimer <= 0;
-      const label = tntTimer > 0 ? `TNT TOSS (${tntSecLeft}S)` : 'TNT TOSS';
-
-      skills.push({
-        id: 'tnt_toss',
-        pct: tntPct,
-        ready,
-        color: themeColor,
-        label,
-      });
-    }
-
-    // 4. Ultimate: Charged Creeper (Lightning Awakening)
+    // 3. Ultimate: Charged Creeper (Lightning Awakening)
     if (isSkillEnabled(cfg.enableChargedCreeper, true)) {
       const isCharged = Boolean(f.isChargedCreeper || (f.chargedCreeperTimer || 0) > 0);
       const chargedDur = f.chargedDuration || cfg.chargedDuration || 1200;

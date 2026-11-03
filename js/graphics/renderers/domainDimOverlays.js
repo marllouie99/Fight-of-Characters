@@ -1070,6 +1070,23 @@ export function drawNaoyaDomainDimScreen() {
   ctx.fillStyle = `rgba(1, 3, 5, ${(opacity * 0.98).toFixed(3)})`;
   ctx.fillRect(0, 0, w, h);
 
+  // 1B. Gojo / Sukuna-style Radial Cursed Energy Aura Spotlight around Naoya during Domain Channeling
+  if (naoyaFighter && naoyaFighter.isChannelingDomainExpansion) {
+    const screenPos = worldToScreen(naoyaFighter.x, naoyaFighter.y);
+    const chargeMax = Math.max(1, naoyaFighter.domainChargeMax || 90);
+    const chProg = Math.min(1.0, (naoyaFighter.domainChargeTimer || 0) / chargeMax);
+    const spotRadius = 180 + chProg * 160;
+    const spotGrad = createSafeRadialGradient(ctx, screenPos.x, screenPos.y, 10, screenPos.x, screenPos.y, spotRadius);
+    if (spotGrad) {
+      spotGrad.addColorStop(0.0, `rgba(0, 242, 254, ${(opacity * 0.28).toFixed(3)})`);
+      spotGrad.addColorStop(0.45, `rgba(214, 62, 158, ${(opacity * 0.18).toFixed(3)})`);
+      spotGrad.addColorStop(0.75, `rgba(118, 224, 66, ${(opacity * 0.10).toFixed(3)})`);
+      spotGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = spotGrad;
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
   // 2. Left Cosmic Teal Nebula Dust & Atmospheric Gas Clouds
   const leftNebulaDiscs = [
     { x: w * 0.12, y: h * 0.36, r: 230, col: `rgba(0, 160, 175, ${(opacity * 0.14).toFixed(3)})` },

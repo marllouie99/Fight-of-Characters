@@ -24,6 +24,7 @@ import {
   drawCurseAirCompressionBursts,
   drawTimeCellMoonPalaceDomain,
   renderNaoyaDomainBackground,
+  drawCurseNaoyaDomainChannelVFX,
   drawCurseMachGaugeHUD
 } from '../../graphics/weapons/naoyaWeaponGraphics.js';
 import { spawnSparks, spawnImpactFlash, spawnAnimePunchImpactFrame } from '../../graphics/particles/sparkEffect.js';
@@ -72,6 +73,10 @@ export class NaoyaFighter extends Fighter {
     this.turbineInhaleTimer = 0;
     this.turbineInhaleMaxTimer = cfg.curseTurbineInhaleDuration || 18;
     this.isDomainActive = false;
+    this.isChannelingDomainExpansion = false;
+    this.isChannelingDomain = false;
+    this.domainChargeTimer = 0;
+    this.domainChargeMax = cfg.curseDomainChannelFrames || 90;
     this.domainTimer = 0;
     this.domainMaxTimer = cfg.curseDomainDurationFrames || 480;
     this.cellularBleedTimer = 0;
@@ -150,7 +155,7 @@ export class NaoyaFighter extends Fighter {
         canCast: (fighter) => {
           const cfg = CONFIG.naoya || {};
           if (fighter.isCurseForm) {
-            return Boolean(cfg.enableCurseRamjet !== false) && !fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isTurbineInhaling && !fighter.isCurseWomb;
+            return Boolean(cfg.enableCurseRamjet !== false) && !fighter.isChannelingDomainExpansion && !fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isTurbineInhaling && !fighter.isCurseWomb;
           }
           return Boolean(cfg.enableFrameBlitz && cfg.enableFrameBlitz !== 0 && cfg.enableFrameBlitz !== '0' && cfg.enableFrameBlitz !== false) &&
             !fighter.isExecutingFlurry &&
@@ -172,7 +177,7 @@ export class NaoyaFighter extends Fighter {
         canCast: (fighter) => {
           const cfg = CONFIG.naoya || {};
           if (fighter.isCurseForm) {
-            return Boolean(cfg.enableCurseTurbineCannon !== false) && !fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isTurbineInhaling && !fighter.isCurseWomb;
+            return Boolean(cfg.enableCurseTurbineCannon !== false) && !fighter.isChannelingDomainExpansion && !fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isTurbineInhaling && !fighter.isCurseWomb;
           }
           return Boolean(cfg.enableSonicKick && cfg.enableSonicKick !== 0 && cfg.enableSonicKick !== '0' && cfg.enableSonicKick !== false) &&
             !fighter.isExecutingFlurry &&
@@ -197,7 +202,7 @@ export class NaoyaFighter extends Fighter {
         canCast: (fighter) => {
           const cfg = CONFIG.naoya || {};
           if (fighter.isCurseForm) {
-            return Boolean(cfg.enableCurseDomain !== false) && !fighter.isDomainActive && !fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isCurseWomb;
+            return Boolean(cfg.enableCurseDomain !== false) && !fighter.isDomainActive && !fighter.isChannelingDomainExpansion && !fighter.isRamjetCharging && !fighter.isRamjetLunging && !fighter.isCurseWomb;
           }
           const maxStacks = cfg.maxFrameStacks !== undefined ? cfg.maxFrameStacks : 25;
           const isUltEnabled = Boolean(cfg.enableUltimate !== 0 && cfg.enableUltimate !== false && cfg.enableUltimate !== '0');
@@ -278,6 +283,10 @@ export class NaoyaFighter extends Fighter {
     this.isTurbineInhaling = false;
     this.turbineInhaleTimer = 0;
     this.isDomainActive = false;
+    this.isChannelingDomainExpansion = false;
+    this.isChannelingDomain = false;
+    this.domainChargeTimer = 0;
+    this.domainChargeMax = cfg.curseDomainChannelFrames || 90;
     this.domainTimer = 0;
     this.cellularBleedTimer = 0;
 
@@ -822,7 +831,7 @@ export class NaoyaFighter extends Fighter {
    * @param {Object} target
    */
   _castCurseRamjet(target) {
-    if (!target || target.isDead || this.isRamjetCharging || this.isRamjetLunging || this.isCurseWomb) return;
+    if (!target || target.isDead || this.isChannelingDomainExpansion || this.isRamjetCharging || this.isRamjetLunging || this.isCurseWomb) return;
     const cfg = CONFIG.naoya || {};
     this.skill1Cooldown = cfg.curseSkill1Cooldown || 300;
     this.skill1CooldownMax = this.skill1Cooldown;
@@ -960,7 +969,7 @@ export class NaoyaFighter extends Fighter {
    * @param {Object} target
    */
   _castCurseTurbineCannon(target) {
-    if (this.isTurbineInhaling || this.isCurseWomb) return;
+    if (this.isChannelingDomainExpansion || this.isTurbineInhaling || this.isCurseWomb) return;
     const cfg = CONFIG.naoya || {};
     this.skill2Cooldown = cfg.curseSkill2Cooldown || 390;
     this.skill2CooldownMax = this.skill2Cooldown;
@@ -1074,10 +1083,46 @@ export class NaoyaFighter extends Fighter {
    * @param {Object} target
    */
   _castTimeCellMoonPalace(target) {
-    if (this.isDomainActive || this.isCurseWomb) return;
+    if (this.isDomainActive || this.isChannelingDomainExpansion || this.isCurseWomb) return;
     const cfg = CONFIG.naoya || {};
+    const channelFrames = cfg.curseDomainChannelFrames !== undefined ? cfg.curseDomainChannelFrames : 90;
     this.ultCooldown = cfg.curseUltCooldown || 1200;
     this.ultCooldownMax = this.ultCooldown;
+    this.isExecutingFlurry = false;
+    this.isRamjetCharging = false;
+    this.isRamjetLunging = false;
+    this.isTurbineInhaling = false;
+    this.vx = 0;
+    this.vy = 0;
+    this.knockbackVx = 0;
+    this.knockbackVy = 0;
+
+    if (channelFrames <= 0) {
+      this._activateTimeCellMoonPalace();
+      return;
+    }
+
+    // Begin Gojo / Sukuna-style Domain Expansion Channeling Wind-Up
+    this.isChannelingDomainExpansion = true;
+    this.isChannelingDomain = true;
+    this.domainChargeTimer = 0;
+    this.domainChargeMax = channelFrames;
+
+    spawnImpactFlash(this.x, this.y, 45, '#00F2FE');
+    spawnSparks(this.x, this.y, 18, '#76E042');
+    const domSnd = cfg.sounds?.domainExpansion || 'Assets/Sound Effects/Skills/enhance.mp3';
+    audioSystem.playSFX(domSnd, 1.15);
+    triggerGlobalScreenShake(6, 12);
+  }
+
+  /**
+   * Unfurls Domain Expansion: Time Cell Moon Palace upon completing channeling wind-up.
+   */
+  _activateTimeCellMoonPalace() {
+    const cfg = CONFIG.naoya || {};
+    this.isChannelingDomainExpansion = false;
+    this.isChannelingDomain = false;
+    this.domainChargeTimer = 0;
     this.isDomainActive = true;
     this.domainTimer = cfg.curseDomainDurationFrames || 480;
     this.domainMaxTimer = this.domainTimer;
@@ -1087,6 +1132,18 @@ export class NaoyaFighter extends Fighter {
     this.speed = cfg.curseDomainSpeed || 18.5;
     this.shootCooldown = 0;
 
+    // Expanding air-compression / cursed energy shockwave burst upon Domain unfurling
+    if (!this.airCompressionBursts) this.airCompressionBursts = [];
+    this.airCompressionBursts.push({
+      x: this.x,
+      y: this.y,
+      maxRadius: 240,
+      timer: 0,
+      maxTimer: 26
+    });
+
+    spawnImpactFlash(this.x, this.y, 90, '#00F2FE');
+    spawnSparks(this.x, this.y, 30, '#76E042');
     spawnFloatingText(this.x, this.y - this.r - 30, '時胞月宮殿 — TIME CELL MOON PALACE!', '#C8E64A');
     const domSnd = cfg.sounds?.domainExpansion || 'Assets/Sound Effects/Skills/enhance.mp3';
     audioSystem.playSFX(domSnd, 1.25);
@@ -1094,6 +1151,32 @@ export class NaoyaFighter extends Fighter {
   }
 
   _updateTimeCellMoonPalace(opponent, arena) {
+    // 1. Domain Expansion Channeling Wind-Up Phase (Gojo / Sukuna Standard)
+    if (this.isChannelingDomainExpansion) {
+      const cfg = CONFIG.naoya || {};
+      this.hitStunTimer = 0; // Hyper-armor during Domain Expansion channeling
+      this.vx = 0;
+      this.vy = 0;
+      this.knockbackVx = 0;
+      this.knockbackVy = 0;
+      this.domainChargeTimer = (this.domainChargeTimer || 0) + 1;
+      const chargeMax = Math.max(1, this.domainChargeMax || cfg.curseDomainChannelFrames || 90);
+
+      if (this.domainChargeTimer % 8 === 0) {
+        spawnSparks(
+          this.x + (Math.random() - 0.5) * 44,
+          this.y + (Math.random() - 0.5) * 60,
+          3,
+          this.domainChargeTimer % 16 === 0 ? '#00F2FE' : '#76E042'
+        );
+      }
+
+      if (this.domainChargeTimer >= chargeMax) {
+        this._activateTimeCellMoonPalace();
+      }
+      return;
+    }
+
     if (!this.isDomainActive) return;
     const cfg = CONFIG.naoya || {};
     this.domainTimer--;
@@ -1179,6 +1262,7 @@ export class NaoyaFighter extends Fighter {
    * Updates Mach 3 Propulsion & Flight Overdrive Gauge in Curse Form.
    */
   _updateCurseMachOverdrive(arena) {
+    if (this.isChannelingDomainExpansion) return;
     const cfg = CONFIG.naoya || {};
     if (!this.isSkillEnabled(cfg.enableMachGauge, true)) return;
     const moveSpeed = Math.hypot(this.vx, this.vy);
@@ -1259,13 +1343,13 @@ export class NaoyaFighter extends Fighter {
    * @param {Object} opponent
    */
   _updateCurseCombatAI(opponent) {
-    if (!opponent || opponent.isDead || (opponent.hp || 0) <= 0 || this.isExecutingFlurry || this.isRamjetCharging || this.isRamjetLunging || this.isTurbineInhaling || this.isCurseWomb) return;
+    if (!opponent || opponent.isDead || (opponent.hp || 0) <= 0 || this.isChannelingDomainExpansion || this.isExecutingFlurry || this.isRamjetCharging || this.isRamjetLunging || this.isTurbineInhaling || this.isCurseWomb) return;
 
     const dist = Math.hypot(opponent.x - this.x, opponent.y - this.y);
     const cfg = CONFIG.naoya || {};
 
     // 1. Ultimate: Domain Expansion — Time Cell Moon Palace
-    if (this.ultCooldown <= 0 && this.isSkillEnabled(cfg.enableCurseDomain, true) && !this.isDomainActive && dist < 340) {
+    if (this.ultCooldown <= 0 && this.isSkillEnabled(cfg.enableCurseDomain, true) && !this.isDomainActive && !this.isChannelingDomainExpansion && dist < 340) {
       this._castTimeCellMoonPalace(opponent);
       return;
     }
@@ -1526,6 +1610,9 @@ export class NaoyaFighter extends Fighter {
     this.knifeStabTarget = null;
     this.punchAnimTimer = 0;
     if (force) {
+      this.isChannelingDomainExpansion = false;
+      this.isChannelingDomain = false;
+      this.domainChargeTimer = 0;
       clearShutterGlassBreaks();
       this.movementAfterimages = [];
       this.steppedRunwayFrames = [];
@@ -1744,7 +1831,7 @@ export class NaoyaFighter extends Fighter {
    * Executes Primary Attack: Rapid 24 FPS Hypersonic Brawler Punch Flurry Barrage (Attack-Teleport-Attack Sequence)
    */
   shoot(ownerIndex, opponent) {
-    if (this.isCurseWomb) return;
+    if (this.isCurseWomb || this.isChannelingDomainExpansion) return;
     if (
       this.isCaughtInBeam() ||
       this.isExecutingUlt ||
@@ -1801,7 +1888,7 @@ export class NaoyaFighter extends Fighter {
    * Shared across both Human Form and Curse Form / Domain Expansion.
    */
   _updateFlurryBarrage(ownerIndex, arena) {
-    if (!this.isExecutingFlurry || (this.ultBreatherTimer || 0) > 0) return;
+    if (!this.isExecutingFlurry || this.isChannelingDomainExpansion || (this.ultBreatherTimer || 0) > 0) return;
     this.vx = 0;
     this.vy = 0;
     const cfg = CONFIG.naoya || {};
@@ -1897,6 +1984,22 @@ export class NaoyaFighter extends Fighter {
 
     // ── OPTION B: CURSE FORM COMBAT LOOP ──
     if (this.isCurseForm) {
+      // Strictly suppress all attacks, skills, movement, and cooldown triggers while channeling Domain Expansion
+      if (this.isChannelingDomainExpansion) {
+        this.isExecutingFlurry = false;
+        this.isRamjetCharging = false;
+        this.isRamjetLunging = false;
+        this.isTurbineInhaling = false;
+        this.punchAnimTimer = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.knockbackVx = 0;
+        this.knockbackVy = 0;
+        this._updateTimeCellMoonPalace(opponent, arena);
+        this._updateVictimWallPinPhysics(arena);
+        return;
+      }
+
       if (this.skill1Cooldown > 0) this.skill1Cooldown--;
       if (this.skill2Cooldown > 0) this.skill2Cooldown--;
       if (this.ultCooldown > 0) this.ultCooldown--;
@@ -1912,13 +2015,15 @@ export class NaoyaFighter extends Fighter {
       this._updateVictimWallPinPhysics(arena);
       this._updateCurseCombatAI(opponent);
 
-      if (this.isRamjetCharging || this.isTurbineInhaling || this.isExecutingFlurry) {
+      if (this.isChannelingDomainExpansion || this.isRamjetCharging || this.isTurbineInhaling || this.isExecutingFlurry) {
         this.vx = 0;
         this.vy = 0;
       }
 
       // Centralized Movement & Physics Standard + Basic Attack Trigger (Rule 1.2)
-      super.update(opponent, ownerIndex, arena);
+      if (!this.isChannelingDomainExpansion) {
+        super.update(opponent, ownerIndex, arena);
+      }
       return;
     }
 
@@ -2691,6 +2796,7 @@ export class NaoyaFighter extends Fighter {
   isStationarySkillActive() {
     return Boolean(
       this.isCurseWomb ||
+      this.isChannelingDomainExpansion ||
       this.isTurbineInhaling ||
       this.isRamjetCharging ||
       this.isExecutingFlurry ||
@@ -2705,6 +2811,7 @@ export class NaoyaFighter extends Fighter {
   canAim() {
     if (
       this.isCurseWomb ||
+      this.isChannelingDomainExpansion ||
       this.isRamjetCharging ||
       this.isRamjetLunging ||
       this.isTurbineInhaling ||
@@ -3175,6 +3282,11 @@ export class NaoyaFighter extends Fighter {
       drawSonicBoomRing(ctx, sw.x, sw.y, sw.currentRadius, sw.maxRadius, sw.timer / sw.maxTimer, sw.angle || 0);
     }
 
+    // 4B. Draw Gojo / Sukuna-style Domain Expansion Channeling Aura & Ground Summoning Ring
+    if (this.isChannelingDomainExpansion) {
+      drawCurseNaoyaDomainChannelVFX(ctx, this);
+    }
+
     // 5. Draw Main Body Skin (handles cocoon, curse skin, human skin)
     drawNaoyaSkin(ctx, this);
 
@@ -3231,7 +3343,7 @@ export class NaoyaFighter extends Fighter {
    * Demo / Studio attack trigger to preview Naoya's combat skills & Domain Expansion.
    */
   triggerDemoAttack() {
-    if (this.isDomainActive) return;
+    if (this.isDomainActive || this.isChannelingDomainExpansion) return;
     if (this._demoToggle === undefined) this._demoToggle = 0;
     const step = this._demoToggle % 3;
     this._demoToggle++;

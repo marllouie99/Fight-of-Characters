@@ -292,7 +292,30 @@ export const AUDIO_CONFIG = {
   'pacman_eating_big_fruit': 'Assets/Sound Effects/PacmanSFX/PAC-MAN - Eating The Big Fruit.mp3',
   'pacman_eating_ghost': 'Assets/Sound Effects/PacmanSFX/PAC-MAN - Eating The Ghost.mp3',
   'pacman_ghost_turn_to_blue': 'Assets/Sound Effects/PacmanSFX/Ghost - Turn to Blue.mp3',
-  'pacman_death_sound': 'Assets/Sound Effects/PacmanSFX/pac-man-death-sound.mp3'
+  'pacman_death_sound': 'Assets/Sound Effects/PacmanSFX/pac-man-death-sound.mp3',
+
+  // Creeper (Minecraft)
+  'creeper_fuse': 'Assets/Sound Effects/CreeperSFX/Creeper_fuse.ogg',
+  'creeper_explode': 'Assets/Sound Effects/CreeperSFX/Explosion1.ogg',
+  'creeper_death': 'Assets/Sound Effects/CreeperSFX/Creeper_death.ogg',
+  'creeper_hurt1': 'Assets/Sound Effects/CreeperSFX/Creeper_hurt1.ogg',
+  'creeper_hurt2': 'Assets/Sound Effects/CreeperSFX/Creeper_hurt2.ogg',
+  'creeper_hurt3': 'Assets/Sound Effects/CreeperSFX/Creeper_hurt3.ogg',
+  'creeper_hurt4': 'Assets/Sound Effects/CreeperSFX/Creeper_hurt4.ogg',
+
+  // Ender Dragon (Minecraft)
+  'ender_dragon_death': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg',
+  'ender_dragon_flap2': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg',
+  'ender_dragon_flap5': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg',
+  'ender_dragon_hurt1': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1.ogg',
+  'ender_dragon_hurt2': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt2.ogg',
+  'ender_dragon_hurt3': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt3.ogg',
+  'ender_dragon_hurt4': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt4.ogg',
+  'ender_dragon_fireball': 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg',
+  'minecraft_explosion1': 'Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg',
+  'minecraft_explosion2': 'Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg',
+  'minecraft_explosion3': 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg',
+  'minecraft_explosion4': 'Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg'
 };
 
 

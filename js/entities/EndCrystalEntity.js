@@ -331,7 +331,8 @@ export class EndCrystalEntity extends Fighter {
     spawnSparks(this.x, this.y, '#FFFFFF', 12, 4.0);
 
     if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
-      audioSystem.playSFX('Assets/Sound Effects/Attacks/explosion.mp3', 0.95);
+      const expIdx = Math.floor(Math.random() * 4) + 1;
+      audioSystem.playSFX(`Assets/Sound Effects/EnderdragonSFX/Explosion${expIdx}.ogg`, 0.95);
       audioSystem.playSFX('Assets/Sound Effects/Skills/purpledeploy.mp3', 0.80);
     }
 
