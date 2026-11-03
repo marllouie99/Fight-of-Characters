@@ -16148,8 +16148,9 @@ async function runInteractionTests() {
     assert(isagi._hasSoccerBall() === false, 'Isagi must not possess ball when it is far away');
 
     // Verify Isagi maintains natural velocity and does NOT steer towards (420, 420)
-    const initialVx = isagi.vx;
-    const initialVy = isagi.vy;
+    isagi.changeInterval = 999;
+    isagi.vx = -4;
+    isagi.vy = 0;
     isagi.update(dummy, 0, arena);
     // Isagi's movement angle must not artificially snap toward the distant ball
     const angleToBall = Math.atan2(ball.y - isagi.y, ball.x - isagi.x);
@@ -16273,6 +16274,111 @@ async function runInteractionTests() {
     state.fighters = [];
     delete state.getFighterTeam;
     console.log('      ✅ Isagi Yoichi (Blue Lock) natural circle movement, physical kicks upon meeting, elastic deflection, One-Two bounce backs & Direct Volley verified.');
+  }
+
+  // ── TEST: Eye of Cthulhu Servant Minion Pac-Man Ghost Arena Clamping & Containment ──
+  console.log('   Testing Eye of Cthulhu Servant of Cthulhu Pac-Man Ghost Anti-Clipping & Arena Containment...');
+  {
+    const { updateIllusions } = await import('../js/systems/illusionSystem.js');
+    const PacmanClass = FIGHTER_CLASS_MAP['pacman'];
+    const EyeClass = FIGHTER_CLASS_MAP['eye_of_cthulhu'];
+    assert(PacmanClass && EyeClass, 'Pacman and Eye of Cthulhu classes must exist');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    CONFIG.arena = testArena;
+
+    const pacman = new PacmanClass(200, 300, 0);
+    const eye = new EyeClass(350, 400, 1);
+    state.fighters = [pacman, eye];
+    state.getFighterTeam = (idx) => idx;
+
+    // Create a Servant of Cthulhu minion belonging to the Eye
+    const servantR = 12;
+    const servant = {
+      x: 100,
+      y: 280,
+      vx: -4,
+      vy: -4,
+      r: servantR,
+      hp: 100,
+      maxHp: 100,
+      owner: eye,
+      ownerIndex: 1,
+      team: 1,
+      isMinion: true,
+      isIllusion: true,
+      isServantOfCthulhu: true,
+      isGhostTerrain: true,
+      knockbackVx: 0,
+      knockbackVy: 0,
+      applyKnockback(vx, vy) { this.knockbackVx = vx; this.knockbackVy = vy; }
+    };
+    state.illusions = [servant];
+
+    // 1. Pac-Man eats power pellet / activates chomp mode
+    pacman.activateChompMode('powerPellet');
+    assert(servant.isPacmanGhost === true, 'Servant of Cthulhu must be transformed into Pac-Man frightened ghost');
+    assert(servant.pacmanGhostTimer > 0, 'Servant ghost timer must be positive');
+
+    // 2. Drive the ghost toward the top-left corner by placing Pac-Man nearby
+    pacman.x = 120;
+    pacman.y = 300;
+    
+    // Simulate 60 frames of updateIllusions
+    for (let frame = 0; frame < 60; frame++) {
+      updateIllusions();
+      assert(
+        servant.x >= testArena.x + servantR - 0.01 &&
+        servant.x <= testArena.x + testArena.width - servantR + 0.01,
+        `Servant of Cthulhu X (${servant.x}) clipped outside arena bounds [${testArena.x + servantR}, ${testArena.x + testArena.width - servantR}] at frame ${frame}`
+      );
+      assert(
+        servant.y >= testArena.y + servantR - 0.01 &&
+        servant.y <= testArena.y + testArena.height - servantR + 0.01,
+        `Servant of Cthulhu Y (${servant.y}) clipped outside arena bounds [${testArena.y + servantR}, ${testArena.y + testArena.height - servantR}] at frame ${frame}`
+      );
+    }
+
+    // 2b. Natural flight & anti-corner trapping verification:
+    // Place servant in the extreme top-left corner and Pac-Man chasing inward
+    servant.x = testArena.x + servantR + 2;
+    servant.y = testArena.y + servantR + 2;
+    pacman.x = testArena.x + servantR + 45;
+    pacman.y = testArena.y + servantR + 45;
+
+    // Simulate 40 frames: servant must steer naturally out of the corner vertex towards open arena
+    for (let frame = 0; frame < 40; frame++) {
+      updateIllusions();
+    }
+    const distFromTopLeftCorner = Math.hypot(servant.x - (testArena.x + servantR), servant.y - (testArena.y + servantR));
+    assert(distFromTopLeftCorner > 20, 'Servant must steer naturally out of the corner towards open arena');
+    assert(Math.hypot(servant.vx, servant.vy) > 0.5, 'Servant must maintain active evasive flight speed without locking up in corner');
+
+    // 3. Apply strong knockback pointing directly out of the arena
+    servant.knockbackVx = -25;
+    servant.knockbackVy = -25;
+    updateIllusions();
+    assert(
+      servant.x >= testArena.x + servantR && servant.y >= testArena.y + servantR,
+      `Servant of Cthulhu must not clip out of arena during knockback while ghosted (got x=${servant.x}, y=${servant.y})`
+    );
+
+    // 4. Also verify Ruby Fighter identity and skin pipeline
+    const RubyClass = FIGHTER_CLASS_MAP['ruby'];
+    assert(RubyClass, 'RubyFighter class must exist in FIGHTER_CLASS_MAP');
+    const ruby = new RubyClass({ x: 270, y: 480, r: 25 });
+    assert(ruby.characterId === 'ruby', `Ruby must declare characterId === 'ruby' (got ${ruby.characterId})`);
+    assert(typeof ruby.drawSkin === 'function', 'Ruby must define drawSkin method');
+    const mockTestCtx = createMockCtx();
+    ruby.drawSkin(mockTestCtx);
+    assert(mockTestCtx.getStackDepth() === 0, 'drawRubySkin must leave 0 Canvas 2D stack depth');
+
+    // Cleanup
+    state.fighters = [];
+    state.illusions = [];
+    delete state.getFighterTeam;
+    console.log('      ✅ Servant of Cthulhu Pac-Man ghost anti-clipping & arena containment verified.');
   }
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;

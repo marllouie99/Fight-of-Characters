@@ -21,6 +21,8 @@ import { spawnBloodEffect } from '../../graphics/particles/bloodEffect.js';
 export class RubyFighter extends Fighter {
   constructor(def) {
     super(def);
+    this.characterId = 'ruby';
+    this.type = 'ruby';
     this.initStates();
   }
 
@@ -519,6 +521,10 @@ export class RubyFighter extends Fighter {
       }
     }
     
+    drawRubySkin(ctx, this);
+  }
+
+  drawSkin(ctx) {
     drawRubySkin(ctx, this);
   }
 

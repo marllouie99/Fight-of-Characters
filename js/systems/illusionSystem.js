@@ -355,8 +355,8 @@ export function updateIllusions() {
       if (Math.abs(illusion.knockbackVx) <= 0.1) illusion.knockbackVx = 0;
       if (Math.abs(illusion.knockbackVy) <= 0.1) illusion.knockbackVy = 0;
 
-      // Always clamp illusion to arena boundaries even during knockback (except ghost terrain entities)
-      if (arena && !illusion.isGhostTerrain && !illusion.isServantOfCthulhu) {
+      // Always clamp illusion to arena boundaries even during knockback (except ghost terrain entities, unless pacman ghost)
+      if (arena && ((!illusion.isGhostTerrain && !illusion.isServantOfCthulhu) || illusion.isPacmanGhost)) {
         if (illusion.isRika) {
           clampRikaToArena(illusion, arena);
         } else {
@@ -408,42 +408,141 @@ export function updateIllusions() {
         // Suppress all minion attack actions and cooldowns while in ghost state
         illusion.attackCooldown = Math.max(illusion.attackCooldown || 0, 30);
 
-        // Flee away from nearest hostile Pac-Man
+        // Natural Organic Flight & Dynamic Corner-Avoidance Steering
+        const maxSpeed = illusion.moveSpeed || 3.2;
+        const turnRate = illusion.turnRate || 0.08;
+
+        // 1. Identify nearest hostile Pac-Man in active Chomp Mode
         const pacmanFighter = (typeof state !== 'undefined' && Array.isArray(state.fighters))
           ? state.fighters.find(f => f && f.characterId === 'pacman' && f.hp > 0 && (!illusion.owner || !f.isTeammate || !f.isTeammate(illusion.owner)))
           : null;
+
+        let fleeNx = 0;
+        let fleeNy = 0;
+        let panicFactor = 0;
+
         if (pacmanFighter) {
           const dx = illusion.x - pacmanFighter.x;
           const dy = illusion.y - pacmanFighter.y;
           const dist = Math.hypot(dx, dy) || 1;
-          const fleeAngle = Math.atan2(dy, dx);
-          const fleeSpeed = illusion.moveSpeed || 3.0;
-          illusion.vx = Math.cos(fleeAngle) * fleeSpeed;
-          illusion.vy = Math.sin(fleeAngle) * fleeSpeed;
-          illusion.gunAngle = fleeAngle;
-          illusion.angle = fleeAngle;
+          fleeNx = dx / dist;
+          fleeNy = dy / dist;
+          // Panic factor scales with proximity: higher panic when close (< 180px), calm cruise when far (> 260px)
+          panicFactor = Math.max(0.25, Math.min(1.0, (260 - dist) / 140));
+        } else {
+          const curSpd = Math.hypot(illusion.vx || 0, illusion.vy || 0);
+          if (curSpd > 0.1) {
+            fleeNx = (illusion.vx || 0) / curSpd;
+            fleeNy = (illusion.vy || 0) / curSpd;
+          } else {
+            fleeNx = 1;
+            fleeNy = 0;
+          }
+        }
+
+        // 2. Wall & Corner Avoidance Forces (Prevents getting pinned or corner-trapped)
+        let wallFx = 0;
+        let wallFy = 0;
+        let centerNx = 0;
+        let centerNy = 0;
+        let centerBias = 0;
+
+        if (arena) {
+          const eR = illusion.r || 12;
+          const minX = arena.x + eR;
+          const maxX = arena.x + arena.width - eR;
+          const minY = arena.y + eR;
+          const maxY = arena.y + arena.height - eR;
+          const cx = arena.x + arena.width / 2;
+          const cy = arena.y + arena.height / 2;
+
+          const margin = 75; // Wall avoidance buffer zone
+          const distLeft = illusion.x - minX;
+          const distRight = maxX - illusion.x;
+          const distTop = illusion.y - minY;
+          const distBottom = maxY - illusion.y;
+
+          if (distLeft < margin) wallFx += Math.pow((margin - distLeft) / margin, 1.4) * 2.8;
+          if (distRight < margin) wallFx -= Math.pow((margin - distRight) / margin, 1.4) * 2.8;
+          if (distTop < margin) wallFy += Math.pow((margin - distTop) / margin, 1.4) * 2.8;
+          if (distBottom < margin) wallFy -= Math.pow((margin - distBottom) / margin, 1.4) * 2.8;
+
+          // Corner detection: approaching two perpendicular walls simultaneously
+          const nearHoriz = distLeft < margin || distRight < margin;
+          const nearVert = distTop < margin || distBottom < margin;
+          const distFromCenter = Math.hypot(illusion.x - cx, illusion.y - cy);
+          centerNx = (cx - illusion.x) / (distFromCenter || 1);
+          centerNy = (cy - illusion.y) / (distFromCenter || 1);
+
+          if (nearHoriz && nearVert) {
+            // Actively curve towards open arena center to escape the corner pocket
+            centerBias = 1.8;
+          } else if (nearHoriz || nearVert) {
+            centerBias = 0.6;
+          } else {
+            // Gentle arena containment pull in open space
+            centerBias = (distFromCenter / (arena.width * 0.45)) * 0.35;
+          }
+        }
+
+        // 3. Natural Terraria Floating Eye Undulation / Hover Waver
+        illusion.hoverAngle = (illusion.hoverAngle || 0) + (illusion.hoverOrbitSpeed || 0.045);
+        const curAngle = Math.atan2(illusion.vy || 0, illusion.vx || 0) || 0;
+        const waveOffset = Math.sin(illusion.hoverAngle) * 0.7;
+        const perpX = -Math.sin(curAngle) * waveOffset;
+        const perpY = Math.cos(curAngle) * waveOffset;
+
+        // 4. Combine Forces into Desired Velocity
+        let desVx = fleeNx * (1.2 + panicFactor * 1.4) + wallFx + centerNx * centerBias + perpX;
+        let desVy = fleeNy * (1.2 + panicFactor * 1.4) + wallFy + centerNy * centerBias + perpY;
+
+        const desMag = Math.hypot(desVx, desVy);
+        if (desMag > 0.001) {
+          desVx = (desVx / desMag) * maxSpeed;
+          desVy = (desVy / desMag) * maxSpeed;
+        }
+
+        // 5. Smooth Inertia Steering & Natural Deceleration
+        illusion.vx = (illusion.vx || 0) + (desVx - (illusion.vx || 0)) * turnRate;
+        illusion.vy = (illusion.vy || 0) + (desVy - (illusion.vy || 0)) * turnRate;
+
+        // Speed limit
+        const spd = Math.hypot(illusion.vx, illusion.vy);
+        if (spd > maxSpeed) {
+          illusion.vx = (illusion.vx / spd) * maxSpeed;
+          illusion.vy = (illusion.vy / spd) * maxSpeed;
         }
 
         illusion.x += illusion.vx;
         illusion.y += illusion.vy;
 
-        // Keep inside arena bounds
+        // 6. Smooth Facing Orientation (Minion looks in direction of actual flight)
+        const moveAngle = Math.atan2(illusion.vy, illusion.vx);
+        illusion.gunAngle = moveAngle;
+        illusion.angle = moveAngle;
+
+        // 7. Strict Arena Boundary Clamping & Gentle Wall Deflection
         if (arena) {
-          const cx = arena.x + arena.width / 2;
-          const cy = arena.y + arena.height / 2;
-          const ar = (arena.radius || (arena.width / 2));
-          const maxLeash = ar - (illusion.r || 10) - 10;
-          const distFromC = Math.hypot(illusion.x - cx, illusion.y - cy);
-          if (distFromC > maxLeash && distFromC > 0) {
-            const nx = (cx - illusion.x) / distFromC;
-            const ny = (cy - illusion.y) / distFromC;
-            illusion.vx += nx * 1.5;
-            illusion.vy += ny * 1.5;
+          const eR = illusion.r || 12;
+          const minX = arena.x + eR;
+          const maxX = arena.x + arena.width - eR;
+          const minY = arena.y + eR;
+          const maxY = arena.y + arena.height - eR;
+
+          if (illusion.x <= minX) {
+            illusion.x = minX;
+            if (illusion.vx < 0) illusion.vx = -illusion.vx * 0.5;
+          } else if (illusion.x >= maxX) {
+            illusion.x = maxX;
+            if (illusion.vx > 0) illusion.vx = -illusion.vx * 0.5;
           }
-          if (!illusion.isGhostTerrain) {
-            const eR = illusion.r || 15;
-            illusion.x = Math.max(arena.x + eR, Math.min(arena.x + arena.width - eR, illusion.x));
-            illusion.y = Math.max(arena.y + eR, Math.min(arena.y + arena.height - eR, illusion.y));
+
+          if (illusion.y <= minY) {
+            illusion.y = minY;
+            if (illusion.vy < 0) illusion.vy = -illusion.vy * 0.5;
+          } else if (illusion.y >= maxY) {
+            illusion.y = maxY;
+            if (illusion.vy > 0) illusion.vy = -illusion.vy * 0.5;
           }
         }
         continue; // Ghost state: skip normal attack execution and minion AI

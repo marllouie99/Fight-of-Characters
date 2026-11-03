@@ -1544,7 +1544,7 @@ export function updateFighters() {
               entity.vx -= dotIll * nx;
               entity.vy -= dotIll * ny;
             }
-          } else if (entity.isTurret || entity.isDispenser || entity.isChannelingBankai || (entity.bankaiBurstTimer && entity.bankaiBurstTimer > 0) || (entity.isChannelingGetsuga && entity.isFinalMassiveGetsuga) || (entity.hollowMaskFormationTimer && entity.hollowMaskFormationTimer > 0) || (entity.hollowBurstTimer && entity.hollowBurstTimer > 0) || entity.isGhostTerrain || entity.isServantOfCthulhu) {
+          } else if (entity.isTurret || entity.isDispenser || entity.isChannelingBankai || (entity.bankaiBurstTimer && entity.bankaiBurstTimer > 0) || (entity.isChannelingGetsuga && entity.isFinalMassiveGetsuga) || (entity.hollowMaskFormationTimer && entity.hollowMaskFormationTimer > 0) || (entity.hollowBurstTimer && entity.hollowBurstTimer > 0) || (!entity.isPacmanGhost && (entity.isGhostTerrain || entity.isServantOfCthulhu))) {
             fighter.x -= nx * overlap;
             fighter.y -= ny * overlap;
           } else {
@@ -1559,7 +1559,7 @@ export function updateFighters() {
           if (arena) {
             if (entity.isRika) {
               clampRikaToArena(entity, arena);
-            } else if (!entity.isGhostTerrain && !entity.isServantOfCthulhu) {
+            } else if ((!entity.isGhostTerrain && !entity.isServantOfCthulhu) || entity.isPacmanGhost) {
               const eR = entity.r || 20;
               entity.x = Math.max(arena.x + eR, Math.min(arena.x + arena.width - eR, entity.x));
               entity.y = Math.max(arena.y + eR, Math.min(arena.y + arena.height - eR, entity.y));

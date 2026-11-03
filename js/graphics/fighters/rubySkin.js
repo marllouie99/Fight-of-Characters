@@ -69,13 +69,13 @@ export function _drawRubyHair(ctx, r, facingLeft = false) {
   const flipY = custom.flipY ? -1 : 1;
 
   // Ruby-hair.png is 560x712.
-  // Aperture vertical center is at Y = 530.
+  // Aperture vertical center is at Y = 547.
   const targetW = r * 3.4 * wMult;
   const scale = targetW / 560;
   const drawW = targetW;
   const drawH = 712 * scale * hMult;
   const drawX = -drawW / 2 + offX;
-  const drawY = -(530 * scale) + offY;
+  const drawY = -(547 * scale) + offY;
 
   if (rot !== 0 || flipX !== 1 || flipY !== 1) {
     ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
@@ -89,45 +89,32 @@ export function _drawRubyHair(ctx, r, facingLeft = false) {
   ctx.restore();
 }
 
+let _cachedRubyBodyCanvas = null;
+let _cachedRubyBodyR = 0;
+
 /**
- * Main Skin Renderer for Ruby (Little Red Hood)
- * Renders the full Rule 24 body model + Rule 22 Red Hood & Hair.
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} fighter
+ * Procedural Pixel Art Render Function (Renders once to offscreen cache).
+ * Adheres strictly to Rule 24 (Toji Reference Standard) & Rule 3.5:
+ * - Stepped dark outer circle stroke (#0E0F14)
+ * - Fair anime face dome (#FFE8D6)
+ * - Gothic black corset bodice with central crimson lace trim (#880E4F / #161720)
+ * - Crimson sash waistband (#C2185B)
+ * - Lower gothic skirt (#161720)
  */
-export function drawRubySkin(ctx, fighter) {
-  const r = fighter.r || 25;
-  const isPodiumPreview = Boolean(fighter._isWinnerReveal);
-  const now = Date.now();
-
-  const isSuppressed = !isPodiumPreview && Boolean(
-    fighter.isTargetOfAmbush ||
-    (typeof fighter.areAttackEffectsSuppressed === 'function' && fighter.areAttackEffectsSuppressed())
-  );
-
-  ctx.save();
-  ctx.translate(fighter.x, fighter.y);
-
-  // 1. Standard Upright Orientation & Local Angle Transforms (Rule 19)
-  const angle = isPodiumPreview ? 0 : (fighter.gunAngle || 0);
-  ctx.rotate(angle);
-
-  const facingLeft = Math.abs(angle) > Math.PI / 2;
-  if (facingLeft) {
-    ctx.scale(1, -1);
-  }
-
-  // 2. LAYER 1: Central Body Circle (Fair Skin Base & Gothic Dress)
+function _renderRubyPixelBodyToCanvas(destCtx, r) {
+  destCtx.save();
+  destCtx.imageSmoothingEnabled = false;
+  destCtx.translate(destCtx.canvas.width / 2, destCtx.canvas.height / 2);
   const P = 2.0;
   const steps = Math.ceil((r + P) / P);
 
   // Body Palette (Toji / Manga Standard)
   const C_INK = '#0E0F14';
-  const C_SKIN = '#FFE8D6';       // Fair anime face dome
+  const C_SKIN = '#FFE8D6';        // Fair anime face dome
   const C_SKIN_SHADOW = '#F2CCB6';
   const C_CORSET_BLACK = '#161720';// Gothic black corset / bodice
-  const C_CORSET_TRIM = '#880E4F'; // Crimson trim
-  const C_SASH_RED = '#C2185B';   // Waistband sash
+  const C_CORSET_TRIM = '#880E4F';  // Crimson trim
+  const C_SASH_RED = '#C2185B';    // Waistband sash
 
   for (let gy = -steps; gy <= steps; gy++) {
     for (let gx = -steps; gx <= steps; gx++) {
@@ -148,34 +135,84 @@ export function drawRubySkin(ctx, fighter) {
       );
 
       if (isBorder) {
-        ctx.fillStyle = C_INK;
-        ctx.fillRect(px, py, P, P);
+        destCtx.fillStyle = C_INK;
+        destCtx.fillRect(px, py, P, P);
       } else {
         // Vertical Zoning (Toji standard)
         // Zone 1: Pure Face Dome (ry < r * 0.28)
         if (ry < r * 0.28) {
-          ctx.fillStyle = (Math.abs(rx) > r * 0.70) ? C_SKIN_SHADOW : C_SKIN;
+          destCtx.fillStyle = (Math.abs(rx) > r * 0.70) ? C_SKIN_SHADOW : C_SKIN;
         }
         // Zone 2: Gothic Corset Bodice (r * 0.28 <= ry < r * 0.65)
         else if (ry < r * 0.65) {
           if (Math.abs(rx) <= P) {
-            ctx.fillStyle = C_CORSET_TRIM; // Center crimson corset lace seam
+            destCtx.fillStyle = C_CORSET_TRIM; // Center crimson corset lace seam
           } else {
-            ctx.fillStyle = C_CORSET_BLACK;
+            destCtx.fillStyle = C_CORSET_BLACK;
           }
         }
         // Zone 3: Waistband Sash (r * 0.65 <= ry < r * 0.78)
         else if (ry < r * 0.78) {
-          ctx.fillStyle = C_SASH_RED;
+          destCtx.fillStyle = C_SASH_RED;
         }
         // Zone 4: Lower Gothic Skirt (ry >= r * 0.78)
         else {
-          ctx.fillStyle = C_CORSET_BLACK;
+          destCtx.fillStyle = C_CORSET_BLACK;
         }
-        ctx.fillRect(px, py, P, P);
+        destCtx.fillRect(px, py, P, P);
       }
     }
   }
+  destCtx.restore();
+}
+
+export function drawRubyPixelBody(ctx, r) {
+  if (typeof document === 'undefined') return;
+  const intR = Math.round(r);
+  if (!_cachedRubyBodyCanvas || _cachedRubyBodyR !== intR) {
+    const P = 2.0;
+    const steps = Math.ceil((intR + P) / P);
+    const size = (steps * 2 + 1) * P;
+    _cachedRubyBodyCanvas = document.createElement('canvas');
+    _cachedRubyBodyCanvas.width = size;
+    _cachedRubyBodyCanvas.height = size;
+    const cctx = _cachedRubyBodyCanvas.getContext('2d');
+    _renderRubyPixelBodyToCanvas(cctx, intR);
+    _cachedRubyBodyR = intR;
+  }
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedRubyBodyCanvas.width;
+  ctx.drawImage(_cachedRubyBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+/**
+ * Main Skin Renderer for Ruby (Little Red Hood)
+ * Renders the full Rule 24 body model + Rule 22 Red Hood & Hair.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} fighter
+ */
+export function drawRubySkin(ctx, fighter) {
+  const r = fighter.r || 25;
+  const isPodiumPreview = Boolean(fighter._isWinnerReveal);
+
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y);
+
+  // 1. Standard Upright Orientation & Local Angle Transforms (Rule 19)
+  const angle = isPodiumPreview ? 0 : (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
+  const normAngle = Math.atan2(Math.sin(angle), Math.cos(angle));
+  ctx.rotate(angle);
+
+  const facingLeft = Math.abs(normAngle) > Math.PI / 2;
+  if (facingLeft && !fighter.isSpinning && !fighter.passiveSpinActive) {
+    ctx.scale(1, -1);
+  }
+
+  // 2. LAYER 1: Procedural Pixel-Art Body via Offscreen Canvas (Rule 24 / Rule 3.5)
+  drawRubyPixelBody(ctx, r);
 
   // 3. LAYER 2: Ruby's Red Hood & Choppy Hair (Assets/model/ruby/Ruby-hair.png)
   _drawRubyHair(ctx, r, facingLeft);
@@ -183,6 +220,7 @@ export function drawRubySkin(ctx, fighter) {
   // 4. LAYER 3: Symmetrical Canonical Default Hands (Rule 20)
   // Positioned symmetrically at lower flanks: Left (-r * 0.82, +r * 0.38), Right (+r * 0.82, +r * 0.38)
   const handRadius = getHandSize(r * 0.30);
+  const C_SKIN = '#FFE8D6';
   drawPixelHand(ctx, -r * 0.82, r * 0.38, handRadius, C_SKIN);
   drawPixelHand(ctx, r * 0.82, r * 0.38, handRadius, C_SKIN);
 
