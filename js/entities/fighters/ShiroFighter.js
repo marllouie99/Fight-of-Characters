@@ -376,6 +376,9 @@ export class ShiroFighter extends Fighter {
       blankBuffTimer: 0,
       blankBuffMaxTimer: shiroConfig.blankBuffDuration || 240,
       isBuffed: false,
+      owner: this,
+      damageNumberColor: this.getDamageNumberColor(),
+      getDamageNumberColor: (opts) => this.getDamageNumberColor(opts),
       takeDamage(amount) {
         this.hp -= amount;
         if (this.hp <= 0) {
@@ -1276,7 +1279,7 @@ export class ShiroFighter extends Fighter {
               if (target.isBomb || target.type === 'bomb') continue;
               if (this._isChessMinionTarget(target)) {
                 if (this._captureEnemyChessMinion(target)) {
-                  spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, '#38BDF8');
+                  spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, this.getDamageNumberColor());
                 }
                 continue;
               }
@@ -1347,7 +1350,7 @@ export class ShiroFighter extends Fighter {
               if (target.isBomb || target.type === 'bomb') continue;
               if (this._isChessMinionTarget(target)) {
                 if (this._captureEnemyChessMinion(target)) {
-                  spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, '#38BDF8');
+                  spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, this.getDamageNumberColor());
                 }
                 continue;
               }
@@ -1442,7 +1445,7 @@ export class ShiroFighter extends Fighter {
               if (this._isChessMinionTarget(target)) {
                 if (this._captureEnemyChessMinion(target)) {
                   this._recordPawnDamage(troop);
-                  spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, '#38BDF8');
+                  spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, this.getDamageNumberColor());
                 }
                 continue;
               }
@@ -1459,7 +1462,7 @@ export class ShiroFighter extends Fighter {
               }
               target.applyHitStun?.(aoeStun);
               const hitLabel = isBuffedHit ? `PAWN AOE! -${finalAoeDmg} (PREDICTED)` : `PAWN AOE! -${aoeDmg}`;
-              const hitColor = isBuffedHit ? '#FCD34D' : '#38BDF8';
+              const hitColor = isBuffedHit ? '#FCD34D' : this.getDamageNumberColor();
               spawnFloatingText(target.x, target.y - 15, hitLabel, hitColor);
             }
           } else if (this._isChessMinionTarget(attackTarget)) {
@@ -1467,7 +1470,7 @@ export class ShiroFighter extends Fighter {
               const hitDist = Math.hypot(attackTarget.x - troop.x, attackTarget.y - troop.y);
               if (this._isEnemyChessTarget(attackTarget) && hitDist <= troop.radius + (attackTarget.r || 25) + 35) {
                 if (this._captureEnemyChessMinion(attackTarget)) {
-                  spawnFloatingText(attackTarget.x, attackTarget.y - 15, `${(attackTarget.name || attackTarget.type || 'MINION').toString().toUpperCase()} CAPTURED!`, '#38BDF8');
+                  spawnFloatingText(attackTarget.x, attackTarget.y - 15, `${(attackTarget.name || attackTarget.type || 'MINION').toString().toUpperCase()} CAPTURED!`, this.getDamageNumberColor());
                   if (troop.type === 'bishop') {
                     this.activeVisualEffects.push({
                       type: 'bishop_slash',

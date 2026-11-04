@@ -184,21 +184,24 @@ function _renderIsagiPixelBodyToCanvas(destCtx, r) {
         else if (ry >= r * 0.42 && ry <= r * 0.52 && rx >= -r * 0.32 && rx <= -r * 0.14 && (Math.abs(rx - Math.round(-r * 0.26 / P) * P) < P * 0.6 || Math.abs(rx - Math.round(-r * 0.18 / P) * P) < P * 0.6)) {
           destCtx.fillStyle = '#FFFFFF';
         }
-        // Flank athletic Electric Cyan racing stripes
-        else if (Math.abs(rx) >= r * 0.70 && Math.abs(rx) <= r * 0.82) {
-          destCtx.fillStyle = '#00F0FF';
+        // NOTE: No flank racing stripes here — vertical accents at |rx| ≈ 0.70r visually pinch the torso
+        // and make Isagi read slimmer than the Toji/Gojo/Sukuna trio (Rule 24 full-width Zone 2).
+        // Shoulder highlight band (gives the upper torso full-width volume under the side locks)
+        else if (ry < r * 0.42 && Math.abs(rx) >= r * 0.52) {
+          destCtx.fillStyle = '#3A4D72';
         }
         // Pectoral / chest highlights
         else if (Math.abs(rx) >= r * 0.14 && Math.abs(rx) <= r * 0.38 && ry >= r * 0.40 && ry <= r * 0.52) {
-          destCtx.fillStyle = '#3A4D6E';
+          destCtx.fillStyle = '#425A84';
         }
         // Lower shirt seam shadow
         else if (ry > r * 0.60) {
-          destCtx.fillStyle = '#1A2332';
+          destCtx.fillStyle = '#222E46';
         }
-        // Main bodysuit fabric (Rich athletic navy, luminance Y >= 28 against #0E0F14 outer ink border - Rule 24)
+        // Main bodysuit fabric (Blue Lock navy, lifted luminance so it separates from the navy hair
+        // and the #0E0F14 outer ink border - Rule 24)
         else {
-          destCtx.fillStyle = '#27344C';
+          destCtx.fillStyle = '#30426A';
         }
         destCtx.fillRect(px, py, P, P);
       }
@@ -224,9 +227,9 @@ function _renderIsagiPixelBodyToCanvas(destCtx, r) {
         if (Math.abs(rx) <= P * 0.5 && ry <= r * 0.84) {
           destCtx.fillStyle = '#1E283A';
         }
-        // Shorts side cyan racing stripes
-        else if (Math.abs(rx) >= r * 0.70) {
-          destCtx.fillStyle = '#00F0FF';
+        // Shorts hem cyan trim (horizontal, full width — never vertical flank stripes that pinch the silhouette)
+        else if (ry >= r * 0.90) {
+          destCtx.fillStyle = '#00C8E0';
         }
         // Deep fold pleat shadow
         else if (Math.abs(rx) >= r * 0.30 && Math.abs(rx) <= r * 0.40) {

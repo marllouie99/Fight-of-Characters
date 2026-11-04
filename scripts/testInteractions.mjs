@@ -17429,6 +17429,55 @@ async function runInteractionTests() {
     console.log('      ✅ Blue Lock Universal EGO Awakening, Potential Buffs & Chigiri speed boost standard verified cleanly.');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 🧪 TEST 128: Shiro Damage Number Color Theme Consistency Standard
+  // ─────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 128: Shiro Damage Number Color Theme Consistency Standard...');
+    const { shiroConfig } = await import('../js/configs/characters/shiroConfig.js');
+    const ShiroClass = FIGHTER_CLASS_MAP['shiro'];
+    const { Fighter, resolveDamageNumberColor } = await import('../js/entities/fighter.js');
+
+    assert(shiroConfig, 'shiroConfig must exist');
+    assert(ShiroClass, 'ShiroFighter class must exist');
+    assert(shiroConfig.damageNumberColor === '#8B5CF6', `shiroConfig.damageNumberColor must be #8B5CF6 (Royal Violet), got ${shiroConfig.damageNumberColor}`);
+
+    const shiro = new ShiroClass({ x: 200, y: 300, hp: 340, maxHp: 340 });
+    const target = new Fighter({ x: 350, y: 300, hp: 600, maxHp: 600, radius: 25 });
+    shiro.team = 0;
+    target.team = 1;
+    state.fighters = [shiro, target];
+    state.arena = { x: 45, y: 240, width: 450, height: 450 };
+
+    // 1. Fighter Properties and getDamageNumberColor() audit
+    assert(shiro.damageNumberColor === '#8B5CF6', `Shiro damageNumberColor must be #8B5CF6, got ${shiro.damageNumberColor}`);
+    assert(shiro.getDamageNumberColor() === '#8B5CF6', `Shiro getDamageNumberColor() must return #8B5CF6, got ${shiro.getDamageNumberColor()}`);
+    assert(resolveDamageNumberColor(shiro) === '#8B5CF6', `resolveDamageNumberColor(shiro) must return #8B5CF6, got ${resolveDamageNumberColor(shiro)}`);
+
+    // 2. Target taking direct damage from Shiro
+    state.floatingTexts = [];
+    target.takeDamage(24, shiro);
+    const lastFloatingText = state.floatingTexts.at(-1);
+    assert(lastFloatingText, 'Floating text must be spawned on damage');
+    assert(lastFloatingText.color === '#8B5CF6', `Floating text color must match Shiro theme color #8B5CF6, got ${lastFloatingText.color}`);
+    assert(lastFloatingText.color !== '#38BDF8', 'Floating text color must NEVER be cyan #38BDF8');
+
+    // 3. Chess Troop summon inherits Shiro damage number color
+    shiro.gunAngle = 0;
+    shiro.shootCooldown = 0;
+    shiro._flickChessTroop(target);
+    const troop = shiro.activeMinions[0];
+    assert(troop, 'Shiro must flick a chess troop');
+    assert(troop.damageNumberColor === '#8B5CF6', `Troop damageNumberColor must be #8B5CF6, got ${troop.damageNumberColor}`);
+    assert(troop.getDamageNumberColor() === '#8B5CF6', `Troop getDamageNumberColor() must return #8B5CF6, got ${troop.getDamageNumberColor()}`);
+    assert(resolveDamageNumberColor(troop) === '#8B5CF6', `resolveDamageNumberColor(troop) must return #8B5CF6, got ${resolveDamageNumberColor(troop)}`);
+
+    // Clean up
+    state.fighters = [];
+    state.floatingTexts = [];
+    console.log('      ✅ Shiro Damage Number Color Theme Consistency Standard verified cleanly.');
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');
