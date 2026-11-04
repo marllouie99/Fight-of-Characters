@@ -3640,6 +3640,102 @@ export const HUD_SKILL_PROVIDERS = {
 
     return skills;
   },
+  chigiri(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.chigiri) ? CONFIG.chigiri : {};
+    const themeColor = f.color || cfg.themeColor || '#EC4899';
+    const skills = [];
+
+    // Skill 1: Panther Sprint (Mach Breakaway Dash & Post-Dash Speed Surge)
+    if (isSkillEnabled(cfg.enablePantherSprint, true)) {
+      const cdMax = cfg.pantherSprintCooldown || 240;
+      const cdTimer = f.pantherSprintCooldownTimer || 0;
+      let pct = 100;
+      let ready = true;
+      let label = 'PANTHER SPRINT';
+
+      if ((f.pantherSpeedBuffTimer || 0) > 0) {
+        pct = Math.max(0, Math.min(100, ((f.pantherSpeedBuffTimer || 0) / (cfg.pantherSprintSpeedBuffDuration || 150)) * 100));
+        ready = true;
+        label = `SPEED SURGE (${((f.pantherSpeedBuffTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `PANTHER SPRINT (${(cdTimer / 60).toFixed(1)}S)`;
+      }
+
+      skills.push({
+        id: 'panther_sprint',
+        pct,
+        ready,
+        color: themeColor,
+        label
+      });
+    }
+
+    // Skill 2: "STRIKER!" (Universal Blue Lock Ultimate Finisher)
+    if (isSkillEnabled(cfg.enableStriker, true)) {
+      const cdMax = cfg.strikerCooldown || 1080;
+      const cdTimer = f.strikerCooldownTimer || 0;
+      let pct = 100;
+      let ready = false;
+      let label = 'STRIKER!';
+
+      if (f.isStrikerWindingUp) {
+        pct = 100;
+        ready = true;
+        label = 'STRIKER!';
+      } else if (cdTimer <= 0) {
+        pct = 100;
+        ready = true;
+        label = 'STRIKER!';
+      } else {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `STRIKER! (${(cdTimer / 60).toFixed(1)}S)`;
+      }
+
+      skills.push({
+        id: 'striker',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
+    }
+
+    // 3. Universal Blue Lock Trait: EGO Meter / Potential Awakening
+    if (isSkillEnabled(cfg.enableEgo, true)) {
+      const maxEgo = f.maxEgoMeter || cfg.maxEgoMeter || 100;
+      const isAwakened = Boolean(f.isEgoActive);
+      let pct = 0;
+      let label = 'EGO';
+
+      if (isAwakened) {
+        const maxDur = f.egoMaxDuration || cfg.egoDuration || 360;
+        const durLeft = f.egoDurationTimer || 0;
+        pct = Math.max(0, Math.min(100, (durLeft / maxDur) * 100));
+        label = `EGO AWAKENED (${(durLeft / 60).toFixed(1)}S)`;
+      } else {
+        pct = Math.max(0, Math.min(100, ((f.egoMeter || 0) / maxEgo) * 100));
+        label = pct > 0 ? `EGO (${Math.round(pct)}%)` : 'EGO';
+      }
+
+      skills.push({
+        id: 'ego',
+        pct,
+        ready: isAwakened,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true
+      });
+    }
+
+    return skills;
+  },
   warden(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.warden) ? CONFIG.warden : {};
     const skills = [];
@@ -3880,6 +3976,7 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     goku: ['kamehameha', 'super_kamehameha', 'SUPER KAMEHAMEHA', 'KAMEHAMEHA', 'super_saiyan', 'SUPER SAIYAN'],
     vegeta: ['final_flash', 'finalflash', 'FINAL FLASH', 'super_saiyan', 'SUPER SAIYAN'],
     isagi: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION', 'ego', 'EGO'],
+    chigiri: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'panther_sprint', 'PANTHER SPRINT', 'ego', 'EGO'],
     warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic']
   };
 

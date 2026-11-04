@@ -2,10 +2,10 @@
   "project": "Circle Mini-Battle (Fight of Larpers 101)",
   "schemaVersion": "1.0.0",
   "summary": {
-    "totalFiles": 2060,
-    "totalSizeMB": 400.55,
-    "fighterCount": 52,
-    "imageFiles": 1394,
+    "totalFiles": 2090,
+    "totalSizeMB": 404.15,
+    "fighterCount": 54,
+    "imageFiles": 1424,
     "audioFiles": 637,
     "fontFiles": 4
   },
@@ -480,6 +480,23 @@
     },
     {
       "index": "0005",
+      "id": "chigiri",
+      "sourcePath": "Assets/model/chigiri",
+      "fileCount": 2,
+      "totalBytes": 1397352,
+      "assets": {
+        "hair": "Assets/model/chigiri/chigiri-hair.png",
+        "skin": null,
+        "weapons": [],
+        "animations": {},
+        "allFiles": [
+          "Assets/model/chigiri/chigiri-hair.png",
+          "Assets/model/chigiri/Chigiri_hair.png"
+        ]
+      }
+    },
+    {
+      "index": "0006",
       "id": "choso",
       "sourcePath": "Assets/model/choso",
       "fileCount": 1,
@@ -495,7 +512,7 @@
       }
     },
     {
-      "index": "0006",
+      "index": "0007",
       "id": "cj",
       "sourcePath": "Assets/model/cj",
       "fileCount": 4,
@@ -516,7 +533,7 @@
       }
     },
     {
-      "index": "0007",
+      "index": "0008",
       "id": "crazyDave",
       "sourcePath": "Assets/model/crazyDave",
       "fileCount": 13,
@@ -577,7 +594,7 @@
       }
     },
     {
-      "index": "0008",
+      "index": "0009",
       "id": "denji",
       "sourcePath": "Assets/model/denji",
       "fileCount": 11,
@@ -630,7 +647,7 @@
       }
     },
     {
-      "index": "0009",
+      "index": "0010",
       "id": "enderDragon",
       "sourcePath": "Assets/model/enderDragon",
       "fileCount": 76,
@@ -820,7 +837,7 @@
       }
     },
     {
-      "index": "0010",
+      "index": "0011",
       "id": "engineer",
       "sourcePath": "Assets/model/engineer",
       "fileCount": 1,
@@ -836,7 +853,7 @@
       }
     },
     {
-      "index": "0011",
+      "index": "0012",
       "id": "escanor",
       "sourcePath": "Assets/model/escanor",
       "fileCount": 88,
@@ -1040,7 +1057,7 @@
       }
     },
     {
-      "index": "0012",
+      "index": "0013",
       "id": "exoMech",
       "sourcePath": "Assets/model/exoMech",
       "fileCount": 28,
@@ -1088,7 +1105,7 @@
       }
     },
     {
-      "index": "0013",
+      "index": "0014",
       "id": "eyeOfCthulhu",
       "sourcePath": "Assets/model/eyeOfCthulhu",
       "fileCount": 4,
@@ -1116,7 +1133,7 @@
       }
     },
     {
-      "index": "0014",
+      "index": "0015",
       "id": "genos",
       "sourcePath": "Assets/model/genos",
       "fileCount": 28,
@@ -1196,7 +1213,7 @@
       }
     },
     {
-      "index": "0015",
+      "index": "0016",
       "id": "gojo",
       "sourcePath": "Assets/model/gojo",
       "fileCount": 94,
@@ -1424,7 +1441,7 @@
       }
     },
     {
-      "index": "0016",
+      "index": "0017",
       "id": "goku",
       "sourcePath": "Assets/model/goku",
       "fileCount": 2,
@@ -1441,7 +1458,7 @@
       }
     },
     {
-      "index": "0017",
+      "index": "0018",
       "id": "gunslinger",
       "sourcePath": "Assets/model/gunslinger",
       "fileCount": 1,
@@ -1459,7 +1476,7 @@
       }
     },
     {
-      "index": "0018",
+      "index": "0019",
       "id": "guts",
       "sourcePath": "Assets/model/guts",
       "fileCount": 8,
@@ -1486,7 +1503,7 @@
       }
     },
     {
-      "index": "0019",
+      "index": "0020",
       "id": "ichigo",
       "sourcePath": "Assets/model/ichigo",
       "fileCount": 48,
@@ -1604,26 +1621,56 @@
       }
     },
     {
-      "index": "0020",
+      "index": "0021",
       "id": "isagi",
       "sourcePath": "Assets/model/isagi",
-      "fileCount": 1,
-      "totalBytes": 582376,
+      "fileCount": 15,
+      "totalBytes": 1654267,
       "assets": {
         "hair": "Assets/model/isagi/isagi-hair.png",
         "skin": null,
         "weapons": [],
         "animations": {
-          "kickImpact": "Assets/model/isagi/kick_impact/kick_impact-b.png"
+          "kick_impact": {
+            "frameCount": 13,
+            "frames": [
+              "Assets/model/isagi/kick_impact/kick_impact-1.png",
+              "Assets/model/isagi/kick_impact/kick_impact-10.png",
+              "Assets/model/isagi/kick_impact/kick_impact-11.png",
+              "Assets/model/isagi/kick_impact/kick_impact-12.png",
+              "Assets/model/isagi/kick_impact/kick_impact-2.png",
+              "Assets/model/isagi/kick_impact/kick_impact-3.png",
+              "Assets/model/isagi/kick_impact/kick_impact-4.png",
+              "Assets/model/isagi/kick_impact/kick_impact-5.png",
+              "Assets/model/isagi/kick_impact/kick_impact-6.png",
+              "Assets/model/isagi/kick_impact/kick_impact-7.png",
+              "Assets/model/isagi/kick_impact/kick_impact-8.png",
+              "Assets/model/isagi/kick_impact/kick_impact-9.png",
+              "Assets/model/isagi/kick_impact/kick_impact-b.png"
+            ]
+          }
         },
         "allFiles": [
           "Assets/model/isagi/isagi-hair.png",
+          "Assets/model/isagi/Isagi_hair.png",
+          "Assets/model/isagi/kick_impact/kick_impact-1.png",
+          "Assets/model/isagi/kick_impact/kick_impact-10.png",
+          "Assets/model/isagi/kick_impact/kick_impact-11.png",
+          "Assets/model/isagi/kick_impact/kick_impact-12.png",
+          "Assets/model/isagi/kick_impact/kick_impact-2.png",
+          "Assets/model/isagi/kick_impact/kick_impact-3.png",
+          "Assets/model/isagi/kick_impact/kick_impact-4.png",
+          "Assets/model/isagi/kick_impact/kick_impact-5.png",
+          "Assets/model/isagi/kick_impact/kick_impact-6.png",
+          "Assets/model/isagi/kick_impact/kick_impact-7.png",
+          "Assets/model/isagi/kick_impact/kick_impact-8.png",
+          "Assets/model/isagi/kick_impact/kick_impact-9.png",
           "Assets/model/isagi/kick_impact/kick_impact-b.png"
         ]
       }
     },
     {
-      "index": "0021",
+      "index": "0022",
       "id": "johnWick",
       "sourcePath": "Assets/model/johnWick",
       "fileCount": 4,
@@ -1642,7 +1689,7 @@
       }
     },
     {
-      "index": "0022",
+      "index": "0023",
       "id": "knight",
       "sourcePath": "Assets/model/knight",
       "fileCount": 10,
@@ -1672,7 +1719,7 @@
       }
     },
     {
-      "index": "0023",
+      "index": "0024",
       "id": "mahito",
       "sourcePath": "Assets/model/mahito",
       "fileCount": 2,
@@ -1691,7 +1738,7 @@
       }
     },
     {
-      "index": "0024",
+      "index": "0025",
       "id": "mahoraga",
       "sourcePath": "Assets/model/mahoraga",
       "fileCount": 14,
@@ -1739,7 +1786,7 @@
       }
     },
     {
-      "index": "0025",
+      "index": "0026",
       "id": "maki",
       "sourcePath": "Assets/model/maki",
       "fileCount": 2,
@@ -1758,7 +1805,7 @@
       }
     },
     {
-      "index": "0026",
+      "index": "0027",
       "id": "makima",
       "sourcePath": "Assets/model/makima",
       "fileCount": 4,
@@ -1782,7 +1829,7 @@
       }
     },
     {
-      "index": "0027",
+      "index": "0028",
       "id": "megumin",
       "sourcePath": "Assets/model/megumin",
       "fileCount": 1,
@@ -1798,7 +1845,7 @@
       }
     },
     {
-      "index": "0028",
+      "index": "0029",
       "id": "namelessDeity",
       "sourcePath": "Assets/model/namelessDeity",
       "fileCount": 177,
@@ -2003,7 +2050,7 @@
       }
     },
     {
-      "index": "0029",
+      "index": "0030",
       "id": "nanami",
       "sourcePath": "Assets/model/nanami",
       "fileCount": 4,
@@ -2024,7 +2071,7 @@
       }
     },
     {
-      "index": "0030",
+      "index": "0031",
       "id": "naoya",
       "sourcePath": "Assets/model/naoya",
       "fileCount": 3,
@@ -2042,7 +2089,7 @@
       }
     },
     {
-      "index": "0031",
+      "index": "0032",
       "id": "nezuko",
       "sourcePath": "Assets/model/nezuko",
       "fileCount": 1,
@@ -2058,7 +2105,7 @@
       }
     },
     {
-      "index": "0032",
+      "index": "0033",
       "id": "pacman",
       "sourcePath": "Assets/model/pacman",
       "fileCount": 3,
@@ -2076,7 +2123,7 @@
       }
     },
     {
-      "index": "0033",
+      "index": "0034",
       "id": "power",
       "sourcePath": "Assets/model/power",
       "fileCount": 3,
@@ -2094,7 +2141,7 @@
       }
     },
     {
-      "index": "0034",
+      "index": "0035",
       "id": "reze",
       "sourcePath": "Assets/model/reze",
       "fileCount": 29,
@@ -2177,7 +2224,7 @@
       }
     },
     {
-      "index": "0035",
+      "index": "0036",
       "id": "ruby",
       "sourcePath": "Assets/model/ruby",
       "fileCount": 2,
@@ -2194,7 +2241,7 @@
       }
     },
     {
-      "index": "0036",
+      "index": "0037",
       "id": "sans",
       "sourcePath": "Assets/model/sans",
       "fileCount": 101,
@@ -2425,11 +2472,11 @@
       }
     },
     {
-      "index": "0037",
+      "index": "0038",
       "id": "shiro",
       "sourcePath": "Assets/model/shiro",
       "fileCount": 4,
-      "totalBytes": 4727668,
+      "totalBytes": 4120651,
       "assets": {
         "hair": "Assets/model/shiro/shiro-hair.png",
         "skin": null,
@@ -2449,7 +2496,7 @@
       }
     },
     {
-      "index": "0038",
+      "index": "0039",
       "id": "sora",
       "sourcePath": "Assets/model/sora",
       "fileCount": 1,
@@ -2465,7 +2512,7 @@
       }
     },
     {
-      "index": "0039",
+      "index": "0040",
       "id": "spartan",
       "sourcePath": "Assets/model/spartan",
       "fileCount": 6,
@@ -2489,7 +2536,7 @@
       }
     },
     {
-      "index": "0040",
+      "index": "0041",
       "id": "sukuna",
       "sourcePath": "Assets/model/sukuna",
       "fileCount": 33,
@@ -2576,7 +2623,7 @@
       }
     },
     {
-      "index": "0041",
+      "index": "0042",
       "id": "tanjiro",
       "sourcePath": "Assets/model/tanjiro",
       "fileCount": 2,
@@ -2593,7 +2640,7 @@
       }
     },
     {
-      "index": "0042",
+      "index": "0043",
       "id": "todo",
       "sourcePath": "Assets/model/todo",
       "fileCount": 1,
@@ -2609,7 +2656,7 @@
       }
     },
     {
-      "index": "0043",
+      "index": "0044",
       "id": "toji",
       "sourcePath": "Assets/model/toji",
       "fileCount": 4,
@@ -2631,7 +2678,7 @@
       }
     },
     {
-      "index": "0044",
+      "index": "0045",
       "id": "ulquiorra",
       "sourcePath": "Assets/model/ulquiorra",
       "fileCount": 1,
@@ -2649,7 +2696,7 @@
       }
     },
     {
-      "index": "0045",
+      "index": "0046",
       "id": "unarmed",
       "sourcePath": "Assets/model/unarmed",
       "fileCount": 1,
@@ -2665,7 +2712,7 @@
       }
     },
     {
-      "index": "0046",
+      "index": "0047",
       "id": "uryu",
       "sourcePath": "Assets/model/uryu",
       "fileCount": 9,
@@ -2694,7 +2741,7 @@
       }
     },
     {
-      "index": "0047",
+      "index": "0048",
       "id": "vegeta",
       "sourcePath": "Assets/model/vegeta",
       "fileCount": 2,
@@ -2711,7 +2758,55 @@
       }
     },
     {
-      "index": "0048",
+      "index": "0049",
+      "id": "warden",
+      "sourcePath": "Assets/model/warden",
+      "fileCount": 14,
+      "totalBytes": 1918222,
+      "assets": {
+        "hair": "Assets/model/warden/warden-hair.png",
+        "skin": null,
+        "weapons": [],
+        "animations": {
+          "sonic_boom": {
+            "frameCount": 13,
+            "frames": [
+              "Assets/model/warden/sonic_boom/sonic_boom-1.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-10.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-11.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-12.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-2.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-3.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-4.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-5.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-6.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-7.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-8.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-9.png",
+              "Assets/model/warden/sonic_boom/sonic_boom-b.png"
+            ]
+          }
+        },
+        "allFiles": [
+          "Assets/model/warden/sonic_boom/sonic_boom-1.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-10.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-11.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-12.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-2.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-3.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-4.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-5.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-6.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-7.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-8.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-9.png",
+          "Assets/model/warden/sonic_boom/sonic_boom-b.png",
+          "Assets/model/warden/warden-hair.png"
+        ]
+      }
+    },
+    {
+      "index": "0050",
       "id": "yuji",
       "sourcePath": "Assets/model/yuji",
       "fileCount": 2,
@@ -2728,7 +2823,7 @@
       }
     },
     {
-      "index": "0049",
+      "index": "0051",
       "id": "yuta",
       "sourcePath": "Assets/model/yuta",
       "fileCount": 42,
@@ -2840,7 +2935,7 @@
       }
     },
     {
-      "index": "0050",
+      "index": "0052",
       "id": "zenitsu",
       "sourcePath": "Assets/model/zenitsu",
       "fileCount": 23,
@@ -2910,7 +3005,7 @@
       }
     },
     {
-      "index": "0051",
+      "index": "0053",
       "id": "zeus",
       "sourcePath": "Assets/model/zeus",
       "fileCount": 23,
@@ -2980,7 +3075,7 @@
       }
     },
     {
-      "index": "0052",
+      "index": "0054",
       "id": "zombie",
       "sourcePath": "Assets/model/zombie",
       "fileCount": 12,

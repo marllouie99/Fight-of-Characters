@@ -45,10 +45,13 @@ import {
   createSoccerBall,
   resetSoccerBall,
   checkFighterCanKickBall,
+  isHostileLethalBall,
   executeSoccerKick,
   executeStrikerSkill,
   updateSoccerBallPhysics,
   resolveBallFighterDeflection,
+  dribbleSoccerBall,
+  getFighterDribbleControl,
   spawn16BitHitEffect,
   spawnPuzzleParticles,
   isBlueLockFighter,
@@ -257,7 +260,19 @@ export class IsagiFighter extends Fighter {
       spawnFloatingText('SLIP!', this.x, this.y - 18, '#00FF88');
       return false;
     }
-    return super.takeDamage(amount, attacker, opts);
+    const res = super.takeDamage(amount, attacker, opts);
+    // Ball Disruption / Poise check when hit while dribbling
+    if (res && this.soccerBall && this.soccerBall.dribbler === this) {
+      const cfg = (typeof CONFIG !== 'undefined' && CONFIG.isagi) ? CONFIG.isagi : isagiConfig;
+      const control = getFighterDribbleControl(this, cfg);
+      if (amount >= 35 || Math.random() > control) {
+        this.soccerBall.dribbler = null;
+        this.soccerBall.vx += (Math.random() - 0.5) * 6;
+        this.soccerBall.vy += (Math.random() - 0.5) * 6;
+        spawnFloatingText('LOOSE BALL!', this.soccerBall.x, this.soccerBall.y - 18, '#FACC15');
+      }
+    }
+    return res;
   }
 
   /**
@@ -501,6 +516,9 @@ export class IsagiFighter extends Fighter {
       if (egoBuffs && typeof egoBuffs.speedMultiplier === 'number') {
         speedMult *= egoBuffs.speedMultiplier;
       }
+      if (this.soccerBall && this.soccerBall.dribbler === this && this.shootCooldown > 0) {
+        speedMult *= (cfg.dribbleSpeedMultiplier || 1.05);
+      }
       this.applyMovementPhysics(speedMult);
       if (this.canAim() && opponent && !opponent.isDead) {
         this.aim(opponent);
@@ -512,15 +530,20 @@ export class IsagiFighter extends Fighter {
   /**
    * Combat & Natural Ball Interaction:
    * - Skill 1 (Metavision Slip) ONLY activates when Isagi is close to the loose soccer ball, dashing directly toward it!
+   * - Strictly guards against interacting with an incoming hostile lethal enemy kick!
    * - Kicks when in natural possession/contact with the ball.
    * - Does not dash when kicking the ball.
    */
   _handleCombatAndBallMeeting(opponent, arena, cfg) {
+    if (this.hitStunTimer > 0 || this.paralyzeTimer > 0 || this.knockbackStunTimer > 0) return;
+    if (this._ballHitCooldown > 0 || this._isagiBallHitCooldown > 0) return;
+    if (isHostileLethalBall(this.soccerBall, this)) return;
+
     const hasBall = this._hasSoccerBall();
 
     // 1. Skill 1: Metavision Slip (Ball Interception Dash)
-    // ONLY activates when Isagi is close to the ball and Metavision is off cooldown!
-    if (!hasBall && this.soccerBall && isSkillEnabled(cfg.enableMetavision, true) && this.metavisionCooldownTimer <= 0) {
+    // ONLY activates when Isagi is close to the loose, friendly ball and Metavision is off cooldown!
+    if (!hasBall && this.soccerBall && !isHostileLethalBall(this.soccerBall, this) && isSkillEnabled(cfg.enableMetavision, true) && this.metavisionCooldownTimer <= 0) {
       const distToBall = Math.hypot(this.soccerBall.x - this.x, this.soccerBall.y - this.y);
       const interceptionRange = cfg.metavisionBallInterceptionRange || 160;
       const kickReach = this.r + this.soccerBall.r + 14;
@@ -555,8 +578,8 @@ export class IsagiFighter extends Fighter {
         }
       }
 
-      // If on cooldown or not kicking, ball elastically deflects off Isagi's body circle
-      this._resolveBallFighterDeflection(this);
+      // If on cooldown, trap and dribble the ball at feet until shootCooldown <= 0
+      dribbleSoccerBall(this, this.soccerBall, arena, cfg);
     }
   }
 
@@ -589,6 +612,8 @@ export class IsagiFighter extends Fighter {
     const bounceChance = cfg.bounceBackToIsagiChance !== undefined ? cfg.bounceBackToIsagiChance : 0.50;
 
     executeSoccerKick(this, this.soccerBall, angle, kickSpeed, {
+      damage: cfg.egoShotDamage || 24,
+      reboundDamage: cfg.egoShotReboundDamage || 32,
       isCrit: this.isFlowStateActive,
       isDirectVolley: false,
       themeColor: '#00F0FF',
@@ -615,6 +640,7 @@ export class IsagiFighter extends Fighter {
   _executeMetavisionSlip(ballTarget, cfg) {
     this.metavisionCooldownTimer = this.metavisionCooldownMax;
     this.isMetavisionDashing = true;
+    this._hasPassedThroughText = false;
     this.metavisionDashTimer = cfg.metavisionDashFrames || 10;
     this.metavisionInvulnTimer = cfg.metavisionInvulnFrames || 14;
 
@@ -636,7 +662,6 @@ export class IsagiFighter extends Fighter {
     // Flow State Empowerment for the incoming kick
     this.isFlowStateActive = true;
     this.flowStateTimer = cfg.metavisionFlowDuration || 180;
-    this.shootCooldown = 0; // Ready next kick immediately upon meeting ball!
 
     // VFX & Sound
     this._spawnPuzzleParticles(this.x, this.y, 8, '#00FF88');
@@ -671,6 +696,7 @@ export class IsagiFighter extends Fighter {
     this.metavisionDashTimer--;
     if (this.metavisionDashTimer <= 0) {
       this.isMetavisionDashing = false;
+      this._hasPassedThroughText = false;
       this.vx *= 0.2;
       this.vy *= 0.2;
     }

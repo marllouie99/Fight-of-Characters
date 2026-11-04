@@ -16,6 +16,7 @@ import { isInsideRubbickStolenVoid } from '../entities/fighters/rubbick/rubbickT
 import { clearFighterDomain, cleanupDeadFightersDomains } from './domainSystem.js';
 import { wasmDist, wasmDistSq, wasmCircleCollide, wasmClamp, wasmLerp, wasmSpatialGridHash, wasmBatchCircleCollisions } from '../core/wasmMath.js';
 import { isEntityOutsideArena } from '../entities/fighter.js';
+import { attemptBallKickSteal } from './soccerBallSystem.js';
 
 // ─────────────────────────────────────────────
 // SPATIAL PARTITIONING GRID (WASM ACCELERATED)
@@ -349,6 +350,43 @@ export function resolveFighterCollision(a, b) {
   // Tangent vector (perpendicular to the collision normal)
   const tx = -ny;
   const ty = nx;
+
+  // Blue Lock "Ball Kick Steal" & Dash Pass-Through Mechanic:
+  // When an enemy bumps into a Blue Lock fighter currently dribbling, rolls a chance to kick/steal the ball!
+  // If a Blue Lock fighter is using their dash skill towards the ball/opponent and misses the steal, they pass through as they dash!
+  let blueLockStealOccurred = false;
+  const aIsBlueLockDash = Boolean(
+    (a.isPantherSprinting && (a.pantherSprintDashTimer || 0) > 0) ||
+    (a.isMetavisionDashing && (a.metavisionDashTimer || 0) > 0) ||
+    (a.isBlueLockDashing && (a.blueLockDashTimer || 0) > 0)
+  );
+  const bIsBlueLockDash = Boolean(
+    (b.isPantherSprinting && (b.pantherSprintDashTimer || 0) > 0) ||
+    (b.isMetavisionDashing && (b.metavisionDashTimer || 0) > 0) ||
+    (b.isBlueLockDashing && (b.blueLockDashTimer || 0) > 0)
+  );
+
+  if (isEnemy && typeof state !== 'undefined') {
+    const ballA = a && a.soccerBall;
+    const ballB = b && b.soccerBall;
+    if (ballA && ballA.dribbler === a) {
+      blueLockStealOccurred = attemptBallKickSteal(a, b, ballA, state.arena, { nx: -nx, ny: -ny, isDashing: bIsBlueLockDash });
+    } else if (ballB && ballB.dribbler === b) {
+      blueLockStealOccurred = attemptBallKickSteal(b, a, ballB, state.arena, { nx, ny, isDashing: aIsBlueLockDash });
+    }
+  }
+
+  // Dash Skill Pass-Through Mechanic:
+  // When a Blue Lock character uses their dash skill towards the ball/opponent:
+  // If the steal misses (or if gliding past during a steal dash), they simply pass through as they dash!
+  if (isEnemy && (aIsBlueLockDash || bIsBlueLockDash)) {
+    const dasher = aIsBlueLockDash ? a : b;
+    if (!dasher._hasPassedThroughText && !blueLockStealOccurred) {
+      dasher._hasPassedThroughText = true;
+      spawnFloatingText('SLIP THROUGH!', dasher.x, dasher.y - (dasher.r || 25) - 12, dasher.themeColor || dasher.color || '#00F0FF');
+    }
+    return; // Pass through cleanly without circle-circle body bounce/block!
+  }
 
   const overlap = (minDist - distance) / 2;
   const aIsCounterLocked = (a._counterPunchTimer && a._counterPunchTimer > 0) || a.isCountering || (a._postCounterRecoveryTimer && a._postCounterRecoveryTimer > 0) || (a._counterWindupTimer && a._counterWindupTimer > 0);

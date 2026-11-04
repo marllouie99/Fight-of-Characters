@@ -20,8 +20,8 @@ export const isagiConfig = {
   maxHpRatio: 1.0,
   speed: 5.2,
   moveSpeed: 5.9,
-  r: 27,
-  radius: 27,
+  r: 25,
+  radius: 25,
   color: '#00F0FF', // Electric Ego Cyan
   themeColor: '#00F0FF',
   secondaryColor: '#111827', // Blue Lock Dark Bodysuit
@@ -44,12 +44,30 @@ export const isagiConfig = {
   egoShotReboundDamage: 32, // Rebound / Bank Volley damage (+33% bonus)
   egoShotSpeed: 14.5, // Fast travel velocity
   egoShotRadius: 16, // Soccer ball collision radius (scaled up for prominent arcade visibility)
-  egoShotCooldown: 34, // Attack cadence (~0.57s)
+  egoShotCooldown: 100, // Attack cadence (~0.57s)
   egoShotMaxRebounds: 1, // Bounces once off arena walls
   kickSlowDuration: 18, // Brief duration in frames (~0.30s) of slow recovery movement upon kicking
   kickSlowMultiplier: 0.18, // Movement speed multiplier during kick recovery (very slow crawl)
   kickAccuracy: 1.0, // 100% kick accuracy: Every kick travels perfectly straight with ZERO spread
   maxKickSpread: (18 * Math.PI) / 180, // Default maximum spread dispersion angle for Blue Lock fighters (~18 deg)
+
+  // ─── Dribble & Ball Control Profile ───
+  enableDribble: true, // Master toggle for dribble mechanic
+  dribbleControl: 0.96, // 96% spatial pocket ball control (high precision, tight shielding)
+  dribbleTightness: 0.85, // Ball stays close to feet in personal spatial pocket
+  dribbleLeadDistance: 2, // Minimal forward offset to keep ball sheltered
+  dribblePushDistance: 10, // Natural forward push impulse distance per stride
+  dribbleLateralWobble: 1.5, // Subtle left/right foot alternation (px)
+  dribbleSpeedMultiplier: 1.05, // Retains smooth tempo while dribbling (+5%)
+  dribbleStyle: 'spatial_pocket',
+  dribbleTouchCadence: 10, // Rhythmic micro-touches cadence (frames)
+
+  // ─── Ball Kick Steal & Tackle Mechanics ───
+  enableBallSteal: true, // Master toggle for ball kick steal mechanic
+  ballStealChance: 0.50, // 50% base chance to kick/steal ball when bumping dribbler
+  ballStealKickSpeed: 11.0, // Kinetic velocity of the dislodged/stolen ball
+  ballStealStaggerDuration: 16, // Frames of hitstun applied to dispossessed dribbler (~0.27s)
+  ballStealCooldownPenalty: 35, // Shoot cooldown penalty applied to dribbler to prevent immediate kick
 
   // ─── Skill 1: Metavision Slip (Tactical Dodge & Ball Interception Dash) ───
   enableMetavision: true, // Master toggle for Skill 1

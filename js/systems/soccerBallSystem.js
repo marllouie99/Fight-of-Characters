@@ -507,7 +507,36 @@ export function getBlueLockEgoBuffs(fighter) {
 }
 
 /**
+ * Evaluates whether the soccer ball is currently an active, lethal hostile strike
+ * traveling towards the specified fighter.
+ * When true, the target fighter MUST NOT intercept, trap, dribble, or kick the ball;
+ * the ball must resolve its lethal hit check and damage against the target first.
+ *
+ * @param {object} ball - Soccer ball entity
+ * @param {object} fighter - Fighter evaluating ball hostility
+ * @returns {boolean} True if the ball is a lethal enemy attack incoming towards fighter
+ */
+export function isHostileLethalBall(ball, fighter) {
+  if (!ball || !fighter) return false;
+  const isKicked = Boolean(ball.isKicked || ball.isKickedByIsagi || ball.isDirectVolley || ball.isStriker || ball.isSuperShot);
+  if (!isKicked) return false;
+  const currentSpeed = Math.hypot(ball.vx || 0, ball.vy || 0);
+  if (currentSpeed < 3.0) return false;
+
+  const kicker = ball.lastKicker || ball.kicker;
+  if (!kicker) return false;
+  // Not hostile if kicker is self (e.g. wall bank pass / one-two return)
+  if (kicker === fighter || kicker.id === fighter.id) return false;
+  // Not hostile if kicker is a teammate
+  if (typeof fighter.isTeammate === 'function' && fighter.isTeammate(kicker)) return false;
+
+  return true;
+}
+
+/**
  * Checks whether a fighter is within physical reach to kick the soccer ball.
+ * Strictly guards against claiming or intercepting incoming lethal hostile kicks,
+ * as well as acting during active hit stun or hit cooldown.
  *
  * @param {object} fighter
  * @param {object} ball
@@ -516,6 +545,16 @@ export function getBlueLockEgoBuffs(fighter) {
  */
 export function checkFighterCanKickBall(fighter, ball, reachMargin = 16) {
   if (!fighter || !ball) return false;
+  if (fighter.isDead || (typeof fighter.hp === 'number' && fighter.hp <= 0)) return false;
+  if (fighter.hitStunTimer > 0 || fighter.paralyzeTimer > 0 || fighter.knockbackStunTimer > 0) return false;
+  if (fighter._ballHitCooldown > 0 || fighter._isagiBallHitCooldown > 0) return false;
+
+  // Crucial: Cannot kick or possess a ball that is actively flying as a lethal hostile attack from an opponent!
+  // (Prevents enemy fighters from grabbing/negating incoming lethal kicks before damage resolves)
+  if (isHostileLethalBall(ball, fighter)) {
+    return false;
+  }
+
   const totalReach = (fighter.r || 25) + (ball.r || 16) + reachMargin;
   return Math.hypot(ball.x - fighter.x, ball.y - fighter.y) <= totalReach;
 }
@@ -605,6 +644,13 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
   ball.isRebound = Boolean(options.isRebound);
   ball.isKicked = true;
   ball.isKickedByIsagi = (kicker.characterId === 'isagi');
+  ball.dribbler = null;
+
+  const kickerCfg = (typeof CONFIG !== 'undefined' && kicker.characterId && CONFIG[kicker.characterId])
+    ? CONFIG[kicker.characterId]
+    : {};
+  ball.baseDamage = options.damage || options.baseDamage || kicker.damage || kickerCfg.damage || kickerCfg.pantherShotDamage || kickerCfg.egoShotDamage || 24;
+  ball.reboundDamage = options.reboundDamage || kickerCfg.reboundDamage || kickerCfg.pantherShotReboundDamage || kickerCfg.egoShotReboundDamage || 32;
 
   // One-Two Return Pass Chance
   const bounceChance = options.bounceBackChance ?? 0.35;
@@ -732,6 +778,20 @@ export function executeStrikerSkill(kicker, ball, opponent, arena, cfg = {}, opt
   }
 
   return ball;
+}
+
+/**
+ * Squared perpendicular distance from point (px, py) to line segment (x1, y1)-(x2, y2).
+ * Used for continuous swept collision detection of high-velocity soccer ball kicks.
+ */
+function distToSegmentSquared(px, py, x1, y1, x2, y2) {
+  const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+  if (l2 === 0) return (px - x1) * (px - x1) + (py - y1) * (py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projX = x1 + t * (x2 - x1);
+  const projY = y1 + t * (y2 - y1);
+  return (px - projX) * (px - projX) + (py - projY) * (py - projY);
 }
 
 /**
@@ -940,7 +1000,6 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           ball.isKickedByIsagi = false;
           ball.isDirectVolley = false;
           ball.isSuperShot = false;
-          activeKicker.shootCooldown = 0; // Ready next return volley kick!
           spawnFloatingText('BANK PASS!', ball.x, ball.y - 18, themeColor);
           if (typeof activeKicker._spawnPuzzleParticles === 'function') {
             activeKicker._spawnPuzzleParticles(ball.x, ball.y, 6, themeColor);
@@ -956,6 +1015,10 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
     const targets = [];
     if (primaryOpponent && primaryOpponent !== activeKicker && !primaryOpponent.isDead && !targets.includes(primaryOpponent)) {
       targets.push(primaryOpponent);
+    }
+    // Also include primary controller (kicker) if opponent is activeKicker
+    if (kicker && kicker !== activeKicker && !kicker.isDead && !targets.includes(kicker)) {
+      targets.push(kicker);
     }
     if (stateRef && stateRef.fighters) {
       for (let i = 0; i < stateRef.fighters.length; i++) {
@@ -989,8 +1052,14 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
 
       const dist = Math.hypot(ball.x - target.x, ball.y - target.y);
       const hitRadius = ball.r + (target.r || 25);
+      const sweptDistSq = distToSegmentSquared(
+        target.x, target.y,
+        ball._lastStepX ?? ball.x, ball._lastStepY ?? ball.y,
+        ball.x, ball.y
+      );
+      const isHit = dist <= hitRadius || sweptDistSq <= hitRadius * hitRadius;
 
-      if (dist <= hitRadius) {
+      if (isHit) {
         const themeColor = ball.kickerThemeColor || '#00F0FF';
 
         // Gojo Limitless Infinity Barrier Check (Rule 1.7)
@@ -1010,7 +1079,6 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
             ball.vx = Math.cos(toKickerAngle) * returnSpeed;
             ball.vy = Math.sin(toKickerAngle) * returnSpeed;
             ball.isRebound = true;
-            activeKicker.shootCooldown = 0;
             spawnFloatingText('ONE-TWO!', ball.x, ball.y - 18, '#00E5FF');
           } else {
             ball.vx = -ball.vx * 0.4;
@@ -1024,13 +1092,16 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
         }
 
         // Damage Calculation
+        const kickerCfg = (typeof CONFIG !== 'undefined' && activeKicker && activeKicker.characterId && CONFIG[activeKicker.characterId])
+          ? CONFIG[activeKicker.characterId]
+          : cfg;
         const isSuper = Boolean(ball.isDirectVolley || ball.isStriker || ball.isSuperShot);
         let damage = isSuper
-          ? (cfg.strikerDamage || cfg.directVolleyDamage || 75)
-          : (ball.isRebound ? (ball.reboundDamage || 32) : (ball.baseDamage || 24));
+          ? (kickerCfg.strikerDamage || kickerCfg.directVolleyDamage || 75)
+          : (ball.isRebound ? (ball.reboundDamage || kickerCfg.reboundDamage || 32) : (ball.baseDamage || kickerCfg.damage || kickerCfg.pantherShotDamage || kickerCfg.egoShotDamage || 24));
 
         if (ball.isCrit) {
-          damage = Math.round(damage * (cfg.flowShotCritMult || 1.35));
+          damage = Math.round(damage * (kickerCfg.flowShotCritMult || cfg.flowShotCritMult || 1.35));
         }
 
         // Active Ego Mode Damage Multiplier (Attacker Buff)
@@ -1047,14 +1118,14 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
 
         // Passive Sweet-Spot Distance Bonus & Cooldown Refund
         const flightDist = Math.hypot(ball.x - ball.startX, ball.y - ball.startY);
-        const isSweetSpot = flightDist >= (cfg.sweetSpotDistance || 180);
+        const isSweetSpot = flightDist >= (kickerCfg.sweetSpotDistance || cfg.sweetSpotDistance || 180);
         if (isSweetSpot || ball.isRebound) {
           const sweetSpotBonus = (kickerEgoBuffs && typeof kickerEgoBuffs.sweetSpotDamageBonus === 'number')
             ? kickerEgoBuffs.sweetSpotDamageBonus
-            : (cfg.sweetSpotDamageBonus || 6);
+            : (kickerCfg.sweetSpotDamageBonus || cfg.sweetSpotDamageBonus || 6);
           damage += sweetSpotBonus;
           if (activeKicker && activeKicker.metavisionCooldownTimer !== undefined) {
-            activeKicker.metavisionCooldownTimer = Math.max(0, activeKicker.metavisionCooldownTimer - (cfg.cooldownRefundOnRebound || 90));
+            activeKicker.metavisionCooldownTimer = Math.max(0, activeKicker.metavisionCooldownTimer - (kickerCfg.cooldownRefundOnRebound || 90));
           }
           if (ball.isRebound) {
             spawnFloatingText('DIRECT SHOT!', ball.x, ball.y - 16, themeColor);
@@ -1062,13 +1133,10 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
         }
 
         // Apply Damage via Universal Combat Helper
-        applyDamageToTarget(target, damage, activeKicker, arena);
+        applyDamageToTarget(target, damage, activeKicker, { isSoccerKick: true, isSuper, isCrit: ball.isCrit, arena });
 
         // Universal Blue Lock "EGO" Meter Charge on Hit
         if (activeKicker && isBlueLockFighter(activeKicker)) {
-          const kickerCfg = (typeof CONFIG !== 'undefined' && activeKicker.characterId && CONFIG[activeKicker.characterId])
-            ? CONFIG[activeKicker.characterId]
-            : cfg;
           if (isSkillEnabled(kickerCfg.enableEgo, true)) {
             const egoGain = isSuper
               ? (kickerCfg.egoGainPerStrikerHit || kickerCfg.egoGainPerSuperHit || 50)
@@ -1084,9 +1152,9 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           const kbMultiplier = (kickerEgoBuffs && typeof kickerEgoBuffs.strikerKnockbackMultiplier === 'number')
             ? kickerEgoBuffs.strikerKnockbackMultiplier
             : 1.0;
-          const kbForce = (cfg.strikerKnockback || cfg.directVolleyKnockback || 20.0) * kbMultiplier;
-          const kbDuration = cfg.strikerKnockbackDuration || cfg.directVolleyKnockbackDuration || 14;
-          const stunDuration = cfg.strikerStunDuration || cfg.directVolleyStunDuration || 100;
+          const kbForce = (kickerCfg.strikerKnockback || kickerCfg.directVolleyKnockback || 20.0) * kbMultiplier;
+          const kbDuration = kickerCfg.strikerKnockbackDuration || kickerCfg.directVolleyKnockbackDuration || 14;
+          const stunDuration = kickerCfg.strikerStunDuration || kickerCfg.directVolleyStunDuration || 100;
 
           // 1. Directional Knockback: Launch target flying backwards along the ball trajectory
           const kbVx = Math.cos(kbAngle) * kbForce;
@@ -1128,14 +1196,34 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
               color: '#00FF88'
             });
           }
-          triggerGlobalScreenShake(cfg.strikerShake || cfg.directVolleyShake || 8, 14);
+          triggerGlobalScreenShake(kickerCfg.strikerShake || kickerCfg.directVolleyShake || 8, 14);
           playSound('Assets/Sound Effects/Attacks/heavypunch2.mp3', 0.85);
           ball.isDirectVolley = false;
           ball.isStriker = false;
           ball.isSuperShot = false;
         } else {
-          target.vx += Math.cos(kbAngle) * 5.5;
-          target.vy += Math.sin(kbAngle) * 5.5;
+          // Basic attack kick impact: Knockback, hit stun, and attack interruption
+          const basicKbForce = kickerCfg.kickKnockback || kickerCfg.pantherShotKnockback || 7.5;
+          const basicHitStun = kickerCfg.basicHitStun || 16;
+          const kbVx = Math.cos(kbAngle) * basicKbForce;
+          const kbVy = Math.sin(kbAngle) * basicKbForce;
+
+          target.vx += kbVx;
+          target.vy += kbVy;
+          if (typeof target.applyKnockback === 'function') {
+            target.applyKnockback(kbVx, kbVy);
+          }
+          if (typeof target.applyHitStun === 'function') {
+            target.applyHitStun(basicHitStun);
+          } else {
+            target.hitStunTimer = Math.max(target.hitStunTimer || 0, basicHitStun);
+          }
+          if (typeof target.interruptAttacks === 'function') {
+            target.interruptAttacks();
+          }
+
+          target._isagiBallHitCooldown = 20;
+          target._ballHitCooldown = 20;
           playSound('Assets/Sound Effects/Attacks/fleshhit.mp3', 0.7);
         }
 
@@ -1145,11 +1233,10 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           ball.shouldBounceBackToKicker = false;
           ball.shouldBounceBackToIsagi = false;
           const toKickerAngle = Math.atan2(activeKicker.y - ball.y, activeKicker.x - ball.x);
-          const returnSpeed = cfg.bounceBackSpeed || 8.5;
+          const returnSpeed = kickerCfg.bounceBackSpeed || cfg.bounceBackSpeed || 8.5;
           ball.vx = Math.cos(toKickerAngle) * returnSpeed;
           ball.vy = Math.sin(toKickerAngle) * returnSpeed;
           ball.isRebound = true;
-          activeKicker.shootCooldown = 0; // Ready return volley!
           spawnFloatingText('ONE-TWO!', ball.x, ball.y - 18, themeColor);
           if (typeof activeKicker._spawnPuzzleParticles === 'function') {
             activeKicker._spawnPuzzleParticles(ball.x, ball.y, 6, themeColor);
@@ -1159,8 +1246,8 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           ball.vy = -ball.vy * 0.45;
         }
 
-        target._isagiBallHitCooldown = 18;
-        target._ballHitCooldown = 18;
+        target._isagiBallHitCooldown = 20;
+        target._ballHitCooldown = 20;
         ball.isKicked = false;
         ball.isKickedByIsagi = false;
         ball.isDirectVolley = false;
@@ -1193,6 +1280,13 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
             const len = Math.hypot(dx, dy) || 1;
             const nx = dx / len;
             const ny = dy / len;
+
+            // Ball Kick Steal: If ball is currently being dribbled by an opponent, intercepting the ball triggers a steal attempt!
+            if (ball.dribbler && ball.dribbler !== f) {
+              const stolen = attemptBallKickSteal(ball.dribbler, f, ball, arena, { nx, ny });
+              if (stolen) break;
+            }
+
             ball.x = f.x + nx * ((f.r || 25) + ball.r + 1);
             ball.y = f.y + ny * ((f.r || 25) + ball.r + 1);
             ball.vx = nx * 3.5;
@@ -1251,6 +1345,372 @@ export function resolveBallFighterDeflection(ball, fighter, isShootingOnCooldown
       ball.vy += (fighter.vy || 0) * 0.4;
     }
   }
+}
+
+/**
+ * Calculates the dynamic dribble control rating (0.0 to 1.0) for a Blue Lock fighter.
+ * Higher control yields tighter ball retention, snappier direction changes,
+ * and higher poise resistance against losing possession on hits.
+ *
+ * @param {object} fighter - Blue Lock fighter entity
+ * @param {object} [cfg={}] - Character configuration object
+ * @returns {number} Effective dribble control rating [0.10, 1.0]
+ */
+export function getFighterDribbleControl(fighter, cfg = {}) {
+  if (!fighter) return 0.75;
+  const charId = (fighter.characterId || fighter.type || '').toLowerCase();
+  let baseControl = cfg.dribbleControl;
+  if (baseControl === undefined) {
+    baseControl = (charId === 'isagi') ? 0.96 : (charId === 'chigiri' ? 0.90 : 0.75);
+  }
+
+  // Active Blue Lock EGO Awakening elevates ball control to elite levels (+10%)
+  if (fighter.isEgoActive) {
+    baseControl = Math.min(1.0, baseControl + 0.10);
+  }
+  // Chigiri Panther Speed Surge sharpens breakaway touch (+8%)
+  if (fighter.pantherSpeedBuffTimer && fighter.pantherSpeedBuffTimer > 0) {
+    baseControl = Math.min(1.0, baseControl + 0.08);
+  }
+  // Isagi Flow State maximizes spatial trapping precision (100% flawless control)
+  if (fighter.isFlowStateActive) {
+    baseControl = 1.0;
+  }
+
+  return Math.max(0.10, Math.min(1.0, baseControl));
+}
+
+/**
+ * Keeps the soccer ball under active control (dribbling & trapping) at the fighter's feet
+ * while their basic attack is on cooldown. Different Blue Lock characters exhibit different
+ * ball control archetypes (e.g. Isagi's spatial pocket vs Chigiri's mach breakaway pace).
+ *
+ * @param {object} fighter - Blue Lock fighter entity
+ * @param {object} ball - Soccer ball entity
+ * @param {object} [arena=null] - Arena bounding box
+ * @param {object} [cfg={}] - Character config
+ */
+export function dribbleSoccerBall(fighter, ball, arena = null, cfg = {}) {
+  if (!fighter || !ball) return;
+  if (fighter.isDead || (typeof fighter.hp === 'number' && fighter.hp <= 0)) return;
+  if (fighter.hitStunTimer > 0 || fighter.paralyzeTimer > 0 || fighter.knockbackStunTimer > 0) return;
+  if (fighter._ballHitCooldown > 0 || fighter._isagiBallHitCooldown > 0) return;
+  if (isHostileLethalBall(ball, fighter)) return;
+
+  const charId = (fighter.characterId || fighter.type || '').toLowerCase();
+  const effectiveControl = getFighterDribbleControl(fighter, cfg);
+  const themeColor = fighter.themeColor || fighter.color || '#00F0FF';
+
+  // 1. Initial Trap Registration (First frame of contact)
+  if (ball.dribbler !== fighter) {
+    spawnSparks(ball.x, ball.y, 4, themeColor);
+    playSound('Assets/Sound Effects/Attacks/punch.mp3', 0.35);
+  }
+
+  // 2. Dynamic Movement Vector & Direction Alignment
+  const fighterSpeed = Math.hypot(fighter.vx || 0, fighter.vy || 0);
+  const aimAngle = (fighter.gunAngle !== undefined) ? fighter.gunAngle : (fighter.angle || 0);
+  const isMoving = fighterSpeed > 0.5;
+  let dribbleAngle = aimAngle;
+
+  if (isMoving) {
+    const moveAngle = Math.atan2(fighter.vy || 0, fighter.vx || 0);
+    const style = cfg.dribbleStyle || (charId === 'isagi' ? 'spatial_pocket' : 'mach_breakaway');
+    if (style === 'spatial_pocket') {
+      // Spatial pocket blends aim and motion, keeping ball shielded between feet & target
+      const angleDiff = Math.atan2(Math.sin(moveAngle - aimAngle), Math.cos(moveAngle - aimAngle));
+      dribbleAngle = aimAngle + angleDiff * 0.40;
+    } else {
+      // Mach breakaway leads directly along movement line
+      dribbleAngle = moveAngle;
+    }
+  }
+
+  // 3. Rhythmic Foot Touch Cadence & Dynamic Forward Push Cycle
+  const touchCadence = cfg.dribbleTouchCadence ?? (charId === 'chigiri' ? 8 : 10);
+  const baseDist = (fighter.r || 25) + (ball.r || 16) + 2;
+  const leadDist = isMoving ? (cfg.dribbleLeadDistance ?? (charId === 'chigiri' ? 6 : 2)) : 0;
+  const pushDistance = isMoving ? (cfg.dribblePushDistance ?? (charId === 'chigiri' ? 22 : 10)) : 0;
+  const lateralWobble = isMoving ? (cfg.dribbleLateralWobble ?? (charId === 'chigiri' ? 3.0 : 1.5)) : 0;
+
+  if (isMoving) {
+    fighter._dribbleTouchTimer = (fighter._dribbleTouchTimer || 0) + 1;
+    if (fighter._dribbleTouchTimer >= touchCadence) {
+      // Foot strikes the ball: push forward again!
+      fighter._dribbleTouchTimer = 0;
+      fighter._dribbleStepCount = (fighter._dribbleStepCount || 0) + 1;
+
+      // Audio & Turf Sparks on foot touch
+      spawnSparks(ball.x, ball.y, 3, themeColor);
+      playSound('Assets/Sound Effects/Attacks/punch.mp3', 0.22);
+      stepSoccerBall3DRotation(ball, (fighter.vx || 0) * 2.2, (fighter.vy || 0) * 2.2);
+
+      // Chigiri Aerodynamic Pink Trail while sprinting with ball
+      if (charId === 'chigiri' && (fighter.isPantherSprinting || fighter.pantherSpeedBuffTimer > 0 || fighter.isEgoActive)) {
+        if (Array.isArray(fighter.afterImages)) {
+          fighter.afterImages.push({
+            x: ball.x,
+            y: ball.y,
+            angle: dribbleAngle,
+            r: ball.r || 16,
+            alpha: 0.35,
+            fadeSpeed: 0.10
+          });
+        }
+      }
+      // Isagi Cyan Puzzle Fragments while in Flow State with ball
+      else if (charId === 'isagi' && (fighter.isFlowStateActive || fighter.isEgoActive)) {
+        if (typeof fighter._spawnPuzzleParticles === 'function') {
+          fighter._spawnPuzzleParticles(ball.x, ball.y, 1, '#00F0FF');
+        }
+      }
+    }
+  } else {
+    fighter._dribbleTouchTimer = 0;
+  }
+
+  // 4. Dynamic Distance & Footwork Curve (Ball is pushed ahead then caught back up)
+  const t = isMoving ? (fighter._dribbleTouchTimer / touchCadence) : 0;
+  const pushCurve = Math.sin(t * Math.PI);
+  const currentPushOffset = pushDistance * Math.pow(pushCurve, 0.85);
+
+  // Natural foot alternation (left foot / right foot micro-wobble)
+  const footSign = ((fighter._dribbleStepCount || 0) % 2 === 0) ? 1 : -1;
+  const currentLateralOffset = Math.sin(t * Math.PI) * lateralWobble * footSign;
+  const perpAngle = dribbleAngle + Math.PI / 2;
+
+  const targetDist = baseDist + leadDist + currentPushOffset;
+  const targetX = fighter.x + Math.cos(dribbleAngle) * targetDist + Math.cos(perpAngle) * currentLateralOffset;
+  const targetY = fighter.y + Math.sin(dribbleAngle) * targetDist + Math.sin(perpAngle) * currentLateralOffset;
+
+  // 5. Snappiness & Follow Rate Scaled by Dribble Control Rating
+  const lerpRate = 0.32 + effectiveControl * 0.44;
+  ball.x += (targetX - ball.x) * lerpRate;
+  ball.y += (targetY - ball.y) * lerpRate;
+  ball._lastStepX = ball.x;
+  ball._lastStepY = ball.y;
+
+  // Match fighter velocity plus push momentum delta
+  const pushVelBoost = isMoving ? (1.0 + (pushDistance / (touchCadence * Math.max(1, fighterSpeed))) * Math.cos(t * Math.PI)) : 1.0;
+  ball.vx = (fighter.vx || 0) * Math.max(0.6, pushVelBoost);
+  ball.vy = (fighter.vy || 0) * Math.max(0.6, pushVelBoost);
+  stepSoccerBall3DRotation(ball, ball.vx, ball.vy);
+
+  // 6. Arena Wall Clamping
+  if (arena && typeof arena.x === 'number') {
+    const minX = arena.x + ball.r;
+    const maxX = arena.x + arena.width - ball.r;
+    const minY = arena.y + ball.r;
+    const maxY = arena.y + arena.height - ball.r;
+    ball.x = Math.max(minX, Math.min(maxX, ball.x));
+    ball.y = Math.max(minY, Math.min(maxY, ball.y));
+  }
+
+  // 7. Controlled Ball State Flags
+  ball.isKicked = false;
+  ball.isKickedByIsagi = false;
+  ball.isDirectVolley = false;
+  ball.isStriker = false;
+  ball.isRebound = false;
+  ball.isSuperShot = false;
+  ball.shouldBounceBackToKicker = false;
+  ball.shouldBounceBackToIsagi = false;
+  ball.lastKicker = fighter;
+  ball.dribbler = fighter;
+  ball.effectiveControl = effectiveControl;
+}
+
+/**
+ * Evaluates and executes the "Ball Kick Steal" mechanic.
+ * Triggered when a fighter physically bumps into a Blue Lock fighter who is currently dribbling,
+ * or when an opponent physically collides with the ball being dribbled at a player's feet.
+ *
+ * Mechanically:
+ * - Checks whether a steal proc succeeds based on base steal chance and dribbler's control rating.
+ * - On success:
+ *   1. Dribbler is DISPOSSESSED: ball.dribbler is cleared.
+ *   2. Prevents the dribbler from kicking: applies hit stun (stagger), attack interruption, and shootCooldown penalty.
+ *   3. Pushes the dribbler backward slightly.
+ *   4. Kicks/pushes the ball away:
+ *      - If tackler is a Blue Lock striker: tackler steals possession (becomes new dribbler or can counter-kick).
+ *      - If tackler is any other fighter: kicks the ball away with kinetic velocity.
+ *   5. Emits floating text, audio ('kick.mp3'), and sparks/puzzle particle VFX.
+ *
+ * @param {object} dribbler - Fighter currently dribbling the soccer ball
+ * @param {object} tackler - Fighter bumping into the dribbler or intercepting the ball
+ * @param {object} ball - The soccer ball entity
+ * @param {object} [arena=null] - Arena bounding box
+ * @param {object} [options={}] - Optional tuning overrides (e.g. nx, ny normal vector, forcedSuccess)
+ * @returns {boolean} True if a ball kick steal successfully occurred
+ */
+export function attemptBallKickSteal(dribbler, tackler, ball, arena = null, options = {}) {
+  if (!dribbler || !tackler || !ball) return false;
+  if (dribbler === tackler || dribbler.id === tackler.id) return false;
+  if (dribbler.isDead || tackler.isDead) return false;
+  if (typeof dribbler.isTeammate === 'function' && dribbler.isTeammate(tackler)) return false;
+
+  // Dribbler must actively be dribbling/controlling the ball
+  if (ball.dribbler !== dribbler) return false;
+
+  // Anti-spam cooldown gate: avoid rolling 60 times/sec during continuous body overlap
+  if ((dribbler._ballStealCooldown && dribbler._ballStealCooldown > 0) ||
+      (tackler._tackleStealCooldown && tackler._tackleStealCooldown > 0)) {
+    return false;
+  }
+
+  const dribblerCfg = (typeof CONFIG !== 'undefined' && dribbler.characterId && CONFIG[dribbler.characterId])
+    ? CONFIG[dribbler.characterId]
+    : {};
+  const tacklerCfg = (typeof CONFIG !== 'undefined' && tackler.characterId && CONFIG[tackler.characterId])
+    ? CONFIG[tackler.characterId]
+    : {};
+
+  // Master toggle check
+  if (!isSkillEnabled(dribblerCfg.enableBallSteal, true) && !isSkillEnabled(tacklerCfg.enableBallSteal, true)) {
+    return false;
+  }
+
+  // Explicit miss flag override (for testing and evasive skills)
+  if (tackler.forceMissSteal || dribbler.forceMissSteal || options.forceMiss) {
+    dribbler._ballStealCooldown = 18;
+    tackler._tackleStealCooldown = 18;
+    return false;
+  }
+
+  // Calculate dynamic steal chance based on tackler ability vs dribbler control
+  const baseChance = tacklerCfg.ballStealChance ?? dribblerCfg.ballStealChance ?? 0.50;
+  if (baseChance <= 0) {
+    dribbler._ballStealCooldown = 18;
+    tackler._tackleStealCooldown = 18;
+    return false;
+  }
+  const dribblerControl = getFighterDribbleControl(dribbler, dribblerCfg); // [0.10, 1.0]
+  let stealChance = baseChance * (1.25 - dribblerControl * 0.40);
+
+  // Bonus steal chance if tackler is another Blue Lock striker
+  if (isBlueLockFighter(tackler)) {
+    stealChance += 0.10;
+  }
+
+  // Bonus steal chance if tackler is lunging / dashing in with high velocity
+  const isTacklerDashing = Boolean(
+    (tackler.isPantherSprinting && (tackler.pantherSprintDashTimer || 0) > 0) ||
+    (tackler.isMetavisionDashing && (tackler.metavisionDashTimer || 0) > 0) ||
+    (tackler.isBlueLockDashing && (tackler.blueLockDashTimer || 0) > 0) ||
+    options.isDashing
+  );
+  const tacklerSpeed = Math.hypot(tackler.vx || 0, tackler.vy || 0);
+  if (tacklerSpeed >= 7.0 || isTacklerDashing) {
+    stealChance += 0.15;
+  }
+  stealChance = Math.max(0.15, Math.min(0.85, stealChance));
+
+  const roll = (typeof options.forcedSuccess === 'boolean')
+    ? (options.forcedSuccess ? 0.0 : 1.0)
+    : Math.random();
+
+  if (roll > stealChance) {
+    // Steal attempt failed: Dribbler successfully shields the ball!
+    dribbler._ballStealCooldown = 18;
+    tackler._tackleStealCooldown = 18;
+    playSound('Assets/Sound Effects/Attacks/punch.mp3', 0.25);
+    return false;
+  }
+
+  // ─── 1. DISPOSSESS DRIBBLER & APPLY STAGGER (PREVENT KICKING) ───
+  ball.dribbler = null;
+  dribbler._ballHitCooldown = 25;
+  dribbler._isagiBallHitCooldown = 25;
+  dribbler._ballStealCooldown = 40;
+  tackler._tackleStealCooldown = 40;
+
+  // Prevent dribbler from kicking: shootCooldown penalty + attack interrupt
+  const cooldownPenalty = dribblerCfg.ballStealCooldownPenalty || 35;
+  dribbler.shootCooldown = Math.max(dribbler.shootCooldown || 0, cooldownPenalty);
+
+  const staggerDuration = dribblerCfg.ballStealStaggerDuration || 16;
+  if (typeof dribbler.applyHitStun === 'function') {
+    dribbler.applyHitStun(staggerDuration);
+  } else {
+    dribbler.hitStunTimer = Math.max(dribbler.hitStunTimer || 0, staggerDuration);
+  }
+  if (typeof dribbler.interruptAttacks === 'function') {
+    dribbler.interruptAttacks();
+  }
+
+  // Normal displacement bump
+  let bumpNx = options.nx;
+  let bumpNy = options.ny;
+  if (bumpNx === undefined || bumpNy === undefined) {
+    const dx = dribbler.x - tackler.x;
+    const dy = dribbler.y - tackler.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    bumpNx = dx / dist;
+    bumpNy = dy / dist;
+  }
+  dribbler.vx += bumpNx * 4.5;
+  dribbler.vy += bumpNy * 4.5;
+
+  // ─── 2. KICK / PUSH BALL AWAY & RESOLVE STEAL POSSESSION ───
+  const tacklerAngle = (tackler.gunAngle !== undefined)
+    ? tackler.gunAngle
+    : (tackler.angle !== undefined ? tackler.angle : Math.atan2(tackler.vy || -bumpNy, tackler.vx || -bumpNx));
+  const kickSpeed = tacklerCfg.ballStealKickSpeed || dribblerCfg.ballStealKickSpeed || 11.0;
+  const tacklerTheme = tackler.themeColor || tackler.color || '#10B981';
+
+  if (isBlueLockFighter(tackler)) {
+    // Tackler is a Blue Lock striker! Direct steal of the ball!
+    ball.lastKicker = tackler;
+    ball.kickerThemeColor = tacklerTheme;
+    tackler._ballHitCooldown = 0;
+    tackler._isagiBallHitCooldown = 0;
+
+    if (tackler.shootCooldown <= 0) {
+      // Ready to kick: Immediate steal-and-shot counter-attack!
+      const aimAngle = (dribbler && !dribbler.isDead)
+        ? Math.atan2(dribbler.y - tackler.y, dribbler.x - tackler.x)
+        : tacklerAngle;
+      executeSoccerKick(tackler, ball, aimAngle, kickSpeed * 1.15, {
+        isCrit: Boolean(tackler.isEgoActive || tackler.isFlowStateActive),
+        isDirectVolley: false,
+        themeColor: tacklerTheme,
+        bounceBackChance: 0.40,
+        rotSpeed: 0.28
+      });
+      tackler.shootCooldown = tackler.shootCooldownMax || 32;
+      spawnFloatingText('STEAL & SHOT!', tackler.x, tackler.y - (tackler.r || 25) - 14, tacklerTheme);
+    } else {
+      // On cooldown: Tackler takes over active dribbling!
+      dribbleSoccerBall(tackler, ball, arena, tacklerCfg);
+      spawnFloatingText('BALL STEAL!', tackler.x, tackler.y - (tackler.r || 25) - 14, tacklerTheme);
+    }
+  } else {
+    // Tackler is any other fighter: Tackles and kicks the ball loose into space!
+    ball.isKicked = true;
+    ball.lastKicker = tackler;
+    ball.kickerThemeColor = tacklerTheme;
+    ball.vx = Math.cos(tacklerAngle) * kickSpeed;
+    ball.vy = Math.sin(tacklerAngle) * kickSpeed;
+    ball.x = dribbler.x + Math.cos(tacklerAngle) * ((dribbler.r || 25) + ball.r + 6);
+    ball.y = dribbler.y + Math.sin(tacklerAngle) * ((dribbler.r || 25) + ball.r + 6);
+    ball.isRebound = false;
+    ball.isDirectVolley = false;
+    ball.isStriker = false;
+    ball.isSuperShot = false;
+    spawnFloatingText('BALL STEAL!', tackler.x, tackler.y - (tackler.r || 25) - 14, '#10B981');
+  }
+
+  // Feedback on dribbler
+  spawnFloatingText('DISPOSSESSED!', dribbler.x, dribbler.y - (dribbler.r || 25) - 14, '#EF4444');
+
+  // VFX & SFX
+  playSound('Assets/Sound Effects/Attacks/heavypunch2.mp3', 0.8);
+  spawnSparks(ball.x, ball.y, 10, tacklerTheme);
+  if (typeof dribbler._spawnPuzzleParticles === 'function') {
+    dribbler._spawnPuzzleParticles(ball.x, ball.y, 6, dribbler.themeColor || '#EC4899');
+  }
+
+  return true;
 }
 
 /**

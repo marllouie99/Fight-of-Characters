@@ -13,7 +13,7 @@ import { getBossConfig } from '../configs/bosses/bossConfigRegistry.js';
 import { getFighterGrade, getGradeMeta } from '../configs/gradeConfig.js';
 import { drawWingedGradeLetter, getZeusGradeCardTheme } from './ui/CollectorCardRenderer.js';
 import { resolveActiveThemeId, getArenaTopWallBlockThickness } from '../systems/arenaThemeSystem.js';
-import { isBlueLockFighter, getBlueLockEgoBuffs, BLUE_LOCK_EGO_REGISTRY } from '../systems/soccerBallSystem.js';
+import { isBlueLockFighter, getBlueLockEgoBuffs, BLUE_LOCK_EGO_REGISTRY, getFighterDribbleControl } from '../systems/soccerBallSystem.js';
 
 export { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking, updateSideHudCameraTracking };
 
@@ -2373,15 +2373,24 @@ export function getBlueLockFighterStatsInfo(f) {
     info.push(`<b>DMG:</b> ${baseDmg}`);
   }
 
-  // 2. Sprint Mobility (SPD) — dynamic update when Ego speedMultiplier is active (e.g. Chigiri Panther Mach Pace)
+  // 2. Sprint Mobility (SPD) — dynamic update when Ego speedMultiplier or Panther Speed Surge is active
   const modeMult = (typeof state !== 'undefined' && state.mode && typeof MODE_SPEED_MULTIPLIER !== 'undefined' && MODE_SPEED_MULTIPLIER[state.mode]) || 1;
   const baseSpd = (f.baseSpeed || cfg.speed || 5.2) * modeMult;
-  const spdMult = (isEgo && typeof egoBuffs.speedMultiplier === 'number') ? egoBuffs.speedMultiplier : 1.0;
+  let spdMult = 1.0;
+  let spdTag = '';
+  if (f.pantherSpeedBuffTimer && f.pantherSpeedBuffTimer > 0) {
+    spdMult *= (cfg.pantherSprintSpeedBuffMultiplier || 1.40);
+    spdTag = 'SURGE';
+  }
+  if (isEgo && typeof egoBuffs.speedMultiplier === 'number') {
+    spdMult *= egoBuffs.speedMultiplier;
+    spdTag = spdTag ? 'SURGE+EGO' : 'EGO';
+  }
   const totalSpd = baseSpd * spdMult;
   const spdDiff = totalSpd - baseSpd;
   if (spdDiff > 0.05) {
     const bonusPct = Math.round((spdMult - 1.0) * 100);
-    info.push(`<b>SPD:</b> ${baseSpd.toFixed(1)} + ${spdDiff.toFixed(1)} <span style="color: ${themeColor}; font-size: 10px;">▲ (+${bonusPct}% EGO)</span>`);
+    info.push(`<b>SPD:</b> ${baseSpd.toFixed(1)} + ${spdDiff.toFixed(1)} <span style="color: ${themeColor}; font-size: 10px;">▲ (+${bonusPct}% ${spdTag})</span>`);
   } else {
     info.push(`<b>SPD:</b> ${baseSpd.toFixed(1)}`);
   }
@@ -2407,8 +2416,15 @@ export function getBlueLockFighterStatsInfo(f) {
     info.push(`<b>Crit Rate:</b> 100% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">(EGO CRIT) ▲</span>`);
   }
 
-  if (isEgo && typeof egoBuffs.dodgeChance === 'number' && egoBuffs.dodgeChance > 0) {
-    info.push(`<b>EVADE:</b> ${Math.round(egoBuffs.dodgeChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  // Evade chance: active during Panther Speed Surge or Ego Awakening
+  const hasSpeedSurge = Boolean(f.pantherSpeedBuffTimer && f.pantherSpeedBuffTimer > 0);
+  const surgeEvadeChance = hasSpeedSurge ? (cfg.pantherSprintEvadeChance !== undefined ? cfg.pantherSprintEvadeChance : 0.35) : 0;
+  const egoEvadeChance = (isEgo && typeof egoBuffs.dodgeChance === 'number') ? egoBuffs.dodgeChance : 0;
+  const totalEvadeChance = (hasSpeedSurge && isEgo) ? Math.min(0.60, surgeEvadeChance + 0.15) : (hasSpeedSurge ? surgeEvadeChance : egoEvadeChance);
+
+  if (totalEvadeChance > 0) {
+    const evadeTag = (hasSpeedSurge && isEgo) ? 'SURGE+EGO' : (hasSpeedSurge ? 'SURGE' : 'EGO');
+    info.push(`<b>EVADE:</b> ${Math.round(totalEvadeChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (${evadeTag})</span>`);
   }
   if (isEgo && typeof egoBuffs.defenseMultiplier === 'number' && egoBuffs.defenseMultiplier < 1.0) {
     const defBoost = Math.round((1 - egoBuffs.defenseMultiplier) * 100);
@@ -2423,6 +2439,20 @@ export function getBlueLockFighterStatsInfo(f) {
   }
   if (isEgo && typeof egoBuffs.reboundBounceChance === 'number') {
     info.push(`<b>PASSBACK:</b> ${Math.round(egoBuffs.reboundBounceChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  }
+
+  // 5. Dribble & Ball Control Status (Reflects character control archetype while moving with ball)
+  const isDribbling = Boolean(f.soccerBall && f.soccerBall.dribbler === f && f.shootCooldown > 0);
+  const controlRating = getFighterDribbleControl(f, cfg);
+  const controlPct = Math.round(controlRating * 100);
+  const styleName = cfg.dribbleStyle === 'mach_breakaway' ? 'MACH DRIBBLE' : (cfg.dribbleStyle === 'spatial_pocket' ? 'SPATIAL POCKET' : 'BALL CONTROL');
+
+  if (isDribbling) {
+    const spdBonus = Math.round(((cfg.dribbleSpeedMultiplier || 1.05) - 1.0) * 100);
+    const bonusTag = spdBonus > 0 ? ` (+${spdBonus}% SPD)` : '';
+    info.push(`<b>DRIBBLE:</b> <span style="color: ${themeColor}; font-weight: bold;">${controlPct}%</span> <span style="color: ${themeColor}; font-size: 10px;">▲ (${styleName}${bonusTag})</span>`);
+  } else {
+    info.push(`<b>CONTROL:</b> ${controlPct}% <span style="color: ${themeColor}; font-size: 10px;">(${styleName})</span>`);
   }
 
   // If no dynamic buff was pushed, display base kick accuracy

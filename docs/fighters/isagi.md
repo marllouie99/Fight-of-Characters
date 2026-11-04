@@ -211,6 +211,23 @@ Unlike typical fighters that spawn transient projectiles into a shared array, Is
 
 ---
 
+### 3b. Ball Trapping & Dribble Control Mechanic
+- **Ball Control Archetype**: `Spatial Pocket Dribble`
+- **Control Rating**: `96%` base control (elevates to `100%` during Flow State / EGO Awakening)
+- **Mechanic Overview**:
+  - When Isagi possesses the ball while his basic attack is on cooldown (`shootCooldown > 0`), he does not attack prematurely. Instead, he traps the ball on his boot and enters the **Dribble State**.
+  - **Spatial Pocket Ball Retention**: Unlike sprinters who push the ball far forward, Isagi keeps the ball protected inside his spatial pocket (`dribbleTightness: 0.85`, `leadDistance: 2px`), shielding the ball between his body and travel path.
+  - **Dynamic Agility & Micro-Touches**: Every 10 frames while moving, Isagi executes subtle micro-touches that kick up cyan turf sparks and rotate the ball in 3D. While in Flow State or EGO, subtle cyan puzzle fragments trail from the dribbled ball.
+  - **Pace Retention**: Grants a `+5%` smooth movement tempo (`dribbleSpeedMultiplier: 1.05`) while actively controlling the ball.
+  - **Tackle Resilience**: High spatial control (`96%`) provides strong poise resistance against being dispossessed; only heavy attacks ($\ge 35\text{ DMG}$) break possession into a `LOOSE BALL!`.
+  - **Ball Kick Steal & Bumping Defense**:
+    - When an opponent physically bumps into Isagi or steps directly onto the ball at his feet while dribbling, a **Ball Kick Steal** check is rolled (base 50% chance, mitigated by Isagi's 96% spatial pocket control).
+    - If the steal proc succeeds: Isagi is `DISPOSSESSED!`, suffers a 16-frame stagger (`applyHitStun`), active attacks are interrupted, and a 35-frame shoot cooldown penalty is applied, preventing him from immediately shooting the ball.
+    - If the bumper is another Blue Lock striker, they steal possession (either firing an immediate `STEAL & SHOT!` or taking over the dribble). If the bumper is a non-Blue Lock fighter, the ball is kicked loose into open space.
+  - **HUD Feedback**: Displays dynamic `DRIBBLE: 96% (SPATIAL POCKET)` status in the HUD card stats.
+
+---
+
 ### 4. Skill 1: Metavision Slip (Tactical Interception & Flow State)
 - **Cooldown**: `8.0s` (`480 frames`) | **Dash Distance**: `210px` | **Invulnerability**: `14 frames` (~`0.23s`)
 - **Proximity Gating**:

@@ -37,7 +37,7 @@ export const engineerConfig = {
   shotgunCooldown: 100,
   shotgunPellets: 8,
   shotgunSpread: 0.45,         // Spread angle in radians (~26°)
-  shotgunDamage: 5.20,         // Damage per pellet
+  shotgunDamage: 3.20,         // Damage per pellet
   shotgunSpeed: 30,            // Initial projectile velocity
   shotgunRange: 300,           // Max distance to trigger shotgun
   shotgunRecoilForce: 3.5,     // Pushback impulse on firing

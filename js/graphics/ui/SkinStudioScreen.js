@@ -61,6 +61,7 @@ import { drawBombermanSkin, _drawBombermanHair, _getBombermanHairImage } from '.
 import { drawPacmanSkin, _drawPacmanHair, _getPacmanHairImage } from '../fighters/pacmanSkin.js';
 import { drawCreeperSkin, _drawCreeperHair } from '../fighters/creeperSkin.js';
 import { drawIsagiSkin, _drawIsagiHair, _getIsagiHairImage } from '../fighters/isagiSkin.js';
+import { drawChigiriSkin, _drawChigiriHair, _getChigiriHairImage } from '../fighters/chigiriSkin.js';
 import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighters/wardenSkin.js';
 
 
@@ -146,7 +147,8 @@ export const SKIN_STUDIO_CATEGORIES = [
   { id: 'CHAINSAW', label: 'CSM', filter: (f) => ['makima', 'reze', 'power'].includes(f.key) },
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
-  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'warden'].includes(f.key) }
+  { id: 'BLUELOCK', label: 'BLUE LOCK', filter: (f) => ['isagi', 'chigiri'].includes(f.key) },
+  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden'].includes(f.key) }
 ];
 
 
@@ -880,6 +882,23 @@ export const SKIN_STUDIO_FIGHTERS = [
     ]
   },
   {
+    key: 'chigiri',
+    label: 'HYOMA CHIGIRI',
+    asset: 'Assets/model/chigiri/Chigiri_hair.png?v=4',
+    assetDims: '1536 x 1024',
+    baseW: 2.65,
+    baseH: 2.45,
+    baseCrownY: -1.85,
+    visW: 942,
+    visH: 1024,
+    centerX: 772,
+    topY: 0,
+    themeColor: '#EC4899',
+    forms: [
+      { id: 'default', label: 'THE RED PANTHER' }
+    ]
+  },
+  {
     key: 'warden',
     label: 'THE WARDEN',
     asset: 'Assets/model/warden/warden-hair.png',
@@ -1271,6 +1290,16 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 153 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'chigiri') {
+    return `// Calibrated Hair for Chigiri (Assets/model/chigiri/Chigiri_hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 942;\n` +
+           `const scaleY = targetHairHeight / 1024;\n` +
+           `const drawW = 1536 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -772 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'warden') {
     return `// Calibrated Sculk Horns for Warden (Assets/model/warden/warden-hair.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
@@ -1769,6 +1798,9 @@ export function drawSkinStudioScreen() {
       } else if (fDef.key === 'isagi') {
         dummyFighter._isStudioDummy = true;
         drawIsagiSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'chigiri') {
+        dummyFighter._isStudioDummy = true;
+        drawChigiriSkin(ctx, dummyFighter);
       } else if (fDef.key === 'warden') {
         dummyFighter._isStudioDummy = true;
         dummyFighter.isEnraged = (state.studioSkinForm === 'enraged');
@@ -1853,6 +1885,8 @@ export function drawSkinStudioScreen() {
       _drawCreeperHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'isagi') {
       _drawIsagiHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'chigiri') {
+      _drawChigiriHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'warden') {
       _drawWardenHair(ctx, baseRadius, isFacingLeft);
     }

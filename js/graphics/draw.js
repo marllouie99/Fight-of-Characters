@@ -56,6 +56,7 @@ export { drawPacmanSkin, drawPacmanPixelBody, _drawPacmanHair, _getPacmanHairIma
 export { drawCreeperSkin, drawCreeperPixelBody, _drawCreeperHair } from './fighters/creeperSkin.js';
 export { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from './fighters/wardenSkin.js';
 export { drawIsagiSkin, drawIsagiGhostSkin, drawIsagiPixelBody, _drawIsagiHair, _getIsagiHairImage, drawIsagiFist } from './fighters/isagiSkin.js';
+export { drawChigiriSkin, drawChigiriGhostSkin, drawChigiriPixelBody, _drawChigiriHair, _getChigiriHairImage, drawChigiriFist } from './fighters/chigiriSkin.js';
 export { drawMinecraftTntBlock, drawCreeperExplosion } from './weapons/creeperWeaponGraphics.js';
 export { drawHeldBomb, drawPlantedBomb, drawBombExplosion, drawBombermanPowerupPopup, drawBombermanKickEffectSprite, _getBombermanKickFrames } from './weapons/bombermanWeaponGraphics.js';
 export { drawZombieChompEffect, drawZombieGravestone, drawZombieMinion, drawZombieHugeWaveBanner, drawZombieWaveProgressBar, drawZombieWaveAlertBanner, drawZombieVictoryBanner, drawZombiesAteYourBrains } from './weapons/zombieWeaponGraphics.js';

@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE â€” MASTER SKIN & HAIR CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Skin Studio on 2026-11-04T10:16:47.374Z
+ * Generated from Skin Studio on 2026-11-04T13:53:01.057Z
  * =============================================================================
  */
 
@@ -67,7 +67,8 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   uryu_glasses: { widthScale: 1.40, heightScale: 1.10, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   shiro: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 1, angleOffset: 0, flipX: false, flipY: false },
   shiro_crown: { widthScale: 0.94, heightScale: 1.00, offsetX: -20, offsetY: -15, angleOffset: -0.5411, flipX: false, flipY: false },
-  isagi: { widthScale: 1.05, heightScale: 0.96, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
+  isagi: { widthScale: 0.82, heightScale: 1.06, offsetX: 0, offsetY: -5, angleOffset: 0, flipX: false, flipY: false, handScale: 0.60 },
+  chigiri: { widthScale: 1.04, heightScale: 0.94, offsetX: 0, offsetY: 13, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   warden: { widthScale: 1.26, heightScale: 0.98, offsetX: 0, offsetY: -14, angleOffset: 0, flipX: false, flipY: false },
   alucard_glasses: { widthScale: 1.10, heightScale: 1.10, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   guts: { widthScale: 1.06, heightScale: 0.86, offsetX: 0, offsetY: 4, angleOffset: 0, flipX: false, flipY: false },

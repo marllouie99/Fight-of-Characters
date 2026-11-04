@@ -1565,6 +1565,9 @@ export class Fighter {
     if (this.characterId === 'shiro' || this.type === 'shiro') {
       return this.damageNumberColor || (typeof CONFIG !== 'undefined' && (CONFIG.shiro?.damageNumberColor || CONFIG.shiro?.themeColor || CONFIG.shiro?.color)) || '#8B5CF6';
     }
+    if (this.characterId === 'chigiri' || this.type === 'chigiri') {
+      return this.damageNumberColor || (typeof CONFIG !== 'undefined' && (CONFIG.chigiri?.damageNumberColor || CONFIG.chigiri?.themeColor || CONFIG.chigiri?.color)) || '#EC4899';
+    }
     if (this.damageNumberColor) return this.damageNumberColor;
     return this.color || '#ff4444';
   }
@@ -2391,6 +2394,10 @@ export class Fighter {
     if (this._bhTextCooldown > 0) this._bhTextCooldown--;
     if (this._flameHitCooldown > 0) this._flameHitCooldown--;
     if (this.burnSpreadCooldown > 0) this.burnSpreadCooldown--;
+    if (this._ballStealCooldown > 0) this._ballStealCooldown--;
+    if (this._tackleStealCooldown > 0) this._tackleStealCooldown--;
+    if (this._ballHitCooldown > 0) this._ballHitCooldown--;
+    if (this._isagiBallHitCooldown > 0) this._isagiBallHitCooldown--;
     if (this._healthBarShakeTimer > 0) this._healthBarShakeTimer--;
     if (this._healthBarHitTimer > 0) this._healthBarHitTimer--;
     if (this._healthBarHealTimer > 0) this._healthBarHealTimer--;

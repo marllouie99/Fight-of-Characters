@@ -74,6 +74,7 @@ import { creeperConfig } from '../configs/characters/creeperConfig.js';
 import { gokuConfig } from '../configs/characters/gokuConfig.js';
 import { vegetaConfig } from '../configs/characters/vegetaConfig.js';
 import { isagiConfig } from '../configs/characters/isagiConfig.js';
+import { chigiriConfig } from '../configs/characters/chigiriConfig.js';
 import { wardenConfig } from '../configs/characters/wardenConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
@@ -106,6 +107,9 @@ export const CONFIG = {
   isagi: isagiConfig,
   Isagi: isagiConfig,
   ISAGI: isagiConfig,
+  chigiri: chigiriConfig,
+  Chigiri: chigiriConfig,
+  CHIGIRI: chigiriConfig,
   warden: wardenConfig,
   Warden: wardenConfig,
   WARDEN: wardenConfig,
@@ -2060,6 +2064,31 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: 1.0,
     ability: 'Sculk Echolocation & Sonic Boom',
     desc: wardenConfig.desc,
+  },
+  {
+    id: 72,
+    name: chigiriConfig.name || 'CHIGIRI',
+    grade: chigiriConfig.grade ?? DEFAULT_GRADE,
+    displayName: chigiriConfig.displayName || chigiriConfig.name || 'Hyoma Chigiri',
+    category: 'Anime',
+    color: chigiriConfig.color || '#EC4899',
+    themeColor: chigiriConfig.themeColor || '#EC4899',
+    secondaryColor: chigiriConfig.secondaryColor || '#111827',
+    startX: 300,
+    startY: 250,
+    startVx: 1.2,
+    startVy: 1.2,
+    radius: chigiriConfig.radius || chigiriConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'chigiri',
+    hp: chigiriConfig.hp || 400,
+    damage: chigiriConfig.damage || 22,
+    cooldown: chigiriConfig.cooldown || 32,
+    moveSpeed: chigiriConfig.moveSpeed || chigiriConfig.speed || 6.4,
+    projectileSpeedMultiplier: 1.0,
+    ability: chigiriConfig.ability || 'Panther Sprint & 44-Mach Snipe',
+    desc: chigiriConfig.desc,
   }
 ];
 

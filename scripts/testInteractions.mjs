@@ -16312,7 +16312,13 @@ async function runInteractionTests() {
     isagi._updateSoccerBallPhysics(dummy, arena);
     assert(dummy.hp === hpBeforeInertHit, 'Ball must NOT deal damage when it does not come from a kick by Isagi');
 
-    // 7. Elastic Deflection When On Cooldown
+
+    const { getFighterDribbleControl } = await import('../js/systems/soccerBallSystem.js');
+    const isagiControl = getFighterDribbleControl(isagi, CONFIG.isagi);
+    assert(isagiControl >= 0.95, `Isagi must possess high spatial pocket ball control (>= 0.95), got ${isagiControl}`);
+    isagi.isFlowStateActive = true;
+    assert(getFighterDribbleControl(isagi, CONFIG.isagi) === 1.0, 'Isagi Flow State must elevate dribble control to 100% (1.0)');
+    isagi.isFlowStateActive = false;
     dummy.x = isagi.x + 200;
     isagi.shootCooldown = 25; // on cooldown
     ball.x = isagi.x + 10;
@@ -16320,7 +16326,33 @@ async function runInteractionTests() {
     ball.vx = 0;
     ball.vy = 0;
     isagi._handleCombatAndBallMeeting(dummy, arena, CONFIG.isagi);
-    assert(ball.x > isagi.x + 25, 'Ball must elastically deflect and separate from Isagi body when on cooldown');
+    assert(ball.dribbler === isagi, 'Ball must be trapped and dribbled by Isagi when on cooldown');
+    assert(ball.effectiveControl >= 0.95, `Isagi effectiveControl must be >= 0.95, got ${ball.effectiveControl}`);
+    assert(ball.isKicked === false, 'Ball must not be kicked when shootCooldown > 0');
+    assert(isagi.shootCooldown === 25, 'shootCooldown must not be wiped to 0 upon meeting the ball');
+
+    // Verify forward movement dynamically pushes the ball forward in stride
+    isagi.vx = 4;
+    isagi.vy = 0;
+    const initialDist = Math.hypot(ball.x - isagi.x, ball.y - isagi.y);
+    for (let frame = 0; frame < 5; frame++) {
+      isagi._handleCombatAndBallMeeting(dummy, arena, CONFIG.isagi);
+    }
+    const pushedDist = Math.hypot(ball.x - isagi.x, ball.y - isagi.y);
+    assert(pushedDist > initialDist, `Moving forward must push the ball forward in stride (got ${pushedDist.toFixed(1)}px vs initial ${initialDist.toFixed(1)}px)`);
+    isagi.vx = 0;
+    isagi.vy = 0;
+    ball.x = isagi.x + 10;
+    ball.y = isagi.y;
+
+    // Decrement cooldown until ready to kick
+    while (isagi.shootCooldown > 0) {
+      isagi.shootCooldown--;
+    }
+    // Now ready to attack!
+    isagi._handleCombatAndBallMeeting(dummy, arena, CONFIG.isagi);
+    assert(ball.isKicked === true || ball.isKickedByIsagi === true, 'Isagi must attack immediately once shootCooldown expires');
+    assert(isagi.shootCooldown === isagi.shootCooldownMax, 'shootCooldown must reset to shootCooldownMax after kicking');
 
     // 8. One-Two Rebound Mechanics (Chance to Bounce Back Right to Isagi)
     isagi.x = 150;
@@ -16338,7 +16370,7 @@ async function runInteractionTests() {
     isagi._updateSoccerBallPhysics(dummy, arena);
     // Ball should now be heading back towards Isagi (leftwards, vx < 0)
     assert(ball.vx < 0, `Ball must rebound back toward Isagi (got vx=${ball.vx})`);
-    assert(isagi.shootCooldown === 0, 'shootCooldown must be primed to 0 for incoming return volley');
+    assert(isagi.shootCooldown === 25, 'shootCooldown must remain intact and NOT be cleared to 0 on return passes');
     assert(ball.isRebound === true, 'Ball must be marked as isRebound');
 
     // 9. HUD Provider Validation
@@ -17476,6 +17508,513 @@ async function runInteractionTests() {
     state.fighters = [];
     state.floatingTexts = [];
     console.log('      ✅ Shiro Damage Number Color Theme Consistency Standard verified cleanly.');
+  }
+
+  // ──────────────────────────────────────────
+  // ⚽ TEST 129: Hyoma Chigiri (Blue Lock) Panther Sprint, Speed Surge & Mach Pace EGO Awakening Standard
+  // ──────────────────────────────────────────
+  {
+    console.log('🧪 Test 129: Hyoma Chigiri (Blue Lock) Panther Sprint, Speed Surge & Mach Pace EGO Awakening Standard...');
+    const { chigiriConfig } = await import('../js/configs/characters/chigiriConfig.js');
+    const ChigiriClass = FIGHTER_CLASS_MAP['chigiri'];
+    const IsagiClass = FIGHTER_CLASS_MAP['isagi'];
+    const { Fighter, resolveDamageNumberColor } = await import('../js/entities/fighter.js');
+    const { activateBlueLockEgo, getBlueLockEgoBuffs, isBlueLockFighter, getFighterDribbleControl } = await import('../js/systems/soccerBallSystem.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+
+    assert(chigiriConfig, 'chigiriConfig must exist');
+    assert(ChigiriClass, 'ChigiriFighter class must exist in FIGHTER_CLASS_MAP');
+    assert(chigiriConfig.r === 25 && chigiriConfig.radius === 25, 'Chigiri must declare Rule 24 humanoid standard 25px radius');
+    assert(chigiriConfig.themeColor === '#EC4899', `Chigiri themeColor must be #EC4899, got ${chigiriConfig.themeColor}`);
+    assert(chigiriConfig.damageNumberColor === '#EC4899', `Chigiri damageNumberColor must be #EC4899, got ${chigiriConfig.damageNumberColor}`);
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+
+    const chigiri = new ChigiriClass({ x: 200, y: 300, hp: 400, maxHp: 400 });
+    const target = new Fighter({ x: 350, y: 300, hp: 600, maxHp: 600, radius: 25 });
+    state.fighters = [chigiri, target];
+
+    // 1. Identity & Rule 24 Scale Verification
+    assert(chigiri.characterId === 'chigiri', `Chigiri characterId must be 'chigiri', got ${chigiri.characterId}`);
+    assert(chigiri.type === 'chigiri', `Chigiri type must be 'chigiri', got ${chigiri.type}`);
+    assert(chigiri.r === 25 && chigiri.radius === 25, `Chigiri radius must be 25px (Rule 24), got ${chigiri.r}`);
+    assert(isBlueLockFighter(chigiri) === true, 'isBlueLockFighter(chigiri) must be true');
+    assert(chigiri.damageNumberColor === '#EC4899', `Chigiri damageNumberColor must be #EC4899, got ${chigiri.damageNumberColor}`);
+    assert(resolveDamageNumberColor(chigiri) === '#EC4899', `resolveDamageNumberColor(chigiri) must be #EC4899, got ${resolveDamageNumberColor(chigiri)}`);
+
+    // 2. Skill 1: Panther Sprint & Lingering Speed Surge Verification
+    assert(chigiri.pantherSpeedBuffTimer === 0, 'pantherSpeedBuffTimer must initially be 0');
+    assert(chigiri.isPantherSprinting === false, 'isPantherSprinting must initially be false');
+
+    // Trigger Panther Sprint dash
+    chigiri._executePantherSprint(chigiri.soccerBall, chigiriConfig);
+    assert(chigiri.isPantherSprinting === true, 'isPantherSprinting must be true during sprint dash');
+    assert(chigiri.pantherSprintInvulnTimer === 14, `pantherSprintInvulnTimer must be 14 frames, got ${chigiri.pantherSprintInvulnTimer}`);
+    assert(chigiri.pantherSpeedBuffTimer === (chigiriConfig.pantherSprintSpeedBuffDuration || 150), `pantherSpeedBuffTimer must be set to 150 frames post-dash speed surge, got ${chigiri.pantherSpeedBuffTimer}`);
+
+    // Verify speed boost application
+    chigiri.isPantherSprinting = false;
+    assert(chigiri.pantherSpeedBuffMultiplier === 1.40, `pantherSpeedBuffMultiplier must be 1.40, got ${chigiri.pantherSpeedBuffMultiplier}`);
+
+    // 2b. Evade Mechanic During Temporary Speed Boost Verification
+    assert(chigiriConfig.pantherSprintEvadeChance === 0.35, `pantherSprintEvadeChance in config must be 0.35, got ${chigiriConfig.pantherSprintEvadeChance}`);
+    assert(chigiri.pantherSprintEvadeChance === 0.35, `pantherSprintEvadeChance on Chigiri must be 0.35, got ${chigiri.pantherSprintEvadeChance}`);
+
+    // Verify dash invulnerability (pantherSprintInvulnTimer)
+    const baseHp = chigiri.hp;
+    chigiri.pantherSprintInvulnTimer = 5;
+    const invulnResult = chigiri.takeDamage(30, target);
+    assert(invulnResult === false, 'takeDamage must return false during active pantherSprintInvulnTimer');
+    assert(chigiri.hp === baseHp, 'Chigiri HP must not decrease during dash invulnerability');
+    chigiri.pantherSprintInvulnTimer = 0;
+
+    // Verify evasion during temporary speed boost (pantherSpeedBuffTimer > 0)
+    chigiri.pantherSpeedBuffTimer = 100;
+    const origRandom = Math.random;
+    try {
+      // Mock random to succeed (< 0.35)
+      Math.random = () => 0.10;
+      const initialAfterimageCount = chigiri.afterImages.length;
+      const evadedResult = chigiri.takeDamage(25, target);
+      assert(evadedResult === false, 'takeDamage must return false when Evade check succeeds during speed boost');
+      assert(chigiri.hp === baseHp, 'Chigiri HP must remain unchanged after successful evade');
+      assert(chigiri.afterImages.length > initialAfterimageCount, 'Chigiri must generate ghost afterimages upon evading');
+
+      // Mock random to fail (> 0.35)
+      Math.random = () => 0.90;
+      const hitResult = chigiri.takeDamage(20, target);
+      assert(hitResult === true, 'takeDamage must return true when Evade check fails');
+      assert(chigiri.hp === baseHp - 20, `Chigiri HP must decrease by 20 when hit, got ${chigiri.hp}`);
+
+      // Verify guaranteed hits bypass evasion
+      Math.random = () => 0.05;
+      const guaranteedResult = chigiri.takeDamage(10, target, { isGuaranteedHit: true });
+      assert(guaranteedResult === true, 'Guaranteed hits must bypass evade mechanic');
+      assert(chigiri.hp === baseHp - 30, `Chigiri HP must decrease on guaranteed hit, got ${chigiri.hp}`);
+
+      // Verify beam evasion during speed boost
+      Math.random = () => 0.10;
+      assert(chigiri.dodgeBeam() === true, 'dodgeBeam must return true when evade succeeds during speed boost');
+    } finally {
+      Math.random = origRandom;
+    }
+    chigiri.hp = baseHp; // Restore HP for remaining tests
+
+    // Verify dynamic HUD stats for speed surge and evade mechanic
+    const { getBlueLockFighterStatsInfo } = await import('../js/graphics/hudManager.js');
+    chigiri.pantherSpeedBuffTimer = 120;
+    const surgeStats = getBlueLockFighterStatsInfo(chigiri);
+    assert(surgeStats.some(s => s.includes('SURGE') && s.includes('SPD')), 'HUD stats must show SURGE SPD bonus during temporary speed boost');
+    assert(surgeStats.some(s => s.includes('EVADE') && s.includes('35%')), 'HUD stats must show 35% EVADE during temporary speed boost');
+    chigiri.pantherSpeedBuffTimer = 0;
+
+    // 3. Single Persistent Soccer Ball Sharing with Isagi
+    const isagi = new IsagiClass({ x: 150, y: 300, hp: 420, maxHp: 420 });
+    state.fighters = [chigiri, isagi, target];
+    chigiri._syncSharedSoccerBall();
+    isagi._syncSharedSoccerBall();
+    assert(chigiri.soccerBall !== null && typeof chigiri.soccerBall === 'object', 'Chigiri must have a soccerBall reference');
+    assert(isagi.soccerBall === chigiri.soccerBall, 'Isagi and Chigiri MUST share the exact same soccer ball entity!');
+
+    // 4. EGO Awakening ("44-Panther Mach Pace") Verification
+    activateBlueLockEgo(chigiri, chigiriConfig);
+    assert(chigiri.isEgoActive === true, 'Chigiri isEgoActive must be true after activateBlueLockEgo');
+    assert(chigiri.egoMeter === 100, `Chigiri egoMeter must be 100, got ${chigiri.egoMeter}`);
+    const egoBuffs = getBlueLockEgoBuffs(chigiri);
+    assert(egoBuffs !== null, 'getBlueLockEgoBuffs(chigiri) must return active buffs');
+    assert(egoBuffs.speedMultiplier === 1.60, `Chigiri EGO speedMultiplier must be 1.60 (+60% speed), got ${egoBuffs.speedMultiplier}`);
+    assert(egoBuffs.dodgeChance === 0.25, `Chigiri EGO dodgeChance must be 0.25 (25%), got ${egoBuffs.dodgeChance}`);
+
+    // 5. Rule 18 HUD Skill Bars & Theme Color Consistency
+    const cSkills = getSkillDataForFighter(chigiri);
+    assert(Array.isArray(cSkills) && cSkills.length >= 3, `Chigiri must return at least 3 HUD skill bars, got ${cSkills?.length}`);
+    for (const s of cSkills) {
+      assert(s.color === '#EC4899', `HUD Skill '${s.id}' color must strictly match Chigiri theme color #EC4899, got ${s.color}`);
+      assert(!s.label.includes('(READY)') && !s.label.includes('(ACTIVE)'), `HUD Skill label '${s.label}' must not include redundant status suffixes`);
+      assert(s.pct >= 0 && s.pct <= 100, `HUD Skill '${s.id}' pct must be clamped [0, 100], got ${s.pct}`);
+    }
+
+    // 6. Skill 2: "STRIKER!" Finisher Execution
+    chigiri.x = chigiri.soccerBall.x;
+    chigiri.y = chigiri.soccerBall.y;
+    chigiri.strikerCooldownTimer = 0;
+    chigiri._unleashStrikerSkill(target, testArena);
+    assert(chigiri.strikerCooldownTimer > 0, 'Striker cooldown timer must reset after unleashing STRIKER!');
+    assert(chigiri.soccerBall.isStriker === true, 'Soccer ball must be flagged isStriker after unleashing STRIKER!');
+
+    // 6b. Panther Shot Basic Attack Cooldown & Ball Trapping
+    const chigiriBaseControl = getFighterDribbleControl(chigiri, chigiriConfig);
+    assert(chigiriBaseControl >= 0.88, `Chigiri base dribble control must be >= 0.88, got ${chigiriBaseControl}`);
+    chigiri.pantherSpeedBuffTimer = 100;
+    const surgeControl = getFighterDribbleControl(chigiri, chigiriConfig);
+    assert(surgeControl >= 0.96, `Chigiri Speed Surge must elevate dribble control to >= 0.96, got ${surgeControl}`);
+    chigiri.pantherSpeedBuffTimer = 0;
+    activateBlueLockEgo(chigiri, chigiriConfig);
+    assert(getFighterDribbleControl(chigiri, chigiriConfig) === 1.0, 'Chigiri EGO Awakening must elevate dribble control to 100% (1.0)');
+
+    chigiri.shootCooldown = 20; // On cooldown
+    chigiri.strikerCooldownTimer = 1000; // Striker on cooldown
+    chigiri.soccerBall.x = chigiri.x + 10;
+    chigiri.soccerBall.y = chigiri.y;
+    chigiri.soccerBall.vx = 0;
+    chigiri.soccerBall.vy = 0;
+    chigiri._handleCombatAndBallMeeting(target, testArena, chigiriConfig);
+    assert(chigiri.soccerBall.dribbler === chigiri, 'Chigiri must trap and dribble ball when basic attack is on cooldown');
+    assert(chigiri.soccerBall.effectiveControl === 1.0, 'Ball effectiveControl must reflect active EGO rating');
+    assert(chigiri.soccerBall.isKicked === false, 'Ball must not be kicked while shootCooldown > 0');
+    assert(chigiri.shootCooldown === 20, 'shootCooldown must not be wiped to 0 upon meeting the ball');
+
+    // Verify Chigiri breakaway forward movement pushes the ball forward in Mach stride
+    chigiri.vx = 7;
+    chigiri.vy = 0;
+    const chigiriInitialDist = Math.hypot(chigiri.soccerBall.x - chigiri.x, chigiri.soccerBall.y - chigiri.y);
+    for (let frame = 0; frame < 4; frame++) {
+      chigiri._handleCombatAndBallMeeting(target, testArena, chigiriConfig);
+    }
+    const chigiriPushedDist = Math.hypot(chigiri.soccerBall.x - chigiri.x, chigiri.soccerBall.y - chigiri.y);
+    assert(chigiriPushedDist > chigiriInitialDist, `Chigiri sprint must push ball forward in stride (got ${chigiriPushedDist.toFixed(1)}px vs ${chigiriInitialDist.toFixed(1)}px)`);
+    chigiri.vx = 0;
+    chigiri.vy = 0;
+    chigiri.soccerBall.x = chigiri.x + 10;
+    chigiri.soccerBall.y = chigiri.y;
+
+    // Dynamic HUD stats validation for Dribble / Ball Control
+    const dribbleHudStats = getBlueLockFighterStatsInfo(chigiri);
+    assert(dribbleHudStats.some(s => s.includes('DRIBBLE') || s.includes('CONTROL')), 'HUD stats must show dynamic DRIBBLE / CONTROL status');
+
+    // Decrement cooldown until ready to kick
+    while (chigiri.shootCooldown > 0) {
+      chigiri.shootCooldown--;
+    }
+    chigiri._handleCombatAndBallMeeting(target, testArena, chigiriConfig);
+    assert(chigiri.soccerBall.isKicked === true, 'Chigiri must kick Panther Shot once shootCooldown reaches 0');
+    assert(chigiri.shootCooldown === chigiri.shootCooldownMax, 'shootCooldown must reset to shootCooldownMax after kicking Panther Shot');
+
+    // 7. Canvas 2D Transform Stack Depth Balance (Rule 2.4 & Rule 21)
+    mockCtx.resetStackDepth();
+    chigiri.draw(mockCtx, target);
+    assert(mockCtx.getStackDepth() === 0, `Canvas stack depth must be 0 after chigiri.draw (got ${mockCtx.getStackDepth()})`);
+
+    // Clean up
+    state.fighters = [];
+    state.floatingTexts = [];
+    console.log('      ✅ Hyoma Chigiri (Blue Lock) Panther Sprint, Speed Surge & Mach Pace EGO Awakening Standard verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────
+  // ⚽ TEST 130: Blue Lock Hostile Lethal Ball Guard & Incoming Kick Damage Standard ⚽
+  // ─────────────────────────────────────────────
+  {
+    console.log('⚽ Test 130: Blue Lock Hostile Lethal Ball Guard & Incoming Kick Damage Standard...');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const {
+      isHostileLethalBall,
+      checkFighterCanKickBall,
+      executeSoccerKick,
+      updateSoccerBallPhysics
+    } = await import('../js/systems/soccerBallSystem.js');
+    const { isagiConfig } = await import('../js/configs/characters/isagiConfig.js');
+    const { chigiriConfig } = await import('../js/configs/characters/chigiriConfig.js');
+
+    const isagi = new IsagiFighter({ id: 70, type: 'isagi', name: 'ISAGI', color: '#00F0FF' });
+    const chigiri = new ChigiriFighter({ id: 71, type: 'chigiri', name: 'CHIGIRI', color: '#EC4899' });
+    const arena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = arena;
+
+    state.fighters = [isagi, chigiri];
+    isagi.x = 200;
+    isagi.y = 400;
+    chigiri.x = 350;
+    chigiri.y = 400;
+
+    const ball = isagi.soccerBall;
+    assert(ball === chigiri.soccerBall, 'Both fighters must share single persistent soccer ball');
+
+    // 1. Chigiri kicks Panther Shot directly at Isagi
+    ball.x = chigiri.x - 20;
+    ball.y = chigiri.y;
+    const initialIsagiHp = isagi.hp;
+    const kickAngle = Math.atan2(isagi.y - chigiri.y, isagi.x - chigiri.x); // Direct line towards Isagi (PI rad)
+
+    executeSoccerKick(chigiri, ball, kickAngle, 16.0, {
+      damage: 22,
+      reboundDamage: 28,
+      themeColor: '#EC4899'
+    });
+
+    assert(ball.isKicked === true, 'Ball must be in kicked state after kick');
+    assert(ball.lastKicker === chigiri, 'lastKicker must be Chigiri');
+
+    // 2. Hostile Ball Classification
+    assert(isHostileLethalBall(ball, isagi) === true, 'Ball incoming from opponent Chigiri must be classified as hostile lethal to Isagi');
+    assert(isHostileLethalBall(ball, chigiri) === false, 'Ball must NOT be hostile to its kicker Chigiri');
+
+    // 3. Isagi MUST NOT be able to kick, trap, or possess incoming hostile ball
+    assert(checkFighterCanKickBall(isagi, ball) === false, 'Isagi MUST NOT be allowed to kick or possess incoming lethal ball');
+    assert(isagi._hasSoccerBall() === false, '_hasSoccerBall must return false for hostile lethal ball');
+
+    // 4. In _handleCombatAndBallMeeting, Isagi must NOT trigger Metavision Slip or counter-attack
+    const preMetavisionCd = isagi.metavisionCooldownTimer;
+    isagi._handleCombatAndBallMeeting(chigiri, arena, isagiConfig);
+    assert(isagi.isMetavisionDashing === false, 'Isagi must NOT execute Metavision Slip dash into incoming hostile kick');
+    assert(isagi.metavisionCooldownTimer === preMetavisionCd, 'Metavision cooldown must not be consumed');
+    assert(ball.lastKicker === chigiri, 'Ball ownership must remain with Chigiri');
+
+    // 5. Physics update: Ball travels and impacts Isagi
+    // Move ball directly into collision reach of Isagi
+    ball.x = isagi.x + 30;
+    ball.y = isagi.y;
+    ball.vx = -16.0;
+    ball.vy = 0;
+
+    updateSoccerBallPhysics(ball, isagi, chigiri, arena, isagiConfig, state);
+
+    // 6. Impact Verification: Isagi takes damage, knockback, and hit stun!
+    assert(isagi.hp < initialIsagiHp, `Isagi must take damage from Chigiri Panther Shot (was ${initialIsagiHp}, now ${isagi.hp})`);
+    assert(isagi.hitStunTimer > 0, `Isagi must enter hit stun after taking basic attack kick (hitStunTimer = ${isagi.hitStunTimer})`);
+    assert(isagi._ballHitCooldown > 0, `Isagi must have hit cooldown to prevent immediate kick (ballHitCooldown = ${isagi._ballHitCooldown})`);
+    assert(ball.isKicked === false, 'Ball must lose kicked state upon hitting target');
+
+    // 7. Inverse: Isagi kicks Ego Shot at Chigiri
+    // Reset hit stuns and cooldowns for reverse test
+    isagi.hitStunTimer = 0;
+    isagi._ballHitCooldown = 0;
+    chigiri.hitStunTimer = 0;
+    chigiri._ballHitCooldown = 0;
+    const initialChigiriHp = chigiri.hp;
+
+    ball.x = isagi.x + 20;
+    ball.y = isagi.y;
+    const reverseAngle = Math.atan2(chigiri.y - isagi.y, chigiri.x - isagi.x); // 0 rad
+
+    executeSoccerKick(isagi, ball, reverseAngle, 16.0, {
+      damage: 24,
+      reboundDamage: 32,
+      themeColor: '#00F0FF'
+    });
+
+    assert(isHostileLethalBall(ball, chigiri) === true, 'Ball from Isagi must be hostile lethal to Chigiri');
+    assert(checkFighterCanKickBall(chigiri, ball) === false, 'Chigiri cannot kick incoming hostile ball from Isagi');
+
+    chigiri._handleCombatAndBallMeeting(isagi, arena, chigiriConfig);
+    assert(chigiri.isPantherSprinting === false, 'Chigiri must not Panther Sprint into incoming hostile ball');
+
+    // Advance ball into Chigiri
+    ball.x = chigiri.x - 30;
+    ball.y = chigiri.y;
+    ball.vx = 16.0;
+    ball.vy = 0;
+
+    updateSoccerBallPhysics(ball, isagi, chigiri, arena, isagiConfig, state);
+
+    assert(chigiri.hp < initialChigiriHp, `Chigiri must take damage from Isagi Ego Shot (was ${initialChigiriHp}, now ${chigiri.hp})`);
+    assert(chigiri.hitStunTimer > 0, `Chigiri must enter hit stun from ball hit (hitStunTimer = ${chigiri.hitStunTimer})`);
+
+    // Clean up
+    state.fighters = [];
+    state.floatingTexts = [];
+    console.log('      ✅ Blue Lock Hostile Lethal Ball Guard & Incoming Kick Damage Standard verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────
+  // ⚽ TEST 131: Blue Lock "Ball Kick Steal" Mechanic on Physical Bumps & Interceptions Standard ⚽
+  // ─────────────────────────────────────────────
+  {
+    console.log('⚽ Test 131: Blue Lock "Ball Kick Steal" Mechanic on Physical Bumps & Interceptions Standard...');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { GojoFighter } = await import('../js/entities/fighters/GojoFighter.js');
+    const {
+      attemptBallKickSteal,
+      dribbleSoccerBall
+    } = await import('../js/systems/soccerBallSystem.js');
+    const { resolveFighterCollision } = await import('../js/systems/physics.js');
+    const { isagiConfig } = await import('../js/configs/characters/isagiConfig.js');
+    const { chigiriConfig } = await import('../js/configs/characters/chigiriConfig.js');
+
+    const isagi = new IsagiFighter({ id: 70, type: 'isagi', name: 'ISAGI', color: '#00F0FF' });
+    const chigiri = new ChigiriFighter({ id: 71, type: 'chigiri', name: 'CHIGIRI', color: '#EC4899' });
+    const gojo = new GojoFighter({ id: 1, type: 'gojo', name: 'GOJO', color: '#38BDF8' });
+    const arena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = arena;
+    state.fighters = [isagi, chigiri];
+
+    const ball = isagi.soccerBall;
+
+    // 1. Isagi is dribbling the ball while on shoot cooldown
+    isagi.x = 200;
+    isagi.y = 400;
+    isagi.vx = 2.0;
+    isagi.vy = 0;
+    isagi.shootCooldown = 20; // on cooldown
+    dribbleSoccerBall(isagi, ball, arena, isagiConfig);
+
+    assert(ball.dribbler === isagi, 'Isagi must be active dribbler of the soccer ball');
+    assert(ball.lastKicker === isagi, 'ball.lastKicker must be Isagi during dribble');
+
+    // 2. Chigiri (enemy) bumps into Isagi: Ball Kick Steal procs!
+    chigiri.x = 230;
+    chigiri.y = 400;
+    chigiri.vx = -4.0;
+    chigiri.vy = 0;
+    chigiri.shootCooldown = 25; // on cooldown
+
+    const stealSuccess = attemptBallKickSteal(isagi, chigiri, ball, arena, { forcedSuccess: true });
+    assert(stealSuccess === true, 'Ball kick steal must succeed on forcedSuccess');
+
+    // Verification:
+    // A. Isagi is dispossessed and cannot immediately kick
+    assert(ball.dribbler !== isagi, 'Isagi must be dispossessed of the soccer ball');
+    assert(isagi.hitStunTimer >= 16, `Isagi must be in hitstun stagger (got ${isagi.hitStunTimer})`);
+    assert(isagi.shootCooldown >= 35, `Isagi must receive shoot cooldown penalty preventing attacks (got ${isagi.shootCooldown})`);
+    assert(isagi._ballHitCooldown > 0, `Isagi must have hit cooldown to prevent instant ball re-grab (got ${isagi._ballHitCooldown})`);
+
+    // B. Chigiri steals possession
+    assert(ball.dribbler === chigiri, 'Chigiri must take over dribble possession on steal while on shoot cooldown');
+    assert(ball.lastKicker === chigiri, 'Chigiri must become lastKicker upon stealing ball');
+
+    // 3. Counter-Attack Steal: When tackler has shootCooldown <= 0, stealing immediately fires a counter-kick
+    // Reset states
+    isagi.hitStunTimer = 0;
+    isagi._ballHitCooldown = 0;
+    isagi._ballStealCooldown = 0;
+    chigiri._ballHitCooldown = 0;
+    chigiri._ballStealCooldown = 0;
+    chigiri._tackleStealCooldown = 0;
+    isagi._tackleStealCooldown = 0;
+
+    // Chigiri is now dribbling
+    chigiri.shootCooldown = 15;
+    dribbleSoccerBall(chigiri, ball, arena, chigiriConfig);
+    assert(ball.dribbler === chigiri, 'Chigiri must be active dribbler');
+
+    // Isagi steals from Chigiri while ready to attack (shootCooldown = 0)
+    isagi.shootCooldown = 0;
+    const isagiCounterSteal = attemptBallKickSteal(chigiri, isagi, ball, arena, { forcedSuccess: true });
+    assert(isagiCounterSteal === true, 'Isagi counter steal must succeed');
+    assert(ball.dribbler === null, 'Ball must be kicked (not dribbled) during immediate steal-and-shot');
+    assert(ball.isKicked === true, 'Ball must be in kicked state after steal-and-shot');
+    assert(ball.lastKicker === isagi, 'Ball lastKicker must be Isagi');
+    assert(chigiri.shootCooldown >= 35, 'Chigiri shoot cooldown penalty must be applied');
+    assert(chigiri.hitStunTimer >= 16, 'Chigiri hitstun stagger must be applied');
+
+    // 4. Non-Blue Lock Fighter (Gojo) bumps into dribbler: Dispossesses and kicks ball away
+    isagi.hitStunTimer = 0;
+    isagi._ballHitCooldown = 0;
+    isagi._ballStealCooldown = 0;
+    isagi._tackleStealCooldown = 0;
+    gojo._tackleStealCooldown = 0;
+    isagi.shootCooldown = 20;
+    dribbleSoccerBall(isagi, ball, arena, isagiConfig);
+    assert(ball.dribbler === isagi, 'Isagi is dribbling again');
+
+    const gojoSteal = attemptBallKickSteal(isagi, gojo, ball, arena, { forcedSuccess: true });
+    assert(gojoSteal === true, 'Gojo tackle steal must succeed');
+    assert(ball.dribbler === null, 'Ball must be dislodged from Isagi');
+    assert(ball.isKicked === true, 'Ball must be kicked away into open space');
+    assert(ball.lastKicker === gojo, 'Ball last kicker must be Gojo');
+    assert(isagi.shootCooldown >= 35, 'Isagi must receive cooldown penalty from Gojo steal');
+
+    // 5. Physics body-bump integration test
+    // Reset ball velocity and kicked state for next test
+    ball.isKicked = false;
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.x = 200;
+    ball.y = 400;
+
+    // Reset cooldowns
+    isagi.hitStunTimer = 0;
+    isagi._ballHitCooldown = 0;
+    isagi._isagiBallHitCooldown = 0;
+    isagi._ballStealCooldown = 0;
+    isagi._tackleStealCooldown = 0;
+    chigiri.hitStunTimer = 0;
+    chigiri._ballHitCooldown = 0;
+    chigiri._isagiBallHitCooldown = 0;
+    chigiri._ballStealCooldown = 0;
+    chigiri._tackleStealCooldown = 0;
+    chigiri.shootCooldown = 20;
+
+    dribbleSoccerBall(chigiri, ball, arena, chigiriConfig);
+    assert(ball.dribbler === chigiri, 'Chigiri is dribbling');
+
+    // Place Isagi and Chigiri in physical circle collision overlap (dist = 30 < 50)
+    chigiri.x = 200;
+    chigiri.y = 400;
+    isagi.x = 230;
+    isagi.y = 400;
+
+    // Force steal chance to 1.0 temporarily to test physics hook
+    const origChigiriSteal = chigiriConfig.ballStealChance;
+    chigiriConfig.ballStealChance = 1.0;
+    resolveFighterCollision(chigiri, isagi);
+    chigiriConfig.ballStealChance = origChigiriSteal;
+
+    assert(chigiri._ballStealCooldown > 0 || isagi._tackleStealCooldown > 0, 'Collision must trigger ball steal attempt');
+
+    // 6. Dash Skill Missed Steal Pass-Through Test:
+    // When a striker dashes towards the ball and misses the steal, they simply pass through as they dash!
+    isagi.hitStunTimer = 0;
+    isagi._ballHitCooldown = 0;
+    isagi._isagiBallHitCooldown = 0;
+    isagi._ballStealCooldown = 0;
+    isagi._tackleStealCooldown = 0;
+    chigiri.hitStunTimer = 0;
+    chigiri._ballHitCooldown = 0;
+    chigiri._isagiBallHitCooldown = 0;
+    chigiri._ballStealCooldown = 0;
+    chigiri._tackleStealCooldown = 0;
+
+    // Isagi is actively dribbling
+    ball.isKicked = false;
+    ball.vx = 0;
+    ball.vy = 0;
+    isagi.x = 200;
+    isagi.y = 400;
+    isagi.shootCooldown = 20;
+    dribbleSoccerBall(isagi, ball, arena, isagiConfig);
+    assert(ball.dribbler === isagi, 'Isagi is active dribbler');
+
+    // Chigiri uses Panther Sprint dash skill towards the ball/Isagi
+    chigiri.x = 225;
+    chigiri.y = 400;
+    chigiri.vx = -14.0;
+    chigiri.vy = 0;
+    chigiri.isPantherSprinting = true;
+    chigiri.pantherSprintDashTimer = 18;
+    chigiri._hasPassedThroughText = false;
+
+    // Temporarily set steal check to miss so pass-through triggers
+    chigiri.forceMissSteal = true;
+    if (CONFIG.chigiri) CONFIG.chigiri.ballStealChance = 0.0;
+    if (CONFIG.isagi) CONFIG.isagi.ballStealChance = 0.0;
+    chigiriConfig.ballStealChance = 0.0;
+    isagiConfig.ballStealChance = 0.0;
+
+    const preIsagiX = isagi.x;
+    const preIsagiY = isagi.y;
+    resolveFighterCollision(isagi, chigiri);
+
+    // Restore configs
+    chigiri.forceMissSteal = false;
+    if (CONFIG.chigiri) CONFIG.chigiri.ballStealChance = origChigiriSteal;
+    if (CONFIG.isagi) CONFIG.isagi.ballStealChance = 0.50;
+    chigiriConfig.ballStealChance = origChigiriSteal;
+    isagiConfig.ballStealChance = 0.50;
+
+    // Dribbler retains ball because steal missed
+    assert(ball.dribbler === isagi, 'Isagi must retain dribble when tackle steal misses');
+    // Dasher passed through without physical body bounce/displacement
+    assert(isagi.x === preIsagiX && isagi.y === preIsagiY, 'Dribbler must not be pushed or displaced when dasher passes through');
+    assert(chigiri._hasPassedThroughText === true, 'Dasher must trigger pass-through feedback when missing the steal');
+
+    // Clean up
+    state.fighters = [];
+    state.floatingTexts = [];
+    console.log('      ✅ Blue Lock "Ball Kick Steal" Mechanic on Physical Bumps & Interceptions Standard verified cleanly.');
   }
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;

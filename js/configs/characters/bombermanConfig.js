@@ -71,9 +71,9 @@ export const bombermanConfig = {
 
   // ── Ultimate: Invincible (Incoming Attack Immunity) ──
   enableInvincible: true,
-  invincibleDuration: 200, // ~8.33s incoming attack immunity at 60 FPS (500 frames)
-  invincibleCooldown: 1500, // ~16.67s cooldown after activation (1000 frames)
-  invincibleInitialCooldown: 1500, // ~16.67s initial charge before first Ultimate cast (1000 frames)
+  invincibleDuration: 500, // ~8.33s incoming attack immunity at 60 FPS (500 frames)
+  invincibleCooldown: 1000, // ~16.67s cooldown after activation (1000 frames)
+  invincibleInitialCooldown: 1000, // ~16.67s initial charge before first Ultimate cast (1000 frames)
   invincibleSpeedMultiplier: 1.15, // Slight heroic pace boost during Invincible
 
   // ── Assets (Rule 22 & 12-Frame Animation Standard) ──

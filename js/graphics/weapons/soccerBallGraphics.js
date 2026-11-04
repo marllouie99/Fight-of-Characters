@@ -499,8 +499,30 @@ export function drawSoccerBallProjectile(ctx, proj, options = {}) {
   ctx.save();
   ctx.translate(x, y);
 
-  // 1. 16-Bit Ego Aura Glow (Rule 11 Compliant - Zero shadowBlur)
-  if (isKicked) {
+  // 1. 16-Bit Ego Aura Glow & Dribble Control Rings (Rule 11 Compliant - Zero shadowBlur)
+  if (proj.dribbler && proj.dribbler.hp > 0 && !proj.dribbler.isDead) {
+    const dribbleColor = options.auraColor || proj.dribbler.themeColor || proj.dribbler.color || '#00F0FF';
+    const control = proj.effectiveControl !== undefined ? proj.effectiveControl : 0.85;
+
+    // Outer turf control disc
+    ctx.beginPath();
+    ctx.arc(0, 0, r * (1.25 + control * 0.25), 0, Math.PI * 2);
+    ctx.fillStyle = dribbleColor.startsWith('#')
+      ? `${dribbleColor}20`
+      : 'rgba(0, 240, 255, 0.12)';
+    ctx.fill();
+
+    // High Control inner magnetized ring (Isagi 96% / Chigiri 90%+)
+    if (control >= 0.90) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = dribbleColor.startsWith('#')
+        ? `${dribbleColor}44`
+        : 'rgba(0, 240, 255, 0.26)';
+      ctx.stroke();
+    }
+  } else if (isKicked) {
     const kickerColor = options.auraColor || proj.kickerThemeColor || (proj.lastKicker?.color) || '#00F0FF';
     const superColor = options.superAuraColor || '#00FF88';
 
