@@ -190,15 +190,15 @@ function _renderIsagiPixelBodyToCanvas(destCtx, r) {
         }
         // Pectoral / chest highlights
         else if (Math.abs(rx) >= r * 0.14 && Math.abs(rx) <= r * 0.38 && ry >= r * 0.40 && ry <= r * 0.52) {
-          destCtx.fillStyle = '#344460';
+          destCtx.fillStyle = '#3A4D6E';
         }
         // Lower shirt seam shadow
         else if (ry > r * 0.60) {
-          destCtx.fillStyle = '#161E2D';
+          destCtx.fillStyle = '#1A2332';
         }
         // Main bodysuit fabric (Rich athletic navy, luminance Y >= 28 against #0E0F14 outer ink border - Rule 24)
         else {
-          destCtx.fillStyle = '#243046';
+          destCtx.fillStyle = '#27344C';
         }
         destCtx.fillRect(px, py, P, P);
       }
@@ -209,35 +209,36 @@ function _renderIsagiPixelBodyToCanvas(destCtx, r) {
         if (Math.abs(rx) <= P * 0.8 && ry >= r * 0.70 && ry <= r * 0.75) {
           destCtx.fillStyle = '#00F0FF'; // Center cyan Blue Lock geometric clip
         } else if (ry < r * 0.72) {
-          destCtx.fillStyle = '#2E3D56'; // Upper waistband highlight
+          destCtx.fillStyle = '#32425E'; // Upper waistband highlight
         } else {
-          destCtx.fillStyle = '#182232'; // Athletic waistband
+          destCtx.fillStyle = '#1C2536'; // Athletic waistband
         }
         destCtx.fillRect(px, py, P, P);
       }
       // ──────────────────────────────────────────
       // ZONE 4: Athletic Shorts (Lower Clothe: ry >= r * 0.78 - Toji Baseline)
+      // High-contrast slate fabric with continuous hem (Inseam stops at 0.84r, NEVER bleeds into bottom border)
       // ──────────────────────────────────────────
       else {
-        // Center inseam / fly crease
-        if (Math.abs(rx) <= P * 0.5) {
-          destCtx.fillStyle = '#0E0F14';
+        // Center inseam / fly crease: strictly bounded to [0.78r, 0.84r], soft dark navy (NEVER #0E0F14!)
+        if (Math.abs(rx) <= P * 0.5 && ry <= r * 0.84) {
+          destCtx.fillStyle = '#1E283A';
         }
         // Shorts side cyan racing stripes
-        else if (Math.abs(rx) >= r * 0.74) {
+        else if (Math.abs(rx) >= r * 0.70) {
           destCtx.fillStyle = '#00F0FF';
         }
-        // Deep fold shadow
+        // Deep fold pleat shadow
         else if (Math.abs(rx) >= r * 0.30 && Math.abs(rx) <= r * 0.40) {
-          destCtx.fillStyle = '#1C2638';
+          destCtx.fillStyle = '#26344A';
         }
         // Fold crease highlight
         else if (ry < r * 0.86 && Math.abs(rx) < r * 0.50) {
-          destCtx.fillStyle = '#384868';
+          destCtx.fillStyle = '#465D86';
         }
-        // Slate athletic shorts fabric (Y >= 28)
+        // Slate athletic shorts fabric (High Luminance Y >= 28 against #0E0F14 outer ink border - Rule 24)
         else {
-          destCtx.fillStyle = '#28364E';
+          destCtx.fillStyle = '#344666';
         }
         destCtx.fillRect(px, py, P, P);
       }

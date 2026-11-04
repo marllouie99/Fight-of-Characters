@@ -37,7 +37,7 @@ export class ShiroFighter extends Fighter {
     this.hideHands = true;
     this.themeColor = shiroConfig.themeColor || '#8B5CF6';
     this.color = shiroConfig.color || '#A855F7';
-    this.damageNumberColor = shiroConfig.damageNumberColor || '#38BDF8';
+    this.damageNumberColor = shiroConfig.damageNumberColor || this.themeColor || '#8B5CF6';
 
     this.hp = shiroConfig.hp || 340;
     this.maxHp = shiroConfig.maxHp || 340;
@@ -221,6 +221,16 @@ export class ShiroFighter extends Fighter {
       this._cutOffBlankVoiceline('takeDamageStun');
     }
     return res;
+  }
+
+  /**
+   * Determines the floating damage number text color for Shiro and her chess summons.
+   * Strictly adheres to Shiro's Royal Violet theme color (#8B5CF6).
+   * @param {Object} [opts={}]
+   * @returns {string}
+   */
+  getDamageNumberColor(opts = {}) {
+    return this.damageNumberColor || this.themeColor || this.color || '#8B5CF6';
   }
 
   onDeath() {
@@ -586,8 +596,8 @@ export class ShiroFighter extends Fighter {
         audioSystem.playSFX(shiroConfig.sounds?.troopDestroyed || 'Assets/Sound Effects/Shiro/PermafrostKeepSealMine1.ogg', this._getSoundVolume('troopDestroyed', 0.90));
       }
     } else if (isBombTarget) {
-      spawnImpactFlash(target.x, target.y, 18, '#38BDF8');
-      spawnSparks(target.x, target.y, 8, 'cyan', '#38BDF8');
+      spawnImpactFlash(target.x, target.y, 18, this.themeColor || '#8B5CF6');
+      spawnSparks(target.x, target.y, 8, 'violet', this.themeColor || '#8B5CF6');
       audioSystem.playSFX('attack_fleshhit', this._getSoundVolume('fleshHit', 0.80));
     }
     target.dead = true;
@@ -642,6 +652,8 @@ export class ShiroFighter extends Fighter {
     troop.owner = this;
     troop.team = (this.team !== undefined ? this.team : null);
     troop.characterId = 'chess_' + troop.type;
+    troop.damageNumberColor = this.getDamageNumberColor();
+    troop.getDamageNumberColor = (opts) => this.getDamageNumberColor(opts);
     troop.isTargetable = true;
     troop.hideHpText = true;
     troop.vx = 0;
@@ -1065,7 +1077,7 @@ export class ShiroFighter extends Fighter {
             }
             opponent.takeDamage?.(finalThrowDmg, this);
             const hitLabel = isBuffedThrow ? `${finalThrowDmg} (PREDICTED)` : `${troop.damage}`;
-            const hitColor = isBuffedThrow ? '#FCD34D' : '#38BDF8';
+            const hitColor = isBuffedThrow ? '#FCD34D' : this.getDamageNumberColor();
             spawnFloatingText(troop.x, troop.y - 12, hitLabel, hitColor);
             audioSystem.playSFX('attack_fleshhit', this._getSoundVolume('fleshHit', 0.80));
             // Snap & Plant Troop squarely at the center of the hit tile facing upright towards player
@@ -1210,7 +1222,7 @@ export class ShiroFighter extends Fighter {
               if (troop.type === 'pawn') {
                 this._recordPawnDamage(troop);
               }
-              spawnFloatingText(bombOnTile.x, bombOnTile.y - 15, 'BOMB CAPTURED!', '#38BDF8');
+              spawnFloatingText(bombOnTile.x, bombOnTile.y - 15, 'BOMB CAPTURED!', this.getDamageNumberColor());
               if (troop.type === 'bishop') {
                 this.activeVisualEffects.push({
                   type: 'bishop_slash',

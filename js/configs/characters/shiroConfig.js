@@ -18,11 +18,11 @@ export const shiroConfig = {
   maxHp: 340,
   speed: 5.6,
   moveSpeed: 5.0,
-  r: 26,
-  radius: 26,
+  r: 25,
+  radius: 25,
   color: '#A855F7', // Soft Lavender Violet
   themeColor: '#8B5CF6', // Radiant Royal Violet
-  damageNumberColor: '#38BDF8', // Crystalline Cyan
+  damageNumberColor: '#8B5CF6', // Radiant Royal Violet (Shiro Theme Color)
   startX: 350,
   startY: 250,
   startVx: 1.5,

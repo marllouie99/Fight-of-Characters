@@ -767,7 +767,7 @@ export class IsagiFighter extends Fighter {
     this.drawBody(ctx);
 
     // 4. Draw THE Single Persistent Soccer Ball (Only primary Blue Lock controller draws to avoid duplicate rendering)
-    if (this.soccerBall && isPrimaryBlueLockBallController(this, state)) {
+    if (this.soccerBall && isPrimaryBlueLockBallController(this, state) && !this._isPreview && !this._isProfilePreview) {
       drawSoccerBallProjectile(ctx, this.soccerBall);
     }
 

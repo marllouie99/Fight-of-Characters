@@ -1714,6 +1714,7 @@ export const FIGHTER_DEFS = [
     category: 'Anime',
     color: shiroConfig.color || '#A855F7',
     themeColor: shiroConfig.themeColor || '#8B5CF6',
+    damageNumberColor: shiroConfig.damageNumberColor || shiroConfig.themeColor || '#8B5CF6',
     secondaryColor: '#38BDF8',
     startX: 300,
     startY: 250,

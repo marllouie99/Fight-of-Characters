@@ -1562,6 +1562,9 @@ export class Fighter {
     if (this.characterId === 'sans' || this.type === 'sans') {
       return this.damageNumberColor || (typeof CONFIG !== 'undefined' && (CONFIG.sans?.damageNumberColor || CONFIG.sans?.themeColor)) || '#03d5f1ff';
     }
+    if (this.characterId === 'shiro' || this.type === 'shiro') {
+      return this.damageNumberColor || (typeof CONFIG !== 'undefined' && (CONFIG.shiro?.damageNumberColor || CONFIG.shiro?.themeColor || CONFIG.shiro?.color)) || '#8B5CF6';
+    }
     if (this.damageNumberColor) return this.damageNumberColor;
     return this.color || '#ff4444';
   }
