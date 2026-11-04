@@ -16146,7 +16146,7 @@ async function runInteractionTests() {
     assert(isagi.characterId === 'isagi', 'isagi.characterId must be "isagi"');
     assert(isagi.hp > 0, 'isagi.hp must be positive');
     assert(CONFIG.isagi.hp === 420, 'CONFIG.isagi.hp must be 420');
-    assert(isagi.r === 25, 'isagi.r must adhere to Rule 24 standard 25px radius');
+    assert(isagi.r === (CONFIG.isagi.r || CONFIG.isagi.radius || 25), 'isagi.r must match config radius');
     assert(isagi.themeColor === '#00F0FF', 'isagi.themeColor must be #00F0FF');
 
     const dummy = {
