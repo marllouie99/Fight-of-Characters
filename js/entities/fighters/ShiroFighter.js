@@ -407,6 +407,27 @@ export class ShiroFighter extends Fighter {
     return false;
   }
 
+  _hasStationaryBombOnTile(col, row, arena = null) {
+    const board = arena || (typeof state !== 'undefined' && state.arena);
+    if (!board || typeof state === 'undefined' || !Array.isArray(state.fighters)) return false;
+
+    const tileW = board.width / ARENA_TILE_COUNT;
+    const tileH = board.height / ARENA_TILE_COUNT;
+    for (const entity of state.fighters) {
+      if (!entity || !Array.isArray(entity.activeBombs)) continue;
+      for (const bomb of entity.activeBombs) {
+        if (!bomb || bomb.hp <= 0 || bomb.isTraveling) continue;
+        if (bomb.col === col && bomb.row === row) return true;
+        if (Number.isFinite(bomb.x) && Number.isFinite(bomb.y)) {
+          const bCol = Math.floor((bomb.x - board.x) / tileW);
+          const bRow = Math.floor((bomb.y - board.y) / tileH);
+          if (bCol === col && bRow === row) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   _isPathClear(startCol, startRow, endCol, endRow, excludeTroop = null, ignoreEntity = null, arena = null) {
     if (this._isTileOccupied(endCol, endRow, excludeTroop, arena, ignoreEntity)) return false;
 
@@ -430,6 +451,7 @@ export class ShiroFighter extends Fighter {
 
   _isChessMinionTarget(entity) {
     return Boolean(entity && (
+      entity.isBomb || entity.type === 'bomb' ||
       entity.isMinion || entity.isMinionEntity || entity.isDeployable || entity.isPlant ||
       entity.isPlantMinion || entity.isPlantBarrier || entity.isWallnut || entity.isTurret ||
       entity.isDispenser || entity.isBuilding || entity.isBarrier || entity.isChessTroop || entity.isChessMinion
@@ -438,6 +460,7 @@ export class ShiroFighter extends Fighter {
 
   _isEnemyChessTarget(entity) {
     if (!entity || entity === this || entity.dead || entity.isDead || entity.hp <= 0) return false;
+    if ((entity.isBomb || entity.type === 'bomb') && entity.isTraveling) return false;
     if (entity.isLawnmower || entity.isUntargetable || entity.untargetable || entity.cannotBeTargeted || entity.isTargetable === false) return false;
     if (entity.owner === this) return false;
     if (typeof this.isTeammate === 'function' && (this.isTeammate(entity) || (entity.owner && this.isTeammate(entity.owner)))) return false;
@@ -454,16 +477,92 @@ export class ShiroFighter extends Fighter {
       targets.add(entity);
     };
 
+    const addFighterBombs = (fighterEntity) => {
+      if (!fighterEntity || fighterEntity === this || !Array.isArray(fighterEntity.activeBombs)) return;
+      if (typeof this.isTeammate === 'function' && this.isTeammate(fighterEntity)) return;
+      for (const bomb of fighterEntity.activeBombs) {
+        if (!bomb || bomb.isTraveling || bomb.hp <= 0 || bomb.dead) continue;
+        addTarget(bomb, true);
+      }
+    };
+
     addTarget(opponent);
+    addFighterBombs(opponent);
     for (const entity of state.fighters || []) {
       addTarget(entity, true);
+      addFighterBombs(entity);
     }
     return [...targets];
+  }
+
+  _getEnemyTargetsInRadius(centerX, centerY, radius, opponent, includeBombs = false) {
+    const validTargets = [];
+    const seen = new Set();
+    const tryAdd = (ent) => {
+      if (!ent || seen.has(ent) || ent.dead || ent.isDead || (ent.hp || 0) <= 0) return;
+      if (ent === this || ent.owner === this) return;
+      if (typeof this.isTeammate === 'function' && (this.isTeammate(ent) || (ent.owner && this.isTeammate(ent.owner)))) return;
+      const isBomb = Boolean(ent.isBomb || ent.type === 'bomb');
+      if (isBomb && (!includeBombs || ent.isTraveling)) return;
+      const d = Math.hypot(ent.x - centerX, ent.y - centerY);
+      if (d <= radius + (ent.r || 25)) {
+        seen.add(ent);
+        validTargets.push(ent);
+      }
+    };
+
+    if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+      for (const ent of state.fighters) {
+        tryAdd(ent);
+        if (includeBombs && ent && Array.isArray(ent.activeBombs)) {
+          for (const bomb of ent.activeBombs) {
+            tryAdd(bomb);
+          }
+        }
+      }
+    } else if (opponent && !opponent.dead) {
+      tryAdd(opponent);
+      if (includeBombs && Array.isArray(opponent.activeBombs)) {
+        for (const bomb of opponent.activeBombs) {
+          tryAdd(bomb);
+        }
+      }
+    }
+    return validTargets;
+  }
+
+  _getPlantedBombOnTile(col, row, opponent = null, attackTarget = null) {
+    if (attackTarget && (attackTarget.isBomb || attackTarget.type === 'bomb') && !attackTarget.dead && attackTarget.hp > 0 && !attackTarget.isTraveling) {
+      if (attackTarget.col === col && attackTarget.row === row) {
+        return attackTarget;
+      }
+    }
+
+    const checkedEntities = new Set();
+    if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+      for (const ent of state.fighters) checkedEntities.add(ent);
+    }
+    if (opponent) checkedEntities.add(opponent);
+
+    for (const ent of checkedEntities) {
+      if (!ent || ent === this || ent.dead || ent.isDead || (ent.hp || 0) <= 0) continue;
+      if (typeof this.isTeammate === 'function' && (this.isTeammate(ent) || (ent.owner && this.isTeammate(ent.owner)))) continue;
+      if (Array.isArray(ent.activeBombs)) {
+        for (const bomb of ent.activeBombs) {
+          if (!bomb || bomb.dead || bomb.hp <= 0 || bomb.isTraveling) continue;
+          if (bomb.col === col && bomb.row === row) {
+            return bomb;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   _captureEnemyChessMinion(target) {
     if (!this._isChessMinionTarget(target) || !this._isEnemyChessTarget(target)) return false;
 
+    const isBombTarget = Boolean(target.isBomb || target.type === 'bomb');
     const previousHp = Number(target.hp);
     const captureOptions = { isChessCapture: true, isGuaranteedHit: true, bypassShield: true };
     if (typeof target.takeDamage === 'function') {
@@ -486,12 +585,16 @@ export class ShiroFighter extends Fighter {
         spawnChessTroopShatter(target);
         audioSystem.playSFX(shiroConfig.sounds?.troopDestroyed || 'Assets/Sound Effects/Shiro/PermafrostKeepSealMine1.ogg', this._getSoundVolume('troopDestroyed', 0.90));
       }
+    } else if (isBombTarget) {
+      spawnImpactFlash(target.x, target.y, 18, '#38BDF8');
+      spawnSparks(target.x, target.y, 8, 'cyan', '#38BDF8');
+      audioSystem.playSFX('attack_fleshhit', this._getSoundVolume('fleshHit', 0.80));
     }
     target.dead = true;
     target.isDead = true;
 
     const owner = typeof target.owner === 'number' ? state.fighters?.[target.owner] : target.owner;
-    for (const listName of ['activeMinions', 'activeWallnuts', 'activePeashooters', 'activeSnowPeas', 'activeTorchwoods', 'activePotatoMines']) {
+    for (const listName of ['activeMinions', 'activeWallnuts', 'activePeashooters', 'activeSnowPeas', 'activeTorchwoods', 'activePotatoMines', 'activeBombs']) {
       const list = owner && owner[listName];
       if (!Array.isArray(list)) continue;
       for (let i = list.length - 1; i >= 0; i--) {
@@ -619,25 +722,27 @@ export class ShiroFighter extends Fighter {
       drawChessTroop(ctx, troop);
     };
 
-    if (arena) {
+    const board = arena || (typeof state !== 'undefined' && state.arena);
+    if (board) {
       const cols = ARENA_TILE_COUNT;
       const rows = ARENA_TILE_COUNT;
-      const tileW = arena.width / cols;
-      const tileH = arena.height / rows;
+      const tileW = board.width / cols;
+      const tileH = board.height / rows;
 
       // Calculate initial tile col and row clamped within [0, 7]
-      let col = Math.max(0, Math.min(cols - 1, Math.floor((troop.x - arena.x) / tileW)));
-      let row = Math.max(0, Math.min(rows - 1, Math.floor((troop.y - arena.y) / tileH)));
+      let col = Math.max(0, Math.min(cols - 1, Math.floor((troop.x - board.x) / tileW)));
+      let row = Math.max(0, Math.min(rows - 1, Math.floor((troop.y - board.y) / tileH)));
 
-      // If the target tile is occupied by any active minion or deployable, use the nearest free tile.
-      if (this._isTileOccupied(col, row, troop, arena)) {
+      // If the target tile is occupied by any active minion, deployable, or stationary bomb, use the nearest free tile.
+      const isTileBlocked = (c, r) => this._isTileOccupied(c, r, troop, board) || this._hasStationaryBombOnTile(c, r, board);
+      if (isTileBlocked(col, row)) {
         let bestDist = Infinity;
         let bestCol = col;
         let bestRow = row;
 
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            if (!this._isTileOccupied(c, r, troop, arena)) {
+            if (!isTileBlocked(c, r)) {
               const d = Math.hypot(c - col, r - row);
               if (d < bestDist) {
                 bestDist = d;
@@ -647,13 +752,29 @@ export class ShiroFighter extends Fighter {
             }
           }
         }
+        if (bestDist === Infinity) {
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              if (!this._isTileOccupied(c, r, troop, board)) {
+                const d = Math.hypot(c - col, r - row);
+                if (d < bestDist) {
+                  bestDist = d;
+                  bestCol = c;
+                  bestRow = r;
+                }
+              }
+            }
+          }
+        }
         col = bestCol;
         row = bestRow;
       }
 
       // Plant squarely at the exact center of the free tile
-      troop.x = arena.x + (col + 0.5) * tileW;
-      troop.y = arena.y + (row + 0.5) * tileH;
+      troop.x = board.x + (col + 0.5) * tileW;
+      troop.y = board.y + (row + 0.5) * tileH;
+      troop._fixedX = troop.x;
+      troop._fixedY = troop.y;
       troop.tileCol = col;
       troop.tileRow = row;
 
@@ -742,7 +863,8 @@ export class ShiroFighter extends Fighter {
   // ─────────────────────────────────────────────
   // Minion Update & Chess Behavior Pipeline
   // ─────────────────────────────────────────────
-  _updateTroopMinions(opponent, arena) {
+  _updateTroopMinions(opponent, arena, allowNewTurns = true) {
+    const board = arena || (typeof state !== 'undefined' && state.arena);
     if (this.chessTurnCooldown > 0) this.chessTurnCooldown--;
 
     // Passive 3 Duration & Cooldown Ticks:
@@ -808,7 +930,7 @@ export class ShiroFighter extends Fighter {
     }
 
     // Passive 3: 『　　』 (Blank) Never Loses & Prediction Activation
-    if (!isFightOver && this.blankCooldown <= 0 && this.blankActiveTimer <= 0 && this.isSkillEnabled(shiroConfig.enableBlankNeverLoses, true) && !this.dead && (this.hp || 0) > 0) {
+    if (allowNewTurns && !isFightOver && this.blankCooldown <= 0 && this.blankActiveTimer <= 0 && this.isSkillEnabled(shiroConfig.enableBlankNeverLoses, true) && !this.dead && (this.hp || 0) > 0) {
       const activeLivingTroops = getActiveTroops();
       if (activeLivingTroops.length > 0) {
         if (this.blankWindupTimer > 0) {
@@ -1066,6 +1188,8 @@ export class ShiroFighter extends Fighter {
           troop.isAttacking = false;
           troop.x = troop.targetTile.x;
           troop.y = troop.targetTile.y;
+          troop._fixedX = troop.x;
+          troop._fixedY = troop.y;
           troop.z = 0;
           troop.tileCol = troop.targetTile.col;
           troop.tileRow = troop.targetTile.row;
@@ -1076,6 +1200,39 @@ export class ShiroFighter extends Fighter {
 
           const attackTarget = troop.attackTarget || opponent;
           troop.attackTarget = null;
+
+          // ── EXACT TILE CENTER BOMB CHECK ──
+          // Troops ONLY destroy/capture the bomb located in the exact center of their landing tile!
+          // AOE attacks never destroy bombs on surrounding tiles.
+          const bombOnTile = this._getPlantedBombOnTile(troop.tileCol, troop.tileRow, opponent, attackTarget);
+          if (bombOnTile) {
+            if (this._captureEnemyChessMinion(bombOnTile)) {
+              if (troop.type === 'pawn') {
+                this._recordPawnDamage(troop);
+              }
+              spawnFloatingText(bombOnTile.x, bombOnTile.y - 15, 'BOMB CAPTURED!', '#38BDF8');
+              if (troop.type === 'bishop') {
+                this.activeVisualEffects.push({
+                  type: 'bishop_slash',
+                  x: troop.x,
+                  y: troop.y,
+                  angle: Math.atan2(troop.targetTile.y - troop.startTile.y, troop.targetTile.x - troop.startTile.x),
+                  timer: 14,
+                  maxTimer: 14
+                });
+              } else if (troop.type === 'rook') {
+                triggerGlobalScreenShake(3.0, 6);
+                audioSystem.playSFX('shiro_rook_ram', this._getSoundVolume('rookRam', 0.90));
+                this.activeVisualEffects.push({
+                  type: 'rook_ram',
+                  x: troop.x,
+                  y: troop.y,
+                  timer: 16,
+                  maxTimer: 16
+                });
+              }
+            }
+          }
 
           // ── Knight & Queen: ALWAYS fire AOE shockwave + area damage on landing ──
           // These are ground-slam AOE attacks — they trigger regardless of distance to opponent
@@ -1100,24 +1257,11 @@ export class ShiroFighter extends Fighter {
               maxTimer: 18
             });
 
-            // Find all valid enemies within AOE radius
-            const validTargets = [];
-            if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
-              for (const ent of state.fighters) {
-                if (!ent || ent.dead || ent.hp <= 0 || ent === this || (typeof this.isTeammate === 'function' && this.isTeammate(ent)) || ent.owner === this) continue;
-                const d = Math.hypot(ent.x - troop.x, ent.y - troop.y);
-                if (d <= aoeRadius + (ent.r || 25)) {
-                  validTargets.push(ent);
-                }
-              }
-            } else if (opponent && !opponent.dead) {
-              const d = Math.hypot(opponent.x - troop.x, opponent.y - troop.y);
-              if (d <= aoeRadius + (opponent.r || 25)) {
-                validTargets.push(opponent);
-              }
-            }
+            // Find all valid enemies within AOE radius (bombs excluded - AOE never destroys bombs)
+            const validTargets = this._getEnemyTargetsInRadius(troop.x, troop.y, aoeRadius, opponent, false);
 
             for (const target of validTargets) {
+              if (target.isBomb || target.type === 'bomb') continue;
               if (this._isChessMinionTarget(target)) {
                 if (this._captureEnemyChessMinion(target)) {
                   spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, '#38BDF8');
@@ -1184,24 +1328,11 @@ export class ShiroFighter extends Fighter {
               maxTimer: 24
             });
 
-            // Find all valid enemies within large Queen AOE radius
-            const validTargets = [];
-            if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
-              for (const ent of state.fighters) {
-                if (!ent || ent.dead || ent.hp <= 0 || ent === this || (typeof this.isTeammate === 'function' && this.isTeammate(ent)) || ent.owner === this) continue;
-                const d = Math.hypot(ent.x - troop.x, ent.y - troop.y);
-                if (d <= aoeRadius + (ent.r || 25)) {
-                  validTargets.push(ent);
-                }
-              }
-            } else if (opponent && !opponent.dead) {
-              const d = Math.hypot(opponent.x - troop.x, opponent.y - troop.y);
-              if (d <= aoeRadius + (opponent.r || 25)) {
-                validTargets.push(opponent);
-              }
-            }
+            // Find all valid enemies within large Queen AOE radius (bombs excluded - AOE never destroys bombs)
+            const validTargets = this._getEnemyTargetsInRadius(troop.x, troop.y, aoeRadius, opponent, false);
 
             for (const target of validTargets) {
+              if (target.isBomb || target.type === 'bomb') continue;
               if (this._isChessMinionTarget(target)) {
                 if (this._captureEnemyChessMinion(target)) {
                   spawnFloatingText(target.x, target.y - 15, `${target.name || target.type || 'MINION'} CAPTURED!`, '#38BDF8');
@@ -1291,24 +1422,11 @@ export class ShiroFighter extends Fighter {
               maxTimer: 16
             });
 
-            // Query all valid enemies in the Pawn AOE zone
-            const validTargets = [];
-            if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
-              for (const ent of state.fighters) {
-                if (!ent || ent.dead || ent.hp <= 0 || ent === this || (typeof this.isTeammate === 'function' && this.isTeammate(ent)) || ent.owner === this) continue;
-                const d = Math.hypot(ent.x - troop.x, ent.y - troop.y);
-                if (d <= aoeRadius + (ent.r || 25)) {
-                  validTargets.push(ent);
-                }
-              }
-            } else if (opponent && !opponent.dead) {
-              const d = Math.hypot(opponent.x - troop.x, opponent.y - troop.y);
-              if (d <= aoeRadius + (opponent.r || 25)) {
-                validTargets.push(opponent);
-              }
-            }
+            // Query all valid enemies in the Pawn AOE zone (bombs excluded - AOE never destroys bombs)
+            const validTargets = this._getEnemyTargetsInRadius(troop.x, troop.y, aoeRadius, opponent, false);
 
             for (const target of validTargets) {
+              if (target.isBomb || target.type === 'bomb') continue;
               if (this._isChessMinionTarget(target)) {
                 if (this._captureEnemyChessMinion(target)) {
                   this._recordPawnDamage(troop);
@@ -1333,13 +1451,35 @@ export class ShiroFighter extends Fighter {
               spawnFloatingText(target.x, target.y - 15, hitLabel, hitColor);
             }
           } else if (this._isChessMinionTarget(attackTarget)) {
-            const hitDist = Math.hypot(attackTarget.x - troop.x, attackTarget.y - troop.y);
-            if (this._isEnemyChessTarget(attackTarget) && hitDist <= troop.radius + (attackTarget.r || 25) + 35) {
-              if (this._captureEnemyChessMinion(attackTarget)) {
-                spawnFloatingText(attackTarget.x, attackTarget.y - 15, `${attackTarget.name || attackTarget.type || 'MINION'} CAPTURED!`, '#38BDF8');
+            if (!attackTarget.isBomb && attackTarget.type !== 'bomb') {
+              const hitDist = Math.hypot(attackTarget.x - troop.x, attackTarget.y - troop.y);
+              if (this._isEnemyChessTarget(attackTarget) && hitDist <= troop.radius + (attackTarget.r || 25) + 35) {
+                if (this._captureEnemyChessMinion(attackTarget)) {
+                  spawnFloatingText(attackTarget.x, attackTarget.y - 15, `${(attackTarget.name || attackTarget.type || 'MINION').toString().toUpperCase()} CAPTURED!`, '#38BDF8');
+                  if (troop.type === 'bishop') {
+                    this.activeVisualEffects.push({
+                      type: 'bishop_slash',
+                      x: troop.x,
+                      y: troop.y,
+                      angle: Math.atan2(troop.targetTile.y - troop.startTile.y, troop.targetTile.x - troop.startTile.x),
+                      timer: 14,
+                      maxTimer: 14
+                    });
+                  } else if (troop.type === 'rook') {
+                    triggerGlobalScreenShake(3.0, 6);
+                    audioSystem.playSFX('shiro_rook_ram', this._getSoundVolume('rookRam', 0.90));
+                    this.activeVisualEffects.push({
+                      type: 'rook_ram',
+                      x: troop.x,
+                      y: troop.y,
+                      timer: 16,
+                      maxTimer: 16
+                    });
+                  }
+                }
               }
             }
-          } else if (attackTarget && !attackTarget.dead) {
+          } else if (attackTarget && !attackTarget.dead && !attackTarget.isBomb && attackTarget.type !== 'bomb') {
             const opponent = attackTarget;
             // ── Bishop, Rook: Melee-range hit check (must land close to opponent) ──
             const hitDist = Math.hypot(opponent.x - troop.x, opponent.y - troop.y);
@@ -1439,6 +1579,16 @@ export class ShiroFighter extends Fighter {
 
       // 5. Stationary Idle Minion Lifecycle (Summon, Attack & Buff Cooldown Ticks)
       if (troop.isMinion) {
+        if (!troop.isAttacking && board && troop.tileCol !== undefined && troop.tileRow !== undefined) {
+          const tileW = board.width / ARENA_TILE_COUNT;
+          const tileH = board.height / ARENA_TILE_COUNT;
+          troop.x = board.x + (troop.tileCol + 0.5) * tileW;
+          troop.y = board.y + (troop.tileRow + 0.5) * tileH;
+          troop._fixedX = troop.x;
+          troop._fixedY = troop.y;
+          troop.vx = 0;
+          troop.vy = 0;
+        }
         if (troop.blankBuffTimer && troop.blankBuffTimer > 0) {
           troop.blankBuffTimer--;
           troop.isBuffed = (troop.blankBuffTimer > 0);
@@ -1460,8 +1610,8 @@ export class ShiroFighter extends Fighter {
     // Never execute attacks while any troop is actively attacking or summoning!
     const isAnyTroopAttacking = this.activeMinions.some(m => m.isMinion && ((m.isAttacking && m.moveTimer > 0) || (m.isTelegraphing && m.telegraphTimer > 0)));
     const isAnyTroopSummoning = this.activeMinions.some(m => m.isMinion && (m.isSummoning || (m.summonTimer && m.summonTimer > 0)));
-    if (!isAnyTroopAttacking && !isAnyTroopSummoning && this.chessTurnCooldown <= 0 && opponent && !opponent.dead && arena) {
-      this._selectAndExecuteNextChessMove(opponent, arena);
+    if (allowNewTurns && !isAnyTroopAttacking && !isAnyTroopSummoning && this.chessTurnCooldown <= 0 && opponent && !opponent.dead && board) {
+      this._selectAndExecuteNextChessMove(opponent, board);
     }
   }
 
@@ -1564,12 +1714,18 @@ export class ShiroFighter extends Fighter {
       const troopCfg = shiroConfig.troops?.[troop.type] || {};
       const telegraphFrames = troopCfg.telegraphDuration ?? shiroConfig.troopTiming?.telegraphDuration ?? shiroConfig.troopTelegraphDuration ?? 22;
 
+      const startX = arenaX + (myCol + 0.5) * tileW;
+      const startY = arenaY + (myRow + 0.5) * tileH;
+      troop.x = startX;
+      troop.y = startY;
+      troop._fixedX = startX;
+      troop._fixedY = startY;
       troop.isTelegraphing = true;
       troop.isAttacking = false;
       troop.telegraphTimer = telegraphFrames;
       troop.telegraphMaxTimer = telegraphFrames;
       troop.moveDuration = moveDuration;
-      troop.startTile = { col: myCol, row: myRow, x: troop.x, y: troop.y };
+      troop.startTile = { col: myCol, row: myRow, x: startX, y: startY };
       troop.targetTile = { col: targetCol, row: targetRow, x: targetX, y: targetY };
       troop.attackTarget = attackTarget;
 
@@ -1847,6 +2003,9 @@ export class ShiroFighter extends Fighter {
     if (isFrozen || this.isTargetOfAmbush) {
       this._cutOffBlankVoiceline('stunnedDuringUpdate');
       this.interruptAttacks(true);
+      if (this.hp > 0 && !this.dead) {
+        this._updateTroopMinions(opponent, arena, false);
+      }
       return;
     }
 

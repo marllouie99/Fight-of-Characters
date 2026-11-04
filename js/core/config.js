@@ -241,6 +241,7 @@ export const CONFIG = {
   enableFighterFloorShadow: true, // Universal ground contact depth shadow anchoring all fighters to the arena floor
   fighterFloorShadowColor: 'rgba(5, 6, 9, 0.32)', // Dark grounded ambient floor shadow color
   hudSkillBarsMode: 'all',      // 'all' = show all skill bars, 'signature' = signature only, 'none' = completely hide all skill bars
+  hudSkillBarStyle: 'bars',     // 'bars' = visual progress bar fills, 'text' = simple text stat lines with cooldown
   hudGhostBarEnabled: true,      // Master toggle for fighting-game trailing damage ghost bar on healthbars
 
   // ── Combo Counter HUD ──

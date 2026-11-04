@@ -1533,7 +1533,7 @@ export function updateFighters() {
               entity.vx -= dotIll * nx;
               entity.vy -= dotIll * ny;
             }
-          } else if (fighterIsCounterLocked || fighter.isTurret || fighter.isDispenser || (fighter.fleshSurgeAnimTimer && fighter.fleshSurgeAnimTimer > 0) || fighter.isChannelingBankai || (fighter.bankaiBurstTimer && fighter.bankaiBurstTimer > 0) || (fighter.isChannelingGetsuga && fighter.isFinalMassiveGetsuga) || (fighter.hollowMaskFormationTimer && fighter.hollowMaskFormationTimer > 0) || (fighter.hollowBurstTimer && fighter.hollowBurstTimer > 0) || fighter.isGhostTerrain || fighter.characterId === 'eye_of_cthulhu' || fighter.type === 'eye_of_cthulhu') {
+          } else if (fighterIsCounterLocked || fighter.isTurret || fighter.isDispenser || fighter.isChessTroop || fighter.isChessMinion || fighter.isImmovable || (fighter.fleshSurgeAnimTimer && fighter.fleshSurgeAnimTimer > 0) || fighter.isChannelingBankai || (fighter.bankaiBurstTimer && fighter.bankaiBurstTimer > 0) || (fighter.isChannelingGetsuga && fighter.isFinalMassiveGetsuga) || (fighter.hollowMaskFormationTimer && fighter.hollowMaskFormationTimer > 0) || (fighter.hollowBurstTimer && fighter.hollowBurstTimer > 0) || fighter.isGhostTerrain || fighter.characterId === 'eye_of_cthulhu' || fighter.type === 'eye_of_cthulhu') {
             if (fighterIsCounterLocked) {
               fighter.vx = 0; fighter.vy = 0; fighter.knockbackVx = 0; fighter.knockbackVy = 0;
             }

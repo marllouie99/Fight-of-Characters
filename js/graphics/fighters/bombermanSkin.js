@@ -306,12 +306,12 @@ export function drawBombermanSkin(ctx, fighter) {
     _drawInvincibleShieldAura(ctx, r, fighter);
   }
 
-  // Rule 19: Upright Front POV orientation & vertical flip when facing left
-  const angle = fighter._isWinnerReveal ? 0 : fighter.gunAngle || 0;
-  ctx.rotate(angle);
-  const facingLeft = Math.abs(angle) > Math.PI / 2;
-  if (facingLeft) {
-    ctx.scale(1, -1);
+  // Rule 19: Strictly Upright Front POV orientation (Zero body rotation; flips horizontally when facing left)
+  const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
+  const normAngle = Math.atan2(Math.sin(angle), Math.cos(angle));
+  const facingLeft = Math.abs(normAngle) > Math.PI / 2;
+  if (facingLeft && !fighter.isSpinning) {
+    ctx.scale(-1, 1);
   }
 
   // Layer 1: Toji-standard pixel body circle

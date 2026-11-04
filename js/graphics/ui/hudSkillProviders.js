@@ -283,7 +283,7 @@ export const HUD_SKILL_PROVIDERS = {
         domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
       }
       const isDomainReady = domainPct >= 99 && !f.domainActive && !f.isChannelingDomainExpansion && (f.domainCooldown || 0) <= 0;
-      skills.push({ id: 'uv', pct: domainPct, ready: isDomainReady, color: themeColor, label: 'UNLIMITED VOID' });
+      skills.push({ id: 'uv', pct: domainPct, ready: isDomainReady, color: themeColor, label: 'UNLIMITED VOID', cooldown: domainTimer, active: f.domainActive || f.isChannelingDomainExpansion });
     }
 
     // 2. Hollow Purple (purple)
@@ -310,7 +310,7 @@ export const HUD_SKILL_PROVIDERS = {
       const label100 = cfg.purpleSecondCastTextHeader100 || 'PURPLE';
       const label200 = cfg.purpleSecondCastTextHeader200 || 'PURPLE';
       const purpleLabel = (f.purpleUseCount === 1) ? label200 : label100;
-      skills.push({ id: 'purple', pct: purplePct, ready: purplePct >= 99, color: themeColor, label: purpleLabel });
+      skills.push({ id: 'purple', pct: purplePct, ready: purplePct >= 99, color: themeColor, label: purpleLabel, cooldown: purpleTimer, active: f.isChannelingPurple || !!purpleOrb });
     }
 
     // 3. Reversal Red (red)
@@ -318,7 +318,7 @@ export const HUD_SKILL_PROVIDERS = {
       const redMax = cfg.redCooldown || 1000;
       const redTimer = f.redCooldown !== undefined ? f.redCooldown : redMax;
       const redPct = Math.max(0, Math.min(100, (1 - (redTimer / redMax)) * 100));
-      skills.push({ id: 'red', pct: redPct, ready: redPct >= 99, color: themeColor, label: 'REVERSAL RED' });
+      skills.push({ id: 'red', pct: redPct, ready: redPct >= 99, color: themeColor, label: 'REVERSAL RED', cooldown: redTimer });
     }
 
     // 4. Reverse Cursed Technique (rct)
@@ -326,7 +326,7 @@ export const HUD_SKILL_PROVIDERS = {
       const rctMax = cfg.reverseCursedTechniqueCooldown || 700;
       const rctTimer = f.reverseCursedTechniqueCooldown !== undefined ? f.reverseCursedTechniqueCooldown : 0;
       const rctPct = Math.max(0, Math.min(100, (1 - (rctTimer / rctMax)) * 100));
-      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && !f.isChannelingRCT && (f.reverseCursedTechniqueCooldown || 0) <= 0, color: themeColor, label: 'RCT' });
+      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && !f.isChannelingRCT && (f.reverseCursedTechniqueCooldown || 0) <= 0, color: themeColor, label: 'RCT', cooldown: rctTimer, active: f.isChannelingRCT });
     }
 
     return skills;
@@ -412,7 +412,7 @@ export const HUD_SKILL_PROVIDERS = {
         domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
       }
       const isDomainReady = domainPct >= 99 && !f.domainActive && !f.isChannelingDomainExpansion && (f.domainCooldown || 0) <= 0;
-      skills.push({ id: 'ms', pct: domainPct, ready: isDomainReady, color: themeColor, label: 'MALEVOLENT SHRINE' });
+      skills.push({ id: 'ms', pct: domainPct, ready: isDomainReady, color: themeColor, label: 'MALEVOLENT SHRINE', cooldown: domainTimer, active: f.domainActive || f.isChannelingDomainExpansion });
     }
 
     // 2. Fuga / Furnace (fuga)
@@ -429,7 +429,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         flamePct = Math.max(0, Math.min(100, (1 - (flameTimer / flameMax)) * 100));
       }
-      skills.push({ id: 'fuga', pct: flamePct, ready: flamePct >= 99, color: themeColor, label: 'FUGA (FURNACE)' });
+      skills.push({ id: 'fuga', pct: flamePct, ready: flamePct >= 99, color: themeColor, label: 'FUGA (FURNACE)', cooldown: flameTimer, active: f.isChannelingDivineFlame });
     }
 
     // 3. Reverse Cursed Technique (rct)
@@ -437,7 +437,7 @@ export const HUD_SKILL_PROVIDERS = {
       const sukunaRctMax = cfg.reverseCursedTechniqueCooldown || 700;
       const sukunaRctTimer = f.reverseCursedTechniqueCooldown !== undefined ? f.reverseCursedTechniqueCooldown : 0;
       const rctPct = Math.max(0, Math.min(100, (1 - (sukunaRctTimer / sukunaRctMax)) * 100));
-      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && (f.reverseCursedTechniqueCooldown || 0) <= 0 && (f.rctVisualTimer || 0) <= 0, color: themeColor, label: 'RCT' });
+      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && (f.reverseCursedTechniqueCooldown || 0) <= 0 && (f.rctVisualTimer || 0) <= 0, color: themeColor, label: 'RCT', cooldown: sukunaRctTimer, active: (f.rctVisualTimer || 0) > 0 });
     }
 
     // 4. Optional Skill: Ten Shadows — Mahoraga summon
@@ -451,7 +451,7 @@ export const HUD_SKILL_PROVIDERS = {
         ? 100
         : (isConsumed ? 0 : Math.max(0, Math.min(100, (1 - (summonTimer / summonMax)) * 100)));
       const isReady = !isConsumed && (summonLive || (summonPct >= 99 && (f.mahoragaSummonCooldown || 0) <= 0));
-      skills.push({ id: 'mahoraga', pct: summonPct, ready: isReady, color: themeColor, label: 'MAHORAGA', active: summonLive });
+      skills.push({ id: 'mahoraga', pct: summonPct, ready: isReady, color: themeColor, label: 'MAHORAGA', active: summonLive, cooldown: summonTimer });
     }
 
     // 5. Minion Mahoraga Skill Bars (when actively summoned)

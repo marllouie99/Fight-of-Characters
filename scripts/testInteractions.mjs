@@ -4035,18 +4035,18 @@ async function runInteractionTests() {
     assert(splashMinion.burnTimer > 0, 'Enemy minion in splash radius must be ignited with burn');
     state.illusions = [];
 
-    // 12. Test TurretEntity Proximity Burn & DoT Damage Ticking
+    // 12. Test TurretEntity Debuff Immunity: Proximity Burn & DoT Rejection
     const { TurretEntity } = await import('../js/entities/TurretEntity.js');
     state.gameState = 'playing';
     state.mode = '1v1';
     const enemyTurret = new TurretEntity(270, 250, nearbyEnemy, 1);
     state.fighters = [torchwood, enemyTurret];
     torchwood.update(null, 0, state.arena);
-    assert(enemyTurret.burnTimer > 0, 'Enemy Turret near Torchwood must receive proximity burn');
+    assert(enemyTurret.burnTimer === 0, 'Enemy Turret is immune to debuffs and must reject proximity burn');
     const initialTurretHp = enemyTurret.hp;
-    enemyTurret.burnDamageTimer = (CONFIG.orange?.burnDamageInterval || 60); // Force DoT tick
+    enemyTurret.burnDamageTimer = (CONFIG.orange?.burnDamageInterval || 60); // Attempt to force DoT tick
     enemyTurret.update(null, 0, state.arena);
-    assert(enemyTurret.hp < initialTurretHp, 'Burning Turret must take burn DoT damage on update');
+    assert(enemyTurret.hp === initialTurretHp, 'Immune Turret must take zero burn DoT damage on update');
 
     // 13. Test Rika Companion Proximity Burn & DoT Damage Ticking
     const { updateRika } = await import('../js/entities/fighters/yuta/rikaLogic.js');
@@ -16379,6 +16379,246 @@ async function runInteractionTests() {
     state.illusions = [];
     delete state.getFighterTeam;
     console.log('      ✅ Servant of Cthulhu Pac-Man ghost anti-clipping & arena containment verified.');
+  }
+
+  // ─── TEST 113: Engineer Buildings (Turret & Dispenser) 100% Debuff, CC & DoT Immunity ───
+  console.log('   113. Testing Engineer Buildings (Turret & Dispenser) 100% debuff, CC & DoT immunity...');
+  {
+    const { TurretEntity } = await import('../js/entities/TurretEntity.js');
+    const { DispenserEntity } = await import('../js/entities/DispenserEntity.js');
+    const { isDomainImmune } = await import('../js/systems/domainSystem.js');
+
+    const mockOwner = {
+      characterId: 'Engineer',
+      name: 'Engineer',
+      x: 100,
+      y: 200,
+      r: 25,
+      hp: 400,
+      maxHp: 400
+    };
+    const mockEnemy = {
+      characterId: 'gojo',
+      name: 'Gojo',
+      x: 350,
+      y: 200,
+      r: 25,
+      hp: 500,
+      maxHp: 500
+    };
+
+    const buildings = [
+      new TurretEntity(200, 200, mockOwner, 1),
+      new DispenserEntity(200, 260, mockOwner)
+    ];
+
+    for (const b of buildings) {
+      const type = b.isTurret ? 'TurretEntity' : 'DispenserEntity';
+
+      // 1. Core Immunity Flags
+      assert(b.isDebuffImmune === true, `${type} must declare isDebuffImmune === true`);
+      assert(b.immuneToDebuffs === true, `${type} must declare immuneToDebuffs === true`);
+      assert(b.immuneToCC === true, `${type} must declare immuneToCC === true`);
+      assert(b.immuneToBurn === true, `${type} must declare immuneToBurn === true`);
+      assert(b.immuneToPoison === true, `${type} must declare immuneToPoison === true`);
+      assert(b.bleedImmune === true, `${type} must declare bleedImmune === true`);
+      assert(b.immuneToSlow === true, `${type} must declare immuneToSlow === true`);
+      assert(b.immuneToHitStun === true, `${type} must declare immuneToHitStun === true`);
+      assert(b.immuneToParalyze === true, `${type} must declare immuneToParalyze === true`);
+      assert(b.immuneToTimeStop === true, `${type} must declare immuneToTimeStop === true`);
+      assert(b.immuneToFreeze === true, `${type} must declare immuneToFreeze === true`);
+      assert(b.domainImmunity === true, `${type} must declare domainImmunity === true`);
+      assert(b._bypassHealDebuff === true, `${type} must declare _bypassHealDebuff === true`);
+
+      // 2. Domain System Recognition
+      assert(isDomainImmune(b) === true, `isDomainImmune must return true for ${type}`);
+
+      // 3. Status Effects Direct Method Invocations must be no-ops
+      b.applyBurn(mockEnemy, 180, 5, 30);
+      assert(b.burnTimer === 0, `${type} must have burnTimer === 0 after applyBurn`);
+      assert(b.burnDamageTimer === 0, `${type} must have burnDamageTimer === 0 after applyBurn`);
+
+      b.applyPoison(mockEnemy);
+      assert(b.poisonTimer === 0, `${type} must have poisonTimer === 0 after applyPoison`);
+      assert(b.poisonTicks === 0, `${type} must have poisonTicks === 0 after applyPoison`);
+
+      b.applyBleed(mockEnemy, 180, 4, 30);
+      assert(b.bleedTimer === 0, `${type} must have bleedTimer === 0 after applyBleed`);
+      assert(b.bleedDamageTimer === 0, `${type} must have bleedDamageTimer === 0 after applyBleed`);
+
+      b.applyFreeze(120, mockEnemy);
+      assert(b.iceFreezeTimer === 0, `${type} must have iceFreezeTimer === 0 after applyFreeze`);
+      assert(b.isFrozenBySnowPea === false, `${type} must have isFrozenBySnowPea === false`);
+
+      b.applySlow(120, 0.25);
+      assert(b.slowTimer === 0, `${type} must have slowTimer === 0 after applySlow`);
+      assert(b.slowMultiplier === 1.0, `${type} must maintain slowMultiplier === 1.0`);
+
+      b.applyHitStun(60);
+      assert(b.hitStunTimer === 0, `${type} must have hitStunTimer === 0 after applyHitStun`);
+
+      b.applyParalyze(90);
+      assert(b.paralyzeTimer === 0, `${type} must have paralyzeTimer === 0 after applyParalyze`);
+      assert(b.isParalyzed === false, `${type} must have isParalyzed === false`);
+
+      b.applyTimeStop(120);
+      assert(b.timeStopTimer === 0, `${type} must have timeStopTimer === 0 after applyTimeStop`);
+
+      b.applySilence(60);
+      assert(b.silenceTimer === 0, `${type} must have silenceTimer === 0 after applySilence`);
+
+      assert(b.isStunnedOrFrozen() === false, `${type}.isStunnedOrFrozen() must return false`);
+      assert(b._handleTimeStop() === false, `${type}._handleTimeStop() must return false`);
+
+      // 4. DoT Damage Rejection
+      b.isBuilding = false; // Finished building
+      const hpBefore = b.hp;
+      assert(b.takeDamage(20, mockEnemy, { isBurn: true }) === false, `${type} must reject isBurn damage`);
+      assert(b.takeDamage(20, mockEnemy, { isPoison: true }) === false, `${type} must reject isPoison damage`);
+      assert(b.takeDamage(20, mockEnemy, { isBleed: true }) === false, `${type} must reject isBleed damage`);
+      assert(b.takeDamage(20, mockEnemy, { isElectrified: true }) === false, `${type} must reject isElectrified damage`);
+      assert(b.takeDamage(20, mockEnemy, { isCurse: true }) === false, `${type} must reject isCurse damage`);
+      assert(b.takeDamage(20, mockEnemy, { source: 'burn' }) === false, `${type} must reject source: 'burn' damage`);
+      assert(b.takeDamage(20, mockEnemy, { source: 'bleed' }) === false, `${type} must reject source: 'bleed' damage`);
+      assert(b.hp === hpBefore, `${type} HP must remain unchanged after attempted DoT damage`);
+
+      // 5. Knockback & Displacement Immunity
+      b.applyKnockback(100, 100);
+      assert(b.vx === 0 && b.vy === 0, `${type} vx/vy must remain 0 after applyKnockback`);
+      assert(b.knockbackVx === 0 && b.knockbackVy === 0, `${type} knockbackVx/Vy must remain 0 after applyKnockback`);
+
+      b.applyPush(50, 50);
+      assert(b.vx === 0 && b.vy === 0, `${type} vx/vy must remain 0 after applyPush`);
+
+      b.applyPull(50, 50);
+      assert(b.vx === 0 && b.vy === 0, `${type} vx/vy must remain 0 after applyPull`);
+
+      // Direct attack damage applies, but knockback is stripped
+      const directDmg = 10;
+      b.takeDamage(directDmg, mockEnemy, { knockback: true, knockbackVx: 50, knockbackVy: 50 });
+      assert(b.hp === hpBefore - directDmg, `${type} takes direct combat damage normally`);
+      assert(b.vx === 0 && b.vy === 0, `${type} vx/vy must remain 0 after attack with knockback`);
+      assert(b.knockbackVx === 0 && b.knockbackVy === 0, `${type} knockbackVx/Vy must remain 0 after attack with knockback`);
+
+      // 6. Healing Debuff Bypass (Wrench Repair Guarantee)
+      b.grievousWoundsTimer = 60;
+      b.tojiRegenDebuffTimer = 60;
+      b.blackFlashDebuffTimer = 60;
+      const hpBeforeHeal = b.hp;
+      b.heal(directDmg);
+      assert(b.hp === hpBeforeHeal + directDmg, `${type} must receive 100% full healing bypass under healing debuffs`);
+
+      // 7. StatusEffectsManager Integration
+      if (b.statusEffectsManager) {
+        b.statusEffectsManager.applyFreeze(60, mockEnemy);
+        assert(b.iceFreezeTimer === 0, `${type} StatusEffectsManager.applyFreeze must be a no-op`);
+        b.statusEffectsManager.applyBurn(mockEnemy, 180, 5, 30);
+        assert(b.burnTimer === 0, `${type} StatusEffectsManager.applyBurn must be a no-op`);
+        b.statusEffectsManager.applySlow(60, 0.5);
+        assert(b.slowTimer === 0, `${type} StatusEffectsManager.applySlow must be a no-op`);
+        assert(b.statusEffectsManager.handleTimeStop() === false, `${type} StatusEffectsManager.handleTimeStop must return false`);
+      }
+    }
+
+    console.log('      ✅ Engineer Buildings (Turret & Dispenser) 100% debuff, CC & DoT immunity verified.');
+  }
+
+  // ── 114. Shiro Chess Troops vs. Bomber Man Planted Bombs (Capture & Tile-Center Lock) ──
+  {
+    console.log('   114. Testing Shiro Chess Troops attacking & capturing Bomber Man planted bombs & exact tile-center alignment...');
+    const ShiroClass = FIGHTER_CLASS_MAP['shiro'];
+    const BombermanClass = FIGHTER_CLASS_MAP['bomberman'];
+    assert(typeof ShiroClass === 'function' && typeof BombermanClass === 'function', 'ShiroFighter and BombermanFighter must exist');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    const tileW = testArena.width / 8;
+    const tileH = testArena.height / 8;
+
+    const shiro = new ShiroClass({ x: testArena.x + 0.5 * tileW, y: testArena.y + 0.5 * tileH, color: '#A855F7', controls: {} });
+    const bomberman = new BombermanClass({ x: testArena.x + 7.5 * tileW, y: testArena.y + 7.5 * tileH, color: '#2563EB', controls: {} });
+    state.fighters = [shiro, bomberman];
+
+    // Bomberman plants a bomb at col 4, row 2
+    const bombCol = 4;
+    const bombRow = 2;
+    const bombCenterX = testArena.x + (bombCol + 0.5) * tileW;
+    const bombCenterY = testArena.y + (bombRow + 0.5) * tileH;
+    const plantedBomb = bomberman.plantBomb(testArena, false, bombCenterX, bombCenterY);
+    assert(plantedBomb && bomberman.activeBombs.includes(plantedBomb), 'Bomberman must plant a bomb at (4, 2)');
+
+    // Spawn a Rook for Shiro at col 1, row 2 (same row as the planted bomb)
+    const rook = {
+      id: 'test_rook',
+      type: 'rook',
+      x: testArena.x + (1 + 0.5) * tileW,
+      y: testArena.y + (2 + 0.5) * tileH,
+      troopRadius: 15,
+      hp: 80,
+      maxHp: 80,
+      damage: 20,
+      dead: false
+    };
+    shiro.activeMinions.push(rook);
+    shiro._plantTroopOnTileCenter(rook, testArena);
+    rook.isSummoning = false;
+    rook.summonTimer = 0;
+    rook.attackCooldown = 0;
+    shiro.chessTurnCooldown = 0;
+
+    // Verify planted bomb is recognized in Shiro's chess attack targets
+    const targets = shiro._getChessAttackTargets(bomberman, testArena);
+    assert(targets.includes(plantedBomb), 'Planted bomb must be included in Shiro _getChessAttackTargets');
+
+    // Trigger chess move selection and advance frames until Rook arrives on the bomb's square
+    shiro._selectAndExecuteNextChessMove(bomberman, testArena);
+    assert(rook.isTelegraphing && rook.targetTile.col === bombCol && rook.targetTile.row === bombRow, 'Rook must lock onto the planted bomb tile (4, 2)');
+
+    for (let f = 0; f < 45; f++) {
+      shiro._updateTroopMinions(bomberman, testArena, false);
+    }
+
+    assert(!bomberman.activeBombs.includes(plantedBomb) && plantedBomb.dead === true, 'Rook must attack and capture/destroy the planted bomb on arrival');
+    assert(Math.abs(rook.x - bombCenterX) < 0.01 && Math.abs(rook.y - bombCenterY) < 0.01, `Rook must remain locked at the exact center of tile (4, 2) (${bombCenterX}, ${bombCenterY}), got (${rook.x}, ${rook.y})`);
+
+    // Verify AOE non-destruction: Queen lands on bomb1 at (3, 3), bomb2 at adjacent (3, 4) inside 110px AOE is NOT destroyed
+    bomberman.activeBombs.length = 0;
+    bomberman.maxBombs = 5;
+    const bomb1 = bomberman.plantBomb(testArena, false, testArena.x + 3.5 * tileW, testArena.y + 3.5 * tileH);
+    const bomb2 = bomberman.plantBomb(testArena, false, testArena.x + 3.5 * tileW, testArena.y + 4.5 * tileH);
+    assert(bomb1 && bomb2 && bomberman.activeBombs.length === 2, 'Bomberman must plant two bombs at (3, 3) and (3, 4)');
+
+    const queen = {
+      id: 'test_queen',
+      type: 'queen',
+      x: testArena.x + 0.5 * tileW,
+      y: testArena.y + 3.5 * tileH,
+      troopRadius: 18,
+      hp: 120,
+      maxHp: 120,
+      damage: 40,
+      dead: false
+    };
+    shiro.activeMinions.length = 0;
+    shiro.activeMinions.push(queen);
+    shiro._plantTroopOnTileCenter(queen, testArena);
+    queen.isSummoning = false;
+    queen.summonTimer = 0;
+    queen.attackCooldown = 0;
+    shiro.chessTurnCooldown = 0;
+
+    // Queen targets bomb1 at (3, 3)
+    shiro._selectAndExecuteNextChessMove(bomberman, testArena);
+    assert(queen.isTelegraphing && queen.targetTile.col === 3 && queen.targetTile.row === 3, 'Queen must target bomb1 at (3, 3)');
+
+    for (let f = 0; f < 45; f++) {
+      shiro._updateTroopMinions(bomberman, testArena, false);
+    }
+
+    assert(bomb1.dead === true && !bomberman.activeBombs.includes(bomb1), 'Bomb1 at exact tile center (3, 3) must be captured and destroyed');
+    assert(bomb2.dead === false && bomb2.hp > 0 && bomberman.activeBombs.includes(bomb2), 'Bomb2 at adjacent tile (3, 4) inside 110px AOE MUST NOT be destroyed by Queen AOE');
+
+    console.log('      ✅ Shiro Chess Troops attacking & capturing Bomber Man planted bombs and exact tile-center alignment verified.');
   }
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;

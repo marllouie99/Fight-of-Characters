@@ -612,6 +612,10 @@ if (localStorage.getItem('hudSkillBarsMode') !== null) {
   CONFIG.hudSkillBarsMode = CONFIG.darkModeShowHudSkillBars === 1 ? 'all' : (CONFIG.darkModeShowHudSkillBars === -1 ? 'none' : 'signature');
 }
 
+if (localStorage.getItem('hudSkillBarStyle') !== null) {
+  CONFIG.hudSkillBarStyle = localStorage.getItem('hudSkillBarStyle') === 'text' ? 'text' : 'bars';
+}
+
 export function syncHudButtons() {
   const masterBtn = document.getElementById('btn-hud-master');
   if (masterBtn) {
@@ -637,6 +641,11 @@ export function syncHudButtons() {
     } else {
       skillBarsBtn.innerText = 'SHOW ALL';
     }
+  }
+
+  const skillBarStyleBtn = document.getElementById('btn-hud-skillbar-style');
+  if (skillBarStyleBtn) {
+    skillBarStyleBtn.innerText = CONFIG.hudSkillBarStyle === 'text' ? 'SIMPLE TEXT' : 'BARS';
   }
 
   const darkSkillsBtn = document.getElementById('btn-darkskills');
@@ -1220,6 +1229,11 @@ export function executeTacticalAction(action) {
     localStorage.setItem('hudHideSkillBars', CONFIG.hudHideSkillBars);
     localStorage.setItem('darkModeShowHudSkillBars', CONFIG.darkModeShowHudSkillBars);
     syncHudButtons();
+  } else if (action === 'toggle-hud-skillbar-style') {
+    CONFIG.hudSkillBarStyle = (CONFIG.hudSkillBarStyle === 'text') ? 'bars' : 'text';
+    localStorage.setItem('hudSkillBarStyle', CONFIG.hudSkillBarStyle);
+    clearHealthHud(true);
+    syncHudButtons();
   } else if (action === 'toggle-hud-stats') {
     CONFIG.hudHideStats = !CONFIG.hudHideStats;
     CONFIG.darkModeShowHudStats = CONFIG.hudHideStats ? 0 : 1;
@@ -1425,6 +1439,11 @@ document.getElementById('btn-hud-healthbars')?.addEventListener('click', (e) => 
 document.getElementById('btn-hud-skillbars')?.addEventListener('click', (e) => {
   e.stopPropagation();
   executeTacticalAction('toggle-hud-skillbars');
+});
+
+document.getElementById('btn-hud-skillbar-style')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  executeTacticalAction('toggle-hud-skillbar-style');
 });
 
 document.getElementById('btn-hud-stats')?.addEventListener('click', (e) => {

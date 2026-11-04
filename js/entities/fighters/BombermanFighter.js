@@ -420,6 +420,10 @@ export class BombermanFighter extends Fighter {
     const bomb = {
       id: ++this._bombIdCounter,
       owner: this,
+      name: 'BOMB',
+      type: 'bomb',
+      isBomb: true,
+      isDeployable: true,
       x: tile.x,
       y: tile.y,
       _fixedX: tile.x,
@@ -430,6 +434,9 @@ export class BombermanFighter extends Fighter {
       cellH: tile.cellH,
       r: this.bombRadius,
       hp: 1,
+      maxHp: 1,
+      dead: false,
+      isDead: false,
       fuseTimer: this.bombFuseFrames,
       maxFuse: this.bombFuseFrames,
       spawnGraceTimer: 24,
@@ -974,6 +981,10 @@ export class BombermanFighter extends Fighter {
       target.knockbackVx = 0;
       target.knockbackVy = 0;
 
+      if (target.isStatusImmune || target.suppressDebuffs || target.isChessTroop || target.isChessMinion || target.hp <= 0 || target.dead) {
+        continue;
+      }
+
       // 2c. Stun Effect on hit target (replaces explosion knockback)
       const stunDur = this.bombStunDuration || 45;
       if (typeof target.interruptAttacks === 'function') {
@@ -1010,17 +1021,49 @@ export class BombermanFighter extends Fighter {
   }
 
   /**
+   * Returns all stationary bombs (excluding `excludeBomb`) plus any active tile-planted entities
+   * (such as Shiro's living chess troops, turrets, or plant barriers) so kicked bombs never snap
+   * onto a tile center already occupied by a tile-planted entity.
+   */
+  _getBombAndTileOccupants(excludeBomb = null) {
+    const occupants = this.activeBombs.filter((b) => b && b !== excludeBomb && b.hp > 0 && !b.isTraveling);
+    const fighters = (typeof state !== 'undefined' && Array.isArray(state.fighters)) ? state.fighters : [];
+    for (let i = 0; i < fighters.length; i++) {
+      const f = fighters[i];
+      if (!f || f.hp <= 0 || f.dead) continue;
+      if (f.isChessTroop || f.isChessMinion || f.isTurret || f.isDispenser || f.isPlant || f.isPlantMinion || f.isPlantBarrier || f.isWallnut) {
+        occupants.push(f);
+      }
+    }
+    return occupants;
+  }
+
+  /**
    * Resolves interactions between bombs and fighters:
    * - When Bomberman contacts a stationary bomb (after stepping fully outside its initial plant overlap
    *   and when his Kick cooldown is ready), he kicks the bomb across the arena!
    * - When a kicked traveling bomb hits an enemy, it deals kinetic impact damage and knocks them back.
-   * - Stationary bombs physically block enemy fighters.
+   * - Stationary bombs physically block enemy fighters (without displacing immovable tile-planted minions).
    */
   _resolveBombCollisions(bomb, arena = state.arena) {
     const fighters = state.fighters || [];
     for (let i = 0; i < fighters.length; i++) {
       const f = fighters[i];
       if (!f || f.hp <= 0 || f.isSwallowedByPacman) continue;
+
+      const isImmovableTileEntity = Boolean(
+        f.isChessTroop ||
+        f.isChessMinion ||
+        f.isImmovable ||
+        f.cannotBePushed ||
+        f.cannotBeDisplaced ||
+        f.isTurret ||
+        f.isDispenser ||
+        f.isPlant ||
+        f.isPlantMinion ||
+        f.isPlantBarrier ||
+        f.isWallnut
+      );
 
       const fr = f.r || 25;
       const minDist = bomb.r + fr;
@@ -1066,7 +1109,7 @@ export class BombermanFighter extends Fighter {
             bomb.hitEnemiesDuringTravel.add(f);
             if (!this._isBlockedByGojoInfinity(f)) {
               const impactDmg = this.bombKickImpactDamage || 12;
-              const kb = this.bombKickKnockback || 10;
+              const kb = isImmovableTileEntity ? 0 : (this.bombKickKnockback || 10);
               const contactAngle = Math.atan2(ny, nx);
 
               // Global Hit Effects on hit enemy
@@ -1087,14 +1130,16 @@ export class BombermanFighter extends Fighter {
               if (typeof applyDamageToTarget === 'function') {
                 applyDamageToTarget(f, impactDmg, this, {
                   isMelee: true,
-                  isKnockback: true,
+                  isKnockback: !isImmovableTileEntity,
+                  skipKnockback: isImmovableTileEntity,
                   damageAngle: contactAngle,
                   knockbackForce: kb,
                 });
               } else if (typeof f.takeDamage === 'function') {
                 f.takeDamage(impactDmg, this, {
                   isMelee: true,
-                  isKnockback: true,
+                  isKnockback: !isImmovableTileEntity,
+                  skipKnockback: isImmovableTileEntity,
                   damageAngle: contactAngle,
                   knockbackForce: kb,
                 });
@@ -1102,7 +1147,7 @@ export class BombermanFighter extends Fighter {
                 f.hp = Math.max(0, f.hp - impactDmg);
               }
 
-              if (typeof f.applyKnockback === 'function') {
+              if (!isImmovableTileEntity && typeof f.applyKnockback === 'function') {
                 f.applyKnockback(nx * kb, ny * kb);
               }
             }
@@ -1113,8 +1158,12 @@ export class BombermanFighter extends Fighter {
           bomb.isTraveling = false;
           bomb.vx = 0;
           bomb.vy = 0;
+          if (isImmovableTileEntity) {
+            bomb.x = f.x - nx * (minDist + 2);
+            bomb.y = f.y - ny * (minDist + 2);
+          }
           if (arena) {
-            const nearest = getNearestTileCenter(bomb.x, bomb.y, arena, this.activeBombs.filter((b) => b !== bomb));
+            const nearest = getNearestTileCenter(bomb.x, bomb.y, arena, this._getBombAndTileOccupants(bomb));
             bomb.x = nearest.x;
             bomb.y = nearest.y;
             bomb._fixedX = nearest.x;
@@ -1125,7 +1174,12 @@ export class BombermanFighter extends Fighter {
           this._playSfx('bombKick');
           triggerGlobalScreenShake(1.8, 4);
         } else {
-          // Stationary bombs act as solid physical obstacles for enemy fighters
+          // Immovable tile-planted entities (such as Shiro's chess troops) must NEVER be pushed off their tile center
+          if (isImmovableTileEntity) {
+            continue;
+          }
+
+          // Stationary bombs act as solid physical obstacles for mobile enemy fighters
           f.x += nx * overlap;
           f.y += ny * overlap;
 
@@ -1136,7 +1190,7 @@ export class BombermanFighter extends Fighter {
           }
         }
 
-        if (arena) {
+        if (arena && !isImmovableTileEntity) {
           f.x = Math.max(arena.x + fr, Math.min(arena.x + arena.width - fr, f.x));
           f.y = Math.max(arena.y + fr, Math.min(arena.y + arena.height - fr, f.y));
         }
@@ -1158,7 +1212,7 @@ export class BombermanFighter extends Fighter {
 
     for (let i = this.activeBombs.length - 1; i >= 0; i--) {
       const bomb = this.activeBombs[i];
-      if (!bomb) {
+      if (!bomb || bomb.hp <= 0 || bomb.dead || bomb.isDead) {
         this.activeBombs.splice(i, 1);
         continue;
       }
@@ -1205,7 +1259,7 @@ export class BombermanFighter extends Fighter {
             bomb.isTraveling = false;
             bomb.vx = 0;
             bomb.vy = 0;
-            const nearest = getNearestTileCenter(bomb.x, bomb.y, activeArena, this.activeBombs.filter((b) => b !== bomb));
+            const nearest = getNearestTileCenter(bomb.x, bomb.y, activeArena, this._getBombAndTileOccupants(bomb));
             bomb.x = nearest.x;
             bomb.y = nearest.y;
             bomb._fixedX = nearest.x;
@@ -1232,7 +1286,7 @@ export class BombermanFighter extends Fighter {
                 const bny = bDist > 0.001 ? bdy / bDist : 0;
                 bomb.x = other.x + bnx * (minBDist + 2);
                 bomb.y = other.y + bny * (minBDist + 2);
-                const nearest = getNearestTileCenter(bomb.x, bomb.y, activeArena, this.activeBombs.filter((b) => b !== bomb));
+                const nearest = getNearestTileCenter(bomb.x, bomb.y, activeArena, this._getBombAndTileOccupants(bomb));
                 bomb.x = nearest.x;
                 bomb.y = nearest.y;
                 bomb._fixedX = nearest.x;
@@ -1483,7 +1537,10 @@ export class BombermanFighter extends Fighter {
   drawDeployedObjects(ctx) {
     if (!ctx) return;
     for (let i = 0; i < this.activeBombs.length; i++) {
-      drawPlantedBomb(ctx, this.activeBombs[i]);
+      const b = this.activeBombs[i];
+      if (b && b.hp > 0 && !b.dead && !b.isDead) {
+        drawPlantedBomb(ctx, b);
+      }
     }
     for (let i = 0; i < this.activeVisualExplosions.length; i++) {
       drawBombExplosion(ctx, this.activeVisualExplosions[i]);

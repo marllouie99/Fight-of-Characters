@@ -1098,34 +1098,42 @@ export function drawBottomHudShatters(ctx, isDark, arena) {
       ctx.rotate(sb.rot);
       ctx.globalAlpha = 1.0;
 
-      // Outer Rounded Box (matching DOM .hud-skill-box)
-      const boxBg = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
-      const boxBorder = isDark ? 'rgba(255, 255, 255, 0.60)' : '#222222';
-      ctx.fillStyle = boxBg;
-      drawRoundedRect(ctx, -sb.w / 2, -sb.h / 2, sb.w, sb.h, 3);
-      ctx.fill();
-      ctx.strokeStyle = boxBorder;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Inner Progress Fill (55% opacity matching DOM .hud-skill-box-fill)
-      const fillMaxW = sb.w - 3;
-      const fillW = Math.max(0, fillMaxW * sb.fillRatio);
-      if (fillW > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.fillStyle = sb.color || '#FFCC00';
-        drawRoundedRect(ctx, -sb.w / 2 + 1.5, -sb.h / 2 + 1.5, fillW, sb.h - 3, 2);
+      if (CONFIG.hudSkillBarStyle === 'text') {
+        ctx.font = 'bold 13px "Silkscreen", "Press Start 2P", monospace, sans-serif';
+        ctx.fillStyle = sb.ready ? '#00FF66' : (isDark ? '#FFFFFF' : '#111111');
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sb.label, -sb.w / 2 + 2, 0.5);
+      } else {
+        // Outer Rounded Box (matching DOM .hud-skill-box)
+        const boxBg = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+        const boxBorder = isDark ? 'rgba(255, 255, 255, 0.60)' : '#222222';
+        ctx.fillStyle = boxBg;
+        drawRoundedRect(ctx, -sb.w / 2, -sb.h / 2, sb.w, sb.h, 3);
         ctx.fill();
-        ctx.restore();
-      }
+        ctx.strokeStyle = boxBorder;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
 
-      // Skill Name Text (matching DOM .hud-skill-box-text)
-      ctx.font = '14px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
-      ctx.fillStyle = isDark ? '#FFFFFF' : '#000000';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(sb.label, -sb.w / 2 + 8, 0.5);
+        // Inner Progress Fill (55% opacity matching DOM .hud-skill-box-fill)
+        const fillMaxW = sb.w - 3;
+        const fillW = Math.max(0, fillMaxW * sb.fillRatio);
+        if (fillW > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = sb.color || '#FFCC00';
+          drawRoundedRect(ctx, -sb.w / 2 + 1.5, -sb.h / 2 + 1.5, fillW, sb.h - 3, 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Skill Name Text (matching DOM .hud-skill-box-text)
+        ctx.font = '14px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif';
+        ctx.fillStyle = isDark ? '#FFFFFF' : '#000000';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sb.label, -sb.w / 2 + 8, 0.5);
+      }
 
       ctx.restore();
     }

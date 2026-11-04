@@ -852,326 +852,681 @@ export function drawTurretBullet(ctx, xOrObj, y, angle, scale = 1.0, lifeRatio =
 }
 
 /**
- * Renders the industrial military tripod base for the Sentry Gun.
+ * Renders the industrial military tripod base for the Sentry Gun in authentic 16-bit pixel art.
  */
 function _drawTurretTripodBase(ctx, level, isHit) {
   const legLen = level === 3 ? 24 : (level === 2 ? 22 : 18);
   const legCount = 3;
 
-  // Tripod Base Legs (anchored in world orientation)
+  // 16-bit Stepped Palette
+  const cOutline = '#0B0D12';
+  const cSpecular = isHit ? '#FFFFFF' : '#CBD5E1';
+  const cHighlight = isHit ? '#E2E8F0' : '#64748B';
+  const cMetal = isHit ? '#CBD5E1' : '#334155';
+  const cShadow = isHit ? '#94A3B8' : '#1E293B';
+  const cDeep = '#0F172A';
+  const cChrome = isHit ? '#FFFFFF' : '#F8FAFC';
+  const cBrass = isHit ? '#FEF08A' : '#F59E0B';
+  const cBronze = '#78350F';
+
+  // 1. Tripod Base Legs (3 articulated radial legs)
   for (let i = 0; i < legCount; i++) {
     const a = (i * Math.PI * 2) / legCount - Math.PI / 2;
     ctx.save();
     ctx.rotate(a);
 
-    // Main Strut Shell
-    ctx.fillStyle = '#0B0D12';
-    ctx.fillRect(-4, 0, 8, legLen + 2);
+    // ── Main Strut Outer Ink Outline ──
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(-5, 0, 10, legLen + 2);
 
-    // Dark Olive / Charcoal Metal Body
-    ctx.fillStyle = isHit ? '#CBD5E1' : '#1E242B';
-    ctx.fillRect(-3, 1, 6, legLen);
-    ctx.fillStyle = isHit ? '#FFFFFF' : '#334155';
+    // ── Main Strut 16-bit Shading Ramp ──
+    // Left Specular Edge
+    ctx.fillStyle = cSpecular;
+    ctx.fillRect(-4, 1, 1, legLen);
+    // Upper Highlight Facet
+    ctx.fillStyle = cHighlight;
     ctx.fillRect(-3, 1, 2, legLen);
+    // Midtone Gunmetal Core
+    ctx.fillStyle = cMetal;
+    ctx.fillRect(-1, 1, 2, legLen);
+    // Right Underside Shadow
+    ctx.fillStyle = cShadow;
+    ctx.fillRect(1, 1, 2, legLen);
+    // Deep Occlusion Crease
+    ctx.fillStyle = cDeep;
+    ctx.fillRect(3, 1, 1, legLen);
 
-    // Hydraulic Cylinder / Piston Bracket (Lv 2 & 3)
+    // Structural Hex Bolt Rivets
+    ctx.fillStyle = cSpecular;
+    ctx.fillRect(-2, 3, 1, 1);
+    ctx.fillRect(-2, 8, 1, 1);
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(-2, 4, 1, 1);
+    ctx.fillRect(-2, 9, 1, 1);
+
+    // ── Hydraulic Cylinder & Piston (Lv 2 & 3) ──
     if (level >= 2) {
-      ctx.fillStyle = '#0B0D12';
-      ctx.fillRect(-6, 6, 12, 6);
-      ctx.fillStyle = isHit ? '#E2E8F0' : '#475569';
+      // Outer Hydraulic Bracket Box
+      ctx.fillStyle = cOutline;
+      ctx.fillRect(-7, 6, 14, 8);
+      ctx.fillStyle = cShadow;
+      ctx.fillRect(-6, 7, 12, 6);
+      ctx.fillStyle = cMetal;
       ctx.fillRect(-5, 7, 10, 4);
-      ctx.fillStyle = '#94A3B8';
-      ctx.fillRect(-1, 4, 2, 8); // Polished silver hydraulic rod
+      ctx.fillStyle = cHighlight;
+      ctx.fillRect(-5, 7, 10, 1);
+
+      // Polished Chrome Hydraulic Piston Rod
+      ctx.fillStyle = cChrome;
+      ctx.fillRect(-1, 4, 1, 10);
+      ctx.fillStyle = cSpecular;
+      ctx.fillRect(0, 4, 1, 10);
+      ctx.fillStyle = cHighlight;
+      ctx.fillRect(1, 4, 1, 10);
+
+      // Brass Packing Gland Bushing Ring
+      ctx.fillStyle = cBrass;
+      ctx.fillRect(-2, 11, 4, 1);
+      ctx.fillStyle = cBronze;
+      ctx.fillRect(-1, 12, 2, 1);
     }
 
-    // Swivel Footpad & Disc Base
-    ctx.fillStyle = '#0B0D12';
+    // ── Articulated Footpad & Disc Base ──
+    // Stepped Octagon Footpad (Corner cutouts)
+    ctx.fillStyle = cOutline;
     ctx.fillRect(-7, legLen - 1, 14, 5);
-    ctx.fillStyle = isHit ? '#E2E8F0' : '#2A323D';
-    ctx.fillRect(-6, legLen, 12, 3);
-    ctx.fillStyle = '#64748B';
-    ctx.fillRect(-4, legLen, 8, 1);
+    ctx.fillRect(-8, legLen, 16, 3);
+
+    // Footpad 16-bit Shaded Body
+    ctx.fillStyle = cShadow;
+    ctx.fillRect(-7, legLen, 14, 3);
+    ctx.fillStyle = cMetal;
+    ctx.fillRect(-6, legLen, 12, 2);
+    ctx.fillStyle = cHighlight;
+    ctx.fillRect(-5, legLen - 1, 10, 1);
+
+    // Rubber Non-Slip Grip Tread Notches (Bottom)
+    ctx.fillStyle = cDeep;
+    ctx.fillRect(-6, legLen + 3, 2, 1);
+    ctx.fillRect(-1, legLen + 3, 2, 1);
+    ctx.fillRect(4, legLen + 3, 2, 1);
+
+    // Anchor Bolt Rivet
+    ctx.fillStyle = cSpecular;
+    ctx.fillRect(0, legLen + 1, 1, 1);
 
     ctx.restore();
   }
 
-  // Heavy Center Swivel Collar Hub
+  // 2. Heavy Center Swivel Collar Hub (16-bit Stepped Octagonal Ring & Brass Gear Teeth)
   const hubR = level === 3 ? 9 : (level === 2 ? 8 : 7);
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-hubR - 1, -hubR - 1, hubR * 2 + 2, hubR * 2 + 2);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E232B';
-  ctx.fillRect(-hubR, -hubR, hubR * 2, hubR * 2);
-  ctx.fillStyle = '#475569';
-  ctx.fillRect(-hubR + 2, -hubR + 2, hubR * 2 - 4, hubR * 2 - 4);
-  ctx.fillStyle = '#D97706'; // Brass pivot teeth ring
-  ctx.fillRect(-hubR + 3, -hubR + 3, hubR * 2 - 6, 2);
+
+  // Outer Octagonal Black Ink Border
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-hubR - 2, -hubR, (hubR + 2) * 2, hubR * 2);
+  ctx.fillRect(-hubR, -hubR - 2, hubR * 2, (hubR + 2) * 2);
+  ctx.fillRect(-hubR - 1, -hubR - 1, (hubR + 1) * 2, (hubR + 1) * 2);
+
+  // Gunmetal Beveled Collar Ring
+  ctx.fillStyle = cShadow;
+  ctx.fillRect(-hubR, -hubR + 1, hubR * 2, hubR * 2 - 2);
+  ctx.fillRect(-hubR + 1, -hubR, hubR * 2 - 2, hubR * 2);
+  ctx.fillStyle = cMetal;
+  ctx.fillRect(-hubR + 1, -hubR + 1, hubR * 2 - 2, hubR * 2 - 2);
+  ctx.fillStyle = cHighlight;
+  ctx.fillRect(-hubR + 1, -hubR + 1, hubR * 2 - 2, 2);
+  ctx.fillRect(-hubR + 1, -hubR + 1, 2, hubR * 2 - 2);
+
+  // Machined Brass Gear Teeth Ring (Visible 8-tooth cog bevel)
+  const gR = hubR - 2;
+  ctx.fillStyle = cBronze;
+  ctx.fillRect(-gR, -gR, gR * 2, gR * 2);
+  ctx.fillStyle = cBrass;
+  // 8 Gear Teeth Pixels
+  ctx.fillRect(-gR + 1, -gR, gR * 2 - 2, 1);
+  ctx.fillRect(-gR + 1, gR - 1, gR * 2 - 2, 1);
+  ctx.fillRect(-gR, -gR + 1, 1, gR * 2 - 2);
+  ctx.fillRect(gR - 1, -gR + 1, 1, gR * 2 - 2);
+  ctx.fillStyle = '#FEF08A';
+  ctx.fillRect(-gR + 2, -gR, 2, 1);
+  ctx.fillRect(gR - 4, -gR, 2, 1);
+
+  // Center Steel Bearing Axle
+  const axR = Math.max(2, hubR - 4);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-axR, -axR, axR * 2, axR * 2);
+  ctx.fillStyle = cMetal;
+  ctx.fillRect(-axR + 1, -axR + 1, axR * 2 - 2, axR * 2 - 2);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-1, -1, 2, 1);
 }
 
 /**
- * Draws the rear RED Team ammunition drum.
+ * Draws the rear RED Team ammunition drum in 16-bit stepped pixel art.
  */
 function _drawTurretAmmoDrum(ctx, level, isHit) {
   const drumW = level === 3 ? 18 : (level === 2 ? 16 : 14);
   const drumH = level === 3 ? 24 : (level === 2 ? 22 : 18);
   const drumX = -drumW - 2;
-  const drumY = -drumH / 2;
+  const drumY = -Math.floor(drumH / 2);
 
-  // Outline
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(drumX - 1, drumY - 1, drumW + 2, drumH + 2);
+  const cOutline = '#0B0D12';
+  const cRedGlint = isHit ? '#FFFFFF' : '#FCA5A5';
+  const cRedHigh = isHit ? '#FFFFFF' : '#EF4444';
+  const cRedMid = isHit ? '#E2E8F0' : '#DC2626';
+  const cRedDark = isHit ? '#CBD5E1' : '#991B1B';
+  const cRedDeep = isHit ? '#94A3B8' : '#450A0A';
+  const cSteelHigh = isHit ? '#FFFFFF' : '#64748B';
+  const cSteelMid = isHit ? '#CBD5E1' : '#334155';
+  const cSteelDark = '#1E293B';
+  const cAmber = '#FACC15';
 
-  // RED Team Burgundy / Crimson Body
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#7F1D1D';
+  // ── 1. Stepped Cylindrical Outer Black Ink Contour (Corner Cuts) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(drumX, drumY - 1, drumW, drumH + 2);
+  ctx.fillRect(drumX - 1, drumY, drumW + 2, drumH);
+
+  // ── 2. RED Enamel 16-bit Vertical Shading Ramp ──
+  // Deep Shadow (Left / Bottom-Left)
+  ctx.fillStyle = cRedDeep;
   ctx.fillRect(drumX, drumY, drumW, drumH);
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#B91C1C';
-  ctx.fillRect(drumX + 2, drumY + 2, drumW - 4, drumH - 4);
+  // Dark Red Base
+  ctx.fillStyle = cRedDark;
+  ctx.fillRect(drumX + 1, drumY, drumW - 1, drumH);
+  // Saturated RED Midtone
+  ctx.fillStyle = cRedMid;
+  ctx.fillRect(drumX + 2, drumY + 1, drumW - 4, drumH - 2);
+  // Specular Highlight Column (Upper Left)
+  ctx.fillStyle = cRedHigh;
+  ctx.fillRect(drumX + 3, drumY + 1, 3, drumH - 2);
+  ctx.fillStyle = cRedGlint;
+  ctx.fillRect(drumX + 3, drumY + 2, 2, 2);
 
-  // Specular Highlight
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#EF4444';
-  ctx.fillRect(drumX + 3, drumY + 2, drumW - 6, 2);
-
-  // Dark Steel Base Rim
-  ctx.fillStyle = '#11141A';
+  // ── 3. Top & Bottom Reinforced Steel Retaining Rims ──
+  // Top Collar
+  ctx.fillStyle = cSteelMid;
+  ctx.fillRect(drumX, drumY, drumW, 2);
+  ctx.fillStyle = cSteelHigh;
+  ctx.fillRect(drumX + 1, drumY, drumW - 2, 1);
+  // Bottom Collar
+  ctx.fillStyle = cSteelDark;
   ctx.fillRect(drumX, drumY + drumH - 3, drumW, 3);
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = cSteelMid;
   ctx.fillRect(drumX + 1, drumY + drumH - 2, drumW - 2, 1);
 
-  // Ammo Conduit Connectors / Yellow Warning Decal
+  // Rivet Studs on Retaining Rims
+  ctx.fillStyle = cSteelHigh;
+  ctx.fillRect(drumX + 2, drumY, 1, 1);
+  ctx.fillRect(drumX + drumW - 3, drumY, 1, 1);
+  ctx.fillRect(drumX + 2, drumY + drumH - 2, 1, 1);
+  ctx.fillRect(drumX + drumW - 3, drumY + drumH - 2, 1, 1);
+
+  // ── 4. Industrial Ammo Decal / Hazard Badge ──
+  ctx.fillStyle = cAmber;
+  ctx.fillRect(drumX + 3, drumY + Math.floor(drumH / 2) - 2, 4, 4);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(drumX + 4, drumY + Math.floor(drumH / 2) - 1, 2, 2);
   ctx.fillStyle = '#FEF08A';
-  ctx.fillRect(drumX + 3, drumY + drumH / 2 - 2, 3, 4);
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(drumX + 4, drumY + drumH / 2 - 1, 1, 2);
+  ctx.fillRect(drumX + 4, drumY + Math.floor(drumH / 2) - 1, 1, 1);
+
+  // ── 5. Forward Ammo Feed Coupling Flange ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(drumX + drumW, drumY + 3, 2, drumH - 6);
+  ctx.fillStyle = cSteelMid;
+  ctx.fillRect(drumX + drumW, drumY + 4, 1, drumH - 8);
 }
 
 /**
- * Draws Level 1 Single Heavy Barrel.
+ * Draws Level 1 Single Heavy Barrel Sentry Head in 16-bit stepped pixel art.
  */
 function _drawTurretLevel1Head(ctx, isHit) {
   _drawTurretAmmoDrum(ctx, 1, isHit);
 
-  // Main Receiver Body
-  ctx.fillStyle = '#0B0D12';
+  const cOutline = '#0B0D12';
+  const cSpecular = isHit ? '#FFFFFF' : '#CBD5E1';
+  const cHigh = isHit ? '#E2E8F0' : '#64748B';
+  const cMid = isHit ? '#CBD5E1' : '#334155';
+  const cDark = isHit ? '#94A3B8' : '#1E293B';
+
+  // ── 1. Main Cast-Iron Receiver Box ──
+  // Stepped Black Ink Outline
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-5, -8, 18, 16);
+  ctx.fillRect(-4, -9, 16, 18);
+
+  // Receiver 16-bit Shading
+  ctx.fillStyle = cDark;
   ctx.fillRect(-4, -8, 16, 16);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E232B';
-  ctx.fillRect(-3, -7, 14, 14);
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(-3, -7, 14, 3);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-4, -7, 14, 14);
+  // Top Chamfer Bevel Highlight
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-3, -7, 14, 2);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-3, -7, 6, 1);
 
-  // Cyan Optical Sensor Scope
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(0, -12, 8, 5);
-  ctx.fillStyle = '#06B6D4';
-  ctx.fillRect(1, -11, 6, 3);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(2, -11, 2, 1);
+  // Lateral Cooling Louver Slits (3 horizontal vents)
+  for (let v = 0; v < 3; v++) {
+    const vy = -3 + v * 3;
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(-1, vy, 8, 1);
+    ctx.fillStyle = cHigh;
+    ctx.fillRect(-1, vy - 1, 8, 1);
+  }
 
-  // Single Heavy Barrel Assembly
-  // Breech / Forward Receiver Sleeve
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(10, -5, 8, 10);
-  ctx.fillStyle = isHit ? '#E2E8F0' : '#334155';
-  ctx.fillRect(11, -4, 6, 8);
+  // Receiver Corner Hex Rivets
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-3, -6, 1, 1);
+  ctx.fillRect(-3, 5, 1, 1);
 
-  // Gunmetal Barrel
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(16, -3.5, 16, 7);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E293B';
-  ctx.fillRect(16, -2.5, 14, 5);
-  ctx.fillStyle = '#64748B';
-  ctx.fillRect(16, -2.5, 14, 1.5);
+  // ── 2. Optical Sensor Scope (Top Periscope Eye) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(0, -13, 9, 6);
+  ctx.fillRect(1, -14, 7, 8);
 
-  // Stepped Red Clamp Ring & Muzzle Crown
-  ctx.fillStyle = '#B91C1C';
-  ctx.fillRect(24, -4.5, 4, 9);
-  ctx.fillStyle = '#DC2626';
-  ctx.fillRect(24, -4.5, 4, 1.5);
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(30, -3, 2, 6); // Dark muzzle bore
+  // Scope Armored Hood
+  ctx.fillStyle = cMid;
+  ctx.fillRect(1, -13, 7, 5);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(1, -13, 7, 1);
+
+  // 16-bit Cyan Objective Sensor Lens
+  ctx.fillStyle = '#082F49'; // Dark ocular rim
+  ctx.fillRect(4, -12, 4, 4);
+  ctx.fillStyle = '#0284C7'; // Deep optical glass
+  ctx.fillRect(4, -12, 3, 3);
+  ctx.fillStyle = '#06B6D4'; // Bright cyan glow
+  ctx.fillRect(5, -12, 2, 2);
+  ctx.fillStyle = '#FFFFFF'; // White specular glint pip
+  ctx.fillRect(5, -12, 1, 1);
+
+  // ── 3. Single Heavy Barrel Assembly ──
+  // Breech / Forward Receiver Collar
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(11, -6, 6, 12);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(12, -5, 4, 10);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(12, -5, 4, 2);
+
+  // Heavy Fluted Steel Barrel (x = 16 to 28, y = -3 to 3)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(16, -4, 12, 8);
+  // Underside Shadow Flute
+  ctx.fillStyle = cDark;
+  ctx.fillRect(16, -3, 12, 6);
+  // Center Gunmetal Barrel Core
+  ctx.fillStyle = cMid;
+  ctx.fillRect(16, -2, 12, 4);
+  // Longitudinal Top Highlight Flute
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(16, -2, 12, 1);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(17, -2, 4, 1);
+
+  // Anodized RED Clamp Band with Brass Screw (x = 22 to 25)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(22, -5, 4, 10);
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#991B1B';
+  ctx.fillRect(23, -4, 2, 8);
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#DC2626';
+  ctx.fillRect(23, -3, 2, 6);
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#EF4444';
+  ctx.fillRect(23, -4, 2, 1);
+  // Brass Hex Bolt Pin
+  ctx.fillStyle = '#F59E0B';
+  ctx.fillRect(23, -1, 1, 2);
+
+  // Heavy Slotted Muzzle Brake (x = 28 to 32)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(28, -5, 4, 10);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(28, -4, 3, 8);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(28, -4, 3, 1);
+  // Lateral Gas Port Vents
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(29, -3, 1, 6);
+  // Recessed Dark Muzzle Bore
+  ctx.fillStyle = '#05070A';
+  ctx.fillRect(31, -2, 1, 4);
 }
 
 /**
- * Draws a curved segmented ammo feed chute.
+ * Draws a curved segmented ammo feed chute in 16-bit pixel art.
  */
 function _drawSegmentedAmmoChute(ctx, fromX, fromY, toX, toY, isHit) {
   const steps = 6;
+  const cOutline = '#0B0D12';
+  const cSteel = isHit ? '#CBD5E1' : '#334155';
+  const cSteelHigh = isHit ? '#FFFFFF' : '#64748B';
+  const cBrassTip = isHit ? '#FFFFFF' : '#FEF08A';
+  const cBrass = isHit ? '#FEF08A' : '#F59E0B';
+  const cBronze = '#B45309';
+
   for (let s = 0; s <= steps; s++) {
     const t = s / steps;
     const curveY = Math.sin(t * Math.PI) * (toY > 0 ? 6 : -6);
-    const px = snap(fromX + (toX - fromX) * t);
-    const py = snap(fromY + (toY - fromY) * t + curveY);
+    const px = Math.round(fromX + (toX - fromX) * t);
+    const py = Math.round(fromY + (toY - fromY) * t + curveY);
 
-    // Segment Link Outer Shell
-    ctx.fillStyle = '#0B0D12';
-    ctx.fillRect(px - 2, py - 3, 5, 6);
+    // Segment Link Outer Shell (Beveled 5x6 block)
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(px - 3, py - 3, 6, 6);
 
-    // Charcoal Metal Link Body
-    ctx.fillStyle = isHit ? '#E2E8F0' : '#2A323D';
-    ctx.fillRect(px - 1, py - 2, 3, 4);
+    // Steel Link Body
+    ctx.fillStyle = cSteel;
+    ctx.fillRect(px - 2, py - 2, 4, 4);
+    ctx.fillStyle = cSteelHigh;
+    ctx.fillRect(px - 2, py - 2, 4, 1);
 
-    // Brass Bullet Cartridge Rim Peeking Out
-    ctx.fillStyle = '#F59E0B';
-    ctx.fillRect(px, py - 1, 1, 2);
+    // Peeking Machined Brass Cartridge
+    ctx.fillStyle = cBronze;
+    ctx.fillRect(px - 1, py - 1, 3, 2);
+    ctx.fillStyle = cBrass;
+    ctx.fillRect(px - 1, py - 1, 2, 2);
+    ctx.fillStyle = cBrassTip;
+    ctx.fillRect(px, py - 1, 1, 1);
+
+    // Hinge Pivot Pin
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(px - 2, py, 1, 1);
   }
 }
 
 /**
- * Draws a 6-barrel rotary Gatling minigun cluster.
+ * Draws a 6-barrel rotary Gatling minigun cluster in 16-bit stepped pixel art.
  */
 function _drawGatlingMinigunCluster(ctx, x, y, isHit) {
   ctx.save();
-  ctx.translate(snap(x), snap(y));
+  ctx.translate(Math.round(x), Math.round(y));
 
-  // Armored Receiver Box
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-4, -6, 12, 12);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E232B';
-  ctx.fillRect(-3, -5, 10, 10);
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(-3, -5, 10, 2);
+  const cOutline = '#0B0D12';
+  const cSpecular = isHit ? '#FFFFFF' : '#CBD5E1';
+  const cHigh = isHit ? '#E2E8F0' : '#64748B';
+  const cMid = isHit ? '#CBD5E1' : '#334155';
+  const cDark = isHit ? '#94A3B8' : '#1E293B';
 
-  // Cylindrical Rotor Hub
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(6, -5, 6, 10);
-  ctx.fillStyle = isHit ? '#E2E8F0' : '#475569';
+  // ── 1. Armored Receiver Housing (x = -4 to 6, y = -6 to 6) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-5, -6, 12, 12);
+  ctx.fillRect(-4, -7, 10, 14);
+
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-4, -6, 10, 12);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-4, -5, 9, 10);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-4, -5, 9, 2);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-4, -5, 4, 1);
+
+  // Ventilation Louvers
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-2, -2, 5, 1);
+  ctx.fillRect(-2, 1, 5, 1);
+
+  // ── 2. Cylindrical Rotor Drive Motor Housing (x = 6 to 11, y = -5 to 5) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(6, -6, 6, 12);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(6, -5, 5, 10);
+  ctx.fillStyle = cMid;
   ctx.fillRect(7, -4, 4, 8);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(7, -4, 4, 1);
 
-  // 6-Barrel Rotary Minigun Cluster (Top, Center, Bottom)
+  // Drive Pulley Belt Notch
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(9, -5, 1, 10);
+
+  // ── 3. 6-Barrel Rotary Minigun Cluster (Barrels at y = -4, -1, 2) ──
   const barrelYs = [-4, -1, 2];
   for (let b = 0; b < barrelYs.length; b++) {
     const by = barrelYs[b];
-    // Barrel Tube
-    ctx.fillStyle = '#0B0D12';
-    ctx.fillRect(10, by, 18, 3);
-    ctx.fillStyle = isHit ? '#CBD5E1' : '#1E293B';
-    ctx.fillRect(10, by + 0.5, 16, 2);
-    ctx.fillStyle = '#64748B';
-    ctx.fillRect(10, by + 0.5, 16, 0.8);
+    // Barrel Tube Outer Outline
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(11, by - 1, 18, 4);
+
+    // Barrel 16-bit Shading
+    ctx.fillStyle = cDark;
+    ctx.fillRect(11, by, 17, 3);
+    ctx.fillStyle = cMid;
+    ctx.fillRect(11, by, 17, 2);
+    ctx.fillStyle = cHigh;
+    ctx.fillRect(11, by, 16, 1);
+
+    if (b === 0) {
+      // Top Barrel Specular Line
+      ctx.fillStyle = cSpecular;
+      ctx.fillRect(13, by, 8, 1);
+    }
   }
 
-  // Forward Retention Collar Ring
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(20, -5, 3, 10);
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#64748B';
-  ctx.fillRect(20.5, -4, 2, 8);
+  // ── 4. Forward Barrel Retention Collar Ring (x = 20 to 23, y = -6 to 6) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(20, -6, 4, 12);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(21, -5, 2, 10);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(21, -4, 2, 8);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(21, -5, 2, 1);
 
-  // Muzzle Crown Ring & Dark Bores
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(26, -5, 2, 10);
-  ctx.fillStyle = '#11141A';
-  ctx.fillRect(27, -4, 1, 8);
+  // Clamping Hex Pins
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(21, -3, 1, 1);
+  ctx.fillRect(21, 2, 1, 1);
+
+  // ── 5. Muzzle Crown Ring & Recessed Dark Bores (x = 27 to 30) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(27, -5, 3, 10);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(27, -4, 2, 8);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(27, -4, 2, 1);
+
+  // Recessed Dark Barrel Muzzle Bores
+  ctx.fillStyle = '#05070A';
+  ctx.fillRect(29, -4, 1, 2);
+  ctx.fillRect(29, -1, 1, 2);
+  ctx.fillRect(29, 2, 1, 2);
+
+  // Center Axis Spindle Pin
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(28, 0, 1, 1);
 
   ctx.restore();
 }
 
 /**
- * Draws Level 2 Twin Gatling Miniguns with dual looping ammo feed chutes.
+ * Draws Level 2 Twin Gatling Miniguns with dual looping ammo feed chutes in 16-bit pixel art.
  */
 function _drawTurretLevel2Head(ctx, isHit) {
   _drawTurretAmmoDrum(ctx, 2, isHit);
 
-  // Horizontal Crossbar Mounting Bracket
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-2, -16, 8, 32);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#334155';
-  ctx.fillRect(-1, -15, 6, 30);
-  ctx.fillStyle = '#64748B';
-  ctx.fillRect(-1, -15, 6, 2);
-  ctx.fillRect(-1, 13, 6, 2);
+  const cOutline = '#0B0D12';
+  const cSpecular = isHit ? '#FFFFFF' : '#CBD5E1';
+  const cHigh = isHit ? '#E2E8F0' : '#64748B';
+  const cMid = isHit ? '#CBD5E1' : '#334155';
+  const cDark = isHit ? '#94A3B8' : '#1E293B';
 
-  // Center Armored Swivel Core & Sensor Scope
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-4, -8, 14, 16);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E232B';
-  ctx.fillRect(-3, -7, 12, 14);
-  ctx.fillStyle = '#06B6D4'; // Cyan Sensor Lens
-  ctx.fillRect(1, -11, 6, 3);
+  // ── 1. Heavy Cast Steel Yoke Crossbar (x = -3 to 6, y = -17 to 17) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-3, -17, 9, 34);
+
+  // Crossbar 16-bit Shading
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-2, -16, 7, 32);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-2, -15, 6, 30);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-2, -15, 6, 2); // Top bevel
+  ctx.fillRect(-2, 13, 6, 2);  // Bottom bevel
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-1, -15, 4, 1);
+
+  // Structural Reinforcement Gusset Bolts
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(0, -11, 1, 1);
+  ctx.fillRect(0, 10, 1, 1);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(0, -10, 1, 1);
+  ctx.fillRect(0, 11, 1, 1);
+
+  // ── 2. Center Armored Swivel Core & Optical Sensor Scope ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-5, -8, 16, 16);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-4, -7, 14, 14);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-4, -6, 12, 12);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-4, -6, 12, 2);
+
+  // Cyan Optical Sensor Scope (Dual Lenses)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(1, -12, 8, 5);
+  ctx.fillStyle = '#082F49';
+  ctx.fillRect(2, -11, 6, 3);
+  ctx.fillStyle = '#0284C7';
+  ctx.fillRect(2, -11, 5, 3);
+  ctx.fillStyle = '#06B6D4';
+  ctx.fillRect(3, -11, 4, 2);
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(2, -11, 2, 1);
+  ctx.fillRect(3, -11, 1, 1);
+  ctx.fillRect(6, -11, 1, 1);
 
-  // Dual Segmented Looping Ammo Belts
+  // ── 3. Dual 16-bit Segmented Looping Ammo Belts ──
   _drawSegmentedAmmoChute(ctx, -14, -8, 2, -13, isHit);
   _drawSegmentedAmmoChute(ctx, -14, 8, 2, 13, isHit);
 
-  // Top & Bottom Gatling Minigun Clusters
+  // ── 4. Top & Bottom Rotary Gatling Minigun Clusters ──
   _drawGatlingMinigunCluster(ctx, 6, -13, isHit);
   _drawGatlingMinigunCluster(ctx, 6, 13, isHit);
 }
 
 /**
- * Draws Level 3 Twin Gatlings + Top-Mounted RED Quad Rocket Launcher Pod.
+ * Draws Level 3 Twin Gatlings + Top-Mounted RED Quad Rocket Launcher Pod in 16-bit pixel art.
  */
 function _drawTurretLevel3Head(ctx, isHit) {
   // Base Twin Gatlings & Looping Ammo Chutes
   _drawTurretLevel2Head(ctx, isHit);
 
-  // Articulated Vertical Rocket Support Arm
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-3, -22, 6, 12);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#334155';
-  ctx.fillRect(-2, -21, 4, 10);
-  ctx.fillStyle = '#64748B';
-  ctx.fillRect(-2, -21, 2, 10);
+  const cOutline = '#0B0D12';
+  const cSpecular = isHit ? '#FFFFFF' : '#CBD5E1';
+  const cHigh = isHit ? '#E2E8F0' : '#64748B';
+  const cMid = isHit ? '#CBD5E1' : '#334155';
+  const cDark = isHit ? '#94A3B8' : '#1E293B';
 
-  // ── RED Quad Rocket Launcher Pod Box ──
+  const cRedGlint = isHit ? '#FFFFFF' : '#FCA5A5';
+  const cRedHigh = isHit ? '#FFFFFF' : '#EF4444';
+  const cRedMid = isHit ? '#E2E8F0' : '#DC2626';
+  const cRedDark = isHit ? '#CBD5E1' : '#991B1B';
+  const cRedDeep = isHit ? '#94A3B8' : '#450A0A';
+
+  // ── 1. Articulated Vertical Rocket Support Pylon (x = -4 to 3, y = -23 to -11) ──
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-4, -23, 8, 13);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-3, -22, 6, 11);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-3, -21, 4, 9);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-3, -21, 2, 9);
+
+  // Polished Chrome Hydraulic Lift Cylinder
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#F8FAFC';
+  ctx.fillRect(0, -21, 1, 8);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(1, -21, 1, 8);
+
+  // ── 2. RED Quad Rocket Launcher Pod Box (x = -6 to 22, y = -35 to -21) ──
   const podX = -6;
-  const podY = -34;
-  const podW = 26;
-  const podH = 14;
+  const podY = -35;
+  const podW = 28;
+  const podH = 15;
 
-  // Dark Outline Shell
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(podX - 1, podY - 1, podW + 2, podH + 2);
+  // Stepped Black Ink Outline Shell (Corner cuts)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(podX, podY - 1, podW, podH + 2);
+  ctx.fillRect(podX - 1, podY, podW + 2, podH);
 
-  // RED Team Crimson Box Body
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#7F1D1D';
+  // Crimson Enamel Shading Ramp
+  ctx.fillStyle = cRedDeep;
   ctx.fillRect(podX, podY, podW, podH);
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#B91C1C';
+  ctx.fillStyle = cRedDark;
+  ctx.fillRect(podX + 1, podY, podW - 1, podH);
+  ctx.fillStyle = cRedMid;
   ctx.fillRect(podX + 1, podY + 1, podW - 2, podH - 2);
 
-  // Top Highlight Ridge
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#EF4444';
+  // Top Armored Rim Specular Highlight
+  ctx.fillStyle = cRedHigh;
   ctx.fillRect(podX + 1, podY + 1, podW - 2, 2);
+  ctx.fillStyle = cRedGlint;
+  ctx.fillRect(podX + 2, podY + 1, 8, 1);
 
-  // Yellow Hazard Decal Patch
-  ctx.fillStyle = '#FEF08A';
-  ctx.fillRect(podX + 2, podY + 4, 6, 6);
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(podX + 3, podY + 5, 4, 4);
-  ctx.fillStyle = '#FEF08A';
-  ctx.fillRect(podX + 4, podY + 6, 2, 2);
+  // ── 3. 16-bit 45° Diagonal Industrial Hazard Warning Stripes (Top Fascia) ──
+  // Fascia from podX + 2 to podX + 14, y = podY + 3 to podY + 6 (height 4px)
+  for (let hx = podX + 2; hx <= podX + 14; hx++) {
+    for (let hy = podY + 3; hy <= podY + 6; hy++) {
+      const isYellow = ((hx - hy) % 4 + 4) % 4 < 2;
+      ctx.fillStyle = isYellow ? '#FACC15' : '#0F172A';
+      ctx.fillRect(hx, hy, 1, 1);
+    }
+  }
 
-  // 4 Circular Rocket Launch Tubes (2x2 Grid)
+  // ── 4. 2x2 Grid of 4 Rocket Launch Tubes (Tubes at x = 11, 18 and y = -31, -25) ──
   const tubeXs = [11, 18];
-  const tubeYs = [-32, -25];
+  const tubeYs = [-31, -25];
   for (let tx of tubeXs) {
     for (let ty of tubeYs) {
-      // Tube Bezel Rim
-      ctx.fillStyle = '#0B0D12';
-      ctx.fillRect(tx - 3, ty - 3, 6, 6);
-      ctx.fillStyle = isHit ? '#FFFFFF' : '#334155';
-      ctx.fillRect(tx - 2.5, ty - 2.5, 5, 5);
+      // Stepped Octagonal Tube Bezel Rim (6x6 pixels, corner cuts)
+      ctx.fillStyle = cOutline;
+      ctx.fillRect(tx - 3, ty - 2, 6, 4);
+      ctx.fillRect(tx - 2, ty - 3, 4, 6);
 
-      // Dark Hollow Bore
-      ctx.fillStyle = '#0B0D12';
-      ctx.fillRect(tx - 1.5, ty - 1.5, 3, 3);
+      // Bevel Shading (Top-Left Highlight, Bottom-Right Shadow)
+      ctx.fillStyle = cDark;
+      ctx.fillRect(tx - 2, ty - 2, 4, 4);
+      ctx.fillStyle = cHigh;
+      ctx.fillRect(tx - 2, ty - 2, 3, 1);
+      ctx.fillRect(tx - 2, ty - 2, 1, 3);
+      ctx.fillStyle = cSpecular;
+      ctx.fillRect(tx - 2, ty - 2, 1, 1);
 
-      // Armed Red/Gold Warhead Nose Cone Inside
-      ctx.fillStyle = '#DC2626';
-      ctx.fillRect(tx - 0.5, ty - 0.5, 2, 2);
+      // Deep Dark Recessed Tube Interior (3x3 pixels)
+      ctx.fillStyle = '#05070A';
+      ctx.fillRect(tx - 1, ty - 1, 3, 3);
+
+      // Armed 70mm Rocket Warhead Inside
+      // Red Ogive Warhead Nose Cone
+      ctx.fillStyle = isHit ? '#FFFFFF' : '#DC2626';
+      ctx.fillRect(tx, ty, 2, 2);
+      ctx.fillStyle = isHit ? '#FFFFFF' : '#EF4444';
+      ctx.fillRect(tx, ty, 1, 1);
+
+      // Machined Brass Detonator Fuse Point
       ctx.fillStyle = '#FEF08A';
       ctx.fillRect(tx, ty, 1, 1);
     }
   }
 
-  // Flexible Orange/Red Power Cables
+  // ── 5. Armored Flexible Braided Cable Conduits ──
+  ctx.fillStyle = '#C2410C';
+  ctx.fillRect(-2, -21, 2, 8);
   ctx.fillStyle = '#EA580C';
-  ctx.fillRect(-2, -20, 1, 6);
-  ctx.fillRect(-4, -18, 1, 6);
-  ctx.fillRect(-3, -14, 2, 1);
+  ctx.fillRect(-2, -21, 1, 8);
+  ctx.fillStyle = '#9A3412';
+  ctx.fillRect(-4, -19, 2, 6);
+  ctx.fillStyle = '#C2410C';
+  ctx.fillRect(-4, -19, 1, 6);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-3, -15, 3, 1); // Clamp band
 }
 
 /**
- * Draws the Sentry Turret (Lv 1, Lv 2, Lv 3) in 100% discrete pixel art (Saitama tech).
+ * Draws the Sentry Turret (Lv 1, Lv 2, Lv 3) in authentic 16-bit pixel art (Saitama tech).
  */
 export function drawTurret(ctx, turret) {
   const { x, y, r, gunAngle, isBuilding, buildProgress, owner, level = 1 } = turret;
@@ -1185,7 +1540,7 @@ export function drawTurret(ctx, turret) {
   }
 
   ctx.save();
-  ctx.translate(snap(x), snap(y - zOffset));
+  ctx.translate(Math.round(x), Math.round(y - zOffset));
 
   const bp = (isBuilding && buildProgress !== undefined) ? buildProgress : 1;
   const s = r / 20;
@@ -1194,17 +1549,27 @@ export function drawTurret(ctx, turret) {
   const isHit = turret.hitFlashTimer > 0;
 
   // ═══════════════════════════════════════════
-  // 1. CONSTRUCTION PHASE (Welding Sparks & Scaffolding)
+  // 1. CONSTRUCTION PHASE (16-bit Blueprint Scaffolding & Welding Sparks)
   // ═══════════════════════════════════════════
   if (isBuilding && bp < 1 && !turret._isSilhouettePass) {
     const now = Date.now();
-    ctx.fillStyle = 'rgba(14, 165, 233, 0.35)';
+    ctx.fillStyle = 'rgba(14, 165, 233, 0.28)';
     ctx.fillRect(-22, -22, 44, 44);
+
+    // Cyan 16-bit Blueprint Grid
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+    for (let gx = -20; gx <= 20; gx += 8) {
+      ctx.fillRect(gx, -20, 1, 40);
+    }
+    for (let gy = -20; gy <= 20; gy += 8) {
+      ctx.fillRect(-20, gy, 40, 1);
+    }
+
     for (let i = 0; i < 6; i++) {
       const a = (now * 0.01 + i * 1.05) % (Math.PI * 2);
       const dist = 6 + (now * 0.05 + i * 5) % 20;
-      ctx.fillStyle = (i % 2 === 0) ? '#FFFFFF' : '#F59E0B';
-      ctx.fillRect(snap(Math.cos(a) * dist), snap(Math.sin(a) * dist), 2, 2);
+      ctx.fillStyle = (i % 2 === 0) ? '#FFFFFF' : '#FACC15';
+      ctx.fillRect(Math.round(Math.cos(a) * dist), Math.round(Math.sin(a) * dist), 2, 2);
     }
   }
 
@@ -1220,15 +1585,17 @@ export function drawTurret(ctx, turret) {
   ctx.rotate(angle);
 
   const recoilTimer = turret.recoilTimer || 0;
-  const recoilOff = (recoilTimer > 0) ? -snap((recoilTimer / 10) * 5) : 0;
+  const recoilOff = (recoilTimer > 0) ? -Math.round((recoilTimer / 10) * 5) : 0;
   ctx.translate(recoilOff, 0);
 
-  // Red Targeting Laser Beam
+  // Red Targeting Laser Beam (16-bit Pixel Beam & Reticle)
   if (!turret._isSilhouettePass) {
     ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
     ctx.fillRect(14, 0, 100, 2);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(114, -1, 3, 3); // Reticle point
+    ctx.fillRect(115, -2, 1, 5); // Crosshair vertical
+    ctx.fillRect(113, 0, 5, 1);  // Crosshair horizontal
   }
 
   // Level-specific Swivel Head
@@ -1257,266 +1624,625 @@ export function drawTurret(ctx, turret) {
 }
 
 /**
- * Draws the TF2 RED Dispenser Cabinet in 100% discrete pixel art (Saitama tech).
+ * Draws the 16-bit pixel stencil "RED" logo on the Dispenser hopper.
+ */
+function _drawPixelRedStencil(ctx, cx, cy, color = '#FEF2F2', shadowColor = '#450A0A') {
+  const drawGlyph = (pixels, ox, oy) => {
+    for (let i = 0; i < pixels.length; i += 2) {
+      const px = ox + pixels[i];
+      const py = oy + pixels[i + 1];
+      if (shadowColor) {
+        ctx.fillStyle = shadowColor;
+        ctx.fillRect(px, py + 1, 1, 1);
+      }
+      ctx.fillStyle = color;
+      ctx.fillRect(px, py, 1, 1);
+    }
+  };
+
+  // 'R' (4x5) at cx - 6
+  const rPixels = [
+    0,0, 1,0, 2,0, 3,0,
+    0,1,           3,1,
+    0,2, 1,2, 2,2, 3,2,
+    0,3,      2,3,
+    0,4,           3,4
+  ];
+  // 'E' (4x5) at cx - 1
+  const ePixels = [
+    0,0, 1,0, 2,0, 3,0,
+    0,1,
+    0,2, 1,2, 2,2,
+    0,3,
+    0,4, 1,4, 2,4, 3,4
+  ];
+  // 'D' (4x5) at cx + 4
+  const dPixels = [
+    0,0, 1,0, 2,0,
+    0,1,           3,1,
+    0,2,           3,2,
+    0,3,           3,3,
+    0,4, 1,4, 2,4
+  ];
+
+  drawGlyph(rPixels, cx - 6, cy - 2);
+  drawGlyph(ePixels, cx - 1, cy - 2);
+  drawGlyph(dPixels, cx + 4, cy - 2);
+}
+
+/**
+ * Draws the 16-bit micro-pixel "PROVISIONS" typography on the backlit marquee sign.
+ */
+function _drawPixelProvisions(ctx, cx, cy, color = '#DC2626') {
+  const drawGlyph = (pixels, ox, oy) => {
+    ctx.fillStyle = color;
+    for (let i = 0; i < pixels.length; i += 2) {
+      ctx.fillRect(ox + pixels[i], oy + pixels[i + 1], 1, 1);
+    }
+  };
+
+  // 10 letters centered around cx:
+  // P (-17), R (-13), O (-9), V (-5), I (-1), S (1), I (5), O (7), N (11), S (15)
+  // Height 5 (-2 to +2 relative to cy)
+
+  // P (3x5) at cx - 17
+  drawGlyph([
+    0,0, 1,0,
+    0,1,      2,1,
+    0,2, 1,2,
+    0,3,
+    0,4
+  ], cx - 17, cy - 2);
+
+  // R (3x5) at cx - 13
+  drawGlyph([
+    0,0, 1,0,
+    0,1,      2,1,
+    0,2, 1,2,
+    0,3,      2,3,
+    0,4,      2,4
+  ], cx - 13, cy - 2);
+
+  // O (3x5) at cx - 9
+  drawGlyph([
+    0,0, 1,0, 2,0,
+    0,1,      2,1,
+    0,2,      2,2,
+    0,3,      2,3,
+    0,4, 1,4, 2,4
+  ], cx - 9, cy - 2);
+
+  // V (3x5) at cx - 5
+  drawGlyph([
+    0,0,      2,0,
+    0,1,      2,1,
+    0,2,      2,2,
+    0,3,      2,3,
+         1,4
+  ], cx - 5, cy - 2);
+
+  // I (1x5) at cx - 1
+  drawGlyph([
+    0,0,
+    0,1,
+    0,2,
+    0,3,
+    0,4
+  ], cx - 1, cy - 2);
+
+  // S (3x5) at cx + 1
+  drawGlyph([
+    0,0, 1,0, 2,0,
+    0,1,
+    0,2, 1,2, 2,2,
+              2,3,
+    0,4, 1,4, 2,4
+  ], cx + 1, cy - 2);
+
+  // I (1x5) at cx + 5
+  drawGlyph([
+    0,0,
+    0,1,
+    0,2,
+    0,3,
+    0,4
+  ], cx + 5, cy - 2);
+
+  // O (3x5) at cx + 7
+  drawGlyph([
+    0,0, 1,0, 2,0,
+    0,1,      2,1,
+    0,2,      2,2,
+    0,3,      2,3,
+    0,4, 1,4, 2,4
+  ], cx + 7, cy - 2);
+
+  // N (3x5) at cx + 11
+  drawGlyph([
+    0,0,      2,0,
+    0,1, 1,1, 2,1,
+    0,2,      2,2,
+    0,3,      2,3,
+    0,4,      2,4
+  ], cx + 11, cy - 2);
+
+  // S (3x5) at cx + 15
+  drawGlyph([
+    0,0, 1,0, 2,0,
+    0,1,
+    0,2, 1,2, 2,2,
+              2,3,
+    0,4, 1,4, 2,4
+  ], cx + 15, cy - 2);
+}
+
+/**
+ * Draws the TF2 RED Dispenser Cabinet in authentic 16-bit pixel art (Saitama tech).
  */
 export function drawDispenser(ctx, dispenser) {
   const { x, y, r, hp = 100, maxHp = 160, isBuilding, buildProgress } = dispenser;
 
   ctx.save();
-  ctx.translate(snap(x), snap(y));
+  ctx.translate(Math.round(x), Math.round(y));
 
   const isHit = dispenser.hitFlashTimer > 0;
   const s = r / 20;
   ctx.scale(s, s);
 
+  // 16-bit Universal Palette
+  const cOutline = '#0B0D12';
+  const cSpecular = isHit ? '#FFFFFF' : '#CBD5E1';
+  const cHigh = isHit ? '#E2E8F0' : '#64748B';
+  const cMid = isHit ? '#CBD5E1' : '#334155';
+  const cDark = isHit ? '#94A3B8' : '#1E293B';
+  const cDeep = '#0F172A';
+
+  const cRedGlint = isHit ? '#FFFFFF' : '#FCA5A5';
+  const cRedHigh = isHit ? '#FFFFFF' : '#EF4444';
+  const cRedMid = isHit ? '#E2E8F0' : '#DC2626';
+  const cRedDark = isHit ? '#CBD5E1' : '#991B1B';
+  const cRedDeep = isHit ? '#94A3B8' : '#450A0A';
+
   // ═══════════════════════════════════════════
-  // 1. CONSTRUCTION PHASE (Blueprint Hologram & Sparks)
+  // 1. CONSTRUCTION PHASE (16-bit Blueprint Wireframe & Welding Sparks)
   // ═══════════════════════════════════════════
   const bp = (isBuilding && buildProgress !== undefined) ? buildProgress : 1;
   if (isBuilding && bp < 1 && !dispenser._isSilhouettePass) {
     const now = Date.now();
-    ctx.fillStyle = 'rgba(14, 165, 233, 0.35)';
-    ctx.fillRect(-20, -32, 40, 56);
+    ctx.fillStyle = 'rgba(14, 165, 233, 0.28)';
+    ctx.fillRect(-22, -34, 44, 60);
+
+    // Cyan 16-bit Blueprint Grid Lines
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+    for (let gx = -20; gx <= 20; gx += 8) {
+      ctx.fillRect(gx, -32, 1, 56);
+    }
+    for (let gy = -30; gy <= 24; gy += 8) {
+      ctx.fillRect(-20, gy, 40, 1);
+    }
+
+    // Dynamic Welding Sparks
     for (let i = 0; i < 6; i++) {
       const a = (now * 0.01 + i * 1.05) % (Math.PI * 2);
       const dist = 6 + (now * 0.05 + i * 5) % 20;
-      ctx.fillStyle = (i % 2 === 0) ? '#FFFFFF' : '#F59E0B';
-      ctx.fillRect(snap(Math.cos(a) * dist), snap(Math.sin(a) * dist), 2, 2);
+      ctx.fillStyle = (i % 2 === 0) ? '#FFFFFF' : '#FACC15';
+      ctx.fillRect(Math.round(Math.cos(a) * dist), Math.round(Math.sin(a) * dist), 2, 2);
     }
   }
 
   // ═══════════════════════════════════════════
-  // 2. BASE MOUNTING FEET & FLOOR PLATE (Y: [18, 26])
+  // 2. BASE MOUNTING FEET & FLOOR PLATE (Y: [18, 27])
   // ═══════════════════════════════════════════
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-20, 18, 40, 8);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E232B';
-  ctx.fillRect(-18, 19, 36, 6);
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(-16, 19, 32, 2);
+  // Stepped Outline
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-21, 18, 42, 9);
+  ctx.fillRect(-22, 19, 44, 7);
 
-  // Anti-slip Rubber Feet
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-18, 24, 8, 3);
-  ctx.fillRect(10, 24, 8, 3);
+  // Cast Steel Base Plate
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-20, 19, 40, 7);
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-19, 19, 38, 5);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-18, 19, 36, 1);
+
+  // 16-bit Diamond-Plate Tread Texture (Subtle Dithered Pixel Pattern)
+  ctx.fillStyle = cHigh;
+  for (let tx = -16; tx <= 16; tx += 4) {
+    ctx.fillRect(tx, 21, 1, 1);
+    ctx.fillRect(tx + 2, 22, 1, 1);
+  }
+
+  // Anti-slip Rubber Feet (Left & Right)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-20, 25, 9, 3);
+  ctx.fillRect(11, 25, 9, 3);
+  ctx.fillStyle = '#06080C';
+  ctx.fillRect(-19, 26, 7, 2);
+  ctx.fillRect(12, 26, 7, 2);
 
   // ═══════════════════════════════════════════
   // 3. BOTTOM SCRAP & AMMO HOPPER BIN (Y: [6, 19])
   // ═══════════════════════════════════════════
-  // Outer Shell
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-18, 5, 36, 15);
+  // Stepped Outline
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-19, 5, 38, 15);
+  ctx.fillRect(-18, 4, 36, 17);
 
-  // Burgundy RED Bin Body
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#7F1D1D';
+  // Crimson Bin Shading Ramp
+  ctx.fillStyle = cRedDeep;
+  ctx.fillRect(-18, 5, 36, 14);
+  ctx.fillStyle = cRedDark;
   ctx.fillRect(-17, 6, 34, 13);
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#B91C1C';
+  ctx.fillStyle = cRedMid;
   ctx.fillRect(-16, 7, 32, 11);
+  ctx.fillStyle = cRedHigh;
+  ctx.fillRect(-16, 7, 32, 1);
 
-  // RED Team Stencil Logo
-  ctx.fillStyle = '#FEF2F2';
-  ctx.font = '900 6px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('RED', 0, 13);
+  // Open Scrap Compartment Cavity (Recessed dark cavity)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-15, 6, 30, 5);
+  ctx.fillStyle = cDeep;
+  ctx.fillRect(-14, 7, 28, 4);
 
-  // Hopper Open Bin with Visible Metal Scrap & Ammo
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-15, 6, 30, 4);
-
-  // Silver Pipe Wrench Handle
-  ctx.fillStyle = '#94A3B8';
-  ctx.fillRect(-12, 7, 8, 2);
-  ctx.fillStyle = '#DC2626'; // Dipped red wrench grip
-  ctx.fillRect(-6, 7, 3, 2);
-
-  // Brass Shotgun Shells / Cartridges
+  // 16-bit Pipe Wrench (Hook Jaw, Brass Knurl, Dipped Red Handle)
+  // Silver Jaws
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-13, 7, 2, 3);
+  ctx.fillRect(-11, 7, 2, 1);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-12, 8, 2, 1);
+  // Brass Adjustment Knurl
   ctx.fillStyle = '#F59E0B';
-  ctx.fillRect(4, 7, 3, 2);
-  ctx.fillRect(9, 7, 3, 2);
-  ctx.fillStyle = '#D97706';
-  ctx.fillRect(7, 7, 1, 2);
-  ctx.fillRect(12, 7, 1, 2);
+  ctx.fillRect(-9, 7, 1, 2);
+  // Red Dipped Handle
+  ctx.fillStyle = '#DC2626';
+  ctx.fillRect(-8, 8, 5, 2);
+  ctx.fillStyle = '#EF4444';
+  ctx.fillRect(-8, 8, 5, 1);
+
+  // Metal Scrap Hex Nut
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-1, 8, 3, 3);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(0, 9, 1, 1);
+
+  // 12-Gauge Shotgun Shells (Brass Heads, Red Plastic Hulls)
+  // Shell 1
+  ctx.fillStyle = '#F59E0B';
+  ctx.fillRect(3, 8, 2, 2);
+  ctx.fillStyle = '#FEF08A';
+  ctx.fillRect(3, 8, 1, 1);
+  ctx.fillStyle = '#DC2626';
+  ctx.fillRect(5, 8, 3, 2);
+  ctx.fillStyle = '#EF4444';
+  ctx.fillRect(5, 8, 3, 1);
+  // Shell 2
+  ctx.fillStyle = '#F59E0B';
+  ctx.fillRect(9, 8, 2, 2);
+  ctx.fillStyle = '#FEF08A';
+  ctx.fillRect(9, 8, 1, 1);
+  ctx.fillStyle = '#DC2626';
+  ctx.fillRect(11, 8, 3, 2);
+  ctx.fillStyle = '#EF4444';
+  ctx.fillRect(11, 8, 3, 1);
+
+  // 16-bit Hand-Crafted Stencil "RED" Logo
+  _drawPixelRedStencil(ctx, 0, 14, isHit ? '#FFFFFF' : '#FEF2F2', cRedDeep);
 
   // ═══════════════════════════════════════════
   // 4. MIDDLE DISPENSING SHELF & MEDICAL BAY (Y: [-8, 6])
   // ═══════════════════════════════════════════
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-18, -9, 36, 16);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#7F1D1D';
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-19, -9, 38, 16);
+  ctx.fillRect(-18, -10, 36, 18);
+
+  ctx.fillStyle = cRedDeep;
+  ctx.fillRect(-18, -8, 36, 14);
+  ctx.fillStyle = cRedMid;
   ctx.fillRect(-17, -8, 34, 14);
 
-  // Recessed Stainless Steel Dispensing Cavity
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-15, -6, 30, 10);
-  ctx.fillStyle = isHit ? '#E2E8F0' : '#1E242B';
-  ctx.fillRect(-14, -5, 28, 8);
+  // Recessed Stainless Steel Dispensing Bay
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-16, -6, 32, 11);
+  ctx.fillStyle = cDeep;
+  ctx.fillRect(-15, -5, 30, 9);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-14, -4, 28, 8);
 
-  // Pull-Out Steel Syringe Tray
-  ctx.fillStyle = '#64748B';
-  ctx.fillRect(-12, -1, 24, 4);
-  ctx.fillStyle = '#CBD5E1';
-  ctx.fillRect(-11, -1, 22, 1);
+  // Pull-Out Stainless Steel Tray with Bevel
+  ctx.fillStyle = cMid;
+  ctx.fillRect(-13, 0, 26, 4);
+  ctx.fillStyle = cSpecular;
+  ctx.fillRect(-12, 0, 24, 1);
 
-  // Medical Glass Vials & Syringes
-  ctx.fillStyle = '#06B6D4'; // Cyan healing serum
-  ctx.fillRect(-8, -3, 3, 3);
+  // 16-bit Medical Vials & Syringe
+  // Cyan Health Serum Ampoule
+  ctx.fillStyle = '#082F49';
+  ctx.fillRect(-9, -4, 4, 5);
+  ctx.fillStyle = '#06B6D4';
+  ctx.fillRect(-8, -3, 2, 4);
+  ctx.fillStyle = '#38BDF8';
+  ctx.fillRect(-8, -3, 1, 2);
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(-4, -4, 2, 4); // Glass syringe
-  ctx.fillStyle = '#22C55E'; // Green antidote vial
-  ctx.fillRect(2, -3, 3, 3);
+  ctx.fillRect(-8, -4, 1, 1); // Glass neck reflection
+
+  // Precision Glass Syringe
+  ctx.fillStyle = '#E2E8F0';
+  ctx.fillRect(-4, -5, 2, 6);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(-4, -5, 1, 5);
+  ctx.fillStyle = '#94A3B8';
+  ctx.fillRect(-4, -2, 2, 1); // Measurement tick mark
+  ctx.fillStyle = '#CBD5E1';
+  ctx.fillRect(-3, 0, 1, 2);  // Steel plunger rod
+
+  // Emerald Green Antidote Bottle
+  ctx.fillStyle = '#064E3B';
+  ctx.fillRect(1, -4, 4, 5);
+  ctx.fillStyle = '#22C55E';
+  ctx.fillRect(2, -3, 2, 4);
+  ctx.fillStyle = '#86EFAC';
+  ctx.fillRect(2, -3, 1, 2);
+  ctx.fillStyle = '#CBD5E1';
+  ctx.fillRect(2, -5, 2, 1); // Silver cap
 
   // Glowing Emergency Red Push Button (Left Panel)
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-13, -4, 4, 4);
-  ctx.fillStyle = '#DC2626';
-  ctx.fillRect(-12, -3, 2, 2);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-14, -4, 4, 4);
+  ctx.fillStyle = '#991B1B';
+  ctx.fillRect(-13, -3, 3, 3);
+  ctx.fillStyle = '#EF4444';
+  ctx.fillRect(-13, -3, 2, 2);
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(-12, -3, 1, 1);
+  ctx.fillRect(-13, -3, 1, 1);
 
   // ═══════════════════════════════════════════
   // 5. LEFT HEALING GAS CYLINDER & DIAL GAUGE (X: [-26, -17])
   // ═══════════════════════════════════════════
-  // Tall Gas Cylinder Tank
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-26, -16, 9, 30);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#C2410C';
-  ctx.fillRect(-25, -15, 7, 28);
+  // 16-bit Rounded Dome Cap & Cylinder (Stepped concentric rows)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-24, -20, 5, 2);
+  ctx.fillRect(-25, -19, 7, 2);
+  ctx.fillRect(-26, -18, 8, 2);
+  ctx.fillRect(-27, -17, 10, 32);
+
+  // Cylinder Shading Ramp
+  // Deep rust-orange shadow on left/back
+  ctx.fillStyle = isHit ? '#CBD5E1' : '#7C2D12';
+  ctx.fillRect(-26, -16, 8, 29);
+  // Saturated orange body
+  ctx.fillStyle = isHit ? '#E2E8F0' : '#EA580C';
+  ctx.fillRect(-25, -16, 6, 29);
+  // Specular highlight column
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#FB923C';
+  ctx.fillRect(-24, -16, 2, 28);
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#FDBA74';
+  ctx.fillRect(-24, -15, 1, 26);
+
+  // Rounded Dome Top Shading
   ctx.fillStyle = isHit ? '#FFFFFF' : '#EA580C';
-  ctx.fillRect(-24, -14, 5, 26);
-  ctx.fillStyle = '#FB923C';
-  ctx.fillRect(-24, -14, 2, 26); // Cylinder specular highlight
+  ctx.fillRect(-23, -19, 3, 2);
+  ctx.fillRect(-24, -18, 5, 2);
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#FDBA74';
+  ctx.fillRect(-23, -19, 1, 2);
+  ctx.fillRect(-23, -18, 2, 1);
 
-  // Metal Mounting Bands
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-26, -8, 9, 3);
-  ctx.fillRect(-26, 4, 9, 3);
-  ctx.fillStyle = '#475569';
-  ctx.fillRect(-25, -7, 7, 1);
-  ctx.fillRect(-25, 5, 7, 1);
+  // Steel Mounting Bands with Rivet Studs
+  for (let bY of [-8, 4]) {
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(-27, bY - 1, 10, 4);
+    ctx.fillStyle = cDark;
+    ctx.fillRect(-26, bY, 8, 2);
+    ctx.fillStyle = cHigh;
+    ctx.fillRect(-26, bY, 8, 1);
+    ctx.fillStyle = cSpecular;
+    ctx.fillRect(-25, bY, 1, 1);
+    ctx.fillRect(-20, bY, 1, 1);
+  }
 
-  // Red Medical Cross Badge on Cylinder
+  // 16-bit Red Medical Cross Badge on Cylinder
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-25, 6, 7, 7);
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(-24, 7, 5, 5);
   ctx.fillStyle = '#DC2626';
-  ctx.fillRect(-23, 8, 3, 3);
+  ctx.fillRect(-22, 7, 1, 5);
   ctx.fillRect(-24, 9, 5, 1);
 
-  // Brass Bottom Valve Knob
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-24, 14, 5, 4);
-  ctx.fillStyle = '#D97706';
-  ctx.fillRect(-23, 15, 3, 2);
+  // Brass Bottom Valve Wheel
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-25, 14, 6, 4);
+  ctx.fillStyle = '#B45309';
+  ctx.fillRect(-24, 15, 4, 2);
+  ctx.fillStyle = '#F59E0B';
+  ctx.fillRect(-24, 15, 3, 1);
 
-  // Circular Dial Pressure Gauge (Top Left)
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-25, -25, 8, 8);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#475569';
-  ctx.fillRect(-24, -24, 6, 6);
-  ctx.fillStyle = '#FFFFFF'; // White Dial Face
-  ctx.fillRect(-23, -23, 4, 4);
-  ctx.fillStyle = '#0B0D12'; // Needle pointing upward-right
-  ctx.fillRect(-22, -22, 2, 1);
-  ctx.fillRect(-21, -23, 1, 1);
+  // Circular Dial Pressure Gauge (Top Left, x = [-26, -18], y = [-26, -18])
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-26, -26, 9, 9);
+  ctx.fillRect(-25, -27, 7, 11);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-25, -26, 7, 7);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-25, -26, 7, 1);
+
+  // White Dial Face
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(-24, -25, 5, 5);
+  // Safe / Danger Arc Ticks
+  ctx.fillStyle = '#22C55E';
+  ctx.fillRect(-21, -25, 2, 1); // Green safe sector
+  ctx.fillStyle = '#EF4444';
+  ctx.fillRect(-24, -25, 1, 2); // Red danger sector
+  // Pointer Needle (Ticking upward-right)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-23, -23, 2, 1);
+  ctx.fillRect(-22, -24, 1, 1);
 
   // ═══════════════════════════════════════════
   // 6. RIGHT FLEXIBLE SUPPLY CONDUIT (X: [17, 24])
   // ═══════════════════════════════════════════
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(17, -18, 6, 32);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#1E242B';
-  ctx.fillRect(18, -17, 4, 30);
-  // Segmented Ribs
-  for (let rY = -16; rY <= 10; rY += 4) {
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(18, rY, 4, 1);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(17, -18, 7, 33);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(18, -17, 5, 31);
+
+  // Corrugated Bellows Ribs with Metallic Highlights
+  for (let rY = -16; rY <= 11; rY += 3) {
+    ctx.fillStyle = cHigh;
+    ctx.fillRect(18, rY, 5, 1);
+    ctx.fillStyle = cSpecular;
+    ctx.fillRect(19, rY, 2, 1);
+    ctx.fillStyle = cOutline;
+    ctx.fillRect(18, rY + 1, 5, 1);
   }
 
   // ═══════════════════════════════════════════
-  // 7. CRT PROVISIONS MONITOR & SPEEDOMETER GAUGE (Y: [-24, -9])
+  // 7. CRT PROVISIONS MONITOR & SPEEDOMETER GAUGE (Y: [-25, -9])
   // ═══════════════════════════════════════════
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-18, -25, 36, 17);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#7F1D1D';
-  ctx.fillRect(-17, -24, 34, 15);
+  // Monitor Outer Shell (Corner cuts)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-19, -25, 38, 17);
+  ctx.fillRect(-18, -26, 36, 19);
 
-  // Dark Monitor Screen Bezel
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-15, -23, 30, 13);
+  ctx.fillStyle = cRedDeep;
+  ctx.fillRect(-18, -24, 36, 15);
+  ctx.fillStyle = cRedDark;
+  ctx.fillRect(-17, -24, 34, 14);
 
-  // Luminous Semi-Circular Speedometer Screen
-  ctx.fillStyle = '#450A0A'; // Deep CRT background
-  ctx.fillRect(-14, -22, 28, 11);
+  // 16-bit Curved CRT Screen Bezel (Stepped rounded corners)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-16, -23, 32, 14);
+  ctx.fillRect(-15, -24, 30, 16);
 
-  // Semi-Circular Glowing Crimson / Pink Dome Gauge
+  // Deep CRT Phosphor Screen (x = -14 to 14, y = -22 to -11)
+  ctx.fillStyle = '#2A0808';
+  ctx.fillRect(-14, -22, 28, 12);
+
+  // Glowing Speedometer Dome Sectors
+  // Left Red Zone (Low HP / Empty)
   ctx.fillStyle = '#991B1B';
-  ctx.fillRect(-11, -19, 22, 7);
-  ctx.fillRect(-8, -21, 16, 9);
-  ctx.fillRect(-5, -22, 10, 10);
+  ctx.fillRect(-11, -19, 7, 7);
   ctx.fillStyle = '#EF4444';
-  ctx.fillRect(-9, -19, 18, 6);
-  ctx.fillRect(-6, -21, 12, 8);
+  ctx.fillRect(-10, -18, 5, 5);
 
-  // Wedge Sector Dividing Radial Lines (TF2 Speedometer sectors)
-  ctx.fillStyle = '#FCA5A5';
-  ctx.fillRect(-5, -19, 1, 5);
-  ctx.fillRect(0, -21, 1, 7);
-  ctx.fillRect(5, -19, 1, 5);
+  // Center Amber Zone (Half HP)
+  ctx.fillStyle = '#B45309';
+  ctx.fillRect(-4, -21, 8, 9);
+  ctx.fillStyle = '#F59E0B';
+  ctx.fillRect(-3, -20, 6, 7);
 
-  // Subtle CRT Scanlines
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.40)';
-  ctx.fillRect(-14, -20, 28, 1);
-  ctx.fillRect(-14, -16, 28, 1);
+  // Right Green Zone (Full HP / Ready)
+  ctx.fillStyle = '#166534';
+  ctx.fillRect(4, -19, 7, 7);
+  ctx.fillStyle = '#22C55E';
+  ctx.fillRect(5, -18, 5, 5);
+
+  // Sector Dividing Radial Ticks
+  ctx.fillStyle = '#FEE2E2';
+  ctx.fillRect(-4, -20, 1, 7);
+  ctx.fillRect(4, -20, 1, 7);
+
+  // Subtle 16-bit CRT Scanlines
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+  ctx.fillRect(-14, -21, 28, 1);
+  ctx.fillRect(-14, -18, 28, 1);
+  ctx.fillRect(-14, -15, 28, 1);
   ctx.fillRect(-14, -12, 28, 1);
 
-  // Dynamic Indicator Hand (E to F based on HP ratio)
+  // Glass Reflection Glint (Top-left CRT arc)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.30)';
+  ctx.fillRect(-12, -21, 4, 1);
+  ctx.fillRect(-8, -20, 3, 1);
+
+  // Dynamic Indicator Needle (E to F based on HP ratio)
   const hpRatio = Math.max(0, Math.min(1.0, hp / maxHp));
-  const needleAngle = -Math.PI * 0.75 + hpRatio * Math.PI * 0.75;
+  const needleAngle = -Math.PI * 0.78 + hpRatio * Math.PI * 0.78;
   const nLen = 7;
-  const nX = snap(Math.cos(needleAngle) * nLen);
-  const nY = snap(-13 + Math.sin(needleAngle) * nLen);
+  const nX = Math.round(Math.cos(needleAngle) * nLen);
+  const nY = Math.round(-13 + Math.sin(needleAngle) * nLen);
+
+  // Needle Arm & Center Pivot
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, -13, 2, 2); // Center pivot
-  ctx.fillRect(nX, nY, 2, 2); // Needle tip
+  ctx.fillRect(0, -14, 2, 2);
+  ctx.fillRect(nX, nY, 2, 2);
+  ctx.fillStyle = '#EF4444'; // Red pointer tip
+  ctx.fillRect(nX, nY, 1, 1);
+  ctx.fillStyle = '#F59E0B'; // Brass center pivot pin
+  ctx.fillRect(0, -13, 1, 1);
 
   // ═══════════════════════════════════════════
-  // 8. "PROVISIONS" ILLUMINATED BACKLIT SIGN (Y: [-31, -25])
+  // 8. "PROVISIONS" ILLUMINATED BACKLIT SIGN (Y: [-32, -25])
   // ═══════════════════════════════════════════
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-18, -32, 36, 8);
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#E2E8F0'; // Illuminated off-white badge
-  ctx.fillRect(-16, -31, 32, 6);
+  // Outer Beveled Frame (x = -19 to 19, y = -33 to -24)
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-19, -33, 38, 9);
+  ctx.fillRect(-18, -34, 36, 11);
 
-  // Red Script Stencil Text "PROVISIONS"
-  ctx.fillStyle = '#DC2626';
-  ctx.font = '900 5.5px "Rajdhani", monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('PROVISIONS', 0, -28);
+  ctx.fillStyle = cDark;
+  ctx.fillRect(-18, -32, 36, 7);
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-18, -32, 36, 1);
+
+  // Illuminated Ivory Backlit Marquee Panel (x = -18 to 18, y = -31 to -25)
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#FEF3C7';
+  ctx.fillRect(-18, -31, 36, 6);
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#FFFBEB';
+  ctx.fillRect(-17, -30, 34, 4);
+
+  // Corner Mounting Screw Rivets
+  ctx.fillStyle = cHigh;
+  ctx.fillRect(-18, -31, 1, 1);
+  ctx.fillRect(17, -31, 1, 1);
+  ctx.fillRect(-18, -26, 1, 1);
+  ctx.fillRect(17, -26, 1, 1);
+
+  // 16-bit Micro-Pixel Typography "PROVISIONS"
+  _drawPixelProvisions(ctx, 0, -28, isHit ? '#FFFFFF' : '#DC2626');
 
   // ═══════════════════════════════════════════
-  // 9. TOP CROWN CAP & CRT STATUS BOX (Y: [-38, -32])
+  // 9. TOP CROWN CAP & CRT STATUS BOX (Y: [-39, -33])
   // ═══════════════════════════════════════════
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-16, -38, 32, 7);
-  ctx.fillStyle = isHit ? '#CBD5E1' : '#7F1D1D';
-  ctx.fillRect(-15, -37, 30, 5);
-  ctx.fillStyle = '#B91C1C';
-  ctx.fillRect(-14, -36, 28, 3);
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-17, -39, 34, 7);
+  ctx.fillRect(-16, -40, 32, 9);
 
-  // Small Green Cross (+) Status Indicator Box
-  ctx.fillStyle = '#0B0D12';
-  ctx.fillRect(-11, -37, 7, 5);
-  ctx.fillStyle = '#11141A';
-  ctx.fillRect(-10, -36, 5, 3);
+  ctx.fillStyle = cRedDeep;
+  ctx.fillRect(-16, -38, 32, 6);
+  ctx.fillStyle = cRedDark;
+  ctx.fillRect(-15, -38, 30, 5);
+  ctx.fillStyle = cRedMid;
+  ctx.fillRect(-14, -37, 28, 3);
+  ctx.fillStyle = cRedHigh;
+  ctx.fillRect(-14, -37, 28, 1);
+
+  // 16-bit Green Cross (+) Status LED Box
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(-11, -38, 8, 5);
+  ctx.fillStyle = '#064E3B';
+  ctx.fillRect(-10, -37, 6, 3);
   ctx.fillStyle = '#22C55E';
-  ctx.fillRect(-9, -35, 3, 1);
-  ctx.fillRect(-8, -36, 1, 3);
+  ctx.fillRect(-9, -36, 4, 1);
+  ctx.fillRect(-8, -37, 2, 3);
+  ctx.fillStyle = '#86EFAC';
+  ctx.fillRect(-8, -36, 2, 1);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(-8, -36, 1, 1); // LED Core
 
-  // Amber Fuse / Capacitor Indicator
+  // Amber Vacuum-Tube Capacitors / Filament Fuses
+  ctx.fillStyle = cOutline;
+  ctx.fillRect(5, -38, 3, 4);
+  ctx.fillRect(9, -38, 3, 4);
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(5, -35, 3, 1);
+  ctx.fillRect(9, -35, 3, 1);
   ctx.fillStyle = '#F59E0B';
-  ctx.fillRect(6, -36, 2, 2);
-  ctx.fillRect(9, -36, 2, 2);
+  ctx.fillRect(6, -37, 1, 2);
+  ctx.fillRect(10, -37, 1, 2);
+  ctx.fillStyle = '#FEF08A';
+  ctx.fillRect(6, -37, 1, 1);
+  ctx.fillRect(10, -37, 1, 1);
 
   ctx.restore();
 }

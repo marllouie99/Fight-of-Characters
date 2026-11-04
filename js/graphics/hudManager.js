@@ -3330,6 +3330,59 @@ function updateHealthHud() {
     return String(label).replace(/(\d+%|\d+)/g, '<span class="hud-num">$1</span>');
   };
 
+  const getSkillCleanLabel = (label) => {
+    if (!label) return '';
+    return String(label)
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s*\(\s*([\d\.]+\s*[sS]?|\d+\s*\/\s*\d+|ACTIVE|READY)\s*\)/gi, '')
+      .trim();
+  };
+
+  const resolveSkillCooldownText = (s, f) => {
+    if (!s) return 'READY';
+
+    if (s.active) return 'ACTIVE';
+    const rawLabel = String(s.label || '');
+    if (/\bACTIVE\b/i.test(rawLabel) && !s.ready) return 'ACTIVE';
+
+    const timerMatch = rawLabel.match(/\(\s*([\d\.]+\s*[sS]?|\d+\s*\/\s*\d+)\s*\)/i);
+    if (timerMatch && timerMatch[1]) {
+      const val = timerMatch[1].trim().toUpperCase();
+      return val.endsWith('S') || val.includes('/') ? val : `${val}S`;
+    }
+
+    if (s.ready || s.pct >= 99) {
+      return 'READY';
+    }
+
+    if (typeof s.cooldown === 'number' && s.cooldown > 0) {
+      const sec = s.cooldown > 60 ? (s.cooldown / 60).toFixed(1) : s.cooldown.toFixed(1);
+      return `${sec}S`;
+    }
+
+    if (f && s.id) {
+      const id = s.id;
+      const candidates = [
+        f[id + 'Cooldown'],
+        f[id + 'CooldownTimer'],
+        f[id + 'Timer'],
+        f[id + 'CooldownLeft'],
+        f[id + 'TimeLeft'],
+        f.skillCooldown,
+        f.cooldownTimer
+      ];
+      for (const cand of candidates) {
+        if (typeof cand === 'number' && cand > 0) {
+          const sec = cand > 60 ? (cand / 60).toFixed(1) : cand.toFixed(1);
+          return `${sec}S`;
+        }
+      }
+    }
+
+    const pct = Math.round(s.pct || 0);
+    return `${pct}%`;
+  };
+
   const getCjStarLevel = (fighter) => {
     if (!fighter || !state.fighters) return 0;
     
@@ -3607,6 +3660,23 @@ function updateHealthHud() {
       const formattedLabel = formatSkillLabel(s.label, isTac);
       const spanClass = isSpan2 ? ' span-2' : '';
 
+      if (CONFIG.hudSkillBarStyle === 'text') {
+        const cdText = resolveSkillCooldownText(s, f);
+        const cleanName = getSkillCleanLabel(s.label);
+        const colonLabel = cleanName.endsWith(':') ? cleanName : `${cleanName}:`;
+        const isReady = !!s.ready || s.pct >= 99;
+        const isActive = cdText === 'ACTIVE' || !!s.active;
+        const statusClass = isReady ? ' hud-skill-ready' : (isActive ? ' hud-skill-active' : '');
+        return `
+          <div class="hud-skill-box align-${align}${statusClass}${spanClass} hud-skill-text-mode${cjSkillClass}" data-skill-id="${s.id}">
+            <div class="hud-skill-box-fill" style="display: none;"></div>
+            <div class="hud-skill-box-text">
+              <span class="hud-stat-label">${colonLabel}</span> <span class="hud-stat-val">${cdText}</span>
+            </div>
+          </div>
+        `;
+      }
+
       if (s.noFill) {
         const parentColor = s.color ? `color: ${s.color};` : '';
         return `
@@ -3843,7 +3913,7 @@ function updateHealthHud() {
               <div class="${mfMemberGlow.className} health-card__minion-fill" style="width:${mfMemberPct}%; background:${mfMemberBarColor};"></div>
               <span class="health-card__bar-text health-card__minion-bar-text">${mfMemberHpText}</span>
             </div>
-            <div class="health-card__skills health-card__minion-skills" style="${skillsGridStyle}">${memberMinionSkillsHTML}</div>
+            <div class="health-card__skills health-card__minion-skills${CONFIG.hudSkillBarStyle === 'text' ? ' skill-style-text' : ''}" style="${skillsGridStyle}">${memberMinionSkillsHTML}</div>
             <div class="health-card__info health-card__minion-info" style="${infoGridStyle} margin-top: 3px;">${memberMinionInfoHTML}</div>
           </div>
         `;
@@ -3870,7 +3940,7 @@ function updateHealthHud() {
             <div class="health-card__member" style="margin-top: ${memberMarginTop};">
               ${memberHeaderHTML}
               ${generateCjGtaHudWidgetHTML(m, titleAlign, hpText, memberShakeStyle)}
-              <div class="health-card__skills" style="${skillsGridStyle}">${memberSkillsHTML}</div>
+              <div class="health-card__skills${CONFIG.hudSkillBarStyle === 'text' ? ' skill-style-text' : ''}" style="${skillsGridStyle}">${memberSkillsHTML}</div>
               <div class="health-card__info" style="${infoGridStyle}">${memberInfoHTML}</div>
               ${memberMinionBlockHTML}
             </div>
@@ -3916,7 +3986,7 @@ function updateHealthHud() {
               <span class="health-card__bar-text">${hpText}</span>
             `}
             </div>
-            <div class="health-card__skills" style="${skillsGridStyle}">${memberSkillsHTML}</div>
+            <div class="health-card__skills${CONFIG.hudSkillBarStyle === 'text' ? ' skill-style-text' : ''}" style="${skillsGridStyle}">${memberSkillsHTML}</div>
             <div class="health-card__info" style="${infoGridStyle}">${memberInfoHTML}</div>
             ${memberMinionBlockHTML}
           </div>
@@ -3977,7 +4047,7 @@ function updateHealthHud() {
             <span class="health-card__bar-text health-card__minion-bar-text">${mfHpText}</span>
           </div>
           ` : ''}
-          <div class="health-card__skills health-card__minion-skills" style="${skillsGridStyle}">${minionSkillsHTML}</div>
+          <div class="health-card__skills health-card__minion-skills${CONFIG.hudSkillBarStyle === 'text' ? ' skill-style-text' : ''}" style="${skillsGridStyle}">${minionSkillsHTML}</div>
           ${!skillsOnly ? `<div class="health-card__info health-card__minion-info" style="${infoGridStyle} margin-top: 3px;">${minionInfoHTML}</div>` : ''}
         </div>
       `;
@@ -3991,7 +4061,7 @@ function updateHealthHud() {
       if (isTargetCj) {
         barsHTML = `
           ${generateCjGtaHudWidgetHTML(targetFighter, titleAlign, metaValue, barShakeStyle)}
-          <div class="health-card__skills" style="${skillsGridStyle}">
+          <div class="health-card__skills${CONFIG.hudSkillBarStyle === 'text' ? ' skill-style-text' : ''}" style="${skillsGridStyle}">
             ${skillsHTML}
           </div>
           ${!skillsOnly ? `<div class="health-card__info" style="${infoGridStyle}">${infoHTML}</div>` : ''}
@@ -4043,7 +4113,7 @@ function updateHealthHud() {
             </div>
             ${minionBlockHTML}
           ` : `
-            <div class="health-card__skills" style="${skillsGridStyle}">
+            <div class="health-card__skills${CONFIG.hudSkillBarStyle === 'text' ? ' skill-style-text' : ''}" style="${skillsGridStyle}">
               ${skillsHTML}
             </div>
             ${!skillsOnly ? `<div class="health-card__info" style="${infoGridStyle}">${infoHTML}</div>` : ''}
@@ -4969,7 +5039,7 @@ function updateHealthHud() {
         if (m.skillsContainer || (m.skillBars && m.skillBars.size > 0)) {
           const rawSkills = getSkillDataForFighter(fighter) || [];
           const skills = rawSkills.filter(s => shouldShowFighterSkill(fighter, s));
-          if (m.skillsContainer && (skills.length !== m.skillBars.size || skills.some(s => !m.skillBars.has(s.id)) || m.lastHasMinion !== hasMemberMinion)) {
+          if (m.skillsContainer && (skills.length !== m.skillBars.size || skills.some(s => !m.skillBars.has(s.id)) || m.lastHasMinion !== hasMemberMinion || m.lastSkillBarStyle !== CONFIG.hudSkillBarStyle)) {
             const isRight = (cachedCard.cardElement.classList.contains('align-right') || cachedCard.cardElement.parentElement?.id === 'hud-top-right' || cachedCard.cardElement.parentElement?.id === 'hud-bottom-right');
             const align = isRight ? 'right' : 'left';
             const isSingleCol = Boolean(isTeamSingleColumn);
@@ -4981,6 +5051,9 @@ function updateHealthHud() {
               m.minionContainer.style.display = hasMemberMinion ? 'block' : 'none';
             }
             m.lastHasMinion = hasMemberMinion;
+            m.lastSkillBarStyle = CONFIG.hudSkillBarStyle;
+            m.skillsContainer.classList.toggle('skill-style-text', CONFIG.hudSkillBarStyle === 'text');
+            if (m.minionSkillsContainer) m.minionSkillsContainer.classList.toggle('skill-style-text', CONFIG.hudSkillBarStyle === 'text');
             m.skillBars.clear();
             const skillRoot = m.memberEl || cachedCard.cardElement;
             skillRoot.querySelectorAll('.hud-skill-box').forEach(box => {
@@ -4995,6 +5068,49 @@ function updateHealthHud() {
             if (cachedSkill) {
               const roundedPct = Math.round(s.pct);
               const isReady = !!s.ready;
+
+              if (CONFIG.hudSkillBarStyle === 'text') {
+                if (cachedSkill.lastDisplay !== 'none') {
+                  cachedSkill.fill.style.display = 'none';
+                  cachedSkill.lastDisplay = 'none';
+                }
+                if (!cachedSkill.box.classList.contains('hud-skill-text-mode')) {
+                  cachedSkill.box.classList.add('hud-skill-text-mode');
+                }
+                const cdText = resolveSkillCooldownText(s, fighter);
+                const cleanName = getSkillCleanLabel(s.label);
+                const colonLabel = cleanName.endsWith(':') ? cleanName : `${cleanName}:`;
+                const isActive = cdText === 'ACTIVE' || !!s.active;
+                const textKey = `${colonLabel}|${cdText}|${isReady}|${isActive}`;
+                if (cachedSkill.lastTextKey !== textKey) {
+                  cachedSkill.text.innerHTML = `<span class="hud-stat-label">${colonLabel}</span> <span class="hud-stat-val">${cdText}</span>`;
+                  cachedSkill.lastTextKey = textKey;
+                }
+                if (cachedSkill.lastReady !== isReady) {
+                  if (isReady) {
+                    cachedSkill.box.classList.add('hud-skill-ready');
+                  } else {
+                    cachedSkill.box.classList.remove('hud-skill-ready');
+                  }
+                  cachedSkill.lastReady = isReady;
+                }
+                if (cachedSkill.lastActive !== isActive) {
+                  if (isActive) {
+                    cachedSkill.box.classList.add('hud-skill-active');
+                  } else {
+                    cachedSkill.box.classList.remove('hud-skill-active');
+                  }
+                  cachedSkill.lastActive = isActive;
+                }
+                return;
+              }
+
+              if (cachedSkill.box.classList.contains('hud-skill-text-mode')) {
+                cachedSkill.box.classList.remove('hud-skill-text-mode');
+              }
+              if (cachedSkill.box.classList.contains('hud-skill-active')) {
+                cachedSkill.box.classList.remove('hud-skill-active');
+              }
 
               if (s.noFill) {
                 if (cachedSkill.lastDisplay !== 'none') {
@@ -5451,7 +5567,7 @@ function updateHealthHud() {
       if (!showDescription && (cachedCard.skillsContainer || cachedCard.skillBars.size > 0)) {
         const rawSkills = getSkillDataForFighter(fighter) || [];
         const skills = rawSkills.filter(s => shouldShowFighterSkill(fighter, s));
-        if (cachedCard.skillsContainer && (skills.length !== cachedCard.skillBars.size || skills.some(s => !cachedCard.skillBars.has(s.id)) || cachedCard.lastHasMinion !== hasMinion)) {
+        if (cachedCard.skillsContainer && (skills.length !== cachedCard.skillBars.size || skills.some(s => !cachedCard.skillBars.has(s.id)) || cachedCard.lastHasMinion !== hasMinion || cachedCard.lastSkillBarStyle !== CONFIG.hudSkillBarStyle)) {
           const isRight = (cachedCard.cardElement.classList.contains('align-right') || cachedCard.cardElement.parentElement?.id === 'hud-top-right' || cachedCard.cardElement.parentElement?.id === 'hud-bottom-right');
           const align = isRight ? 'right' : 'left';
           const isSingleCol = isSingleColumnMode || (is1v2 && index === 0) || (CONFIG.hudLayoutStyle === 'classic' && isRegular1v2);
@@ -5463,6 +5579,9 @@ function updateHealthHud() {
             cachedCard.minionContainer.style.display = hasMinion ? 'block' : 'none';
           }
           cachedCard.lastHasMinion = hasMinion;
+          cachedCard.lastSkillBarStyle = CONFIG.hudSkillBarStyle;
+          cachedCard.skillsContainer.classList.toggle('skill-style-text', CONFIG.hudSkillBarStyle === 'text');
+          if (cachedCard.minionSkillsContainer) cachedCard.minionSkillsContainer.classList.toggle('skill-style-text', CONFIG.hudSkillBarStyle === 'text');
           cachedCard.skillBars.clear();
           const collectBoxes = (rootEl) => {
             if (!rootEl) return;
@@ -5483,6 +5602,49 @@ function updateHealthHud() {
           if (cachedSkill) {
             const roundedPct = Math.round(s.pct);
             const isReady = !!s.ready;
+
+            if (CONFIG.hudSkillBarStyle === 'text') {
+              if (cachedSkill.lastDisplay !== 'none') {
+                cachedSkill.fill.style.display = 'none';
+                cachedSkill.lastDisplay = 'none';
+              }
+              if (!cachedSkill.box.classList.contains('hud-skill-text-mode')) {
+                cachedSkill.box.classList.add('hud-skill-text-mode');
+              }
+              const cdText = resolveSkillCooldownText(s, fighter);
+              const cleanName = getSkillCleanLabel(s.label);
+              const colonLabel = cleanName.endsWith(':') ? cleanName : `${cleanName}:`;
+              const isActive = cdText === 'ACTIVE' || !!s.active;
+              const textKey = `${colonLabel}|${cdText}|${isReady}|${isActive}`;
+              if (cachedSkill.lastTextKey !== textKey) {
+                cachedSkill.text.innerHTML = `<span class="hud-stat-label">${colonLabel}</span> <span class="hud-stat-val">${cdText}</span>`;
+                cachedSkill.lastTextKey = textKey;
+              }
+              if (cachedSkill.lastReady !== isReady) {
+                if (isReady) {
+                  cachedSkill.box.classList.add('hud-skill-ready');
+                } else {
+                  cachedSkill.box.classList.remove('hud-skill-ready');
+                }
+                cachedSkill.lastReady = isReady;
+              }
+              if (cachedSkill.lastActive !== isActive) {
+                if (isActive) {
+                  cachedSkill.box.classList.add('hud-skill-active');
+                } else {
+                  cachedSkill.box.classList.remove('hud-skill-active');
+                }
+                cachedSkill.lastActive = isActive;
+              }
+              return;
+            }
+
+            if (cachedSkill.box.classList.contains('hud-skill-text-mode')) {
+              cachedSkill.box.classList.remove('hud-skill-text-mode');
+            }
+            if (cachedSkill.box.classList.contains('hud-skill-active')) {
+              cachedSkill.box.classList.remove('hud-skill-active');
+            }
 
             if (s.noFill) {
               if (cachedSkill.lastDisplay !== 'none') {

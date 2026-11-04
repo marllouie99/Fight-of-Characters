@@ -3224,6 +3224,133 @@ body.arena-dark-mode {
   opacity: 0.55;
 }
 
+/* ── HUD Skill Bar Style: Simple Text Mode (Matching HUD Stats with Cooldown Text) ── */
+.health-card__skills.skill-style-text {
+  gap: 3px 6px;
+}
+
+.health-card__skills.skill-style-text .hud-skill-box,
+.hud-skill-box.hud-skill-text-mode {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  height: auto !important;
+  min-height: 16px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: flex-start !important;
+}
+
+.health-card__skills.skill-style-text .hud-skill-box::after,
+.hud-skill-box.hud-skill-text-mode::after {
+  display: none !important;
+}
+
+.health-card__skills.skill-style-text .hud-skill-box-fill,
+.hud-skill-box.hud-skill-text-mode .hud-skill-box-fill {
+  display: none !important;
+}
+
+.health-card__skills.skill-style-text .hud-skill-box-text,
+.hud-skill-box.hud-skill-text-mode .hud-skill-box-text {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+  text-transform: none !important;
+}
+
+.hud-skill-box.hud-skill-text-mode .hud-stat-label {
+  color: #94A3B8 !important;
+  font-family: 'Silkscreen', 'Press Start 2P', monospace, sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  -webkit-text-stroke: 1px #000000;
+  paint-order: stroke fill;
+  text-shadow:
+    -1px -1px 0 #000000,
+     0   -1px 0 #000000,
+     1px -1px 0 #000000,
+    -1px  0   0 #000000,
+     1px  0   0 #000000,
+    -1px  1px 0 #000000,
+     0    1px 0 #000000,
+     1px  1px 0 #000000 !important;
+}
+
+.hud-skill-box.hud-skill-text-mode .hud-stat-val {
+  color: #FFFFFF !important;
+  font-family: 'Silkscreen', 'Press Start 2P', monospace, sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  -webkit-text-stroke: 1px #000000;
+  paint-order: stroke fill;
+  text-shadow:
+    -1px -1px 0 #000000,
+     0   -1px 0 #000000,
+     1px -1px 0 #000000,
+    -1px  0   0 #000000,
+     1px  0   0 #000000,
+    -1px  1px 0 #000000,
+     0    1px 0 #000000,
+     1px  1px 0 #000000 !important;
+}
+
+/* Ready State Accent in Text Mode (Glowing Neon Emerald) */
+.hud-skill-box.hud-skill-text-mode.hud-skill-ready .hud-stat-val {
+  color: #00FF66 !important;
+  text-shadow:
+    -1px -1px 0 #000000,
+     0   -1px 0 #000000,
+     1px -1px 0 #000000,
+    -1px  0   0 #000000,
+     1px  0   0 #000000,
+    -1px  1px 0 #000000,
+     0    1px 0 #000000,
+     1px  1px 0 #000000,
+     0 0 6px rgba(0, 255, 102, 0.6) !important;
+}
+
+/* Active State Accent in Text Mode (Glowing Cyan) */
+.hud-skill-box.hud-skill-text-mode.hud-skill-active .hud-stat-val {
+  color: #38BDF8 !important;
+  text-shadow:
+    -1px -1px 0 #000000,
+     0   -1px 0 #000000,
+     1px -1px 0 #000000,
+    -1px  0   0 #000000,
+     1px  0   0 #000000,
+    -1px  1px 0 #000000,
+     0    1px 0 #000000,
+     1px  1px 0 #000000,
+     0 0 6px rgba(56, 189, 248, 0.6) !important;
+}
+
+/* Classic HUD Mode: Clean flat pixel text without black stroke */
+body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-label,
+body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-val {
+  font-weight: normal !important;
+  -webkit-text-stroke: 0px !important;
+  text-shadow: none !important;
+}
+
+/* Horizontal mode side cards font sizing */
+.horizontal-viewport-mode .hud-skill-box.hud-skill-text-mode .hud-stat-label,
+.horizontal-viewport-mode .hud-skill-box.hud-skill-text-mode .hud-stat-val {
+  font-size: 12px !important;
+}
+
 .hud-damage-text {
   background: transparent;
   border: none;

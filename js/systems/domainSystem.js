@@ -13,6 +13,12 @@ export function isDomainImmune(fighter) {
   if (!fighter) return false;
   return !!(
     fighter.domainImmunity ||
+    fighter.isDomainImmune ||
+    fighter.isTurret ||
+    fighter.isDispenser ||
+    fighter.isBuilding ||
+    fighter.immuneToDebuffs ||
+    fighter.isDebuffImmune ||
     fighter.characterId === 'toji' ||
     fighter.type === 'toji' ||
     fighter._def?.id === 'toji'

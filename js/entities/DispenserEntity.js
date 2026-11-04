@@ -6,7 +6,7 @@ import { getSkillEffectSound } from '../soundEffects/skillEffectSounds.js';
 import { drawDispenser, drawDispenserTetherBeam, drawDispenserHealingRing } from '../graphics/weapons/engineerWeaponGraphics.js';
 import { spawnSparks } from '../graphics/particles/sparkEffect.js';
 import { spawnMachineCorpse } from '../graphics/particles/deathShatterEffect.js';
-import { drawMinionHealthBar, drawBurnEffect } from '../graphics/statusEffects.js';
+import { drawMinionHealthBar } from '../graphics/statusEffects.js';
 
 export class DispenserEntity extends Fighter {
   constructor(x, y, ownerFighter) {
@@ -37,16 +37,48 @@ export class DispenserEntity extends Fighter {
     super(def);
 
     this.owner = ownerFighter;
+
+    // Comprehensive Debuff & Status Effect Immunity Flags
     this.isDispenser = true;
+    this.isBuilding = true;
     this.isMinion = true;
     this.isDeployable = true;
     this.isImmovable = true;
     this.cannotBeKnockbacked = true;
-    this.hideHpText = true; // Disable HP number overlay over body
-    this.noBlood = true;
-    this.suppressBlood = true; // Machines don't bleed — spawn sparks instead
+    this.immuneToKnockback = true;
+    this.immuneToPush = true;
+    this.immuneToPull = true;
+    this.immuneToSuction = true;
+    this.immuneToDrag = true;
+    this.immuneToCC = true;
+    this.immuneToDebuffs = true;
+    this.isDebuffImmune = true;
+    this.isStatusImmune = true;
+    this.immuneToBurn = true;
+    this.isImmuneToBurn = true;
+    this.immuneToPoison = true;
+    this.isPoisonImmune = true;
     this.bleedImmune = true;
     this.isBloodImmune = true;
+    this.noBlood = true;
+    this.suppressBlood = true; // Machines don't bleed — spawn sparks instead
+    this.immuneToParalyze = true;
+    this.isParalyzeImmune = true;
+    this.immuneToSlow = true;
+    this.immuneToHitStun = true;
+    this.immuneToTimeStop = true;
+    this.immuneToFreeze = true;
+    this.immuneToSoulDisfigurement = true;
+    this.immuneToTelekinesis = true;
+    this.cannotBeChained = true;
+    this.cannotBeGrabbed = true;
+    this.cannotBeSwapped = true;
+    this.domainImmunity = true;
+    this.isDomainImmune = true;
+    this.immuneToDomainStasis = true;
+    this.cannotBeTargetedByAmbush = true;
+    this._bypassHealDebuff = true;
+    this.hideHpText = true; // Disable HP number overlay over body
     this.maxHp = cfg.dispenserHp || 160;
     this.hp = this.maxHp;
     this.healCooldownTimer = 0;
@@ -62,14 +94,164 @@ export class DispenserEntity extends Fighter {
     this._fixedY = y;
   }
 
+  // ── Absolute Debuff & Status Effect Neutralization Getters/Setters ──
+  get burnTimer() { return 0; }
+  set burnTimer(_) {}
+  get burnDamageTimer() { return 0; }
+  set burnDamageTimer(_) {}
+  get poisonTimer() { return 0; }
+  set poisonTimer(_) {}
+  get poisonTicks() { return 0; }
+  set poisonTicks(_) {}
+  get bleedTimer() { return 0; }
+  set bleedTimer(_) {}
+  get bleedDamageTimer() { return 0; }
+  set bleedDamageTimer(_) {}
+  get slowTimer() { return 0; }
+  set slowTimer(_) {}
+  get slowMultiplier() { return 1.0; }
+  set slowMultiplier(_) {}
+  get paralyzeTimer() { return 0; }
+  set paralyzeTimer(_) {}
+  get isParalyzed() { return false; }
+  set isParalyzed(_) {}
+  get iceFreezeTimer() { return 0; }
+  set iceFreezeTimer(_) {}
+  get isFrozenBySnowPea() { return false; }
+  set isFrozenBySnowPea(_) {}
+  get isFrozenByBlueBone() { return false; }
+  set isFrozenByBlueBone(_) {}
+  get isFrozenByInfinity() { return false; }
+  set isFrozenByInfinity(_) {}
+  get timeStopTimer() { return 0; }
+  set timeStopTimer(_) {}
+  get hitStunTimer() { return 0; }
+  set hitStunTimer(_) {}
+  get electricStunTimer() { return 0; }
+  set electricStunTimer(_) {}
+  get crimsonElectrifiedTimer() { return 0; }
+  set crimsonElectrifiedTimer(_) {}
+  get dubstepStunTimer() { return 0; }
+  set dubstepStunTimer(_) {}
+  get silenceTimer() { return 0; }
+  set silenceTimer(_) {}
+  get nanamiArmorFractureTimer() { return 0; }
+  set nanamiArmorFractureTimer(_) {}
+  get grievousWoundsTimer() { return 0; }
+  set grievousWoundsTimer(_) {}
+  get healBlockTimer() { return 0; }
+  set healBlockTimer(_) {}
+  get tojiRegenDebuffTimer() { return 0; }
+  set tojiRegenDebuffTimer(_) {}
+  get blackFlashDebuffTimer() { return 0; }
+  set blackFlashDebuffTimer(_) {}
+  get pureLoveBeamRegenDebuffTimer() { return 0; }
+  set pureLoveBeamRegenDebuffTimer(_) {}
+  get staticDebuffTimer() { return 0; }
+  set staticDebuffTimer(_) {}
+  get zenitsuStaticDebuffTimer() { return 0; }
+  set zenitsuStaticDebuffTimer(_) {}
+  get voidMarkTimer() { return 0; }
+  set voidMarkTimer(_) {}
+  get isTargetOfAmbush() { return false; }
+  set isTargetOfAmbush(_) {}
+  get isChainedByMakima() { return false; }
+  set isChainedByMakima(_) {}
+  get isWallPinnedByMakima() { return false; }
+  set isWallPinnedByMakima(_) {}
+  get isWallPinnedBySaitama() { return false; }
+  set isWallPinnedBySaitama(_) {}
+  get isWallPinnedByNaoya() { return false; }
+  set isWallPinnedByNaoya(_) {}
+  get isCurrentlyWallPinnedByNaoya() { return false; }
+  set isCurrentlyWallPinnedByNaoya(_) {}
+  get isCaughtInNaoyaUlt() { return false; }
+  set isCaughtInNaoyaUlt(_) {}
+  get isFrameFrozen() { return false; }
+  set isFrameFrozen(_) {}
+  get frameFreezeTimer() { return 0; }
+  set frameFreezeTimer(_) {}
+  get isCaughtInBlue() { return false; }
+  set isCaughtInBlue(_) {}
+  get isCaughtInBluePull() { return false; }
+  set isCaughtInBluePull(_) {}
+  get isCaughtInBlackHole() { return false; }
+  set isCaughtInBlackHole(_) {}
+  get isDraggedByGetsuga() { return false; }
+  set isDraggedByGetsuga(_) {}
+  get isDraggedByDragon() { return false; }
+  set isDraggedByDragon(_) {}
+  get isPacmanGhost() { return false; }
+  set isPacmanGhost(_) {}
+  get isFrightenedGhost() { return false; }
+  set isFrightenedGhost(_) {}
+  get isParalyzedByMahito() { return false; }
+  set isParalyzedByMahito(_) {}
+  get isParalyzedByMahoraga() { return false; }
+  set isParalyzedByMahoraga(_) {}
+  get isGrabbedByMahoraga() { return false; }
+  set isGrabbedByMahoraga(_) {}
+  get isUnderMindControl() { return false; }
+  set isUnderMindControl(_) {}
+  get isSubjugated() { return false; }
+  set isSubjugated(_) {}
+  get caughtInJohnWickCombo() { return false; }
+  set caughtInJohnWickCombo(_) {}
+  get caughtInYujiFlurry() { return false; }
+  set caughtInYujiFlurry(_) {}
+  get caughtInOmniPunch() { return false; }
+  set caughtInOmniPunch(_) {}
+  get caughtInSaitamaCounter() { return false; }
+  set caughtInSaitamaCounter(_) {}
+  get caughtInGenosFlurry() { return false; }
+  set caughtInGenosFlurry(_) {}
+  get ratioHitPauseTimer() { return 0; }
+  set ratioHitPauseTimer(_) {}
+  get basicAttackHitPauseTimer() { return 0; }
+  set basicAttackHitPauseTimer(_) {}
+
   reset() {
     super.reset();
     const cfg = CONFIG.Engineer || {};
     this.isDispenser = true;
+    this.isBuilding = true;
     this.isMinion = true;
     this.isDeployable = true;
     this.isImmovable = true;
     this.cannotBeKnockbacked = true;
+    this.immuneToKnockback = true;
+    this.immuneToPush = true;
+    this.immuneToPull = true;
+    this.immuneToSuction = true;
+    this.immuneToDrag = true;
+    this.immuneToCC = true;
+    this.immuneToDebuffs = true;
+    this.isDebuffImmune = true;
+    this.isStatusImmune = true;
+    this.immuneToBurn = true;
+    this.isImmuneToBurn = true;
+    this.immuneToPoison = true;
+    this.isPoisonImmune = true;
+    this.bleedImmune = true;
+    this.isBloodImmune = true;
+    this.noBlood = true;
+    this.suppressBlood = true;
+    this.immuneToParalyze = true;
+    this.isParalyzeImmune = true;
+    this.immuneToSlow = true;
+    this.immuneToHitStun = true;
+    this.immuneToTimeStop = true;
+    this.immuneToFreeze = true;
+    this.immuneToSoulDisfigurement = true;
+    this.immuneToTelekinesis = true;
+    this.cannotBeChained = true;
+    this.cannotBeGrabbed = true;
+    this.cannotBeSwapped = true;
+    this.domainImmunity = true;
+    this.isDomainImmune = true;
+    this.immuneToDomainStasis = true;
+    this.cannotBeTargetedByAmbush = true;
+    this._bypassHealDebuff = true;
     this.hideHpText = true;
     this.maxHp = cfg.dispenserHp || 160;
     this.hp = this.maxHp;
@@ -85,22 +267,55 @@ export class DispenserEntity extends Fighter {
     this.knockbackVy = 0;
   }
 
-  applyKnockback(vx, vy) {
-    this.knockbackVx = 0;
-    this.knockbackVy = 0;
-    this.vx = 0;
-    this.vy = 0;
-  }
+  // ── Debuff & Physics Neutralization Method Overrides ──
+  applyKnockback() { return; }
+  applyPush() { return; }
+  applyPull() { return; }
+  applySuction() { return; }
+  applyDrag() { return; }
+  applyBurn() { return; }
+  applyPoison() { return; }
+  applyBleed() { return; }
+  applySlow() { return; }
+  applyHitStun() { return; }
+  applyParalyze() { return; }
+  applyFreeze() { return; }
+  applyTimeStop() { return; }
+  applySilence() { return; }
+  applyStatusEffect() { return; }
+  applyElectricStun() { return; }
+  applySoulDisfigurement() { return; }
+  applyTelekinesis() { return; }
+  applyChain() { return; }
+  applyRatioCrit() { return; }
+  applyDomainStasis() { return; }
+  applyGetsugaDrag() { return; }
+  handleBurn() { return; }
+  handlePoison() { return; }
+  handleBleed() { return; }
+  handleStatusEffects() { return; }
+  _handleTimeStop() { return false; }
+  isStunnedOrFrozen() { return false; }
+  isParalyzedDebuffActive() { return false; }
+  isSilenced() { return false; }
+  isCaughtInBeam() { return false; }
+  drawStatusOverlays() { /* Buildings are immune to debuffs */ }
+  drawFreezeTimer() { /* Buildings are immune to freeze */ }
 
   takeDamage(amount, attacker, opts = {}) {
     if (this.isBuilding) return false;
-    if (opts.isPoison) return false;
 
-    if (opts) {
-      opts.knockback = false;
-      opts.knockbackVx = 0;
-      opts.knockbackVy = 0;
+    // Normalize opts: callers may pass a bare boolean or non-object.
+    if (!opts || typeof opts !== 'object') opts = {};
+
+    // Dispensers are completely immune to all status effect DoTs and debuff damage
+    if (opts.isPoison || opts.isBurn || opts.isFlame || opts.isBleed || opts.isElectrified || opts.isCurse || opts.source === 'bleed' || opts.source === 'curse' || opts.source === 'poison' || opts.source === 'burn') {
+      return false;
     }
+
+    opts.knockback = false;
+    opts.knockbackVx = 0;
+    opts.knockbackVy = 0;
 
     const applied = super.takeDamage(amount, attacker, opts);
     this.vx = 0;
@@ -115,10 +330,6 @@ export class DispenserEntity extends Fighter {
       this.hitFlashTimer = 10;
     }
     return applied;
-  }
-
-  applyPoison(attacker) {
-    // Dispensers are machines
   }
 
   onDeath() {
@@ -140,10 +351,6 @@ export class DispenserEntity extends Fighter {
   update(opponent, ownerIndex, arena) {
     if (this.hp <= 0) return;
 
-    if (this.burnTimer > 0) {
-      this.handleBurn();
-    }
-
     if (this.healCooldownTimer > 0) this.healCooldownTimer--;
     if (this.hitFlashTimer > 0) this.hitFlashTimer--;
     if (this.healTimer > 0) this.healTimer--;
@@ -160,10 +367,6 @@ export class DispenserEntity extends Fighter {
           this.smokeParticles.splice(i, 1);
         }
       }
-    }
-
-    if (this._handleTimeStop() || this.isTargetOfAmbush) {
-      return;
     }
 
     // ── Absolute Immovable Anchor Lock ──
@@ -316,14 +519,6 @@ export class DispenserEntity extends Fighter {
 
     // 2. Draw Dispenser cabinet & components
     drawDispenser(ctx, this);
-
-    // Render burn status visual effect (fiery aura & flickering embers)
-    if (this.burnTimer > 0) {
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      drawBurnEffect(ctx, this.r);
-      ctx.restore();
-    }
 
     // 3. Draw smoke particles (Discrete Pixel Art)
     if (this.smokeParticles && this.smokeParticles.length > 0) {

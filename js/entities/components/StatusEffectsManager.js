@@ -75,6 +75,7 @@ export class StatusEffectsManager {
 
   applyFreeze(frames, attacker, opts = {}) {
     if (!this.fighter) return;
+    if (this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     if (opts.isSnowPea && this.fighter.adaptedSnowPea) return;
     if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) return;
     if (this.fighter.isDashingThunderclap || (this.fighter.thunderclapDashPauseTimer && this.fighter.thunderclapDashPauseTimer > 0)) return;
@@ -117,6 +118,7 @@ export class StatusEffectsManager {
   }
 
   applySlow(frames, multiplier, opts = {}) {
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) return;
     if (this.fighter.isDashingThunderclap || (this.fighter.thunderclapDashPauseTimer && this.fighter.thunderclapDashPauseTimer > 0)) return;
     if ((this.fighter.immuneToCC || this.fighter.domainImmunity || this.fighter.characterId === 'toji' || this.fighter.type === 'toji' || this.fighter.characterId === 'escanor' || this.fighter.type === 'escanor') && !opts.isPurple && !opts.isRed && !opts.isInfinitySlow) return;
@@ -125,6 +127,7 @@ export class StatusEffectsManager {
   }
 
   applyHitStun(frames, opts = {}) {
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) return;
     if (this.fighter.isDashingThunderclap || (this.fighter.thunderclapDashPauseTimer && this.fighter.thunderclapDashPauseTimer > 0)) return;
     if ((this.fighter.immuneToCC || this.fighter.domainImmunity || this.fighter.characterId === 'toji' || this.fighter.type === 'toji' || this.fighter.characterId === 'escanor' || this.fighter.type === 'escanor') && !opts.isPurple && !opts.isRed) return;
@@ -135,6 +138,7 @@ export class StatusEffectsManager {
   }
 
   applyParalyze(frames, opts = {}) {
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) return;
     if (this.fighter.isDashingThunderclap || (this.fighter.thunderclapDashPauseTimer && this.fighter.thunderclapDashPauseTimer > 0)) return;
     if ((this.fighter.immuneToCC || this.fighter.domainImmunity || this.fighter.characterId === 'toji' || this.fighter.type === 'toji' || this.fighter.characterId === 'escanor' || this.fighter.type === 'escanor') && !opts.isPurple && !opts.isBlue) return;
@@ -145,6 +149,7 @@ export class StatusEffectsManager {
 
   // --- Poison ---
   applyPoison(attacker) {
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune || this.fighter.isPoisonImmune || this.fighter.immuneToPoison) return;
     if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive) return;
     const grenadierCfg = CONFIG.grenadier || {};
     const ticks = (typeof grenadierCfg.poisonTicks === 'number')
@@ -186,7 +191,8 @@ export class StatusEffectsManager {
 
   // --- Burn ---
   applyBurn(attacker, duration, damage, interval) {
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isImmuneToBurn || this.fighter.characterId === 'escanor') return;
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune || this.fighter.immuneToBurn || this.fighter.isImmuneToBurn) return;
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.characterId === 'escanor') return;
     const finalDuration = duration ?? CONFIG.orange?.burnDuration ?? 180;
     this.fighter.burnTimer = Math.max(this.fighter.burnTimer || 0, finalDuration);
     this.fighter.burnDamageTimer = 0;
@@ -231,6 +237,7 @@ export class StatusEffectsManager {
   // --- Bleed ---
   applyBleed(attacker, duration, damagePerTick, intervalFrames) {
     if (!this.fighter) return;
+    if (this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive) return;
     if (this.fighter.isBloodImmune || this.fighter.noBlood || this.fighter.suppressBlood || this.fighter.bleedImmune || this.fighter.isStatusImmune || this.fighter.dead || this.fighter.isDead || (this.fighter.hp !== undefined && this.fighter.hp <= 0)) return;
     const bleedCfg = CONFIG.bleed || {};
@@ -283,6 +290,7 @@ export class StatusEffectsManager {
 
   // --- Freeze / Time Stop ---
   applyTimeStop(frames, opts = {}) {
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     // Only apply if not immune (Frame stasis & Makima chains bypass generic CC immunity)
     if (!opts.isFrameStasis && !opts.isNaoya) {
       if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.domainImmunity || this.fighter.characterId === 'toji' || this.fighter.type === 'toji' || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) {
@@ -317,6 +325,9 @@ export class StatusEffectsManager {
 
   handleTimeStop() {
     const fighter = this.fighter;
+    if (!fighter || fighter.isTurret || fighter.isDispenser || fighter.isBuilding || fighter.immuneToDebuffs || fighter.isDebuffImmune) {
+      return false;
+    }
     // Check if trapped inside enemy Gojo's Unlimited Void domain (which overrides BAGUVIX and freezes the fighter)
     const isInsideGojoDomain = typeof state !== 'undefined' && state.fighters && state.fighters.some((g, gIdx) => {
       if (!g || g === fighter || g.hp <= 0 || !g.domainActive) return false;
@@ -549,6 +560,9 @@ export class StatusEffectsManager {
    * Frame-safe: executes all registered debuff processors once per tick.
    */
   handleStatusEffects() {
+    if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) {
+      return;
+    }
     const currentFrame = (typeof state !== 'undefined' && typeof state.frameCount === 'number') ? state.frameCount : (this._lastStatusTickFrame + 1);
     if (this._lastStatusTickFrame === currentFrame && typeof state !== 'undefined' && typeof state.frameCount === 'number') {
       return; // Already processed this frame!
