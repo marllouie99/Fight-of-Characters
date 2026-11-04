@@ -127,6 +127,18 @@ async function run() {
     console.log(`  ✅ Created weapon graphics: js/graphics/weapons/${rawId}WeaponGraphics.js`);
   }
 
+  // 3.5 Generate Fighter Documentation Markdown File (Rule 33)
+  const docsDir = path.join(rootDir, 'docs', 'fighters');
+  if (!fs.existsSync(docsDir)) {
+    fs.mkdirSync(docsDir, { recursive: true });
+  }
+  const docFilePath = path.join(docsDir, `${rawId}.md`);
+  if (!fs.existsSync(docFilePath)) {
+    const docCode = generateDocCode(rawId, displayName, archetype, themeColor);
+    fs.writeFileSync(docFilePath, docCode, 'utf8');
+    console.log(`  ✅ Created documentation: docs/fighters/${rawId}.md (Rule 33)`);
+  }
+
   // 4. Update Balance Sheet
   if (fs.existsSync(balanceSheetPath)) {
     try {
@@ -478,6 +490,117 @@ export function draw${capitalize(id)}Weapon(ctx, fighter) {
 
   ctx.restore();
 }
+`;
+}
+
+function generateDocCode(id, name, archetype, themeColor) {
+  const defaults = ARCHETYPE_DEFAULTS[archetype];
+  return `# ${name} — The ${capitalize(archetype)}
+
+**Category:** Anime / Gaming  
+**Character ID:** \`${id}\`  
+**Fighter Grade:** \`A\`  
+**Title:** \`The ${capitalize(archetype)}\`  
+**Boss Title:** \`Supreme ${capitalize(archetype)}\`  
+**Theme Color:** \`${themeColor}\`  
+**Secondary Accents:** Dark Ink (\`#0E0F14\`), Highlight (\`#FFFFFF\`)  
+**Role:** ${capitalize(archetype)} Combat Specialist  
+
+---
+
+## 📖 Lore & Character Philosophy
+
+> *"In battle, true strength lies in unwavering focus and flawless execution."*
+
+${name} enters the *Circle Mini-Battle* arena as a dedicated ${archetype}. Built with high responsiveness and crisp hit feedback, ${name} commands the battlefield through disciplined spacing, swift recovery, and impactful combat combos.
+
+---
+
+## 🎨 Visual Design & Rendering Standards
+
+\`\`\`
+                      ┌─────────────────────────────────┐
+                      │    ${name.toUpperCase()} BODY ZONING        │
+                      └────────────────┬────────────────┘
+                                       │
+      ry < r * 0.28   ┌─────────────────┴─────────────────┐  Clean Fair/Tan Skin Dome
+                      │ Zone 1: Pure Face & Cheeks Dome   │  (Faceless Minimalist)
+                      └─────────────────┬─────────────────┘
+                                       │
+  r*0.28 <= ry < r*0.68 ┌───────────────┴─────────────────┐  Upper Torso & Attire
+                      │ Zone 2: Torso & Collar / Vest     │  (${themeColor})
+                      └─────────────────┬─────────────────┘
+                                       │
+  r*0.68 <= ry < r*0.78 ┌───────────────┴─────────────────┐  Waistband / Belt
+                      │ Zone 3: Waistband & Buckle Frame  │  (#1E293B)
+                      └─────────────────┬─────────────────┘
+                                       │
+      ry >= r * 0.78  ┌─────────────────┴─────────────────┐  Trousers / Lower Garment
+                      │ Zone 4: Pants & Center Fly Seam   │  (High Luminance Y >= 24)
+                      └───────────────────────────────────┘
+\`\`\`
+
+### 1. Upright Fighter Body Model (Rule 19 & Rule 24 Toji Baseline)
+- **Zone 1: Pure Face Dome (\`ry < r * 0.28\`)**: Faceless anime dome (\`#FEDBC0\` / \`#E8BD9B\`) with subtle side cheek contour. Zero mouths, eyes, or drawn hair inside the circular body.
+- **Zone 2: Collar & Upper Torso (\`r * 0.28 <= ry < r * 0.68\`)**: Full-width outfit covering \`-r\` to \`+r\` with primary theme accent \`${themeColor}\`.
+- **Zone 3: Waistband (\`r * 0.68 <= ry < r * 0.78\`)**: High-contrast cinch belt (\`#1E293B\`).
+- **Zone 4: Lower Trousers (\`ry >= r * 0.78\`)**: Lower clothing with center fly seam and pleats ($Y \\ge 24$).
+- **Outer Ink Outline Shell (Rule 32)**: Crisp 2.0px outer manga ink outline (\`#0E0F14\`) via 4-neighbor boundary test.
+- **Canonical Hand Positioning (Rule 20)**: Symmetrical lower-flank hands at \`(-r * 0.82, +r * 0.38)\` and \`(+r * 0.82, +r * 0.38)\`.
+
+### 2. Hair Asset Model Import (Rule 22)
+- Hair asset path: \`Assets/model/${id}/${name}-hair.png\`.
+- Scaled to \`targetHairWidth = r * 3.10\`, \`targetHairHeight = r * 2.00\`, anchored at \`drawY = -r * 1.30\`.
+
+---
+
+## ⚔️ Core Combat Mechanics & Passive Traits
+- **Base Attributes**: HP: \`${defaults.hp}\`, Speed: \`${defaults.speed}\`, Radius: \`r = 25\`.
+- **Rule 23 Projectile Suppression**: Overrides \`shoot(ownerIndex)\` with custom combat logic; default generic bullet projectiles are suppressed.
+
+---
+
+## 💥 Dedicated Combat Skills Breakdown
+- **Basic Attack**: Archetype \`${archetype}\` strike dealing \`${defaults.damage}\` damage with frontal arc reach (\`${defaults.range}px\`).
+- **Skill 1**: Primary combat ability with dedicated cooldown and visual effects.
+- **Skill 2**: Secondary combat maneuver / buff.
+- **Ultimate**: Finisher / signature move with clean concentric shockwaves (Rule 26) and uncropped visual effects (Rule 31).
+
+---
+
+## 📊 HUD Skill Configuration & Gating (Rule 18)
+- Registered in \`js/graphics/ui/hudSkillProviders.js\`.
+- Unified character theme color: \`${themeColor}\`.
+- Gated by \`isSkillEnabled(cfg.enable[Skill], true)\`.
+- Clean labels with zero redundant \`(READY)\` / \`(ACTIVE)\` status suffixes.
+
+---
+
+## 🛡️ Physics & Status Effect Interactions
+- **Rule 1 Freeze Guard**: Universal \`_handleTimeStop()\` check at the top of \`update()\`.
+- **Rule 25 VFX Decay**: \`_updateVisualExplosions()\` and \`_updateVisualEffects()\` execute before freeze return guard.
+
+---
+
+## 🔊 Sound & Audio Engineering
+- Volume normalized in \`js/configs/audioVolumeConfig.js\`.
+- Combat hits layer fleshy slap impacts (\`attack_fleshhit\`) with archetype audio.
+
+---
+
+## 📁 Asset Manifest & Directory Structure
+- \`Assets/model/${id}/${name}-hair.png\`
+- \`js/entities/fighters/${capitalize(id)}Fighter.js\`
+- \`js/graphics/fighters/${id}Skin.js\`
+- \`js/configs/characters/${id}Config.js\`
+- \`docs/fighters/${id}.md\`
+
+---
+
+## 🧪 Verification & Test Coverage Matrix
+- Codebase integrity scanner (\`scripts/verifyCodebase.js\`)
+- 100% Canvas 2D transform stack depth balance
+- Interaction test in \`scripts/testInteractions.mjs\`
 `;
 }
 

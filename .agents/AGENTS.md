@@ -400,6 +400,23 @@ Whenever creating, extracting, formatting, or rendering visual effects, sprite a
   - Transient glowing auras, energy shields, and attack sparkles MUST check `if (!fighter._isSilhouettePass)` to avoid contaminating the 2.2px manga outline silhouette.
 - **Reference Playbook & Skill**: Activate the dedicated skill `character-black-outline` (`.agents/skills/character-black-outline/SKILL.md`).
 
+### 3.11 Mandatory Fighter Documentation Markdown File Standard (Rule 33 — `docs/fighters/<characterId>.md`)
+- **MANDATORY INSTRUCTION — ALWAYS INCLUDE THE FIGHTER MD FILE**: Whenever the user asks to create, scaffold, design, or implement a new fighter character, the agent **MUST ALWAYS** create and include the character's dedicated documentation markdown file located at `docs/fighters/<characterId>.md`.
+  - **STRICT PROHIBITION**: Scaffolding, implementing, or committing a new fighter without creating its corresponding `docs/fighters/<characterId>.md` file is strictly prohibited.
+- **Documentation Parity & Single Source of Truth**: The fighter markdown file serves as the definitive reference manual for players, developers, and AI agents. It must be created alongside the code files (`js/entities/fighters/*Fighter.js`, `js/graphics/fighters/*Skin.js`, `js/configs/characters/*Config.js`).
+- **Standardized 10-Section Structure**: Every fighter document in `docs/fighters/<characterId>.md` MUST contain:
+  1. **Header & Metadata**: Title, Category, `characterId`, Grade (`B`–`SSR`), Titles, Theme Color (`#HEX`), Secondary Accents, Combat Role.
+  2. **📖 Lore & Character Philosophy**: Iconic quote block (`> *"<Quote>"*`), lore background, fighting style, circle fighter thematic adaptation.
+  3. **🎨 Visual Design & Rendering Standards**: ASCII proportion diagram, 4-zone body zoning (Rule 24), hair asset import & calibration (Rule 22), 2.0px `#0E0F14` outer black outline (Rule 32), canonical hands (Rule 20).
+  4. **⚔️ Core Combat Mechanics & Passive Traits**: Passive abilities, resource meters, movement speed, and Rule 23 generic projectile suppression (`shoot(ownerIndex)` override).
+  5. **💥 Dedicated Combat Skills Breakdown**: Basic Attack, Skill 1, Skill 2, and Ultimate/Signature with frame data, damage, hitboxes, 5-phase melee kinematics (Rule 30), and visual effect standards (Rule 26, Rule 31).
+  6. **📊 HUD Skill Configuration & Data Provider Gating**: Registration in `hudSkillProviders.js`, unified `themeColor` (Rule 18), `isSkillEnabled(cfg.enable[Skill])` toggle gating, zero parenthetical suffixes, and dark mode / signature registration.
+  7. **🛡️ Physics & Status Effect Interactions**: Freeze/stasis guard (`_handleTimeStop()`), top-of-update visual effect decay before freeze exit (Rule 25), knockback, wall bounce, and domain interactions.
+  8. **🔊 Sound & Audio Engineering**: SFX mapping, synth parameters, volume normalization in `audioVolumeConfig.js`, and layered fleshy impact audio.
+  9. **📁 Asset Manifest & Directory Structure**: Directory tree of dedicated model files (`Assets/model/<characterId>/`), hair PNG, 12-frame animation folders, and weapon assets.
+  10. **🧪 Verification & Test Coverage Matrix**: Integration tests in `scripts/testInteractions.mjs` and verification with `npm run verify`.
+- **Existing Fighters Backlog**: Whenever working on, refactoring, or tuning a fighter that currently lacks a `docs/fighters/<characterId>.md` file, the agent must proactively author and commit the missing documentation file.
+
 ---
 
 ## 4. Systems Architecture (Weapon Studio, Tactical Force, Configs)

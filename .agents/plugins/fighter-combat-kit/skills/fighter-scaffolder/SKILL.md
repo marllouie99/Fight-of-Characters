@@ -137,4 +137,19 @@ super.update(opponent, ownerIndex, arena);
   - Transient glowing auras, energy shields, and attack sparkles MUST check `if (!fighter._isSilhouettePass)` to avoid contaminating the 2.2px manga outline silhouette.
 - **Reference Playbook**: See dedicated skill `character-black-outline` (`.agents/skills/character-black-outline/SKILL.md`).
 
+### 12. Mandatory Fighter Documentation Markdown File Standard (docs/fighters/<characterId>.md - Rule 33)
+- **MANDATORY INSTRUCTION — ALWAYS INCLUDE THE FIGHTER MD FILE**: Whenever creating or scaffolding a new fighter, the agent **MUST ALWAYS** create and include the character's dedicated documentation file at `docs/fighters/<characterId>.md`.
+  - **STRICT PROHIBITION**: Scaffolding, implementing, or committing a new fighter without creating its corresponding `docs/fighters/<characterId>.md` file is strictly prohibited.
+- **Required 10-Section Documentation Structure**:
+  1. Header & Metadata (`category`, `characterId`, `grade`, `themeColor`, `role`)
+  2. Lore & Character Philosophy (Quote, background, circle fighter combat philosophy)
+  3. Visual Design & Rendering Standards (Rule 24 4-zone ASCII diagram, hair asset import, 2.0px `#0E0F14` outer outline, canonical hands)
+  4. Core Combat Mechanics & Passive Traits (Rule 23 generic projectile suppression, movement, stats)
+  5. Dedicated Combat Skills Breakdown (Basic Attack, Skill 1, Skill 2, Ultimate with damage, cooldown, frames, Rule 30 melee kinematics)
+  6. HUD Skill Configuration & Data Provider Gating (Rule 18 unified `themeColor`, `isSkillEnabled(cfg.enable[Skill])`, zero parenthetical status suffixes)
+  7. Physics & Status Effect Interactions (Rule 1 freeze guard, Rule 25 top-of-update VFX decay, wall bounce)
+  8. Sound & Audio Engineering (Volume config in `audioVolumeConfig.js`, layered impact SFX)
+  9. Asset Manifest & Directory Structure (`Assets/model/<characterId>/`)
+  10. Verification & Test Coverage Matrix (`scripts/testInteractions.mjs`, `npm run verify`)
+
 
