@@ -74,6 +74,7 @@ import { creeperConfig } from '../configs/characters/creeperConfig.js';
 import { gokuConfig } from '../configs/characters/gokuConfig.js';
 import { vegetaConfig } from '../configs/characters/vegetaConfig.js';
 import { isagiConfig } from '../configs/characters/isagiConfig.js';
+import { wardenConfig } from '../configs/characters/wardenConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -105,6 +106,9 @@ export const CONFIG = {
   isagi: isagiConfig,
   Isagi: isagiConfig,
   ISAGI: isagiConfig,
+  warden: wardenConfig,
+  Warden: wardenConfig,
+  WARDEN: wardenConfig,
   genos: genosConfig,
   mahito: mahitoConfig,
   nanami: nanamiConfig,
@@ -2030,6 +2034,31 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: 1.0,
     ability: isagiConfig.ability || 'Metavision & Direct Volley',
     desc: isagiConfig.desc,
+  },
+  {
+    id: 71,
+    name: wardenConfig.name || 'Warden',
+    grade: wardenConfig.grade ?? DEFAULT_GRADE,
+    displayName: wardenConfig.displayName || wardenConfig.name || 'The Warden',
+    category: 'Gaming',
+    color: wardenConfig.color || '#0D9488',
+    themeColor: wardenConfig.themeColor || '#0D9488',
+    secondaryColor: wardenConfig.secondaryColor || '#00F5D4',
+    startX: 300,
+    startY: 250,
+    startVx: 1.0,
+    startVy: 1.0,
+    radius: wardenConfig.radius || wardenConfig.r || 30,
+    aimbot: false,
+    spinRate: 0,
+    type: 'warden',
+    hp: wardenConfig.hp || 580,
+    damage: wardenConfig.basicAttackDamage || 42,
+    cooldown: wardenConfig.basicAttackCooldown || 48,
+    moveSpeed: wardenConfig.moveSpeed || wardenConfig.speed || 3.8,
+    projectileSpeedMultiplier: 1.0,
+    ability: 'Sculk Echolocation & Sonic Boom',
+    desc: wardenConfig.desc,
   }
 ];
 

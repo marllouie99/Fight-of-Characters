@@ -60,6 +60,8 @@ import { drawAshSkin, _drawAshHair, _getAshHairImage } from '../fighters/ashSkin
 import { drawBombermanSkin, _drawBombermanHair, _getBombermanHairImage } from '../fighters/bombermanSkin.js';
 import { drawPacmanSkin, _drawPacmanHair, _getPacmanHairImage } from '../fighters/pacmanSkin.js';
 import { drawCreeperSkin, _drawCreeperHair } from '../fighters/creeperSkin.js';
+import { drawIsagiSkin, _drawIsagiHair, _getIsagiHairImage } from '../fighters/isagiSkin.js';
+import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighters/wardenSkin.js';
 
 
 
@@ -144,7 +146,7 @@ export const SKIN_STUDIO_CATEGORIES = [
   { id: 'CHAINSAW', label: 'CSM', filter: (f) => ['makima', 'reze', 'power'].includes(f.key) },
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
-  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash'].includes(f.key) }
+  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'warden'].includes(f.key) }
 ];
 
 
@@ -859,6 +861,41 @@ export const SKIN_STUDIO_FIGHTERS = [
     forms: [
       { id: 'default', label: 'PALLET TOWN TRAINER' }
     ]
+  },
+  {
+    key: 'isagi',
+    label: 'ISAGI YOICHI',
+    asset: 'Assets/model/isagi/isagi-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 3.05,
+    baseH: 2.25,
+    baseCrownY: -1.35,
+    visW: 708,
+    visH: 749,
+    centerX: 511.5,
+    topY: 153,
+    themeColor: '#00F0FF',
+    forms: [
+      { id: 'default', label: 'EGOIST STRIKER' }
+    ]
+  },
+  {
+    key: 'warden',
+    label: 'THE WARDEN',
+    asset: 'Assets/model/warden/warden-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 3.30,
+    baseH: 1.75,
+    baseCrownY: -1.58,
+    visW: 926,
+    visH: 488,
+    centerX: 511.5,
+    topY: 262,
+    themeColor: '#00F5D4',
+    forms: [
+      { id: 'default', label: 'DEEP DARK GUARDIAN' },
+      { id: 'enraged', label: 'SCULK ROAR (ENRAGED)' }
+    ]
   }
 ];
 
@@ -1224,6 +1261,26 @@ function generateJsCode(fDef, custom) {
            `const targetHairHeight = r * ${curH};\n` +
            `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'isagi') {
+    return `// Calibrated Hair for Isagi (Assets/model/isagi/isagi-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 708;\n` +
+           `const scaleY = targetHairHeight / 749;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 153 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'warden') {
+    return `// Calibrated Sculk Horns for Warden (Assets/model/warden/warden-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 926;\n` +
+           `const scaleY = targetHairHeight / 488;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 262 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   }
   let extra = '';
   if (custom.handScale !== undefined) {
@@ -1709,6 +1766,13 @@ export function drawSkinStudioScreen() {
         dummyFighter.isChargedCreeper = (state.studioSkinForm === 'charged');
         dummyFighter.chargedCreeperTimer = dummyFighter.isChargedCreeper ? 1200 : 0;
         drawCreeperSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'isagi') {
+        dummyFighter._isStudioDummy = true;
+        drawIsagiSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'warden') {
+        dummyFighter._isStudioDummy = true;
+        dummyFighter.isEnraged = (state.studioSkinForm === 'enraged');
+        drawWardenSkin(ctx, dummyFighter);
       }
     } catch (renderErr) {
       console.error('Skin render error in studio:', renderErr);
@@ -1787,6 +1851,10 @@ export function drawSkinStudioScreen() {
       _drawPacmanHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'creeper') {
       _drawCreeperHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'isagi') {
+      _drawIsagiHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'warden') {
+      _drawWardenHair(ctx, baseRadius, isFacingLeft);
     }
 
     ctx.restore();

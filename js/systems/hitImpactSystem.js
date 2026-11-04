@@ -493,23 +493,7 @@ export const HitImpactSystem = {
     if (isEngineerShotgun) {
       const hitAngle = Math.atan2(projectile.vy || Math.sin(projectile.angle || 0), projectile.vx || Math.cos(projectile.angle || 0));
 
-      // 1. Kinetic push back on target along buckshot trajectory
-      if (shouldApplyPhysicalPush(target)) {
-        const pushForce = 1.6;
-        target.vx = (target.vx || 0) + Math.cos(hitAngle) * pushForce;
-        target.vy = (target.vy || 0) + Math.sin(hitAngle) * pushForce;
-        target.x += Math.cos(hitAngle) * (pushForce * 0.4);
-        target.y += Math.sin(hitAngle) * (pushForce * 0.4);
-
-        if (state && state.arena) {
-          const minX = state.arena.x + (target.r || 20);
-          const maxX = state.arena.x + state.arena.width - (target.r || 20);
-          const minY = state.arena.y + (target.r || 20);
-          const maxY = state.arena.y + state.arena.height - (target.r || 20);
-          target.x = Math.max(minX, Math.min(maxX, target.x));
-          target.y = Math.max(minY, Math.min(maxY, target.y));
-        }
-      }
+      // 1. Kinetic push back removed per balance standard (zero knockback on shotgun pellets)
 
       // 2. Fiery buckshot impact flash & metal/flame sparks
       if (typeof spawnImpactFlash === 'function') {
@@ -544,23 +528,7 @@ export const HitImpactSystem = {
       const hitAngle = Math.atan2(projectile.vy || Math.sin(projectile.angle || 0), projectile.vx || Math.cos(projectile.angle || 0));
 
       if (projectile.isRocket) {
-        // ── Level 3 Micro-Rocket Explosive Detonation ──
-        if (shouldApplyPhysicalPush(target)) {
-          const rocketPush = 5.0;
-          target.vx = (target.vx || 0) + Math.cos(hitAngle) * rocketPush;
-          target.vy = (target.vy || 0) + Math.sin(hitAngle) * rocketPush;
-          target.x += Math.cos(hitAngle) * (rocketPush * 0.4);
-          target.y += Math.sin(hitAngle) * (rocketPush * 0.4);
-
-          if (state && state.arena) {
-            const minX = state.arena.x + (target.r || 20);
-            const maxX = state.arena.x + state.arena.width - (target.r || 20);
-            const minY = state.arena.y + (target.r || 20);
-            const maxY = state.arena.y + state.arena.height - (target.r || 20);
-            target.x = Math.max(minX, Math.min(maxX, target.x));
-            target.y = Math.max(minY, Math.min(maxY, target.y));
-          }
-        }
+        // ── Level 3 Micro-Rocket Explosive Detonation (zero knockback per balance standard) ──
 
         // Explosive impact flash & fiery shrapnel sparks
         if (typeof spawnImpactFlash === 'function') {
@@ -583,12 +551,7 @@ export const HitImpactSystem = {
           triggerGlobalScreenShake(8.0, 6);
         }
       } else {
-        // ── Standard Sentry High-Velocity Rivet/Bullet ──
-        if (shouldApplyPhysicalPush(target)) {
-          const bulletPush = 1.2;
-          target.vx = (target.vx || 0) + Math.cos(hitAngle) * bulletPush;
-          target.vy = (target.vy || 0) + Math.sin(hitAngle) * bulletPush;
-        }
+        // ── Standard Sentry High-Velocity Rivet/Bullet (zero knockback per balance standard) ──
 
         // Rapid kinetic rivet sparks & flash
         if (typeof spawnImpactFlash === 'function') {

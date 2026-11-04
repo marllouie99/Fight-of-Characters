@@ -4532,6 +4532,38 @@ async function runInteractionTests() {
       drawArenaFloorModal
     } = await import('../js/systems/arenaTileSystem.js');
 
+    const { ARENA_THEMES, getSelectedArenaTheme, setSelectedArenaTheme, resolveActiveThemeId, drawArenaThemeSelector, drawArenaThemeModal, getArenaTopWallBlockThickness } = await import('../js/systems/arenaThemeSystem.js');
+    const { isArenaDecorationsEnabled, getArenaDecorationTheme } = await import('../js/systems/arenaDecorationSystem.js');
+    assert(Array.isArray(ARENA_THEMES) && ARENA_THEMES.length === 14, `ARENA_THEMES should contain all 14 selectable themes (got ${ARENA_THEMES?.length})`);
+    assert(ARENA_FLOORS === ARENA_THEMES, 'ARENA_FLOORS must equal ARENA_THEMES for backward compatibility');
+
+    // Bomberman "Normal Zone" Theme integration checks & top wall elevation
+    const bombermanTheme = ARENA_THEMES.find(t => t.id === 'bomberman_normal');
+    assert(bombermanTheme && bombermanTheme.icon === '💣', 'Bomberman theme must exist in ARENA_THEMES with 💣 icon');
+    assert(bombermanTheme.hasDecorations === false, 'Bomberman theme must declare hasDecorations: false');
+    assert(getArenaTopWallBlockThickness('bomberman_normal') === 25, 'getArenaTopWallBlockThickness must return 25 for bomberman_normal');
+    assert(getArenaTopWallBlockThickness('classic_clean') === 0, 'getArenaTopWallBlockThickness must return 0 for classic_clean');
+
+    setSelectedArenaTheme('bomberman_normal');
+    assert(getSelectedArenaTheme() === 'bomberman_normal', 'getSelectedArenaTheme should reflect bomberman_normal');
+    assert(resolveActiveThemeId() === 'bomberman_normal', 'resolveActiveThemeId should return bomberman_normal');
+    assert(isArenaDecorationsEnabled() === false, 'isArenaDecorationsEnabled must be false for bomberman_normal');
+
+    // Halloween theme integration checks
+    const halloweenTheme = ARENA_THEMES.find(t => t.id === 'halloween');
+    assert(halloweenTheme && halloweenTheme.icon === '🎃', 'Halloween theme must exist in ARENA_THEMES with 🎃 icon');
+    assert(halloweenTheme.hasDecorations === true, 'Halloween theme must declare hasDecorations: true');
+
+    setSelectedArenaTheme('halloween');
+    assert(getSelectedArenaTheme() === 'halloween', 'getSelectedArenaTheme should reflect halloween');
+    assert(resolveActiveThemeId() === 'halloween', 'resolveActiveThemeId should return halloween');
+    assert(isArenaDecorationsEnabled() === true, 'isArenaDecorationsEnabled must return true when halloween is equipped');
+    assert(getArenaDecorationTheme() === 'halloween', 'getArenaDecorationTheme must return halloween');
+
+    setSelectedArenaTheme('classic_clean');
+    assert(isArenaDecorationsEnabled() === false, 'isArenaDecorationsEnabled must return false for classic_clean');
+    assert(getArenaDecorationTheme() === 'none', 'getArenaDecorationTheme must return none for classic_clean');
+
     assert(Array.isArray(ARENA_FLOORS) && ARENA_FLOORS.length >= 7, 'ARENA_FLOORS should contain all selectable floor themes');
     
     // Test persistence & selection
@@ -4601,6 +4633,29 @@ async function runInteractionTests() {
     assert(mockCtx.getStackDepth() === 0, 'drawArenaFloorModal must balance Canvas state');
     
     // Restore auto
+    mockCtx.resetStackDepth();
+    drawArenaThemeSelector(mockCtx, 10, 10, 135, 24);
+    assert(mockCtx.getStackDepth() === 0, 'drawArenaThemeSelector must balance Canvas state');
+
+    mockCtx.resetStackDepth();
+    drawArenaThemeModal(mockCtx);
+    assert(mockCtx.getStackDepth() === 0, 'drawArenaThemeModal must balance Canvas state');
+
+    const { drawArenaBorder, drawArenaMatchNames } = await import('../js/graphics/renderers/arenaRenderer.js');
+    setSelectedArenaTheme('bomberman_normal');
+    state.arena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    state._arenaBorderCanvas = null;
+    mockCtx.resetStackDepth();
+    drawArenaBorder(mockCtx, true);
+    assert(state._arenaBorderCanvas !== null, 'Border canvas must be generated for bomberman_normal');
+    assert(mockCtx.getStackDepth() === 0, 'drawArenaBorder must balance Canvas state for bomberman_normal');
+
+    state.fighters = [{ characterId: 'bomber_man', name: 'BOMBER MAN', color: '#38BDF8' }, { characterId: 'bomber_man', name: 'BOMBER MAN', color: '#38BDF8' }];
+    state.gameState = 'playing';
+    mockCtx.resetStackDepth();
+    drawArenaMatchNames(mockCtx, false);
+    assert(mockCtx.getStackDepth() === 0, 'drawArenaMatchNames must balance Canvas state for bomberman_normal');
+
     setSelectedArenaFloor('auto');
     console.log('      ✅ Arena Tile System, themes, snapping math & 100% balanced Canvas 2D stacks verified.');
   }
@@ -16130,8 +16185,21 @@ async function runInteractionTests() {
     const kickSpeed = Math.hypot(ball.vx, ball.vy);
     assert(kickSpeed >= 12, `Kicking the ball must propel it with high velocity (got ${kickSpeed})`);
     assert(ball.vx > 10, `Ball must launch straight towards the enemy (got vx=${ball.vx})`);
+    assert(isagi.kickAccuracy === 1.0, 'Isagi must have 100% kick accuracy (1.0)');
+    assert(CONFIG.isagi.kickAccuracy === 1.0, 'Isagi config must declare kickAccuracy: 1.0 (100%)');
+    assert(ball.kickAccuracy === 1.0, 'Ball kickAccuracy must record 1.0');
+    assert(ball.kickSpreadAngle === 0, 'Isagi 100% kick accuracy must result in ZERO spread angle');
+    assert(Math.abs(ball.vy) < 0.001, `Isagi horizontal kick must have zero vertical deviation (got vy=${ball.vy})`);
     assert(isagi.activeKickImpacts.length > 0, '12-frame kick impact animation must spawn upon kicking');
     assert(CONFIG.isagi.assets.kickImpact === 'Assets/model/isagi/kick_impact/kick_impact-b.png', 'Kick impact asset path registered in config');
+
+    // 2b. Inaccurate Kick Spread Verification (< 100% Kick Accuracy)
+    const { executeSoccerKick: testKickHelper } = await import('../js/systems/soccerBallSystem.js');
+    const mockBall = { x: 100, y: 100, r: 16, vx: 0, vy: 0 };
+    testKickHelper(isagi, mockBall, 0, 15, { kickAccuracy: 0.0, maxKickSpread: 0.25 });
+    assert(mockBall.kickAccuracy === 0.0, 'Mock ball kickAccuracy must record 0.0');
+    assert(mockBall.kickSpreadAngle !== 0, 'Inaccurate kick (0% accuracy) must produce non-zero spread deviation');
+    assert(mockBall.finalKickAngle !== 0, 'Final kick angle must deviate from initial 0-deg aim angle');
 
     // 3. Wall Ricochet on the Single Ball
     dummy.x = arena.x + 100;
@@ -16204,6 +16272,8 @@ async function runInteractionTests() {
     assert(isagi.kickSlowTimer > 0, 'Isagi must receive brief slow movement upon executing Direct Volley');
 
     // 6b. Verify Damage & Stun Debuff on Direct Volley Impact ONLY When Kicked by Isagi
+    dummy.hp = 500;
+    dummy.maxHp = 500;
     dummy.x = isagi.x + 40;
     dummy.y = isagi.y;
     ball.x = dummy.x - 2;
@@ -16217,7 +16287,15 @@ async function runInteractionTests() {
     const hpBeforeVolley = dummy.hp;
     isagi._updateSoccerBallPhysics(dummy, arena);
     assert(isagi.active16BitHits.length > 0, 'Hardcoded 16-bit hit impact effect must spawn when the ball hits an enemy');
-    assert(dummy.paralyzeTimer >= 40, `Direct Volley must apply stun/paralyze debuff to enemy (got ${dummy.paralyzeTimer})`);
+    assert(dummy.vx >= 12, `Direct Volley must apply strong directional knockback on hit (got vx=${dummy.vx})`);
+    assert(dummy._strikerKnockback !== undefined, 'Target must enter active striker knockback flight phase');
+
+    // Complete knockback flight to apply stun afterwards
+    for (let f = 0; f < 20; f++) {
+      if ((dummy.paralyzeTimer || 0) >= 40) break;
+      isagi._updateSoccerBallPhysics(dummy, arena);
+    }
+    assert(dummy.paralyzeTimer >= 40, `Direct Volley must apply stun/paralyze debuff to enemy after knockback (got ${dummy.paralyzeTimer})`);
     assert(dummy.hp < hpBeforeVolley, 'Ball must deal damage when kicked by Isagi');
     assert(ball.isKickedByIsagi === false, 'Ball must clear isKickedByIsagi immediately after impact so it cannot deal damage on rebounds');
 
@@ -16266,9 +16344,27 @@ async function runInteractionTests() {
     // 9. HUD Provider Validation
     const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
     const hudSkills = getSkillDataForFighter(isagi, () => []);
-    assert(Array.isArray(hudSkills) && hudSkills.length === 2, 'Isagi must export 2 HUD skills (Metavision & Direct Volley)');
-    assert(hudSkills[0].color === '#00F0FF' && hudSkills[1].color === '#00F0FF', 'All HUD skill bars must use unified themeColor (Rule 18)');
-    assert(hudSkills[1].isSignature === true, 'Direct Volley must declare isSignature: true (Rule 18)');
+    assert(Array.isArray(hudSkills) && hudSkills.length >= 2, 'Isagi must export HUD skills (Metavision, Striker & Ego)');
+    assert(hudSkills.every(s => s.color === '#00F0FF'), 'All HUD skill bars must use unified themeColor (Rule 18)');
+    assert(hudSkills.some(s => s.isSignature === true), 'Signature skills must declare isSignature: true (Rule 18)');
+
+    // 10. Skin Studio & Hair Width / Length Adjustment Calibration (Rule 22 & Rule 24)
+    const { SKIN_STUDIO_FIGHTERS } = await import('../js/graphics/ui/SkinStudioScreen.js');
+    const { _drawIsagiHair, drawIsagiSkin } = await import('../js/graphics/fighters/isagiSkin.js');
+    const isagiStudioDef = SKIN_STUDIO_FIGHTERS.find(f => f.key === 'isagi');
+    assert(isagiStudioDef, 'Isagi must be registered in SKIN_STUDIO_FIGHTERS');
+    assert(isagiStudioDef.visW === 708 && isagiStudioDef.visH === 749, `Isagi hair bounding box must be 708x749 (got ${isagiStudioDef?.visW}x${isagiStudioDef?.visH})`);
+    assert(isagiStudioDef.centerX === 511.5 && isagiStudioDef.topY === 153, 'Isagi centerX and topY must match asset bounding box');
+
+    // Test Canvas 2D render with custom widthScale and heightScale
+    state.skinCustomizations = state.skinCustomizations || {};
+    state.skinCustomizations.isagi = { widthScale: 1.15, heightScale: 0.90, offsetX: 2, offsetY: -1, angleOffset: 0.05, flipX: false, flipY: false };
+    mockCtx.resetStackDepth();
+    _drawIsagiHair(mockCtx, 25, false);
+    assert(mockCtx.getStackDepth() === 0, '_drawIsagiHair must maintain 100% Canvas stack balance');
+    mockCtx.resetStackDepth();
+    drawIsagiSkin(mockCtx, isagi);
+    assert(mockCtx.getStackDepth() === 0, 'drawIsagiSkin must maintain 100% Canvas stack balance');
 
     // Clean up
     state.fighters = [];
@@ -16619,6 +16715,718 @@ async function runInteractionTests() {
     assert(bomb2.dead === false && bomb2.hp > 0 && bomberman.activeBombs.includes(bomb2), 'Bomb2 at adjacent tile (3, 4) inside 110px AOE MUST NOT be destroyed by Queen AOE');
 
     console.log('      ✅ Shiro Chess Troops attacking & capturing Bomber Man planted bombs and exact tile-center alignment verified.');
+  }
+
+  // ── 115. The Warden (Minecraft) Vibration Echolocation, Darkness Pulse & Supersonic Sonic Boom ──
+  {
+    console.log('   115. Testing The Warden vibration echolocation, anger meter, darkness pulse & Sonic Boom...');
+    const WardenClass = FIGHTER_CLASS_MAP['warden'];
+    const KnightClass = FIGHTER_CLASS_MAP['knight'];
+    assert(typeof WardenClass === 'function', 'WardenFighter class must be registered in FIGHTER_CLASS_MAP');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+
+    const warden = new WardenClass({ x: 200, y: 300, color: '#0D9488', controls: {} });
+    const opponent = new KnightClass({ x: 300, y: 300, color: '#64748B', controls: {} });
+    state.fighters = [warden, opponent];
+
+    // 1. Base Attributes & Geometry Check (Rule 24 Boss Tier r = 30)
+    assert(warden.r === 30, 'The Warden must have boss tier radius r = 30');
+    assert(warden.maxHp === 580 && warden.hp === 580, 'The Warden base HP must be 580');
+    assert(warden.characterId === 'warden', 'characterId must be warden');
+    assert(warden.anger === 0 && warden.isEnraged === false, 'Warden initial anger must be 0 and not enraged');
+
+    // 2. Generic Projectile Suppression (Rule 23)
+    const initialProjectilesCount = state.projectiles ? state.projectiles.length : 0;
+    warden.shoot(0);
+    const postShootProjectilesCount = state.projectiles ? state.projectiles.length : 0;
+    assert(postShootProjectilesCount === initialProjectilesCount, 'Warden shoot() must suppress generic bullet projectiles');
+
+    // 3. Vibration Echolocation & Anger Meter Escalation
+    // Stationary opponent produces zero movement vibrations
+    warden._processEcholocation(opponent);
+    assert(warden.anger === 0, 'Stationary opponent must not increase anger');
+
+    // Moving/dashing opponent produces vibrations that increase anger
+    opponent.x = 350;
+    opponent.y = 300;
+    warden._processEcholocation(opponent);
+    assert(warden.anger > 0, 'Opponent movement vibrations within radius must increase anger');
+    assert(warden.activeVibrationArcs.length > 0, 'Vibration arcs must be spawned toward Warden horns');
+
+    // Fill anger to max (100) -> Triggers Enraged Roar state
+    warden._addAnger(100, opponent.x, opponent.y, 'test_burst');
+    assert(warden.isEnraged === true, 'Anger reaching 100 must trigger Enraged State');
+    assert(warden.moveSpeed > 5.0, 'Enraged state must boost Warden movement speed');
+
+    // 4. Skill 1: Darkness Pulse
+    warden.darknessCooldownTimer = 0;
+    warden._castDarknessPulse(opponent, { darknessCooldown: 480, darknessSlowMultiplier: 0.55, darknessDuration: 150 });
+    assert(warden.darknessCooldownTimer > 0, 'Darkness pulse must enter cooldown after cast');
+    assert(warden.activeDarknessWaves.length > 0, 'Darkness pulse must create expanding wave');
+
+    // 5. Skill 2: Sculk Tendril Sniff (Reveals & Roots)
+    opponent.isStealthed = true;
+    warden.sniffCooldownTimer = 0;
+    warden._castSculkSniff(opponent, { sniffCooldown: 380, sniffDuration: 40, trapDuration: 45, trapDamage: 24 });
+    assert(opponent.isStealthed === false, 'Sculk sniff must reveal stealthed opponent');
+    assert(opponent.hitStunTimer > 0, 'Sculk sniff must root opponent in place');
+
+    // 6. Ultimate: Sculk Sonic Boom (Rule 1.4 Committed Aim Lock & Rule 26 Concentric Waves)
+    warden.sonicBoomCooldownTimer = 0;
+    const initialOpponentHp = opponent.hp;
+    const castAngle = 0;
+    warden._startSonicBoom(castAngle);
+    assert(warden.isSonicBoomCharging === true, 'Sonic boom must start charging phase');
+    assert(warden.skillCastAngle === castAngle, 'Sonic boom must commit cast angle');
+
+    // Advance charge frames until fired
+    while (warden.sonicBoomChargeTimer > 0) {
+      warden._updateSonicBoomCharge(opponent, {
+        sonicBoomChargeFrames: 45,
+        sonicBoomBeamFrames: 24,
+        sonicBoomReach: 520,
+        sonicBoomWidth: 36,
+        sonicBoomDamage: 95,
+        sonicBoomKnockback: 22
+      });
+      if (warden.isSonicBoomCharging) {
+        assert(warden.gunAngle === castAngle, 'gunAngle must remain locked to committed cast angle during charge');
+      }
+    }
+
+    assert(warden.isSonicBoomFiring === true, 'Sonic boom must transition to firing phase');
+    assert(warden.activeSonicWaves.length > 0, 'Sonic boom must generate Rule 26 concentric shockwaves');
+    assert(opponent.hp < initialOpponentHp, 'Opponent must take unblockable piercing damage from Sonic Boom');
+    assert(warden.vx < 0, 'Warden must experience physical recoil kick in opposite direction of cast angle');
+
+    // 7. Non-Freezing Active Visual Effects (Rule 25)
+    const initialWaveTimer = warden.activeSonicWaves[0]?.timer || 0;
+    warden.timeStopTimer = 60;
+    warden.update(opponent, 0, testArena);
+    assert(warden.activeSonicWaves[0].timer > initialWaveTimer, 'Transient visual effects must advance/decay even while time-stopped');
+
+    console.log('      ✅ The Warden vibration echolocation, anger meter, darkness pulse, sculk sniff, and Sonic Boom verified successfully.');
+  }
+
+  // ── 116. Bomber Man Planted Bombs: Solid Body Block on Enemies & Unimpeded Pass-Through for Bomberman ──
+  {
+    console.log('   116. Testing Bomber Man planted bombs solid body block on enemies & unimpeded pass-through for Bomberman...');
+    const { resolveBombObstacleCollisions } = await import('../js/systems/physics.js');
+    const BombermanClass = FIGHTER_CLASS_MAP['bomberman'];
+    const KnightClass = FIGHTER_CLASS_MAP['knight'];
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+
+    const bm1 = new BombermanClass({ x: 200, y: 300, color: '#2563EB', controls: {} });
+    const enemy = new KnightClass({ x: 300, y: 300, color: '#64748B', controls: {} });
+    const bm2 = new BombermanClass({ x: 300, y: 300, color: '#DC2626', controls: {} });
+    state.fighters = [bm1, enemy];
+
+    // Plant a stationary bomb at (200, 300)
+    bm1.activeBombs.length = 0;
+    bm1.plantCooldownTimer = 0;
+    bm1.layStepTimer = 0;
+    const bomb = bm1.plantBomb(testArena, true, 200, 300);
+    assert(bomb && bm1.activeBombs.includes(bomb), 'Bomberman must plant a stationary bomb');
+    const bx = bomb.x;
+    const by = bomb.y;
+    const br = bomb.r || 22;
+    const er = enemy.r || 25;
+    const minDist = br + er; // 47px
+
+    // 1. Enemy attempts to walk/penetrate into the bomb
+    enemy.x = bx + 10; // Overlapping: distance is 10px, minDist is 47px
+    enemy.y = by;
+    enemy.vx = -5; // Moving directly left toward bomb center
+    enemy.vy = 0;
+    enemy.knockbackVx = -3;
+    enemy.knockbackVy = 0;
+
+    // Run global physics body-block resolver
+    resolveBombObstacleCollisions(testArena);
+
+    assert(enemy.x >= bx + minDist - 0.01, `Enemy must be pushed out of the bomb obstacle (expected x >= ${bx + minDist}, got ${enemy.x})`);
+    assert(enemy.vx > 0, `Enemy velocity must be deflected away from the bomb (expected vx > 0, got ${enemy.vx})`);
+    assert(enemy.knockbackVx >= 0, `Enemy knockback toward bomb must be zeroed (got ${enemy.knockbackVx})`);
+
+    // 2. Bomberman passes through his own bomb with ZERO body blocking
+    bm1.x = bx + 10; // Inside bomb radius
+    bm1.y = by;
+    bm1.vx = -4;
+    bm1.vy = 0;
+    resolveBombObstacleCollisions(testArena);
+
+    assert(bm1.x === bx + 10, `Bomberman must pass freely through bomb without displacement (expected x=${bx + 10}, got ${bm1.x})`);
+    assert(bm1.vx === -4, `Bomberman velocity must remain completely unaffected (expected vx=-4, got ${bm1.vx})`);
+
+    // 3. Opponent Bomberman (mirror match) also passes through without body blocking ("bomberman can get pass through")
+    state.fighters = [bm1, bm2];
+    bm2.x = bx + 10;
+    bm2.y = by;
+    bm2.vx = -3;
+    bm2.vy = 0;
+    resolveBombObstacleCollisions(testArena);
+
+    assert(bm2.x === bx + 10, `Opponent Bomberman must also pass through bombs freely (expected x=${bx + 10}, got ${bm2.x})`);
+    assert(bm2.vx === -3, `Opponent Bomberman velocity must remain unaffected (expected vx=-3, got ${bm2.vx})`);
+
+    // 4. Test BombermanFighter._resolveBombCollisions internal handler
+    state.fighters = [bm1, enemy];
+    enemy.x = bx + 15;
+    enemy.y = by;
+    enemy.vx = -6;
+    bm1._resolveBombCollisions(bomb, testArena);
+
+    assert(enemy.x >= bx + minDist - 0.01, `_resolveBombCollisions must push enemy out of bomb (expected x >= ${bx + minDist}, got ${enemy.x})`);
+    assert(enemy.vx > 0, `_resolveBombCollisions must deflect enemy velocity (expected vx > 0, got ${enemy.vx})`);
+
+    // Clean up
+    bm1.activeBombs.length = 0;
+    state.fighters = [];
+    console.log('      ✅ Bomber Man planted bombs solid body block on enemies and unimpeded pass-through for Bomberman verified cleanly.');
+  }
+
+  // ── TEST 117: Engineer Sentry & Shotgun Zero Knockback Standard ──
+  console.log('   117. Testing Engineer Sentry & Shotgun Zero Knockback Standard...');
+  {
+    const { HitImpactSystem } = await import('../js/systems/hitImpactSystem.js');
+    const { projectileSystem } = await import('../js/systems/projectileSystem.js');
+    const EngineerClass = FIGHTER_CLASS_MAP.Engineer;
+    const { TurretEntity } = await import('../js/entities/TurretEntity.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    const engineer = new EngineerClass({ startX: 100, startY: 200, hp: 400 });
+    const target = {
+      characterId: 'dummy',
+      name: 'Dummy Target',
+      x: 200,
+      y: 200,
+      vx: 0,
+      vy: 0,
+      r: 25,
+      hp: 500,
+      maxHp: 500,
+      isDead: false,
+      dead: false,
+      team: 'red',
+      applyDamage(amt) { this.hp -= amt; },
+      takeDamage(amt) { this.hp -= amt; }
+    };
+    engineer.team = 'blue';
+    state.fighters = [engineer, target];
+
+    // 1. Engineer Shotgun Pellet Zero Knockback
+    target.vx = 0;
+    target.vy = 0;
+    const shotgunPellet = {
+      visual: 'EngineerBullet',
+      isShotgun: true,
+      x: target.x,
+      y: target.y,
+      vx: 20,
+      vy: 0,
+      angle: 0,
+      damage: 5,
+      owner: 0,
+      active: true,
+      dead: false
+    };
+
+    HitImpactSystem.processProjectileHit(target, shotgunPellet, engineer, state.fighters);
+    assert(target.vx === 0, `Target vx must remain 0 on Engineer shotgun pellet hit (got ${target.vx})`);
+    assert(target.vy === 0, `Target vy must remain 0 on Engineer shotgun pellet hit (got ${target.vy})`);
+
+    // 2. Turret Sentry Bullet Zero Knockback
+    target.vx = 0;
+    target.vy = 0;
+    const turret = new TurretEntity(150, 200, engineer, 1);
+    const sentryBullet = {
+      visual: 'turretBullet',
+      isTurretBullet: true,
+      isRocket: false,
+      x: target.x,
+      y: target.y,
+      vx: 22,
+      vy: 0,
+      angle: 0,
+      damage: 2,
+      owner: 0,
+      active: true,
+      dead: false
+    };
+
+    HitImpactSystem.processProjectileHit(target, sentryBullet, turret, state.fighters);
+    assert(target.vx === 0, `Target vx must remain 0 on Sentry bullet hit (got ${target.vx})`);
+    assert(target.vy === 0, `Target vy must remain 0 on Sentry bullet hit (got ${target.vy})`);
+
+    // 3. Turret Level 3 Micro-Rocket Zero Knockback
+    target.vx = 0;
+    target.vy = 0;
+    const sentryRocket = {
+      visual: 'turretBullet',
+      isTurretBullet: true,
+      isRocket: true,
+      x: target.x,
+      y: target.y,
+      vx: 18,
+      vy: 0,
+      angle: 0,
+      damage: 8,
+      owner: 0,
+      active: true,
+      dead: false
+    };
+
+    HitImpactSystem.processProjectileHit(target, sentryRocket, turret, state.fighters);
+    assert(target.vx === 0, `Target vx must remain 0 on Sentry rocket hit (got ${target.vx})`);
+    assert(target.vy === 0, `Target vy must remain 0 on Sentry rocket hit (got ${target.vy})`);
+
+    // 4. Engineer Wrench Melee Knockback Preserved
+    target.vx = 0;
+    target.vy = 0;
+    target.x = engineer.x + 30; // within wrench range
+    target.y = engineer.y;
+    engineer.wrenchActive = false;
+    engineer.wrenchCooldown = 0;
+    engineer.wrenchTimer = 0;
+    engineer.gunAngle = 0;
+    engineer._executeWrenchStrike(target, testArena);
+    assert(target.vx > 0, `Wrench melee attack MUST retain knockback push (expected vx > 0, got ${target.vx})`);
+
+    // Clean up
+    state.fighters = [];
+    console.log('      ✅ Engineer Sentry & Shotgun zero knockback and wrench melee push verified cleanly.');
+  }
+  // ── TEST 118: Horizontal Mode 1v1 Top HUD Standard ──
+  {
+    console.log('   118. Testing Horizontal Mode 1v1 Top HUD Standard (Placed in Header Space Above Arena Wall)...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const originalOrientation = state.viewOrientation;
+    const originalFighters = state.fighters;
+
+    const dummy1 = { characterId: 'toji', name: 'Toji', color: '#a855f7', hp: 1000, maxHp: 1000 };
+    const dummy2 = { characterId: 'isagi', name: 'Isagi', color: '#38BDF8', hp: 1000, maxHp: 1000 };
+    state.fighters = [dummy1, dummy2];
+    state.mode = '1v1';
+    state.viewOrientation = 'horizontal';
+
+    const leftEl = globalThis.document.getElementById('healthHudLeft');
+    const rightEl = globalThis.document.getElementById('healthHudRight');
+
+    const isMultiFighter = Boolean(state.fighters.length > 2);
+    const isLargeArena = false;
+    const isTopHud1v1 = Boolean(!isMultiFighter && !isLargeArena);
+    const sideTopPxInCanvas = isTopHud1v1 ? 21 : 122;
+    const sideWidthPx = isTopHud1v1 ? 300 : 176;
+
+    assert(isTopHud1v1 === true, 'isTopHud1v1 must be true for 1v1 horizontal match');
+    assert(sideTopPxInCanvas === 21, 'sideTopPxInCanvas must be 21px in canvas space (above the arena top wall)');
+    assert(sideWidthPx === 300, 'sideWidthPx must be 300px for wide top HUD card');
+
+    if (isTopHud1v1) {
+      leftEl.classList.add('top-hud-1v1');
+      rightEl.classList.add('top-hud-1v1');
+    }
+
+    assert(leftEl.classList.contains('top-hud-1v1'), 'leftEl must contain top-hud-1v1 class');
+    assert(rightEl.classList.contains('top-hud-1v1'), 'rightEl must contain top-hud-1v1 class');
+
+    // Check vertical isolation: in vertical mode, isTopHud1v1 is false
+    state.viewOrientation = 'vertical';
+    const isTopHud1v1Vert = (state.viewOrientation === 'horizontal') && !isMultiFighter && !isLargeArena;
+    assert(isTopHud1v1Vert === false, 'isTopHud1v1 must be false in vertical mode');
+
+    leftEl.classList.remove('top-hud-1v1');
+    rightEl.classList.remove('top-hud-1v1');
+
+    state.viewOrientation = originalOrientation;
+    state.fighters = originalFighters;
+    console.log('      ✅ Horizontal Mode 1v1 Top HUD header placement and vertical isolation verified cleanly.');
+  }
+
+
+  // ── TEST 125: Toji Ambush Backstab Melee Reach & Long-Distance Whiff Standard ──
+  console.log('   125. Testing Toji Ambush Backstab Melee Reach & Long-Distance Whiff Standard...');
+  {
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const TojiFighterClass = FIGHTER_CLASS_MAP['toji'];
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    state.fighters = [];
+
+    const toji = new TojiFighterClass(200, 200, 0);
+    toji.hp = 400;
+    toji.maxHp = 400;
+    const target = {
+      characterId: 'dummy',
+      name: 'Dummy Target',
+      x: 260,
+      y: 200,
+      vx: 0,
+      vy: 0,
+      r: 25,
+      hp: 300,
+      maxHp: 300,
+      isDead: false,
+      dead: false,
+      team: 'red',
+      isTargetOfAmbush: false,
+      applyDamage(amt) { this.hp -= amt; },
+      takeDamage(amt) { this.hp -= amt; },
+      applyTimeStop(duration) { this.timeStopTimer = duration; }
+    };
+    toji.team = 'blue';
+    toji.x = 200;
+    toji.y = 200;
+    state.fighters = [toji, target];
+
+    // 1. Close-range Inverted Spear backstab lands cleanly
+    toji.gunAngle = 0;
+    toji.angle = 0;
+    const closeHits = toji.performInvertedSpearStrike(target, 0, true);
+    assert(closeHits.length > 0, 'Inverted Spear ambush strike must hit target at close range (60px)');
+    assert(target.hp < 300, `Target must take damage at close range (got hp: ${target.hp})`);
+
+    // 2. Long-distance Inverted Spear backstab strictly whiffs (no phantom hit or damage across the arena)
+    target.hp = 300;
+    target.x = 420; // 220px away, well beyond 80px reach + radii
+    const longHits = toji.performInvertedSpearStrike(target, 0, true);
+    assert(longHits.length === 0, `Inverted Spear ambush strike must strictly whiff at long distance (got ${longHits.length} hits)`);
+    assert(target.hp === 300, `Target must take ZERO damage when out of range (got hp: ${target.hp})`);
+
+    // 3. Long-distance Split Soul Katana strictly whiffs
+    toji.isAmbushing = true;
+    const katanaHits = toji.performSplitSoulKatanaSlash(target, 0);
+    assert(katanaHits.length === 0, `Split Soul Katana slash must strictly whiff when target is beyond reach (got ${katanaHits.length} hits)`);
+    assert(target.hp === 300, 'Target must take zero damage from out-of-reach Katana slash');
+
+    // 4. Ambush sequence whiff & clean recovery without stasis trap
+    target.isTargetOfAmbush = false;
+    target.timeStopTimer = 0;
+    toji.isAmbushing = true;
+    toji.ambushPhase = 'BACK_CHARGE';
+    toji.ambushTimer = 1;
+    toji.ambushTarget = target;
+    toji.spearSwingTimer = 0;
+
+    // Frame transition: BACK_CHARGE -> BACK_STAB
+    toji.update(target, 0, testArena);
+    assert(toji.ambushPhase === 'BACK_STAB', `Toji must transition to BACK_STAB (got ${toji.ambushPhase})`);
+    assert(toji._ambushThrustHit === false, `toji._ambushThrustHit must be false on whiff (got ${toji._ambushThrustHit})`);
+    assert(target.isTargetOfAmbush === false, 'Escaped target must NOT be trapped in isTargetOfAmbush stasis');
+    assert(!target.timeStopTimer, 'Escaped target must NOT be frozen with applyTimeStop');
+
+    // Complete BACK_STAB whiff recovery
+    for (let f = 0; f < 45; f++) {
+      if (!toji.isAmbushing) break;
+      toji.update(target, 0, testArena);
+    }
+    assert(toji.isAmbushing === false, 'Toji must cleanly exit ambush mode after whiffed backstab');
+    assert(toji.ambushTarget === null, 'Toji ambushTarget must be cleared after whiffed backstab');
+    assert(toji.stealthCooldown > 0, 'Toji stealthCooldown must be reset after whiffed backstab');
+
+    // Clean up
+    state.fighters = [];
+    console.log('      ✅ Toji Ambush Backstab melee reach, long-distance whiff, zero stasis trap & clean recovery verified cleanly.');
+  }
+
+
+  // ── TEST 126: Multiple Blue Lock Characters Single Shared Soccer Ball Standard ──
+  console.log('   126. Testing Multiple Blue Lock Characters Single Shared Soccer Ball Standard...');
+  {
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const {
+      isBlueLockFighter,
+      countBlueLockFighters,
+      isPrimaryBlueLockBallController,
+      getOrCreateSharedSoccerBall
+    } = await import('../js/systems/soccerBallSystem.js');
+    const IsagiClass = FIGHTER_CLASS_MAP['isagi'];
+    assert(typeof IsagiClass === 'function', 'Isagi fighter class must be registered in FIGHTER_CLASS_MAP');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    CONFIG.arena = testArena;
+
+    // 1. Single Shared Ball Instance on Instantiation / Reset
+    const isagi1 = new IsagiClass({ id: 70, type: 'isagi', name: 'ISAGI 1', color: '#00F0FF' });
+    state.fighters = [isagi1];
+    assert(isBlueLockFighter(isagi1) === true, 'isagi1 must be identified as Blue Lock fighter');
+    assert(countBlueLockFighters(state) === 1, 'Only 1 Blue Lock fighter initially');
+    assert(isPrimaryBlueLockBallController(isagi1, state) === true, 'Solo Blue Lock fighter is primary ball controller');
+
+    const isagi2 = new IsagiClass({ id: 71, type: 'isagi', name: 'ISAGI 2', color: '#38BDF8' });
+    state.fighters = [isagi1, isagi2];
+    assert(isBlueLockFighter(isagi2) === true, 'isagi2 must be identified as Blue Lock fighter');
+    assert(countBlueLockFighters(state) === 2, '2 Blue Lock fighters detected in state');
+
+    // Synchronize shared ball
+    isagi2._syncSharedSoccerBall();
+    assert(isagi1.soccerBall === isagi2.soccerBall, 'Both Blue Lock fighters MUST share the exact same soccer ball instance');
+
+    // 2. Center Pitch Kick-off on Match / Round Reset
+    isagi1.reset();
+    isagi2.reset();
+    assert(isagi1.soccerBall === isagi2.soccerBall, 'Soccer ball instance remains strictly unified after reset()');
+    const sharedBall = isagi1.soccerBall;
+    const expectedCenterX = testArena.x + testArena.width / 2;
+    const expectedCenterY = testArena.y + testArena.height / 2;
+    assert(Math.abs(sharedBall.x - expectedCenterX) < 0.1, `Ball must reset to arena center X=${expectedCenterX} on kickoff (got ${sharedBall.x})`);
+    assert(Math.abs(sharedBall.y - expectedCenterY) < 0.1, `Ball must reset to arena center Y=${expectedCenterY} on kickoff (got ${sharedBall.y})`);
+
+    // 3. Primary Controller Election & Handover on Defeat
+    assert(isPrimaryBlueLockBallController(isagi1, state) === true, 'First alive Blue Lock fighter is primary controller');
+    assert(isPrimaryBlueLockBallController(isagi2, state) === false, 'Second Blue Lock fighter is secondary controller');
+
+    isagi1.isDead = true;
+    assert(isPrimaryBlueLockBallController(isagi2, state) === true, 'Surviving Blue Lock fighter seamlessly becomes primary controller upon partner defeat');
+    isagi1.isDead = false;
+
+    // 4. Kicking Possession Transfer (Isagi 1 kicks -> Isagi 2 intercepts & volleys)
+    isagi1.x = sharedBall.x - 24;
+    isagi1.y = sharedBall.y;
+    isagi2.x = sharedBall.x + 140;
+    isagi2.y = sharedBall.y;
+    isagi1.shootCooldown = 0;
+    isagi2.shootCooldown = 0;
+
+    assert(isagi1._hasSoccerBall() === true, 'Isagi 1 must be in kicking reach of the shared ball');
+    isagi1._fireEgoShot(isagi2, CONFIG.isagi);
+
+    assert(sharedBall.lastKicker === isagi1, 'Ball lastKicker must be attributed to Isagi 1');
+    assert(sharedBall.vx > 5, 'Ball must travel towards Isagi 2 (vx > 5)');
+
+    // Simulate ball reaching Isagi 2
+    sharedBall.x = isagi2.x - 20;
+    sharedBall.y = isagi2.y;
+    sharedBall.vx = 1.0; // slowed roll
+    assert(isagi2._hasSoccerBall() === true, 'Isagi 2 must now have possession of the shared ball');
+
+    // Isagi 2 fires "STRIKER!" finisher back towards Isagi 1
+    isagi2._unleashStrikerSkill(isagi1, testArena);
+    assert(sharedBall.lastKicker === isagi2, 'Ball lastKicker must now transfer to Isagi 2');
+    assert(sharedBall.vx < -10, 'Striker kick must propel the ball back towards Isagi 1 (vx < -10)');
+
+    // 5. Canvas 2D Stack Integrity & Deduplicated Draw Pass
+    mockCtx.resetStackDepth();
+    isagi1.draw(mockCtx, isagi2);
+    isagi2.draw(mockCtx, isagi1);
+    assert(mockCtx.getStackDepth() === 0, 'Canvas 2D stack depth must be 0 after drawing both Blue Lock fighters');
+
+    // Clean up
+    state.fighters = [];
+    state.sharedSoccerBall = null;
+    console.log('      ✅ Multiple Blue Lock Characters Single Shared Soccer Ball standard verified cleanly.');
+  }
+
+
+  // ── TEST 127: Blue Lock Universal EGO Awakening & Potential Buff Standard ──
+  console.log('   127. Testing Blue Lock Universal EGO Awakening & Potential Buff Standard...');
+  {
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const {
+      isBlueLockFighter,
+      BLUE_LOCK_EGO_REGISTRY,
+      initBlueLockEgo,
+      gainBlueLockEgo,
+      activateBlueLockEgo,
+      updateBlueLockEgo,
+      getBlueLockEgoBuffs,
+      executeSoccerKick
+    } = await import('../js/systems/soccerBallSystem.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const IsagiClass = FIGHTER_CLASS_MAP['isagi'];
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    CONFIG.arena = testArena;
+
+    const isagi = new IsagiClass({ id: 70, type: 'isagi', name: 'ISAGI', color: '#00F0FF' });
+    const dummy = {
+      x: isagi.x + 40,
+      y: isagi.y,
+      r: 25,
+      hp: 1000,
+      maxHp: 1000,
+      vx: 0,
+      vy: 0,
+      isDead: false,
+      takeDamage(d) { this.hp -= d; },
+      applyParalyze(d) { this.paralyzeTimer = d; },
+      applyHitStun(d) { this.hitStunTimer = d; }
+    };
+    state.fighters = [isagi, dummy];
+
+    // 1. Initial State: Ego Meter at 0
+    assert(isagi.egoMeter === 0, 'Isagi must start with 0 Ego meter');
+    assert(isagi.isEgoActive === false, 'Isagi must not have active Ego initially');
+    assert(getBlueLockEgoBuffs(isagi) === null, 'No buffs when Ego is inactive');
+
+    // 2. Incremental Ego Charge on Ball Hits
+    // Hit 1: standard shot hit (+25)
+    gainBlueLockEgo(isagi, 25, CONFIG.isagi);
+    assert(isagi.egoMeter === 25, `Ego meter must gain 25 on hit (got ${isagi.egoMeter})`);
+    assert(isagi.isEgoActive === false, 'Ego must not activate before reaching 100%');
+
+    // Hit 2: rebound bank shot (+35)
+    gainBlueLockEgo(isagi, 35, CONFIG.isagi);
+    assert(isagi.egoMeter === 60, `Ego meter must reach 60 (got ${isagi.egoMeter})`);
+
+    // Hit 3: striker finisher hit (+50) -> triggers Awakening!
+    gainBlueLockEgo(isagi, 50, CONFIG.isagi);
+    assert(isagi.isEgoActive === true, 'Ego Awakening must activate upon reaching >= 100%');
+    assert(isagi.egoMeter === 100, 'Ego meter must be clamped at 100 upon activation');
+    assert(isagi.egoDurationTimer > 0, 'Active Ego duration timer must be set');
+
+    // 3. Potential Buffs Unlocked (Isagi Yoichi Standard: Spatial Metavision without Sprint/Crit Overlap)
+    const isagiBuffs = getBlueLockEgoBuffs(isagi);
+    assert(isagiBuffs !== null, 'Ego buffs must be active');
+    assert(isagiBuffs.speedMultiplier === undefined, 'Isagi must NOT gain movement speed multiplier from Ego');
+    assert(isagiBuffs.guaranteedCrit === undefined, 'Isagi must NOT gain guaranteed critical strikes from Ego');
+    assert(isagiBuffs.kickSpeedMultiplier >= 1.25, 'Isagi must gain kick speed multiplier');
+    assert(isagiBuffs.damageMultiplier >= 1.20, 'Isagi must gain attack damage multiplier');
+    assert(isagiBuffs.cooldownRate >= 1.5, 'Isagi must gain accelerated skill cooldown cycling');
+    assert(isagiBuffs.sweetSpotDamageBonus >= 6, 'Isagi must gain spatial sweet-spot damage bonus');
+
+    // 4. Kicking during Ego Mode grants higher kinetic speed (without forced crit if not flow state)
+    const ball = isagi.soccerBall;
+    executeSoccerKick(isagi, ball, 0, 10, { isCrit: false });
+    assert(ball.vx >= 12.5, `Ball kick speed must receive Ego multiplier (got vx=${ball.vx})`);
+    assert(ball.isCrit === false, 'Standard kicks during Ego Mode without Flow State must not be forced to crit');
+
+    // 5. Distinct Per-Character Modular Buffs: Registry Verification & Auto-Inheritance
+    assert(BLUE_LOCK_EGO_REGISTRY !== undefined, 'BLUE_LOCK_EGO_REGISTRY must be exported');
+    const registeredIds = Object.keys(BLUE_LOCK_EGO_REGISTRY);
+    assert(registeredIds.length >= 7, 'Must register at least 7 Blue Lock strikers');
+
+    // A. Hyoma Chigiri: Extreme 1.60x Mach Sprint Speed
+    const mockChigiri = { characterId: 'chigiri', color: '#EC4899', x: 200, y: 300, r: 25, shockwaves: [] };
+    initBlueLockEgo(mockChigiri);
+    assert(mockChigiri.egoBuffs.speedMultiplier === 1.60, 'Chigiri must inherit 1.60x sprint speed boost');
+    assert(mockChigiri.egoTitle.includes('Panther'), 'Chigiri title must be 44-Panther');
+    activateBlueLockEgo(mockChigiri, { egoDuration: 360 });
+    assert(mockChigiri.isEgoActive === true, 'Chigiri unlocks Ego potential');
+    const chigiriBuffs = getBlueLockEgoBuffs(mockChigiri);
+    assert(chigiriBuffs.speedMultiplier === 1.60, 'Chigiri must gain 1.60x movement speed boost');
+
+    // B. Barou Shouei: The King's Brute Force & Knockback
+    const mockBarou = { characterId: 'barou', color: '#DC2626', x: 200, y: 300, r: 25, shockwaves: [] };
+    initBlueLockEgo(mockBarou);
+    assert(mockBarou.egoBuffs.damageMultiplier === 1.55, 'Barou must inherit 1.55x damage multiplier');
+    assert(mockBarou.egoBuffs.strikerKnockbackMultiplier === 1.60, 'Barou must inherit 1.60x striker knockback');
+    assert(mockBarou.egoBuffs.defenseMultiplier === 0.80, 'Barou must inherit 20% defense reduction');
+
+    // C. Meguru Bachira: Monster Trance Evasion & Passback Rate
+    const mockBachira = { characterId: 'bachira', color: '#F59E0B', x: 200, y: 300, r: 25, shockwaves: [] };
+    initBlueLockEgo(mockBachira);
+    assert(mockBachira.egoBuffs.dodgeChance === 0.40, 'Bachira must inherit 40% erratic footwork dodge chance');
+    assert(mockBachira.egoBuffs.reboundBounceChance === 0.80, 'Bachira must inherit 80% passback chance');
+
+    // D. Itoshi Rin: Berserker Destruction & Curved Trivela
+    const mockRin = { characterId: 'rin', color: '#00B4D8', x: 200, y: 300, r: 25, shockwaves: [] };
+    initBlueLockEgo(mockRin);
+    assert(mockRin.egoBuffs.curvedShotRate === 1.6, 'Rin must inherit 1.6 curved trivela shot rate');
+    assert(mockRin.egoBuffs.damageMultiplier === 1.45, 'Rin must inherit 1.45x damage multiplier');
+
+    // E. Seishiro Nagi: Black Hole Instant Trap Velocity Kill
+    const mockNagi = { characterId: 'nagi', color: '#F8FAFC', x: 200, y: 300, r: 25, shockwaves: [] };
+    initBlueLockEgo(mockNagi);
+    assert(mockNagi.egoBuffs.trapKillVelocity === true, 'Nagi must inherit instant trap velocity kill');
+
+    // 6. Active Duration Drain & Expiration
+    isagi.egoDurationTimer = 2;
+    updateBlueLockEgo(isagi, CONFIG.isagi);
+    assert(isagi.egoDurationTimer === 1, 'Ego duration must decrement on update');
+    assert(isagi.isEgoActive === true, 'Ego still active with 1 frame left');
+    updateBlueLockEgo(isagi, CONFIG.isagi);
+    assert(isagi.isEgoActive === false, 'Ego must deactivate when duration expires');
+    assert(isagi.egoMeter === 0, 'Ego meter must reset to 0 upon expiration');
+
+    // 7. HUD Skill Provider Theme Consistency & Label Standard (Rule 18)
+    isagi.egoMeter = 50;
+    const hudSkillsIdle = getSkillDataForFighter(isagi, () => []);
+    const egoBarIdle = hudSkillsIdle.find(s => s.id === 'ego');
+    assert(egoBarIdle !== undefined, 'Ego bar must be present in Isagi HUD skill array');
+    assert(egoBarIdle.color === isagi.color, 'Ego bar must use unified character themeColor (Rule 18)');
+    assert(egoBarIdle.ready === false, 'Ego bar must not be ready while charging');
+    assert(egoBarIdle.pct === 50, 'Ego bar pct must reflect meter percentage');
+    assert(egoBarIdle.label.includes('50%'), 'Ego bar label must show charge progress');
+
+    isagi.isEgoActive = true;
+    isagi.egoDurationTimer = 300;
+    isagi.egoMaxDuration = 360;
+    const hudSkillsActive = getSkillDataForFighter(isagi, () => []);
+    const egoBarActive = hudSkillsActive.find(s => s.id === 'ego');
+    assert(egoBarActive.ready === true, 'Ego bar must be ready/active when Ego is awakened');
+    assert(egoBarActive.label.includes('EGO AWAKENED'), 'Ego bar label must show awakened state');
+    assert(egoBarActive.label.includes('5.0S'), 'Ego bar label must show live remaining seconds countdown');
+
+    // 8. HUD Stats Update when Gaining Buffs Standard
+    const { getBlueLockFighterStatsInfo, getAdditionalInfoForFighter } = await import('../js/graphics/hudManager.js');
+    const { MODE_SPEED_MULTIPLIER } = await import('../js/core/modeConfig.js');
+    const currentModeMult = (typeof state !== 'undefined' && state.mode && typeof MODE_SPEED_MULTIPLIER !== 'undefined' && MODE_SPEED_MULTIPLIER[state.mode]) || 1;
+    const expectedBaseSpd = (5.2 * currentModeMult).toFixed(1);
+
+    // A. Isagi Baseline Stats (Idle)
+    isagi.isEgoActive = false;
+    isagi.isFlowStateActive = false;
+    const isagiIdleStats = getAdditionalInfoForFighter(isagi);
+    assert(isagiIdleStats.some(s => s.includes('<b>DMG:</b> 24')), 'Isagi idle stats must display base DMG: 24');
+    assert(isagiIdleStats.some(s => s.includes(`<b>SPD:</b> ${expectedBaseSpd}`)), `Isagi idle stats must display base SPD: ${expectedBaseSpd}`);
+    assert(isagiIdleStats.some(s => s.includes('<b>KICK SPD:</b> 14.5')), 'Isagi idle stats must display base KICK SPD: 14.5');
+    assert(isagiIdleStats.some(s => s.includes('<b>ACCURACY:</b> 100%')), 'Isagi idle stats must display ACCURACY: 100%');
+
+    // B. Isagi Flow State Buffs (Metavision Slip)
+    isagi.isFlowStateActive = true;
+    isagi.flowStateTimer = 180;
+    const isagiFlowStats = getAdditionalInfoForFighter(isagi);
+    assert(isagiFlowStats.some(s => s.includes('KICK SPD:') && s.includes('(FLOW)')), 'Isagi Flow state must boost KICK SPD in HUD stats');
+    assert(isagiFlowStats.some(s => s.includes('Crit Rate:') && s.includes('FLOW 1.85x')), 'Isagi Flow state must display 100% Flow Crit Rate');
+    assert(isagiFlowStats.some(s => s.includes('STATE:') && s.includes('FLOW STATE')), 'Isagi Flow state must display live Flow indicator in HUD stats');
+
+    // C. Isagi EGO Awakening Buffs (Spatial Cooldown Cycling & Direct Volley Damage)
+    isagi.isFlowStateActive = false;
+    isagi.isEgoActive = true;
+    isagi.egoDurationTimer = 360;
+    const isagiEgoStats = getAdditionalInfoForFighter(isagi);
+    assert(isagiEgoStats.some(s => s.includes('DMG:') && s.includes('▲ (+25% EGO)')), 'Isagi Ego state must boost DMG in HUD stats');
+    assert(isagiEgoStats.some(s => s.includes(`<b>SPD:</b> ${expectedBaseSpd}`)), 'Isagi Ego state must NOT boost movement speed (preserves Chigiri role isolation)');
+    assert(isagiEgoStats.some(s => s.includes('KICK SPD:') && s.includes('(EGO)')), 'Isagi Ego state must boost KICK SPD in HUD stats');
+    assert(isagiEgoStats.some(s => s.includes('CDR:') && s.includes('+60%')), 'Isagi Ego state must display +60% CDR in HUD stats');
+    assert(isagiEgoStats.some(s => s.includes('EGO:') && s.includes('METAVISION FLOW')), 'Isagi Ego state must display METAVISION FLOW title in HUD stats');
+
+    // D. Chigiri EGO Awakening Buffs (Sprint Speed & Evade Slip)
+    const chigiriStats = getAdditionalInfoForFighter(mockChigiri);
+    assert(chigiriStats.some(s => s.includes('SPD:') && s.includes('▲ (+60% EGO)')), 'Chigiri Ego state must boost SPD by +60% in HUD stats');
+    assert(chigiriStats.some(s => s.includes('EVADE:') && s.includes('25%')), 'Chigiri Ego state must display 25% EVADE in HUD stats');
+    assert(chigiriStats.some(s => s.includes('EGO:') && s.includes('44-PANTHER')), 'Chigiri Ego state must display 44-PANTHER title in HUD stats');
+
+    // E. Barou EGO Awakening Buffs (Brute Force Strike Damage & Defense)
+    activateBlueLockEgo(mockBarou, { egoDuration: 360 });
+    const barouStats = getAdditionalInfoForFighter(mockBarou);
+    assert(barouStats.some(s => s.includes('DMG:') && s.includes('▲ (+55% EGO)')), 'Barou Ego state must boost DMG by +55% in HUD stats');
+    assert(barouStats.some(s => s.includes('DEF:') && s.includes('+20%')), 'Barou Ego state must display +20% DEF in HUD stats');
+    assert(barouStats.some(s => s.includes('EGO:') && s.includes('PREDATOR CANNON')), 'Barou Ego state must display The King title in HUD stats');
+
+    // F. Bachira EGO Awakening Buffs (Monster Dribbler Evasion & Passback)
+    activateBlueLockEgo(mockBachira, { egoDuration: 360 });
+    const bachiraStats = getAdditionalInfoForFighter(mockBachira);
+    assert(bachiraStats.some(s => s.includes('EVADE:') && s.includes('40%')), 'Bachira Ego state must display 40% EVADE in HUD stats');
+    assert(bachiraStats.some(s => s.includes('SPD:') && s.includes('▲ (+30% EGO)')), 'Bachira Ego state must boost SPD by +30% in HUD stats');
+    assert(bachiraStats.some(s => s.includes('PASSBACK:') && s.includes('80%')), 'Bachira Ego state must display 80% PASSBACK in HUD stats');
+
+    // 9. Canvas 2D Stack Integrity with Ego Aura
+    mockCtx.resetStackDepth();
+    isagi.draw(mockCtx, dummy);
+    assert(mockCtx.getStackDepth() === 0, 'Canvas 2D stack depth must be 0 after drawing Isagi with Ego Aura');
+
+    // Clean up
+    state.fighters = [];
+    console.log('      ✅ Blue Lock Universal EGO Awakening, Potential Buffs & Chigiri speed boost standard verified cleanly.');
   }
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;

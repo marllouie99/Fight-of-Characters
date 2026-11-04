@@ -1234,6 +1234,11 @@ export function updateFighters() {
       }
     });
     // Still update fuel pickups for visual pulsing during countdown
+    // 3. Bomb Obstacle Physical Body-Block Collisions
+    // Planted bombs act as solid physical obstacles that body-block all non-Bomberman fighters/illusions.
+    // Bomberman fighters can pass freely through bombs without body blocking.
+    resolveBombObstacleCollisions(state.arena);
+
     updateFuelPickups();
     return;
   }
@@ -1574,6 +1579,11 @@ export function updateFighters() {
       }
     }
 
+    // 3. Bomb Obstacle Physical Body-Block Collisions
+    // Planted bombs act as solid physical obstacles that body-block all non-Bomberman fighters/illusions.
+    // Bomberman fighters can pass freely through bombs without body blocking.
+    resolveBombObstacleCollisions(state.arena);
+
     updateFuelPickups();
     updateIllusions();
 
@@ -1649,5 +1659,120 @@ function endRoundIfMultiTeamEnded() {
     endRoundIf2v2Ended();
     endRoundIf1v1Ended();
     endRoundIfTlfsEnded();
+  }
+}
+
+
+/**
+ * Resolves physical body-block collisions between all active stationary planted bombs and fighters/illusions.
+ * Bomberman fighters can pass freely through bombs without body blocking.
+ * All other fighters and illusions are physically blocked by bombs as solid circular obstacles.
+ * @param {Object} [arena=state.arena]
+ */
+export function resolveBombObstacleCollisions(arena = state.arena) {
+  if (typeof state === 'undefined' || !Array.isArray(state.fighters)) return;
+
+  const activeArena = arena || state.arena || CONFIG.arena;
+
+  // Gather all active stationary planted bombs from any fighter
+  const activeBombs = [];
+  for (let i = 0; i < state.fighters.length; i++) {
+    const f = state.fighters[i];
+    if (f && Array.isArray(f.activeBombs)) {
+      for (let j = 0; j < f.activeBombs.length; j++) {
+        const b = f.activeBombs[j];
+        if (b && !b.dead && !b.isDead && (b.hp === undefined || b.hp > 0) && !b.isTraveling) {
+          activeBombs.push(b);
+        }
+      }
+    }
+  }
+
+  if (activeBombs.length === 0) return;
+
+  // Gather all mobile entities (fighters + illusions)
+  const entities = [];
+  for (let i = 0; i < state.fighters.length; i++) {
+    const f = state.fighters[i];
+    if (f && f.hp > 0 && !f.dead && !f.isDead && !f.isSwallowedByPacman) {
+      entities.push(f);
+    }
+  }
+  if (Array.isArray(state.illusions)) {
+    for (let i = 0; i < state.illusions.length; i++) {
+      const ill = state.illusions[i];
+      if (ill && ill.hp > 0 && !ill.dead && !ill.isDead && !ill.isSwallowedByPacman) {
+        entities.push(ill);
+      }
+    }
+  }
+
+  for (let bIdx = 0; bIdx < activeBombs.length; bIdx++) {
+    const bomb = activeBombs[bIdx];
+    const br = bomb.r || 22;
+
+    for (let eIdx = 0; eIdx < entities.length; eIdx++) {
+      const ent = entities[eIdx];
+
+      // Bomberman can get pass through!
+      const isBomberman = Boolean(
+        ent.characterId === 'bomberman' ||
+        ent.type === 'bomberman' ||
+        ent._def?.type === 'bomberman' ||
+        (bomb.owner && ent === bomb.owner)
+      );
+      if (isBomberman) continue;
+
+      // Immovable tile-fixed entities are pinned to their tile center and not displaced
+      const isImmovable = Boolean(
+        ent.isChessTroop ||
+        ent.isChessMinion ||
+        ent.isImmovable ||
+        ent.cannotBePushed ||
+        ent.cannotBeDisplaced ||
+        ent.isTurret ||
+        ent.isDispenser ||
+        ent.isPlant ||
+        ent.isPlantMinion ||
+        ent.isPlantBarrier ||
+        ent.isWallnut
+      );
+      if (isImmovable) continue;
+
+      const er = ent.r || 25;
+      const minDist = br + er;
+      const dx = ent.x - bomb.x;
+      const dy = ent.y - bomb.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < minDist) {
+        const nx = dist > 0.0001 ? dx / dist : 1;
+        const ny = dist > 0.0001 ? dy / dist : 0;
+        const overlap = minDist - dist;
+
+        // Push non-Bomberman entity out of the solid bomb obstacle
+        ent.x += nx * overlap;
+        ent.y += ny * overlap;
+
+        // Deflect velocity component towards bomb
+        const vn = (ent.vx || 0) * nx + (ent.vy || 0) * ny;
+        if (vn < 0) {
+          ent.vx -= vn * nx * 1.35;
+          ent.vy -= vn * ny * 1.35;
+        }
+
+        const vkn = (ent.knockbackVx || 0) * nx + (ent.knockbackVy || 0) * ny;
+        if (vkn < 0) {
+          ent.knockbackVx = 0;
+          ent.knockbackVy = 0;
+        }
+
+        // Clamp entity inside arena boundary
+        if (activeArena) {
+          ent.x = Math.max(activeArena.x + er, Math.min(activeArena.x + activeArena.width - er, ent.x));
+          ent.y = Math.max(activeArena.y + er, Math.min(activeArena.y + activeArena.height - er, ent.y));
+        }
+      }
+    }
   }
 }

@@ -7,6 +7,7 @@ import { CONFIG } from '../core/config.js';
 import { _registerButton, drawChamferedRect, fitSingleLineText } from '../graphics/ui/uiFramework.js';
 import { spawnSparks, spawnImpactFlash } from '../graphics/particles/sparkEffect.js';
 import { audioSystem } from './audioSystem.js';
+import { getSelectedArenaTheme } from './arenaThemeSystem.js';
 
 export const ARENA_DECORATION_STORAGE_ENABLED_KEY = 'circle_arena_decorations_enabled';
 export const ARENA_DECORATION_STORAGE_THEME_KEY = 'circle_arena_decoration_theme';
@@ -221,6 +222,16 @@ if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
  * @returns {boolean}
  */
 export function isArenaDecorationsEnabled() {
+  const activeTheme = (typeof getSelectedArenaTheme === 'function')
+    ? getSelectedArenaTheme()
+    : ((typeof state !== 'undefined' && state.selectedArenaTheme) || 'classic_clean');
+
+  // If Halloween is the active arena theme, decorations are automatically enabled
+  if (activeTheme === 'halloween') {
+    return true;
+  }
+
+  // If user explicitly configured / toggled decorations, check local state
   if (_isDecorationsEnabled !== null) return _isDecorationsEnabled;
   try {
     if (typeof localStorage !== 'undefined') {
@@ -232,11 +243,8 @@ export function isArenaDecorationsEnabled() {
     }
   } catch (_) {}
 
-  const cfgEnabled = (typeof CONFIG !== 'undefined' && CONFIG.arenaDecorations?.enabled !== undefined)
-    ? Boolean(CONFIG.arenaDecorations.enabled)
-    : true;
-  _isDecorationsEnabled = cfgEnabled;
-  return _isDecorationsEnabled;
+  // For non-Halloween arena themes, default to clean (no decorations)
+  return false;
 }
 
 /**
@@ -267,6 +275,14 @@ export function toggleArenaDecorations() {
  * @returns {string}
  */
 export function getArenaDecorationTheme() {
+  const activeTheme = (typeof getSelectedArenaTheme === 'function')
+    ? getSelectedArenaTheme()
+    : ((typeof state !== 'undefined' && state.selectedArenaTheme) || 'classic_clean');
+
+  if (activeTheme === 'halloween') {
+    return 'halloween';
+  }
+
   if (_currentThemeId !== null) return _currentThemeId;
   try {
     if (typeof localStorage !== 'undefined') {
@@ -278,11 +294,7 @@ export function getArenaDecorationTheme() {
     }
   } catch (_) {}
 
-  const cfgTheme = (typeof CONFIG !== 'undefined' && CONFIG.arenaDecorations?.theme)
-    ? CONFIG.arenaDecorations.theme
-    : 'halloween';
-  _currentThemeId = cfgTheme;
-  return _currentThemeId;
+  return 'none';
 }
 
 /**

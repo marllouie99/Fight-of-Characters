@@ -12,6 +12,8 @@ import { ensureComboTrackers, getComboConfig, tickComboTrackers } from '../syste
 import { getBossConfig } from '../configs/bosses/bossConfigRegistry.js';
 import { getFighterGrade, getGradeMeta } from '../configs/gradeConfig.js';
 import { drawWingedGradeLetter, getZeusGradeCardTheme } from './ui/CollectorCardRenderer.js';
+import { resolveActiveThemeId, getArenaTopWallBlockThickness } from '../systems/arenaThemeSystem.js';
+import { isBlueLockFighter, getBlueLockEgoBuffs, BLUE_LOCK_EGO_REGISTRY } from '../systems/soccerBallSystem.js';
 
 export { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking, updateSideHudCameraTracking };
 
@@ -412,9 +414,15 @@ export function drawHUD() {
     topHudOpacity = 0;
   }
 
+  const activeFloor = (typeof resolveActiveThemeId === 'function')
+    ? resolveActiveThemeId()
+    : (state.selectedArenaTheme || state.selectedArenaFloor || 'classic_clean');
+  const isBombermanTheme = activeFloor === 'bomberman_normal';
+
   if (topContainer) {
     if (topContainer.classList && typeof topContainer.classList.toggle === 'function') {
       topContainer.classList.toggle('hud-top-1v2', Boolean(isRegular1v2));
+      topContainer.classList.toggle('hud-top-bomberman', Boolean(isBombermanTheme));
     }
     if ((isBossBattleMode || isDuelTopHud) && topHudOpacity > 0 && !CONFIG.hudHideAll && !CONFIG.hudHideHealthBars) {
       topContainer.style.display = 'flex';
@@ -451,6 +459,10 @@ export function drawHUD() {
     containerBottom.classList.toggle('tactical-hud', isTactical);
     containerBottom.classList.toggle('classic-hud', isClassicHudLayout);
     containerBottom.classList.toggle('arcade-hud', !isClassicHudLayout);
+    containerBottom.classList.toggle('hud-bottom-bomberman', isBombermanTheme);
+    if (bottomContainer && bottomContainer.classList && typeof bottomContainer.classList.toggle === 'function') {
+      bottomContainer.classList.toggle('hud-bottom-bomberman', isBombermanTheme);
+    }
     const isCameraTracking = (!state.camera || state.camera.mode === 'dynamic');
     if (isSideHud1v1 || (isHorizontal && isDuelTopHud)) {
       containerBottom.style.visibility = 'hidden';
@@ -1523,7 +1535,7 @@ export function clearHealthHud(force = false) {
     _cachedTopContainer.style.display = 'none';
     _cachedTopContainer.style.visibility = 'hidden';
     if (_cachedTopContainer.classList && typeof _cachedTopContainer.classList.remove === 'function') {
-      _cachedTopContainer.classList.remove('hud-top-1v2');
+      _cachedTopContainer.classList.remove('hud-top-1v2', 'hud-top-bomberman');
     }
   }
   if (_cachedBottomContainer) {
@@ -2329,6 +2341,109 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
   `;
 }
 
+/**
+ * Generates dynamic HUD stat lines for Blue Lock characters.
+ * Accurately reflects baseline stats and updates immediately when gaining buffs
+ * (EGO Awakening, Flow State, Cooldown Recovery, Sprint Velocity, etc.).
+ * 
+ * @param {Object} f - Blue Lock fighter entity
+ * @returns {string[]} Array of formatted HTML stat strings
+ */
+export function getBlueLockFighterStatsInfo(f) {
+  const info = [];
+  if (!f) return info;
+
+  const charId = (f.characterId || f.type || '').toLowerCase();
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG[charId]) ? CONFIG[charId] : {};
+  const reg = BLUE_LOCK_EGO_REGISTRY[charId];
+  const themeColor = f.color || cfg.themeColor || reg?.themeColor || '#00F0FF';
+  const egoBuffs = getBlueLockEgoBuffs(f);
+  const isEgo = Boolean(f.isEgoActive && egoBuffs);
+  const isFlow = Boolean(f.isFlowStateActive);
+
+  // 1. Kick Strike Damage (DMG) — dynamic update when Ego damageMultiplier is active
+  const baseDmg = cfg.damage || cfg.egoShotDamage || f.damage || 22;
+  const dmgMult = (isEgo && typeof egoBuffs.damageMultiplier === 'number') ? egoBuffs.damageMultiplier : 1.0;
+  const totalDmg = Math.round(baseDmg * dmgMult);
+  const boostDmg = totalDmg - baseDmg;
+  if (boostDmg > 0) {
+    const bonusPct = Math.round((dmgMult - 1.0) * 100);
+    info.push(`<b>DMG:</b> ${baseDmg} + ${boostDmg} <span style="color: ${themeColor}; font-size: 10px;">▲ (+${bonusPct}% EGO)</span>`);
+  } else {
+    info.push(`<b>DMG:</b> ${baseDmg}`);
+  }
+
+  // 2. Sprint Mobility (SPD) — dynamic update when Ego speedMultiplier is active (e.g. Chigiri Panther Mach Pace)
+  const modeMult = (typeof state !== 'undefined' && state.mode && typeof MODE_SPEED_MULTIPLIER !== 'undefined' && MODE_SPEED_MULTIPLIER[state.mode]) || 1;
+  const baseSpd = (f.baseSpeed || cfg.speed || 5.2) * modeMult;
+  const spdMult = (isEgo && typeof egoBuffs.speedMultiplier === 'number') ? egoBuffs.speedMultiplier : 1.0;
+  const totalSpd = baseSpd * spdMult;
+  const spdDiff = totalSpd - baseSpd;
+  if (spdDiff > 0.05) {
+    const bonusPct = Math.round((spdMult - 1.0) * 100);
+    info.push(`<b>SPD:</b> ${baseSpd.toFixed(1)} + ${spdDiff.toFixed(1)} <span style="color: ${themeColor}; font-size: 10px;">▲ (+${bonusPct}% EGO)</span>`);
+  } else {
+    info.push(`<b>SPD:</b> ${baseSpd.toFixed(1)}`);
+  }
+
+  // 3. Kinetic Kick Speed (KICK SPD) — dynamic update when Flow State (1.5x) or Ego (1.2x - 1.5x) is active
+  const baseKickSpd = cfg.egoShotSpeed || cfg.kickSpeed || 15.5;
+  let kickMult = 1.0;
+  if (isFlow) kickMult *= (cfg.flowShotSpeedMult || 1.50);
+  if (isEgo && typeof egoBuffs.kickSpeedMultiplier === 'number') kickMult *= egoBuffs.kickSpeedMultiplier;
+  const totalKickSpd = parseFloat((baseKickSpd * kickMult).toFixed(1));
+  const kickDiff = parseFloat((totalKickSpd - baseKickSpd).toFixed(1));
+  if (kickDiff > 0.05) {
+    const tag = (isFlow && isEgo && egoBuffs.kickSpeedMultiplier) ? 'FLOW+EGO' : (isFlow ? 'FLOW' : 'EGO');
+    info.push(`<b>KICK SPD:</b> ${baseKickSpd.toFixed(1)} + ${kickDiff.toFixed(1)} <span style="color: ${themeColor}; font-size: 10px;">▲ (${tag})</span>`);
+  } else {
+    info.push(`<b>KICK SPD:</b> ${baseKickSpd.toFixed(1)}`);
+  }
+
+  // 4. Lore Weapon Buffs & Critical / Evasion / Defense / CDR Stats
+  if (isFlow) {
+    info.push(`<b>Crit Rate:</b> 100% <span style="color: #00F0FF; font-size: 10px; font-weight: bold;">(FLOW 1.85x) ▲</span>`);
+  } else if (isEgo && egoBuffs.guaranteedCrit) {
+    info.push(`<b>Crit Rate:</b> 100% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">(EGO CRIT) ▲</span>`);
+  }
+
+  if (isEgo && typeof egoBuffs.dodgeChance === 'number' && egoBuffs.dodgeChance > 0) {
+    info.push(`<b>EVADE:</b> ${Math.round(egoBuffs.dodgeChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  }
+  if (isEgo && typeof egoBuffs.defenseMultiplier === 'number' && egoBuffs.defenseMultiplier < 1.0) {
+    const defBoost = Math.round((1 - egoBuffs.defenseMultiplier) * 100);
+    info.push(`<b>DEF:</b> +${defBoost}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  }
+  if (isEgo && typeof egoBuffs.cooldownRate === 'number' && egoBuffs.cooldownRate > 1.0) {
+    const cdrBoost = Math.round((egoBuffs.cooldownRate - 1.0) * 100);
+    info.push(`<b>CDR:</b> +${cdrBoost}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  }
+  if (isEgo && typeof egoBuffs.curvedShotRate === 'number') {
+    info.push(`<b>TRIVELA:</b> ${egoBuffs.curvedShotRate.toFixed(1)}x <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  }
+  if (isEgo && typeof egoBuffs.reboundBounceChance === 'number') {
+    info.push(`<b>PASSBACK:</b> ${Math.round(egoBuffs.reboundBounceChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
+  }
+
+  // If no dynamic buff was pushed, display base kick accuracy
+  if (!isFlow && (!isEgo || (!egoBuffs.guaranteedCrit && !egoBuffs.dodgeChance && !egoBuffs.defenseMultiplier && !egoBuffs.cooldownRate && !egoBuffs.curvedShotRate && !egoBuffs.reboundBounceChance))) {
+    const accPct = Math.round((f.kickAccuracy !== undefined ? f.kickAccuracy : (cfg.kickAccuracy ?? 1.0)) * 100);
+    info.push(`<b>ACCURACY:</b> ${accPct}%`);
+  }
+
+  // 5. Active EGO Title / Duration Indicator when Awakened (or Flow State indicator)
+  if (isEgo) {
+    const egoSec = Math.max(1, Math.ceil((f.egoDurationTimer || 0) / 60));
+    const egoTitle = f.egoTitle || reg?.title || 'AWAKENED';
+    info.push(`<b>EGO:</b> <span style="color: ${themeColor}; font-weight: bold;">${egoTitle.toUpperCase()}</span> <span style="color: ${themeColor}; font-size: 10px;">(${egoSec}S) ▲</span>`);
+  } else if (isFlow && (f.flowStateTimer || 0) > 0) {
+    const flowSec = Math.max(1, Math.ceil((f.flowStateTimer || 0) / 60));
+    info.push(`<b>STATE:</b> <span style="color: #00F0FF; font-weight: bold;">FLOW STATE</span> <span style="color: #00F0FF; font-size: 10px;">(${flowSec}S) ▲</span>`);
+  }
+
+  return info;
+}
+
 function updateHealthHud() {
   if (!_cachedContainerBottom) _cachedContainerBottom = document.getElementById('healthHud');
   if (!_cachedContainerLeft) _cachedContainerLeft = document.getElementById('healthHudLeft');
@@ -2472,6 +2587,10 @@ function updateHealthHud() {
   // getSkillDataForFighter and shouldShowFighterSkill are imported from ./ui/hudSkillProviders.js
 
   const getAdditionalInfoForFighter = (f) => {
+    if (isBlueLockFighter(f)) {
+      return getBlueLockFighterStatsInfo(f);
+    }
+
     const info = [];
     const baseDmg = parseFloat(Math.max(0, Number(f.damage) || 0).toFixed(1));
     const fType = (f.characterId || f.type || (f._def && f._def.type) || '').toLowerCase();
@@ -3706,7 +3825,7 @@ function updateHealthHud() {
     let info = getAdditionalInfoForFighter(f);
     const isDummy = f.characterId === 'dummy' || f.type === 'dummy';
     if (CONFIG.hudShowFighterDescription && !isDummy) {
-      info = info.filter(line => line.includes('<b>DMG:</b>') || line.includes('<b>Tick DMG:</b>') || line.includes('<b>Stun Chance:</b>') || line.includes('<b>Illusions:</b>') || line.includes('<b>EVADE:</b>') || line.includes('<b>Evade:</b>') || line.includes('<b>Evade Chance:</b>') || line.includes('<b>DODGE:</b>') || line.includes('<b>Dodge:</b>') || line.includes('<b>Dodge Chance:</b>') || line.includes('<b>DEF:</b>') || line.includes('<b>ATK RANGE:</b>') || line.includes('<b>CC:</b>') || line.includes('<b>Parry:</b>') || line.includes('<b>PARRY:</b>') || line.includes('<b>ATTK SPD:</b>') || line.includes('<b>ATK SPD:</b>') || line.includes('<b>SPD:</b>') || line.includes('<b>Speed:</b>') || line.includes('<b>Regen:</b>') || line.includes('<b>$UN:</b>') || line.includes('<b>SUN:</b>') || line.includes('<b>Plants:</b>') || line.includes('<b>Troops:</b>') || line.includes('<b>Crit') || line.includes('<b>Maho'));
+      info = info.filter(line => line.includes('<b>DMG:</b>') || line.includes('<b>Tick DMG:</b>') || line.includes('<b>Stun Chance:</b>') || line.includes('<b>Illusions:</b>') || line.includes('<b>EVADE:</b>') || line.includes('<b>Evade:</b>') || line.includes('<b>Evade Chance:</b>') || line.includes('<b>DODGE:</b>') || line.includes('<b>Dodge:</b>') || line.includes('<b>Dodge Chance:</b>') || line.includes('<b>DEF:</b>') || line.includes('<b>ATK RANGE:</b>') || line.includes('<b>CC:</b>') || line.includes('<b>Parry:</b>') || line.includes('<b>PARRY:</b>') || line.includes('<b>ATTK SPD:</b>') || line.includes('<b>ATK SPD:</b>') || line.includes('<b>SPD:</b>') || line.includes('<b>Speed:</b>') || line.includes('<b>Regen:</b>') || line.includes('<b>$UN:</b>') || line.includes('<b>SUN:</b>') || line.includes('<b>Plants:</b>') || line.includes('<b>Troops:</b>') || line.includes('<b>Crit') || line.includes('<b>Maho') || line.includes('<b>KICK SPD:</b>') || line.includes('<b>ACCURACY:</b>') || line.includes('<b>EGO:</b>') || line.includes('<b>CDR:</b>') || line.includes('<b>TRIVELA:</b>') || line.includes('<b>PASSBACK:</b>') || line.includes('<b>STATE:</b>'));
     }
     if (typeof filterFn === 'function') {
       info = info.filter(filterFn);
@@ -3769,8 +3888,8 @@ function updateHealthHud() {
         }
         const upperLabel = cleanLabel.toUpperCase();
         const upperVal = cleanVal.toUpperCase();
-        const isCyanAccent = upperLabel.includes('INFINITY') || upperVal.includes('ACTIVE') || upperLabel.includes('BARRIER') || upperLabel.includes('SHIELD');
-        const isGoldAccent = upperLabel.includes('CRIT') || upperLabel.includes('DMG') || upperLabel.includes('ATK') || upperLabel.includes('KILL') || upperLabel.includes('MAHO');
+        const isCyanAccent = upperLabel.includes('INFINITY') || upperVal.includes('ACTIVE') || upperLabel.includes('BARRIER') || upperLabel.includes('SHIELD') || upperLabel.includes('EGO') || upperLabel.includes('FLOW') || upperVal.includes('FLOW');
+        const isGoldAccent = upperLabel.includes('CRIT') || upperLabel.includes('DMG') || upperLabel.includes('ATK') || upperLabel.includes('KILL') || upperLabel.includes('MAHO') || upperLabel.includes('KICK');
         const accentClass = isCyanAccent ? ' hud-chip-cyan' : (isGoldAccent ? ' hud-chip-gold' : '');
         return `<div class="${spanClass}${accentClass}"><span class="hud-stat-label">${cleanLabel}</span> <span class="hud-stat-val">${cleanVal}</span></div>`;
       }
@@ -5768,6 +5887,9 @@ function updateHealthHud() {
 }
 
 export function getAdditionalInfoForFighter(f) {
+  if (isBlueLockFighter(f)) {
+    return getBlueLockFighterStatsInfo(f);
+  }
   if (typeof updateHealthHud.getAdditionalInfoForFighter === 'function') {
     return updateHealthHud.getAdditionalInfoForFighter(f);
   }

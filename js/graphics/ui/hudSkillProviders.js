@@ -3574,30 +3574,32 @@ export const HUD_SKILL_PROVIDERS = {
       });
     }
 
-    // Skill 2: Direct Volley (Ultimate Finisher)
-    if (isSkillEnabled(cfg.enableDirectVolley, true)) {
-      const cdMax = cfg.directVolleyCooldown || 1080;
-      const cdTimer = f.directVolleyCooldownTimer || 0;
+    // Skill 2: "STRIKER!" (Universal Blue Lock Ultimate Finisher)
+    const enableStriker = isSkillEnabled(cfg.enableStriker, isSkillEnabled(cfg.enableDirectVolley, true));
+    if (enableStriker) {
+      const cdMax = cfg.strikerCooldown || cfg.directVolleyCooldown || 1080;
+      const cdTimer = f.strikerCooldownTimer ?? f.directVolleyCooldownTimer ?? 0;
       let pct = 100;
       let ready = false;
-      let label = 'DIRECT VOLLEY';
+      let label = 'STRIKER!';
 
-      if (f.isDirectVolleyWindingUp) {
+      if (f.isDirectVolleyWindingUp || f.isStrikerWindingUp) {
         pct = 100;
         ready = true;
-        label = 'DIRECT VOLLEY';
+        label = 'STRIKER!';
       } else if (cdTimer <= 0) {
         pct = 100;
         ready = true;
-        label = 'DIRECT VOLLEY';
+        label = 'STRIKER!';
       } else {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `DIRECT VOLLEY (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `STRIKER! (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({
-        id: 'direct_volley',
+        id: 'striker',
+        aliasId: 'direct_volley',
         pct,
         ready,
         color: themeColor,
@@ -3605,6 +3607,139 @@ export const HUD_SKILL_PROVIDERS = {
         isSignature: true,
         signature: true,
         isUltimate: true
+      });
+    }
+
+    // 3. Universal Blue Lock Trait: EGO Meter / Potential Awakening
+    if (isSkillEnabled(cfg.enableEgo, true)) {
+      const maxEgo = f.maxEgoMeter || cfg.maxEgoMeter || 100;
+      const isAwakened = Boolean(f.isEgoActive);
+      let pct = 0;
+      let label = 'EGO';
+
+      if (isAwakened) {
+        const maxDur = f.egoMaxDuration || cfg.egoDuration || 360;
+        const durLeft = f.egoDurationTimer || 0;
+        pct = Math.max(0, Math.min(100, (durLeft / maxDur) * 100));
+        label = `EGO AWAKENED (${(durLeft / 60).toFixed(1)}S)`;
+      } else {
+        pct = Math.max(0, Math.min(100, ((f.egoMeter || 0) / maxEgo) * 100));
+        label = pct > 0 ? `EGO (${Math.round(pct)}%)` : 'EGO';
+      }
+
+      skills.push({
+        id: 'ego',
+        pct,
+        ready: isAwakened,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true
+      });
+    }
+
+    return skills;
+  },
+  warden(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.warden) ? CONFIG.warden : {};
+    const skills = [];
+    const themeColor = f.color || cfg.themeColor || '#0D9488';
+
+    // 1. Passive: Sculk Anger / Echolocation Meter
+    if (isSkillEnabled(cfg.enableEcholocation, true)) {
+      const anger = f.anger || 0;
+      const maxAnger = f.maxAnger || cfg.maxAnger || 100;
+      const isEnraged = Boolean(f.isEnraged || anger >= maxAnger);
+      const pct = Math.max(0, Math.min(100, (anger / maxAnger) * 100));
+
+      let label = `ANGER (${Math.round(pct)}%)`;
+      if (isEnraged) {
+        const secLeft = Math.ceil((f.enragedTimer || 0) / 60);
+        label = `ENRAGED (${secLeft}S)`;
+      }
+
+      skills.push({
+        id: 'anger',
+        pct,
+        ready: isEnraged,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 2. Skill 1: Darkness Pulse
+    if (isSkillEnabled(cfg.enableDarknessPulse, true)) {
+      const cdTimer = f.darknessCooldownTimer || 0;
+      const cdMax = cfg.darknessCooldown || 480;
+      const ready = cdTimer <= 0;
+      const pct = ready ? 100 : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = ready ? 'DARKNESS PULSE' : `DARKNESS (${(cdTimer / 60).toFixed(1)}S)`;
+
+      skills.push({
+        id: 'darkness',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 3. Skill 2: Sculk Sniff
+    if (isSkillEnabled(cfg.enableSculkSniff, true)) {
+      const cdTimer = f.sniffCooldownTimer || 0;
+      const cdMax = cfg.sniffCooldown || 380;
+      const ready = cdTimer <= 0;
+      const pct = ready ? 100 : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = ready ? 'SCULK SNIFF' : `SCULK SNIFF (${(cdTimer / 60).toFixed(1)}S)`;
+
+      skills.push({
+        id: 'sniff',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 4. Ultimate: Sculk Sonic Boom (Rule 18 Signature & Ultimate)
+    if (isSkillEnabled(cfg.enableSonicBoom, true)) {
+      const isCharging = Boolean(f.isSonicBoomCharging);
+      const isFiring = Boolean(f.isSonicBoomFiring);
+      const cdTimer = f.sonicBoomCooldownTimer || 0;
+      const cdMax = cfg.sonicBoomCooldown || 720;
+
+      let pct = 100;
+      let ready = false;
+      let label = 'SONIC BOOM';
+
+      if (isFiring) {
+        pct = 100;
+        ready = true;
+        label = 'SONIC BOOM!';
+      } else if (isCharging) {
+        const p = 1 - ((f.sonicBoomChargeTimer || 0) / (cfg.sonicBoomChargeFrames || 45));
+        pct = Math.max(0, Math.min(100, p * 100));
+        ready = true;
+        label = `CHARGING (${Math.round(pct)}%)`;
+      } else if (cdTimer > 0) {
+        pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+        ready = false;
+        label = `SONIC BOOM (${(cdTimer / 60).toFixed(1)}S)`;
+      } else {
+        pct = 100;
+        ready = true;
+        label = 'SONIC BOOM';
+      }
+
+      skills.push({
+        id: 'sonic_boom',
+        pct,
+        ready,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
       });
     }
 
@@ -3744,8 +3879,14 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     eyeofcthulhu: ['servants', 'servants_of_cthulhu', 'SERVANTS OF CTHULHU', 'SERVANTS', 'SERVANT OF CTHULHU', 'SERVANT', 'chain_dash', 'BERSERK RAM'],
     goku: ['kamehameha', 'super_kamehameha', 'SUPER KAMEHAMEHA', 'KAMEHAMEHA', 'super_saiyan', 'SUPER SAIYAN'],
     vegeta: ['final_flash', 'finalflash', 'FINAL FLASH', 'super_saiyan', 'SUPER SAIYAN'],
-    isagi: ['direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION']
+    isagi: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION', 'ego', 'EGO'],
+    warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic']
   };
+
+  // Universal Blue Lock "STRIKER!" & "EGO" signature exemption
+  if (sId === 'striker' || sLabel.includes('STRIKER') || sId === 'ego' || sLabel.includes('EGO')) {
+    return true;
+  }
 
   const keys = signatureMap[fId];
   if (keys) {

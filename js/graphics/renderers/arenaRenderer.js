@@ -5,7 +5,7 @@ import { applyCameraToCtx, worldToScreen } from '../../systems/cameraSystem.js';
 import { updateSaitamaWallShatters, drawSaitamaWallShatters } from '../particles/saitamaWallShatter.js';
 import { drawTopHudNameShatters } from '../particles/hudShatterEffect.js';
 import { isCrazyDavePresent, renderCrazyDaveGrassFloor, loadGrassTileSpriteSheet, getGrassTileSpriteSheet } from './grassFloorRenderer.js';
-import { renderActiveArenaFloor, resolveActiveFloorId } from '../../systems/arenaTileSystem.js';
+import { renderActiveArenaTheme, resolveActiveThemeId, renderActiveArenaFloor, resolveActiveFloorId, _drawBombermanBevelBlock, getArenaTopWallBlockThickness } from '../../systems/arenaThemeSystem.js';
 import { drawHorizontalMapFeatures } from '../../systems/horizontalMapSystem.js';
 import { drawHorizontalFighterDolls } from './horizontalDollRenderer.js';
 import { drawCenterPlusObstacle } from '../../systems/arenaObstacleSystem.js';
@@ -782,6 +782,99 @@ function _renderClassicArenaBorder(oc, padding, arena, isDark, activeFloor = 'cl
 }
 
 /**
+ * Renders the classic Super Bomberman "Normal Zone" 3D bevelled grey block perimeter wall.
+ * Pixel-accurate homage to the iconic 16-bit SNES arena border.
+ */
+function _renderBombermanArenaBorder(oc, padding, arena, isDark) {
+  const shape = arena.shape || 'rect';
+  const x = padding;
+  const y = padding;
+  const w = arena.width;
+  const h = arena.height;
+
+  oc.save();
+  oc.imageSmoothingEnabled = false;
+
+  if (shape === 'circle') {
+    const cx = padding + w / 2;
+    const cy = padding + h / 2;
+    const ar = (arena.radius !== undefined ? arena.radius : (w / 2));
+    const blockThick = 24.0;
+    const circumference = Math.PI * 2 * (ar + blockThick / 2);
+    const numBlocks = Math.max(28, Math.round(circumference / 24));
+    const angleStep = (Math.PI * 2) / numBlocks;
+
+    for (let i = 0; i < numBlocks; i++) {
+      const angle = i * angleStep;
+      const midR = ar + blockThick / 2;
+      const bx = cx + Math.cos(angle) * midR;
+      const by = cy + Math.sin(angle) * midR;
+
+      oc.save();
+      oc.translate(bx, by);
+      oc.rotate(angle + Math.PI / 2);
+      _drawBombermanBevelBlock(oc, -11, -blockThick / 2, 22, blockThick, isDark);
+      oc.restore();
+    }
+
+    // Inner contact ring
+    oc.strokeStyle = '#181818';
+    oc.lineWidth = 2.0;
+    oc.beginPath();
+    oc.arc(cx, cy, ar, 0, Math.PI * 2);
+    oc.stroke();
+  } else {
+    // Rectangular Arena (Standard 450x450 or widescreen)
+    const blockThick = 25.0; // Thickness extending outward from arena wall
+    const numCols = Math.max(8, Math.round(w / blockThick));
+    const numRows = Math.max(8, Math.round(h / blockThick));
+    const cellW = w / numCols;
+    const cellH = h / numRows;
+
+    // 1. Top Wall Blocks (from y - blockThick to y)
+    for (let c = 0; c < numCols; c++) {
+      const bx = x + c * cellW;
+      const by = y - blockThick;
+      _drawBombermanBevelBlock(oc, bx, by, cellW, blockThick, isDark);
+    }
+
+    // 2. Bottom Wall Blocks (from y + h to y + h + blockThick)
+    for (let c = 0; c < numCols; c++) {
+      const bx = x + c * cellW;
+      const by = y + h;
+      _drawBombermanBevelBlock(oc, bx, by, cellW, blockThick, isDark);
+    }
+
+    // 3. Left Wall Blocks (from x - blockThick to x)
+    for (let r = 0; r < numRows; r++) {
+      const bx = x - blockThick;
+      const by = y + r * cellH;
+      _drawBombermanBevelBlock(oc, bx, by, blockThick, cellH, isDark);
+    }
+
+    // 4. Right Wall Blocks (from x + w to x + w + blockThick)
+    for (let r = 0; r < numRows; r++) {
+      const bx = x + w;
+      const by = y + r * cellH;
+      _drawBombermanBevelBlock(oc, bx, by, blockThick, cellH, isDark);
+    }
+
+    // 5. Four Corner Blocks (Outer corners)
+    _drawBombermanBevelBlock(oc, x - blockThick, y - blockThick, blockThick, blockThick, isDark); // Top-Left
+    _drawBombermanBevelBlock(oc, x + w, y - blockThick, blockThick, blockThick, isDark);          // Top-Right
+    _drawBombermanBevelBlock(oc, x - blockThick, y + h, blockThick, blockThick, isDark);          // Bottom-Left
+    _drawBombermanBevelBlock(oc, x + w, y + h, blockThick, blockThick, isDark);                  // Bottom-Right
+
+    // 6. Crisp Inner Contact Boundary Line (where arena turf meets wall)
+    oc.strokeStyle = '#181818';
+    oc.lineWidth = 2.0;
+    oc.strokeRect(x, y, w, h);
+  }
+
+  oc.restore();
+}
+
+/**
  * Renders the high-octane comic arena border, turnbuckle cleats, center obstacles,
  * wall cracks, and Saitama wall breaches.
  * Can be called during background setup and/or on the foreground layer to guarantee
@@ -800,7 +893,7 @@ export function drawArenaBorder(ctx = state.ctx, alreadyInCameraSpace = false) {
 
   const shape = arena.shape || 'rect';
   const isClassic = typeof CONFIG !== 'undefined' && CONFIG.hudLayoutStyle === 'classic';
-  const activeFloor = (typeof resolveActiveFloorId === 'function') ? resolveActiveFloorId() : (state.selectedArenaFloor || 'classic_clean');
+  const activeFloor = (typeof resolveActiveThemeId === 'function') ? resolveActiveThemeId() : (state.selectedArenaTheme || state.selectedArenaFloor || 'classic_clean');
   const borderKey = `${arena.width}_${arena.height}_${shape}_${isDark ? 'dark' : 'light'}_${isClassic ? 'classic' : 'comic'}_${activeFloor}_v3`;
   if (!state._arenaBorderCanvas || state._arenaBorderCanvas._key !== borderKey) {
     const padding = 60;
@@ -808,7 +901,9 @@ export function drawArenaBorder(ctx = state.ctx, alreadyInCameraSpace = false) {
     offCanvas.width = arena.width + padding * 2;
     offCanvas.height = arena.height + padding * 2;
     const oc = offCanvas.getContext('2d');
-    if (isClassic) {
+    if (activeFloor === 'bomberman_normal') {
+      _renderBombermanArenaBorder(oc, padding, arena, isDark);
+    } else if (isClassic) {
       _renderClassicArenaBorder(oc, padding, arena, isDark, activeFloor);
     } else {
       _renderComicArenaBorder(oc, padding, arena, isDark);
@@ -1052,7 +1147,7 @@ export function drawArena() {
       ctx.save();
       applyCameraToCtx(ctx);
       const fBleed = 0;
-      renderActiveArenaFloor(ctx, arena, isDark, fBleed);
+      renderActiveArenaTheme(ctx, arena, isDark, fBleed);
       const isGrandArena = (arena.width > 1000) || (state.mode === '3v3v3v3' || state.mode === '4v4' || state.mode === '2v2v2v2' || state.mode === 'Battle Royale 8');
       if (state.viewOrientation === 'horizontal' && isGrandArena) {
         drawHorizontalMapFeatures(ctx, arena);
@@ -1663,13 +1758,16 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   const isSideHudHorizontal = isHorizontal && !isGrandBattleMode;
 
   const drawHorizontalTopWallHud = (leftFighters, rightFighters, leftData, rightData, renderDolls = true) => {
-    const sideFontSize = 34;
+    const isTwoFighterMatch = Boolean(leftFighters && leftFighters.length === 1 && rightFighters && rightFighters.length === 1);
+    const isTopHud1v1 = Boolean(isSideHudHorizontal && !isTeamMatch && isTwoFighterMatch);
+
+    const sideFontSize = isTopHud1v1 ? 15 : 34;
     const customSideFont = `700 ${sideFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
     const stackedSideFont = `700 20px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
-    const maxSideW = 176;
+    const maxSideW = isTopHud1v1 ? 300 : 176;
 
     const drawSideColumnNames = (dataArr, x, baseY, align) => {
-      // In 1v1 mode (single fighter per side), draw the large top wall flank name above the side card.
+      // In 1v1 mode (single fighter per side), draw the top wall flank name above the side card.
       // In multi-fighter modes (e.g. 2v2 or FFA), names are placed directly on each fighter's
       // respective healthbar/skillbar block in the DOM instead of stacking on canvas.
       if (!dataArr || dataArr.length !== 1) return;
@@ -1696,11 +1794,11 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       ctx.restore();
     };
 
-    const nameY = arena.y;
-    // Player / Team 1 on Left Flank (aligned with top arena wall: left 18px, top y: arena.y)
+    const nameY = isTopHud1v1 ? 4 : arena.y;
+    // Player / Team 1 on Left Flank (placed in top header space in 1v1 mode: left 18px, top y: 4)
     drawSideColumnNames(leftData, 18, nameY, 'left');
 
-    // Player / Team 2 on Right Flank (aligned with top arena wall: right 18px / x: 960 - 18, top y: arena.y, right-aligned)
+    // Player / Team 2 on Right Flank (placed in top header space in 1v1 mode: right 18px / x: 960 - 18, right-aligned)
     drawSideColumnNames(rightData, 960 - 18, nameY, 'right');
 
     // ── Center Top-Wall Round Banner & Win Bullets: [BULLETS] ── [ROUND BANNER] ── [BULLETS] ──
@@ -1719,21 +1817,23 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       }
 
       ctx.save();
-      const bannerFont = '700 11px "Press Start 2P", "Silkscreen", monospace';
+      const bannerFont = isTopHud1v1
+        ? '700 9.5px "Press Start 2P", "Silkscreen", monospace'
+        : '700 11px "Press Start 2P", "Silkscreen", monospace';
       ctx.font = bannerFont;
       if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
       const textMetrics = ctx.measureText(roundText);
       const textW = textMetrics.width;
 
-      const pillPadX = 14;
-      const pillW = Math.max(92, Math.round(textW + pillPadX * 2));
-      const pillH = 22;
-      const pillRadius = 6;
+      const pillPadX = isTopHud1v1 ? 10 : 14;
+      const pillW = Math.max(isTopHud1v1 ? 80 : 92, Math.round(textW + pillPadX * 2));
+      const pillH = isTopHud1v1 ? 17 : 22;
+      const pillRadius = isTopHud1v1 ? 4 : 6;
+      const roundCenterY = isTopHud1v1 ? 12 : arena.y;
       const pillX = Math.round(centerX - pillW / 2);
-      const pillY = Math.round(arena.y - pillH / 2);
+      const pillY = Math.round(roundCenterY - pillH / 2);
 
       // ── Top-Wall Win Bullets ──
-      const isTwoFighterMatch = (leftFighters.length === 1 && rightFighters.length === 1);
       if (isTwoFighterMatch) {
         const fighter0 = leftFighters[0];
         const fighter1 = rightFighters[0];
@@ -1742,23 +1842,23 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
         const p1Wins = (p1Index >= 0 && state.scores ? state.scores[p1Index] : 0) || 0;
         const p2Wins = (p2Index >= 0 && state.scores ? state.scores[p2Index] : 0) || 0;
         const maxBullets = 2;
-        const bulletR = 5.5;
-        const bulletGap = 16;
-        const bulletOffsetFromPill = 20;
+        const bulletR = isTopHud1v1 ? 4.5 : 5.5;
+        const bulletGap = isTopHud1v1 ? 13 : 16;
+        const bulletOffsetFromPill = isTopHud1v1 ? 15 : 20;
 
         const drawTopWallBullet = (bx, filled, fighterColor) => {
           ctx.beginPath();
-          ctx.arc(bx, arena.y, bulletR, 0, Math.PI * 2);
+          ctx.arc(bx, roundCenterY, bulletR, 0, Math.PI * 2);
           if (filled) {
             ctx.fillStyle = fighterColor || '#FFD700';
             ctx.strokeStyle = isDark ? '#FFFFFF' : '#000000';
-            ctx.lineWidth = 1.8;
+            ctx.lineWidth = isTopHud1v1 ? 1.5 : 1.8;
             ctx.fill();
             ctx.stroke();
           } else {
             ctx.fillStyle = isDark ? '#141824' : '#FFFAF0';
             ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.45)' : '#000000';
-            ctx.lineWidth = 1.8;
+            ctx.lineWidth = isTopHud1v1 ? 1.5 : 1.8;
             ctx.fill();
             ctx.stroke();
           }
@@ -1837,7 +1937,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       ctx.fillStyle = isDark ? '#FFD700' : '#000000';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(roundText, centerX, arena.y + 0.5);
+      ctx.fillText(roundText, centerX, roundCenterY + 0.5);
       ctx.restore();
     }
 
@@ -1872,6 +1972,11 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   }
 
   // ── Vertical Mode / Non-Side-HUD Centered Names Rendering ──
+  // Automatically adjust vertical anchor when active arena theme features perimeter wall blocks (e.g. Bomberman Normal Zone)
+  const topWallExtra = (typeof getArenaTopWallBlockThickness === 'function')
+    ? getArenaTopWallBlockThickness()
+    : ((activeFloor === 'bomberman_normal') ? 25 : 0);
+
   if (isTeamMatch) {
     const hasStackedTeam = team0.length > 1 || team1.length > 1;
     const nameFontSize = hasStackedTeam ? 44 : 60;
@@ -1904,7 +2009,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
     const maxW = arena.width - 16;
     const scale = totalW > maxW ? maxW / totalW : 1.0;
 
-    const bottomY = arena.y - 12;
+    const bottomY = arena.y - topWallExtra - 12;
     const lineSpacing = hasStackedTeam ? 34 : 0;
     const topY = bottomY - lineSpacing;
     const midY = (topY + bottomY) / 2;
@@ -1976,7 +2081,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       const customFighterFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
       const customVsFont = `700 ${nameFontSize}px "Silkscreen", "Press Start 2P", "Rajdhani", monospace, sans-serif`;
 
-      const bottomY = arena.y - 12;
+      const bottomY = arena.y - topWallExtra - 12;
       const topY = bottomY - 50;
       const vsY = Math.round((topY + bottomY) / 2) - 1;
 
@@ -2039,7 +2144,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       // Multi-fighter FFA fallback: horizontal row joined with "VS"
       const pad = 10;
       const vsText = 'VS';
-      const textY = arena.y - 12;
+      const textY = arena.y - topWallExtra - 12;
 
       let totalW = 0;
       fighterData.forEach((fd, i) => {

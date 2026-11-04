@@ -8,8 +8,7 @@ import { drawCornerBrackets, drawHazardStripes } from './CollectorCardRenderer.j
 import { getFighterPreview } from './FighterPreviewCache.js';
 import { drawWeaponPreview } from './WeaponIndexScreen.js';
 import { drawArenaBgmSelector, isArenaBgmModalOpen, drawArenaBgmModal, openArenaBgmModal, closeArenaBgmModal } from '../../systems/arenaBgmSystem.js';
-import { drawArenaFloorSelector, isArenaFloorModalOpen, drawArenaFloorModal, openArenaFloorModal, closeArenaFloorModal } from '../../systems/arenaTileSystem.js';
-import { drawArenaDecorationSelector } from '../../systems/arenaDecorationSystem.js';
+import { drawArenaThemeSelector, isArenaThemeModalOpen, drawArenaThemeModal, openArenaThemeModal, closeArenaThemeModal } from '../../systems/arenaThemeSystem.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { goToTitle, startGame, startFaceOffScreen } from '../../core/gameFlow.js';
 
@@ -231,18 +230,16 @@ export function drawHorizontalTeamSelectScreen(ctx) {
   ctx.fillText(`[ ${rawModeTitle} // DEPLOYMENT ]`, w / 2, titleY - 1);
   ctx.restore();
 
-  // Sub-Controls Bar (Arena BGM, Arena Floor / Tiles & Arena Decoration)
+  // Sub-Controls Bar (Arena BGM & Arena Theme)
   const tmY = 54;
-  const bgmW = 115;
-  const floorW = 115;
-  const decoW = 115;
-  const gap = 8;
-  const totalCtrlW = bgmW + gap + floorW + gap + decoW;
+  const bgmW = 135;
+  const themeW = 145;
+  const gap = 10;
+  const totalCtrlW = bgmW + gap + themeW;
   const startCtrlX = w / 2 - totalCtrlW / 2;
 
   drawArenaBgmSelector(ctx, startCtrlX, tmY, bgmW, 24);
-  drawArenaFloorSelector(ctx, startCtrlX + bgmW + gap, tmY, floorW, 24);
-  drawArenaDecorationSelector(ctx, startCtrlX + bgmW + gap + floorW + gap, tmY, decoW, 24);
+  drawArenaThemeSelector(ctx, startCtrlX + bgmW + gap, tmY, themeW, 24);
 
   // 4. Layout
   if (isFfa) {
@@ -260,8 +257,8 @@ export function drawHorizontalTeamSelectScreen(ctx) {
   if (isArenaBgmModalOpen()) {
     drawArenaBgmModal(ctx);
   }
-  if (isArenaFloorModalOpen()) {
-    drawArenaFloorModal(ctx);
+  if (isArenaThemeModalOpen()) {
+    drawArenaThemeModal(ctx);
   }
 }
 
@@ -805,7 +802,7 @@ function _drawUnifiedBottomCommandDeck(w, h, primaryLabel) {
  */
 export function handleHorizontalTeamSelectClick(x, y, onStartBattle, onBack) {
   // If any modal is active, delegate entirely to modal / UI framework
-  if (isFighterSelectModalOpen() || isArenaBgmModalOpen() || isArenaFloorModalOpen()) {
+  if (isFighterSelectModalOpen() || isArenaBgmModalOpen() || isArenaThemeModalOpen()) {
     return false;
   }
   return false;

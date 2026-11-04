@@ -500,7 +500,6 @@ export function modUpdateAmbushSequence(fighter, opponent, ownerIndex) {
         audioSystem.playSFX(backthrustSound?.src || CONFIG.toji?.sounds?.backThrust || 'Assets/Sound Effects/Skills/toji-backthrust.mp3', btVol, backthrustSound?.speed || 1.0, 0, btDelay);
       }
       audioSystem.playSFX('attack_swordswing', CONFIG.toji?.soundVolumes?.spearSwing ?? 0.85);
-      audioSystem.playSFX('attack_fleshhit', 0.8);
 
       const hitTargets = fighter.performInvertedSpearStrike(opponent, ownerIndex, true);
       const didHit = Array.isArray(hitTargets) ? (hitTargets.includes(opponent) || hitTargets.length > 0) : Boolean(hitTargets);

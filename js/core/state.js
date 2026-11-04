@@ -394,6 +394,7 @@ export const state = {
 
   // Fighters
   fighters: [],
+  sharedSoccerBall: null, // Single shared soccer ball entity for Blue Lock characters
   p1Index: 0, // Default Red Slot 1
   p2Index: 1, // Default Blue Slot 1
   p3Index: 2, // Red Slot 2

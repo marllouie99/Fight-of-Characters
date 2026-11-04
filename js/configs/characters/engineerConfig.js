@@ -37,7 +37,7 @@ export const engineerConfig = {
   shotgunCooldown: 100,
   shotgunPellets: 8,
   shotgunSpread: 0.45,         // Spread angle in radians (~26°)
-  shotgunDamage: 2.20,         // Damage per pellet
+  shotgunDamage: 5.20,         // Damage per pellet
   shotgunSpeed: 30,            // Initial projectile velocity
   shotgunRange: 300,           // Max distance to trigger shotgun
   shotgunRecoilForce: 3.5,     // Pushback impulse on firing
@@ -82,14 +82,14 @@ export const engineerConfig = {
   // Level 2 Sentry Stats (Dual Gatling Miniguns)
   enableSentryLevel2: true,
   turretLevel2Hp: 280,
-  turretLevel2Damage: 1.3,     // Damage per bullet (twin volley = 3.6)
+  turretLevel2Damage: 1.5,     // Damage per bullet (twin volley = 3.6)
   turretLevel2FireRate: 6,     // Faster fire rate
   turretLevel2Ammo: 20,        // Shots per magazine
 
   // Level 3 Sentry Stats (Dual Heavy Gatlings + Quad Rocket Pod)
   enableSentryLevel3: true,
   turretLevel3Hp: 380,
-  turretLevel3Damage: 1.5,     // Damage per bullet (twin volley = 4.0)
+  turretLevel3Damage: 2.0,     // Damage per bullet (twin volley = 4.0)
   turretLevel3FireRate: 5,     // Supersonic Gatling fire rate
   turretLevel3Ammo: 30,        // High capacity drum
   turretLevel3RocketDamage: 5.0, // Area of effect damage per micro-rocket
@@ -101,7 +101,7 @@ export const engineerConfig = {
   dispenserRadius: 19,         // Physical collision radius
   dispenserBuildTime: 200,     // Construction duration (~1.8s)
   dispenserRange: 260,         // Healing field radius & tether range
-  dispenserHealPerTick: 2,     // Health restored per pulse
+  dispenserHealPerTick: 5,     // Health restored per pulse
   dispenserTickInterval: 10,   // Ticks every 0.5s (~4 HP/s)
   dispenserSpeedBuff: 1.10,    // 10% movement speed boost in zone
   dispenserHealAmount: 30,     // Wrench repair heal amount

@@ -18,18 +18,18 @@ Use this skill when designing or coding character skins, hair silhouettes, headw
    - **NEVER** draw eyes, pupils, sclera, irises, eyelashes, mouths, lips, or nose bridges on fighter skins.
    - Convey identity exclusively through hair silhouettes, headwear/eyewear, iconic scars/stitches, and tailored clothing.
 
-## Phase 2: Vertical Proportion Bands (Toji Reference Standard — Radius `r`)
-- **Primary Reference**: ALWAYS use `js/graphics/fighters/tojiSkin.js` as the baseline blueprint.
-- **`ry < r * 0.28` to `0.32`**: Face & head clean skin tone dome (tan/fair tone `#E8BD9B` / `#FFF0DE`, cheek contour `#D4A373`, lip scars/markings strictly bounded inside, zero baked hair).
-- **`r * 0.28 <= ry < r * 0.64` to `0.68`**: Collar, neck opening, compression shirt / uniform jacket (full body circle width `-r` to `+r`).
-- **`r * 0.64 <= ry < r * 0.78`**: Waistband, belt, dark sash knot with ribbon split / buckle frame.
+## Phase 2: Vertical Proportion Bands (Canonical Reference Trio — Toji, Sukuna & Gojo)
+- **Primary Reference**: ALWAYS reference the Canonical Manga Ink Trio: Toji (`js/graphics/fighters/tojiSkin.js`), Sukuna (`js/graphics/fighters/sukunaSkin.js`), or Gojo (`js/graphics/fighters/gojoSkin.js`) as baseline blueprints.
+- **`ry < r * 0.28` to `0.32` (`ny < 0.30`)**: Face & head clean skin tone dome (fair `#FEDBC0` or tan `#E8BD9B`, cheek contour `#E9B796` / `#D4A373`, forehead highlight `#FFF0E2`, scars/markings strictly bounded inside, zero baked hair, zero drawn mouths/eyes).
+- **`r * 0.28 <= ry < r * 0.64` to `0.68`**: Collar, neck opening, compression shirt / uniform jacket / kimono robe (full body circle width `-r` to `+r`).
+- **`r * 0.64 <= ry < r * 0.78`**: Waistband, belt, dark sash knot with ribbon split, patterned obi, or buckle frame.
 - **`ry >= r * 0.78`**: Lower trousers, hakama pants, skirts with fly seam, pleat creases, and luminance $Y \ge 24$.
 
 ## Phase 3: Local Transform & Hand Layering
 1. **Transform Setup**:
    ```javascript
    ctx.save();
-   ctx.translate(fighter.x, fighter.y);
+   ctx.translate(fighter.x, fighter.y - (fighter.z || 0));
    const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle || 0);
    ctx.rotate(angle);
    if (Math.abs(angle) > Math.PI / 2) {
@@ -37,17 +37,14 @@ Use this skill when designing or coding character skins, hair silhouettes, headw
    }
    ```
 2. **Canonical Default Hand Positioning Standard**:
-   - **Layer 1 (Body)**: Body circle, clothing, hair, and headwear rendered at `(0, 0)` with radius `r`.
-   - **Layer 2 (Front Hands Overlap)**:
-     - **Left Hand**: Symmetrically positioned at lower-left flank `(x: -r * 0.82, y: +r * 0.38)` with radius `r * 0.30`.
-     - **Right Hand**: Symmetrically positioned at lower-right flank `(x: +r * 0.82, y: +r * 0.38)` with radius `r * 0.30`.
-     - Both hands sit on the front layer, overlapping the lower-left and lower-right perimeter boundary.
-   - **Layer 3 (Weapon Anchor)**: Main-hand weapon hilt anchors at `(+r * 0.82, +r * 0.38)` during idle/rest, with the right hand drawn over the grip.
+   - **Neutral Body Standard (Zero Floating Hands)**: Just like Toji, Gojo, and Sukuna, character body skin functions (`draw[Name]Skin`) **MUST NEVER render loose, static, disembodied hands (`drawPixelHand`) glued to the neutral body circle**. Neutral moving and idle sprites are clean circular manga figures.
+   - **Weapon Grips & Combat Strikes (Only When Wielding / Striking)**:
+     - **Main-Hand Weapon Anchor**: Main-hand weapon hilt anchors at `(+r * 0.82, +r * 0.38)` during idle/rest, with the right hand (`drawPixelHand`) drawn directly over the grip in weapon local space.
+     - **Off-Hand / Dual-Wield Anchor**: Off-hand anchors at `(-r * 0.82, +r * 0.38)` with the left hand drawn directly over the grip.
 
-
-## Phase 4: Mandatory Offscreen Canvas Caching Pattern (Toji Reference Standard)
+## Phase 4: Mandatory Offscreen Canvas Caching Pattern (Canonical Trio Standard)
 - **STRICT PROHIBITION**: NEVER call per-pixel `ctx.fillRect(px, py, P, P)` loops directly in the game loop while the canvas is rotated (`ctx.rotate(angle)`). Rotated sub-pixel rectangles create ugly "crisscross white grid lines / screen-door artifacts" and cause severe frame drops.
-- **The Canonical Architecture (Toji Standard — `tojiSkin.js`)**:
+- **The Canonical Architecture (Canonical Trio Standard — `tojiSkin.js`, `sukunaSkin.js`, `gojoSkin.js`)**:
   ```javascript
   let _cachedCanvas = null;
   let _cachedR = 0;

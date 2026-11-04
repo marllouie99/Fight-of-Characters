@@ -1780,13 +1780,6 @@ class ProjectileSystem {
               fighter.vx += Math.cos(hitAngle) * knockbackForce;
               fighter.vy += Math.sin(hitAngle) * knockbackForce;
             }
-            if (projectile.visual === 'EngineerBullet') {
-              // Apply small knockback from shotgun pellets
-              const knockbackForce = 1.0; 
-              const hitAngle = Math.atan2(projectile.vy, projectile.vx);
-              fighter.vx += Math.cos(hitAngle) * knockbackForce;
-              fighter.vy += Math.sin(hitAngle) * knockbackForce;
-            }
             if (projectile.isBlackHole && projectile.hitTargets) {
               projectile.hitTargets.add(fi);
             }

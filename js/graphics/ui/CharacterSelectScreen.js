@@ -21,8 +21,7 @@ import { drawWeaponPreview } from './WeaponIndexScreen.js';
 import { spawnFloatingText } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { drawArenaBgmSelector, isArenaBgmModalOpen, drawArenaBgmModal, closeArenaBgmModal } from '../../systems/arenaBgmSystem.js';
-import { drawArenaFloorSelector, isArenaFloorModalOpen, drawArenaFloorModal, closeArenaFloorModal } from '../../systems/arenaTileSystem.js';
-import { drawArenaDecorationSelector } from '../../systems/arenaDecorationSystem.js';
+import { drawArenaThemeSelector, isArenaThemeModalOpen, drawArenaThemeModal, closeArenaThemeModal } from '../../systems/arenaThemeSystem.js';
 import { GAME_MODES, MODE_SETTINGS } from '../../core/modeConfig.js';
 import { getBossConfig } from '../../configs/bosses/bossConfigRegistry.js';
 import { drawGradeBadge } from '../../configs/gradeConfig.js';
@@ -1705,7 +1704,7 @@ function _drawComicSteppedInfoStack(ctx, def, fighterIndex, isP1, palette, isMir
 
 function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMirrored = null, customSlotTag = null, customSlotLetter = null) {
   const { ctx } = state;
-  const isAnyModalOpen = (selectingSlot !== null || isArenaBgmModalOpen() || isArenaFloorModalOpen());
+  const isAnyModalOpen = (selectingSlot !== null || isArenaBgmModalOpen() || isArenaThemeModalOpen());
   const isInteractive = enabled && !isAnyModalOpen;
 
   const currentDefs = getActiveFighterDefs();
@@ -2036,15 +2035,14 @@ function drawSelectScreen() {
   ctx.fillText(`[ ${rawTitle} // DEPLOYMENT ]`, canvas.width / 2, titleY - 1);
   ctx.restore();
 
-  // Sub-Controls (Boss Battle Team Toggle, Arena BGM, Arena Floor & Arena Decoration)
+  // Sub-Controls (Boss Battle Team Toggle, Arena BGM, Arena Theme)
   const isBossBattleMode = (mode === 'Boss Battle' || mode === GAME_MODES.BOSS_BATTLE || mode === '1v2 Stand Off' || mode === GAME_MODES.STAND_OFF_1V2 || mode === 'STAND_OFF_1V2');
   const teamToggleW = isBossBattleMode ? 120 : 0;
-  const bgmW = isBossBattleMode ? 96 : 110;
-  const floorW = isBossBattleMode ? 96 : 110;
-  const decoW = isBossBattleMode ? 96 : 110;
+  const bgmW = isBossBattleMode ? 110 : 125;
+  const themeW = isBossBattleMode ? 120 : 135;
   const ctrlH = 24;
-  const gap = isBossBattleMode ? 6 : 8;
-  const totalCtrlW = (isBossBattleMode ? teamToggleW + gap : 0) + bgmW + gap + floorW + gap + decoW;
+  const gap = isBossBattleMode ? 8 : 10;
+  const totalCtrlW = (isBossBattleMode ? teamToggleW + gap : 0) + bgmW + gap + themeW;
   const startCtrlX = canvas.width / 2 - totalCtrlW / 2;
   
   let curCtrlX = startCtrlX;
@@ -2085,12 +2083,8 @@ function drawSelectScreen() {
   drawArenaBgmSelector(ctx, curCtrlX, tmY, bgmW, ctrlH);
   curCtrlX += bgmW + gap;
 
-  // Arena Floor / Tiles Selector Button
-  drawArenaFloorSelector(ctx, curCtrlX, tmY, floorW, ctrlH);
-  curCtrlX += floorW + gap;
-
-  // Arena Decoration / Seasonal Event Toggle Button
-  drawArenaDecorationSelector(ctx, curCtrlX, tmY, decoW, ctrlH);
+  // Arena Theme Selector Button
+  drawArenaThemeSelector(ctx, curCtrlX, tmY, themeW, ctrlH);
 
   // ── Main Combatant Grid ──
   const topY = isLandscape ? 88 : 132;
@@ -2453,8 +2447,8 @@ function drawSelectScreen() {
     drawArenaBgmModal(state.ctx);
   }
 
-  if (isArenaFloorModalOpen()) {
-    drawArenaFloorModal(state.ctx);
+  if (isArenaThemeModalOpen()) {
+    drawArenaThemeModal(state.ctx);
   }
 }
 
@@ -4038,9 +4032,9 @@ window.addEventListener('keydown', (e) => {
         return;
       }
     }
-    if (isArenaFloorModalOpen()) {
+    if (isArenaThemeModalOpen()) {
       if (e.key === 'Escape' || e.key === 'Enter') {
-        closeArenaFloorModal();
+        closeArenaThemeModal();
         e.preventDefault();
         return;
       }
@@ -4107,8 +4101,8 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('wheel', (e) => {
   if (state.gameState !== 'select' && state.gameState !== 'horizontal_select') return;
 
-  // Block card wheel cycling when Arena BGM or Arena Floor modal is active
-  if (isArenaBgmModalOpen() || isArenaFloorModalOpen()) {
+  // Block card wheel cycling when Arena BGM or Arena Theme modal is active
+  if (isArenaBgmModalOpen() || isArenaThemeModalOpen()) {
     return;
   }
 

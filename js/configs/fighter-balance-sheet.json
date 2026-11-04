@@ -907,7 +907,7 @@
         },
         "chompMode": {
           "duration": 360,
-          "damagePercent": 0.30,
+          "damagePercent": 0.3,
           "speedMultiplier": 1.25
         }
       }
@@ -969,6 +969,21 @@
       "speed": 5.2,
       "baseRange": 320,
       "baseDamage": 24,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
+    },
+    "warden": {
+      "name": "The Warden",
+      "archetype": "brawler",
+      "color": "#0D9488",
+      "hp": 1400,
+      "speed": 3.8,
+      "baseRange": 80,
+      "baseDamage": 44,
       "multipliers": {
         "damage": 1,
         "speed": 1,

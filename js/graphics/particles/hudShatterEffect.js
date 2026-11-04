@@ -13,6 +13,7 @@ import { CONFIG } from '../../core/config.js';
 import { findArenaWallIntersection } from './saitamaWallShatter.js';
 import { getSkillDataForFighter, shouldShowFighterSkill, shouldShowHudSkillBars, shouldShowHudStats } from '../ui/hudSkillProviders.js';
 import { getFighterHealthBarColor } from '../hudManager.js';
+import { getArenaTopWallBlockThickness } from '../../systems/arenaThemeSystem.js';
 
 /**
  * Checks whether a given point (px, py) is strictly inside the frontal supersonic cone / corridor
@@ -292,7 +293,8 @@ function getTopMatchNameCharacters(arena) {
   if (mainFighters.length === 0) return [];
 
   const centerX = arena.x + arena.width / 2;
-  const bottomY = arena.y - 12;
+  const topWallExtra = (typeof getArenaTopWallBlockThickness === 'function') ? getArenaTopWallBlockThickness() : 0;
+  const bottomY = arena.y - topWallExtra - 12;
   const isDark = Boolean(typeof state !== 'undefined' && (state.arenaTheme === 'dark' || state.darkMode));
 
   let measureCtx = (typeof state !== 'undefined' && state.ctx) ? state.ctx : null;
@@ -433,7 +435,7 @@ function getTopMatchNameCharacters(arena) {
     // Multi-fighter FFA fallback
     const pad = 10;
     const vsText = 'VS';
-    const textY = arena.y - 12;
+    const textY = arena.y - topWallExtra - 12;
     const fighterData = mainFighters.map(f => ({
       name: (f.displayName || f.name || f._def?.displayName || f._def?.name || f.characterId || 'P').toUpperCase(),
       color: getFighterThemeColor(f, '#F8FAFC')
@@ -659,9 +661,10 @@ function generateTopNameShatters(arena, punchAngle, hitX, maxLife, originX, orig
   for (let k = 0; k < crumbCount; k++) {
     const fanAngle = punchAngle + (Math.random() - 0.5) * 1.4;
     const speed = 4.0 + Math.random() * 9.0;
+    const topWallExtra = (typeof getArenaTopWallBlockThickness === 'function') ? getArenaTopWallBlockThickness() : 0;
     crumbs.push({
       x: hitX + (Math.random() - 0.5) * 12,
-      y: arena.y - 12 + (Math.random() - 0.5) * 6,
+      y: arena.y - topWallExtra - 12 + (Math.random() - 0.5) * 6,
       vx: Math.cos(fanAngle) * speed,
       vy: Math.sin(fanAngle) * speed - (2.0 + Math.random() * 4.0),
       radius: 1.2 + Math.random() * 1.8,
@@ -696,7 +699,8 @@ function generateBottomHudShatters(arena, punchAngle, hitX, maxLife, originX, or
 
   const cosA = Math.cos(punchAngle);
   const isDark = Boolean(typeof state !== 'undefined' && (state.arenaTheme === 'dark' || state.darkMode));
-  const baseY = arena.y + arena.height + 20;
+  const bottomWallExtra = (typeof getArenaTopWallBlockThickness === 'function') ? getArenaTopWallBlockThickness() : 0;
+  const baseY = arena.y + arena.height + bottomWallExtra + 20;
   const numFighters = Math.max(1, mainFighters.length);
   const halfArc = (CONFIG.saitama?.counterFrontalArc ?? ((28 * Math.PI) / 180)) / 2;
 
@@ -856,7 +860,7 @@ function generateBottomHudShatters(arena, punchAngle, hitX, maxLife, originX, or
     const speed = 4.0 + Math.random() * 9.0;
     crumbs.push({
       x: hitX + (Math.random() - 0.5) * 14,
-      y: arena.y + arena.height + 4,
+      y: arena.y + arena.height + bottomWallExtra + 4,
       vx: Math.cos(fanAngle) * speed,
       vy: Math.sin(fanAngle) * speed + (2.0 + Math.random() * 4.0),
       radius: 1.2 + Math.random() * 1.8,

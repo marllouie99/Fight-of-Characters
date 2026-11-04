@@ -250,17 +250,17 @@ export function performSplitSoulKatanaSlash(fighter, primaryTarget, ownerIndex) 
   }
   fighter._secondSeqAudioPlayed = false;
   audioSystem.playSFX('attack_swordswing', 1.25);
-  audioSystem.playSFX('attack_fleshhit', 1.35);
-  audioSystem.playSFX('attack_groundsmash', 1.1);
 
   const attackAngle = fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0);
   const reach = CONFIG.toji?.katanaRange || fighter.katanaRange || 75;
   // Wide 160 degree frontal arc cleave for Katana!
   const targets = tojiGetTargetsInFrontalArc(fighter, primaryTarget, attackAngle, reach, Math.PI * 0.88);
 
-  if (fighter.isAmbushing && primaryTarget && primaryTarget.hp > 0 && !targets.includes(primaryTarget)) {
-    targets.push(primaryTarget);
-  }
+  // Strictly enforce melee reach: never hit targets outside the frontal arc or beyond katana reach
+  if (targets.length === 0) return [];
+
+  audioSystem.playSFX('attack_fleshhit', 1.35);
+  audioSystem.playSFX('attack_groundsmash', 1.1);
 
   const damage = CONFIG.toji?.katanaDamage || 35;
   const soulWoundDuration = CONFIG.toji?.soulWoundDuration || 180;
@@ -362,11 +362,12 @@ export function deliverInvertedSpearImpact(fighter, primaryTarget, ownerIndex = 
   const cfg = (typeof CONFIG !== 'undefined' && CONFIG.toji) ? CONFIG.toji : {};
   const attackAngle = fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0);
   const reach = isAmbushThrust ? (cfg.ambushSpearReach || 80) : (cfg.spearRange || fighter.spearRange || 50);
-  const arc = isAmbushThrust ? (Math.PI * 0.67) : (cfg.hit1ArcAngle || (Math.PI * 0.88));
-  let targets = tojiGetTargetsInFrontalArc(fighter, primaryTarget, attackAngle, reach, arc);
+  const arc = isAmbushThrust ? (cfg.ambushSpearArc || Math.PI * 0.67) : (cfg.hit1ArcAngle || (Math.PI * 0.88));
+  const targets = tojiGetTargetsInFrontalArc(fighter, primaryTarget, attackAngle, reach, arc);
 
-  if (targets.length === 0 && primaryTarget && primaryTarget !== fighter && primaryTarget.hp > 0 && !primaryTarget.isDead) {
-    targets = [primaryTarget];
+  // Strictly enforce melee reach: never hit targets outside the frontal arc or beyond spear reach
+  if (targets.length === 0) {
+    return [];
   }
 
   // ── THE VISCERAL MEATY FLESH SLAP AUDIO COMBINATION (Rule 30 & Melee Animator Guide) ──

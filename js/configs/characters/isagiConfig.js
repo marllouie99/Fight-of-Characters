@@ -48,10 +48,12 @@ export const isagiConfig = {
   egoShotMaxRebounds: 1, // Bounces once off arena walls
   kickSlowDuration: 18, // Brief duration in frames (~0.30s) of slow recovery movement upon kicking
   kickSlowMultiplier: 0.18, // Movement speed multiplier during kick recovery (very slow crawl)
+  kickAccuracy: 1.0, // 100% kick accuracy: Every kick travels perfectly straight with ZERO spread
+  maxKickSpread: (18 * Math.PI) / 180, // Default maximum spread dispersion angle for Blue Lock fighters (~18 deg)
 
   // ─── Skill 1: Metavision Slip (Tactical Dodge & Ball Interception Dash) ───
   enableMetavision: true, // Master toggle for Skill 1
-  metavisionCooldown: 100, // 8.0s cooldown
+  metavisionCooldown: 200, // 8.0s cooldown
   metavisionDashDistance: 210, // Tactical reposition distance
   metavisionDashFrames: 30, // Dash duration in frames
   metavisionInvulnFrames: 14, // Dodge invulnerability window
@@ -60,18 +62,31 @@ export const isagiConfig = {
   flowShotSpeedMult: 1.5, // Projectile speed during Flow State
   flowShotCritMult: 1.35, // Guaranteed critical damage multiplier
 
-  // ─── Skill 2: Direct Volley (Ultimate / Signature Finisher) ───
-  enableDirectVolley: true, // Master toggle for Skill 2
-  directVolleyCooldown: 1080, // 18.0s cooldown
-  directVolleyWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
-  directVolleyDamage: 75, // Massive finishing blast damage
-  directVolleySpeed: 24.0, // Hypersonic volley velocity
-  directVolleyRadius: 20, // Blast collision radius (scaled up)
-  directVolleyKnockback: 18.0, // Blasts opponent into the wall
-  directVolleyStunDuration: 100, // Stun debuff duration in frames (~0.75s stun)
-  directVolleyShake: 8, // Screen shake intensity (px)
-  directVolleyKickSlowDuration: 24, // Brief duration for heavy Direct Volley (~0.40s)
-  directVolleyKickSlowMultiplier: 0.12, // Movement speed multiplier during Direct Volley recovery
+  // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Signature Finisher) ───
+  enableStriker: true, // Universal Blue Lock Skill 2 Master toggle
+  enableDirectVolley: true, // Backward-compatible alias
+  strikerCooldown: 1080, // 18.0s cooldown
+  directVolleyCooldown: 1080, // Backward-compatible alias
+  strikerWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
+  directVolleyWindup: 0,
+  strikerDamage: 75, // Massive finishing blast damage
+  directVolleyDamage: 75,
+  strikerSpeed: 24.0, // Hypersonic volley velocity
+  directVolleySpeed: 24.0,
+  strikerRadius: 20, // Blast collision radius (scaled up)
+  directVolleyRadius: 20,
+  strikerKnockback: 20.0, // Blasts opponent backwards into the turf/wall
+  directVolleyKnockback: 20.0,
+  strikerKnockbackDuration: 14, // Knockback flight duration (frames) before applying stun afterwards
+  directVolleyKnockbackDuration: 14,
+  strikerStunDuration: 100, // Stun debuff duration in frames applied after knockback (~1.6s stun)
+  directVolleyStunDuration: 100,
+  strikerShake: 8, // Screen shake intensity (px)
+  directVolleyShake: 8,
+  strikerKickSlowDuration: 24, // Brief duration for heavy strike (~0.40s)
+  directVolleyKickSlowDuration: 24,
+  strikerKickSlowMultiplier: 0.12, // Movement speed multiplier during recovery
+  directVolleyKickSlowMultiplier: 0.12,
 
   // ─── Passive: Spatial Awareness & One-Two Rebound ───
   sweetSpotDistance: 180, // Distance threshold for sweet spot bonus
@@ -79,4 +94,21 @@ export const isagiConfig = {
   cooldownRefundOnRebound: 90, // Frames (1.5s) refunded to Metavision on bank hits
   bounceBackToIsagiChance: 0.50, // 50% chance for ball to bounce right back to Isagi when kicked
   bounceBackSpeed: 8.5, // Return velocity towards Isagi on rebound
+
+  // ─── Universal Blue Lock Trait: EGO Awakening & Potential Unlocked ───
+  enableEgo: true, // Master toggle for Ego mechanic
+  egoTitle: 'Metavision Flow', // Custom Ego Awakening Title
+  maxEgoMeter: 100, // Maximum Ego capacity
+  egoGainPerHit: 25, // Ego gained per standard soccer ball hit (+25% = 4 hits to fill)
+  egoGainPerReboundHit: 35, // Ego gained on spatial rebound bank shots (+35%)
+  egoGainPerStrikerHit: 50, // Ego gained on heavy "STRIKER!" finisher impacts (+50%)
+  egoDuration: 360, // Duration of awakened potential in frames (360 frames = 6.0s)
+  egoAwakenShake: 7, // Screen shake intensity on Ego awakening
+  egoHitExtensionFrames: 30, // Extra duration added per ball hit while Ego is active (~0.5s)
+  egoBuffs: {
+    kickSpeedMultiplier: 1.30, // +30% ball kinetic velocity during Ego Mode
+    damageMultiplier: 1.25, // +25% kick damage during Ego Mode
+    cooldownRate: 1.6, // 60% accelerated skill cooldown recovery (spatial processing)
+    sweetSpotDamageBonus: 8, // Enhanced spatial awareness direct sweet-spot hit damage
+  },
 };

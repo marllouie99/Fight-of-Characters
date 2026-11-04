@@ -241,6 +241,7 @@ export function reinitFighters(isNewMatch = false) {
   clearBamEffects();
   clearHybridProjectiles();
   clearProjectiles();
+  if (state) state.sharedSoccerBall = null;
 
   if (state.floatingTexts) state.floatingTexts.length = 0;
   if (state.bloodEffects) state.bloodEffects.length = 0;
@@ -1537,6 +1538,7 @@ export function goToTitle() {
   clearBamEffects();
   clearHybridProjectiles();
   clearProjectiles();
+  if (state) state.sharedSoccerBall = null;
   clearAllPools();
 
   state.gameState = 'title';

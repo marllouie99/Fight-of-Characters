@@ -69,12 +69,15 @@ When creating, scaffolding, or implementing new characters:
   ```
 - **Why**: Base `Fighter.update()` in `fighter.js` automatically invokes `this.shoot(ownerIndex)` whenever `shootCooldown <= 0`, which spawns unwanted generic bullet/orb projectiles unless explicitly overridden.
 
-## Mandatory Universal Character Body Model & Scale Standard (Rule 24 — Toji Reference Standard)
+## Mandatory Universal Character Body Model & Scale Standard (Rule 24 — The Canonical Reference Trio: Toji, Sukuna & Gojo)
 
-When creating, scaffolding, or implementing new characters, agents **MUST ALWAYS use Toji's body model (`js/graphics/fighters/tojiSkin.js`) as the primary reference and baseline standard** for all character body models, geometry, outer stroke, and vertical proportional zoning:
-- **Canonical Baseline Reference (`tojiSkin.js`)**: Always inspect and clone the rasterization architecture from `js/graphics/fighters/tojiSkin.js`. Toji's body model defines the gold standard for perfectly circular 4-neighbor manga ink outlines, clean facial domes without baked hair, and crisp multi-zone clothing layers.
+When creating, scaffolding, designing, updating, or reviewing any character model, agents **MUST ALWAYS reference the Canonical Manga Ink Trio: Toji (`js/graphics/fighters/tojiSkin.js`), Sukuna (`js/graphics/fighters/sukunaSkin.js`), or Gojo (`js/graphics/fighters/gojoSkin.js`) as the primary blueprints and gold standard** for all character body models, geometry, outer stroke, vertical proportional zoning, and hand layering:
+- **Canonical Trio References**:
+  - **Toji Fushiguro (`js/graphics/fighters/tojiSkin.js`)**: Gold standard for athletic modern silhouettes — warm athletic tan skin (`#E8BD9B`), charcoal compression crewneck (`#2A2C32`), center sash knot with hanging ribbons, light grey hakama pants (`#CDCDCF`), and weapon-anchored hands.
+  - **Ryomen Sukuna (`js/graphics/fighters/sukunaSkin.js`)**: Gold standard for traditional robes & intricate markings — warm fair skin (`#FEDBC0`), canonical black cursed tattoos, puffy dark cowl (`#262230`), off-white kimono robe (`#DCD8D0`), diagonal navy lapel, and dark obi belt.
+  - **Satoru Gojo (`js/graphics/fighters/gojoSkin.js`)**: Gold standard for sleek anime uniforms — warm fair skin (`#FEDBC0`), unmasked faceless dome with soft forehead highlight (`#FFF0E2`), deep midnight indigo uniform (`#262039`), and crisp center zipper placket with collar highlight creases.
 - **Universal Baseline Body Radius**: All standard humanoid fighters MUST declare `r: 25, radius: 25` in their config (`js/configs/characters/<name>Config.js`) and fighter constructor. Only designated giant bosses/tanks (Mahoraga, Escanor, PEKKA, Nameless Deity) may use custom oversized radii.
-- **1:1 Offscreen Canvas Buffer Architecture (Toji Standard)**:
+- **1:1 Offscreen Canvas Buffer Architecture (Canonical Standard)**:
   ```javascript
   const P = 2.0;
   const snap = (v) => Math.round(v / P) * P;
@@ -83,18 +86,21 @@ When creating, scaffolding, or implementing new characters, agents **MUST ALWAYS
   ```
   - Destination context MUST translate to `(destCtx.canvas.width / 2, destCtx.canvas.height / 2)` with `destCtx.imageSmoothingEnabled = false;`.
   - Main render loop blits via `ctx.drawImage(_cachedCanvas, -size / 2, -size / 2)` with `ctx.imageSmoothingEnabled = false;`.
-- **Universal Vertical Proportion Zones (Toji Baseline)**:
-  - **Zone 1: Pure Face & Cheeks Dome (`ry < r * 0.28` to `r * 0.32`)**: Clean tan/fair skin base tone (`#E8BD9B` / `#FFF0DE`) with side cheek contour (`#D4A373`). Scars, eyepatches, or markings MUST stay contained inside this dome. Zero hair may be baked into the body circle.
-  - **Zone 2: Collar & Upper Torso / Shirt / Vest (`r * 0.28 <= ry < r * 0.64` to `0.68`)**: Full-width upper outfit covering `-r` to `+r` with high-collar rim, center placket/zipper, and chest highlights. NEVER draw bare skin at the outer flanks that pinches the torso.
-  - **Zone 3: Waistband / Belt / Sash (`r * 0.64 <= ry < r * 0.78`)**: Belt band with distinct center knot, ribbon split, or buckle frame.
+- **Universal Vertical Proportion Zones (Toji/Sukuna/Gojo Baseline)**:
+  - **Zone 1: Pure Face & Cheeks Dome (`ry < r * 0.28` to `r * 0.32` / `ny < 0.30`)**: Clean fair/tan skin base tone (`#FEDBC0` or `#E8BD9B`) with side cheek contour (`#E9B796` / `#D4A373`) and forehead highlight (`#FFF0E2`). Scars, eyepatches, or tattoos MUST stay contained inside this dome. Zero hair may be baked into the body circle. NEVER draw mouths, eyes, or horizontal chin stripes on neutral skins.
+  - **Zone 2: Collar & Upper Torso / Shirt / Vest / Robe (`r * 0.28 <= ry < r * 0.64` to `0.68`)**: Full-width upper outfit covering `-r` to `+r` with high-collar rim, center placket/zipper, and chest highlights. NEVER draw bare skin at the outer flanks that pinches the torso.
+  - **Zone 3: Waistband / Belt / Sash / Obi (`r * 0.64 <= ry < r * 0.78`)**: Belt band with distinct center knot, ribbon split, buckle frame, or patterned obi.
   - **Zone 4: Lower Trousers / Hakama / Skirt (`ry >= r * 0.78`)**: Lower garment with center fly seam, pleat creases, and luminance $Y \ge 24$.
+- **Hand Layering & Neutral Body Standard (Strict Prohibition of Loose/Static Floating Fists)**:
+  - **Zero Hands on Neutral Body**: Just like Toji, Gojo, and Sukuna, character body skin functions (`draw[Name]Skin`) **MUST NEVER render loose, static, disembodied hands (`drawPixelHand`) glued to the neutral body circle**.
+  - **Weapons-Only Hand Anchoring**: Hands are rendered strictly and exclusively when holding weapons (drawn directly over the weapon grip/hilt via `drawPixelHand` in weapon space) or during active melee strike animations. Neutral idle and moving sprites are clean, faceless circular manga figures without detached fists.
 - **Outer Ink Outline & Luminance Separation**:
-  - Always use the Toji 4-neighbor boundary test (`Math.hypot((gx + 1) * P, gy * P) > r || Math.hypot((gx - 1) * P, gy * P) > r || Math.hypot(gx * P, (gy + 1) * P) > r || Math.hypot(gx * P, (gy - 1) * P) > r`) filled strictly with `#0E0F14`.
+  - Always use the 4-neighbor boundary test (`Math.hypot((gx + 1) * P, gy * P) > r || Math.hypot((gx - 1) * P, gy * P) > r || Math.hypot(gx * P, (gy + 1) * P) > r || Math.hypot(gx * P, (gy - 1) * P) > r`) filled strictly with `#0E0F14`.
   - Interior clothing fabrics MUST maintain clear luminance separation ($Y \ge 24$, e.g. `#242A36` or brighter) so dark clothes NEVER merge into the black border and destroy the 1-pixel circular stroke.
 - **Layer 2 Hair & Crown Volume Calibration**:
-  - All character hair MUST be drawn on Layer 2 (`_draw[Name]Hair(ctx, r, facingLeft)`) after blitting the Toji-standard body circle.
-  - Scale character hair to `targetHairWidth = r * 2.80 - r * 3.10` and `targetHairHeight = r * 2.10 - r * 2.30`.
-  - Set crown apex anchor to `drawY = -r * 1.30` to `-r * 1.45` so the hair frames the head seamlessly with full anime volume matching Toji, Gojo, and Makima.
+  - All character hair MUST be drawn on Layer 2 (`_draw[Name]Hair(ctx, r, facingLeft)`) after blitting the standard body circle.
+  - Scale character hair to `targetHairWidth = r * 3.00 - r * 3.20` and `targetHairHeight = r * 1.95 - r * 2.10`.
+  - Set crown apex anchor to `drawY = -r * 1.30` to `-r * 1.45` so the hair frames the head seamlessly with full anime volume matching Toji, Gojo, and Sukuna.
 
 
 

@@ -74,25 +74,27 @@ super.update(opponent, ownerIndex, arena);
   ```
 - This prevents the base `Fighter.update()` loop from spawning unwanted generic circular bullet projectiles during basic attack loops.
 
-### 8. Mandatory Universal Character Body Model & Scale Standard (Rule 24 — Toji Reference Standard)
-- **Primary Reference Standard (`tojiSkin.js`)**: ALWAYS use Toji's body model (`js/graphics/fighters/tojiSkin.js`) as the primary blueprint and gold standard for all new fighter body models.
+### 8. Mandatory Universal Character Body Model & Scale Standard (Rule 24 — The Canonical Reference Trio: Toji, Sukuna & Gojo)
+- **Primary Canonical Reference Trio**: ALWAYS reference the Canonical Manga Ink Trio: Toji (`js/graphics/fighters/tojiSkin.js`), Sukuna (`js/graphics/fighters/sukunaSkin.js`), or Gojo (`js/graphics/fighters/gojoSkin.js`) as the primary blueprints and gold standard for all new fighter body models, proportions, and hand layering.
 - **Universal Baseline Body Radius**: All standard humanoid fighters MUST declare `r: 25, radius: 25` in `js/configs/characters/<name>Config.js` and in the fighter constructor.
-- **1:1 Offscreen Canvas Buffer Architecture (Toji Standard)**:
+- **1:1 Offscreen Canvas Buffer Architecture (Canonical Standard)**:
   ```javascript
   const P = 2.0;
   const snap = (v) => Math.round(v / P) * P;
   const steps = Math.ceil((intR + P) / P);
   const size = (steps * 2 + 1) * P;
   ```
-- **Universal Vertical Proportions (Toji Baseline)**:
-  - `ry < r * 0.28` to `0.32`: Face & head clean skin tone dome (upper 28–32% of radius, zero baked hair).
-  - `r * 0.28 <= ry < r * 0.64` to `0.68`: Collar & upper torso / shirt / vest (full circle width).
-  - `r * 0.64 <= ry < r * 0.78`: Waistband / belt band & buckle / knot frame.
-  - `ry >= r * 0.78`: Lower trousers / hakama / skirt with fly seam & pleat creases ($Y \ge 24$).
+- **Universal Vertical Proportions (Toji/Sukuna/Gojo Baseline)**:
+  - `ry < r * 0.28` to `0.32` (`ny < 0.30`): Face & head clean skin tone dome (fair `#FEDBC0` or tan `#E8BD9B`, upper 28–32% of radius, zero baked hair, zero drawn mouths/eyes).
+  - `r * 0.28 <= ry < r * 0.64` to `0.68`: Collar & upper torso / shirt / vest / robe (full circle width, high-collar rim, center placket/zipper).
+  - `r * 0.64 <= ry < r * 0.78`: Waistband / belt band / sash knot / obi frame.
+  - `ry >= r * 0.78`: Lower trousers / hakama / skirt with center fly seam & pleat creases ($Y \ge 24$).
+- **Zero Hands on Neutral Body (Anti-Floating-Fists Standard)**:
+  - Never render loose or static disembodied hands on the neutral body circle in `draw[Name]Skin`. Hands are strictly drawn ONLY over weapon grips via `drawPixelHand` in weapon space or during active melee strike animations.
 - **Outer 4-Neighbor Ink Outline Shell**:
-  - Always use Toji's 4-neighbor boundary test filled with `#0E0F14`.
+  - Always use the 4-neighbor boundary test filled with `#0E0F14`.
 - **Hair Scale & Crown Volume**:
-  - `targetHairWidth = r * 2.80 - r * 3.10` and `targetHairHeight = r * 2.10 - r * 2.30`.
+  - `targetHairWidth = r * 3.00 - r * 3.20` and `targetHairHeight = r * 1.95 - r * 2.10`.
   - Crown apex anchor `drawY = -r * 1.30` to `-r * 1.45`.
 
 ### 9. Mandatory Non-Freezing Active Visual Effects & Particle Decay Standard (Rule 25)

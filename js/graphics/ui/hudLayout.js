@@ -2,6 +2,7 @@ import { CONFIG } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { GAME_MODES } from '../../core/modeConfig.js';
 import { worldToScreen } from '../../systems/cameraSystem.js';
+import { getArenaTopWallBlockThickness } from '../../systems/arenaThemeSystem.js';
 
 let _hudSyncInitialized = false;
 let _cachedGameBox = null;
@@ -124,15 +125,19 @@ export function syncHudPosition() {
   );
 
   // 1. Position Top HUD Container
+  const topWallExtra = (typeof getArenaTopWallBlockThickness === 'function')
+    ? getArenaTopWallBlockThickness()
+    : ((state.selectedArenaTheme === 'bomberman_normal' || state.selectedArenaFloor === 'bomberman_normal') ? 25 : 0);
+  const topMarginPx = (is1v2 ? 82 : 72) + topWallExtra;
   const topRatio = isHorizontal
-    ? (6 / canvasHeight)
-    : (is1v2 ? ((arena.y - 82) / canvasHeight) : ((arena.y - 72) / canvasHeight));
+    ? (4 / canvasHeight)
+    : ((arena.y - topMarginPx) / canvasHeight);
   const topPx = canvasTopInBox + canvasRect.height * topRatio;
   const topPercent = (topPx / boxRect.height) * 100;
   
   if (!_cachedTopContainer) _cachedTopContainer = document.getElementById('hudTopContainer');
   if (_cachedTopContainer) {
-    setSafeStyle(_cachedTopContainer, 'top', `${topPercent.toFixed(3)}%`);
+    setSafeStyle(_cachedTopContainer, 'top', isHorizontal ? '4px' : `${topPercent.toFixed(3)}%`, 'important');
     setSafeStyle(_cachedTopContainer, 'width', isHorizontal ? 'calc(100% - 20px)' : `${topVisualWidthPercent.toFixed(3)}%`, 'important');
     setSafeStyle(_cachedTopContainer, 'max-width', isHorizontal ? '940px' : 'none', 'important');
     setSafeStyle(_cachedTopContainer, 'left', isHorizontal ? '10px' : `${topVisualLeftPercent.toFixed(3)}%`, 'important');
@@ -143,7 +148,8 @@ export function syncHudPosition() {
   }
 
   // 2. Position Bottom HUD Container (Snug right below arena bottom wall)
-  const bottomMarginPx = isHorizontal ? 6 : (is1v2 ? 24 : 16);
+  const bottomWallExtra = topWallExtra;
+  const bottomMarginPx = isHorizontal ? 6 : ((is1v2 ? 24 : 16) + bottomWallExtra);
   const bottomRatio = ((arena.y + arena.height + bottomMarginPx) / canvasHeight);
   const bottomPx = canvasTopInBox + canvasRect.height * bottomRatio;
   const bottomPercent = (bottomPx / boxRect.height) * 100;
@@ -189,10 +195,11 @@ export function syncHudPosition() {
 
     // In large arenas (arena.width > 600, e.g. FFA 800x800 or Grand 1400x1400), side containers
     // are anchored cleanly at screen top (24px) spanning the screen height (canvasHeight - 48px).
-    // In standard 1v1 mode, top is arena.y + 38px (below the 34px canvas name).
+    // In horizontal 1v1 mode, side containers are placed cleanly in the top space provided above the arena top wall (21px).
     // In standard multi-fighter mode, top is arena.y (aligned with the arena top wall).
     const isLargeArena = Boolean(arena && arena.width >= 1200);
-    const sideTopPxInCanvas = isLargeArena ? 24 : (isMultiFighter ? arena.y : (arena.y + 38));
+    const isTopHud1v1 = Boolean(!isMultiFighter && !isLargeArena);
+    const sideTopPxInCanvas = isLargeArena ? 24 : (isMultiFighter ? arena.y : (isTopHud1v1 ? 21 : (arena.y + 38)));
     const sideTopRatio = sideTopPxInCanvas / canvasHeight;
     const sideTopPx = canvasTopInBox + canvasRect.height * sideTopRatio;
     const sideTopPercent = (sideTopPx / boxRect.height) * 100;
@@ -201,10 +208,15 @@ export function syncHudPosition() {
     const sideHeightPxInBox = canvasRect.height * (sideHeightPx / canvasHeight);
     const sideHeightPercent = (sideHeightPxInBox / boxRect.height) * 100;
 
-    const sideWidthPx = 176;
+    const sideWidthPx = isTopHud1v1 ? 300 : 176;
     const sideWidthPercent = (sideWidthPx / canvasWidth) * 100;
 
     if (_cachedContainerLeft) {
+      if (isTopHud1v1) {
+        _cachedContainerLeft.classList.add('top-hud-1v1');
+      } else {
+        _cachedContainerLeft.classList.remove('top-hud-1v1');
+      }
       setSafeStyle(_cachedContainerLeft, 'top', `${sideTopPercent.toFixed(3)}%`);
       if (isMultiFighter) {
         setSafeStyle(_cachedContainerLeft, 'height', `${sideHeightPercent.toFixed(3)}%`, 'important');
@@ -217,6 +229,11 @@ export function syncHudPosition() {
       setSafeStyle(_cachedContainerLeft, 'max-width', 'none', 'important');
     }
     if (_cachedContainerRight) {
+      if (isTopHud1v1) {
+        _cachedContainerRight.classList.add('top-hud-1v1');
+      } else {
+        _cachedContainerRight.classList.remove('top-hud-1v1');
+      }
       setSafeStyle(_cachedContainerRight, 'top', `${sideTopPercent.toFixed(3)}%`);
       if (isMultiFighter) {
         setSafeStyle(_cachedContainerRight, 'height', `${sideHeightPercent.toFixed(3)}%`, 'important');
@@ -306,7 +323,10 @@ export function updateTopHudCameraTracking(topContainer) {
     state.mode === 'Stand Off 1v2' ||
     (typeof GAME_MODES !== 'undefined' && (state.mode === GAME_MODES.BOSS_BATTLE || state.mode === GAME_MODES.STAND_OFF_1V2))
   );
-  const topMarginPx = is1v2 ? 82 : 72;
+  const topWallExtra = (typeof getArenaTopWallBlockThickness === 'function')
+    ? getArenaTopWallBlockThickness()
+    : ((state.selectedArenaTheme === 'bomberman_normal' || state.selectedArenaFloor === 'bomberman_normal') ? 25 : 0);
+  const topMarginPx = (is1v2 ? 82 : 72) + topWallExtra;
   const defaultTopY = arenaY - topMarginPx;
 
   const screenTop = worldToScreen(arenaCenterX, arenaY);
@@ -391,7 +411,10 @@ export function updateBottomHudCameraTracking(bottomContainer) {
     state.mode === 'Stand Off 1v2' ||
     (typeof GAME_MODES !== 'undefined' && (state.mode === GAME_MODES.BOSS_BATTLE || state.mode === GAME_MODES.STAND_OFF_1V2))
   );
-  const bottomMarginPx = is1v2 ? 24 : 16;
+  const bottomWallExtra = (typeof getArenaTopWallBlockThickness === 'function')
+    ? getArenaTopWallBlockThickness()
+    : ((state.selectedArenaTheme === 'bomberman_normal' || state.selectedArenaFloor === 'bomberman_normal') ? 25 : 0);
+  const bottomMarginPx = (is1v2 ? 24 : 16) + bottomWallExtra;
   const defaultHudTopY = arenaBottomY + bottomMarginPx;
 
   const screenBottom = worldToScreen(arenaCenterX, arenaBottomY);
@@ -437,20 +460,28 @@ export function updateSideHudCameraTracking(containerLeft, containerRight) {
   const isHorizontal = Boolean(typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
   if (!isHorizontal) return;
 
+  const isMultiFighter = Boolean(
+    (state.fighters && state.fighters.filter(f => f && !f.isTurret && !f.isEndCrystal && !f.isMinion && !f.isDeployable).length > 2) ||
+    state.mode === '2v2' || state.mode === '1v2' || state.mode === '4v4' ||
+    (typeof GAME_MODES !== 'undefined' && (state.mode === GAME_MODES.TWO_VS_TWO || state.mode === GAME_MODES.ONE_VS_TWO))
+  );
+  const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
+  const isLargeArena = Boolean(arena && arena.width >= 1200);
+  const isTopHud1v1 = Boolean(!isMultiFighter && !isLargeArena);
+
   const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
   const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
   const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
   const isCamActive = isDynamic || isZooming;
 
-  if (!isCamActive) {
-    if (_lastSideHudStyle === 'static') return;
-    _lastSideHudStyle = 'static';
+  if (!isCamActive || isTopHud1v1) {
+    if (_lastSideHudStyle === 'static' && !isTopHud1v1) return;
+    _lastSideHudStyle = isTopHud1v1 ? 'top-1v1' : 'static';
     if (containerLeft) setSafeStyle(containerLeft, 'transform', 'none', 'important');
     if (containerRight) setSafeStyle(containerRight, 'transform', 'none', 'important');
     return;
   }
 
-  const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
   const arenaWidth = arena.width || 450;
   const arenaHeight = arena.height || 450;
   const arenaX = arena.x || 45;

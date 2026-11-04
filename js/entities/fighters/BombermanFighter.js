@@ -407,15 +407,6 @@ export class BombermanFighter extends Fighter {
     // Always include Bomberman in initialOverlaps on newly planted bombs so he never
     // accidentally kicks the bomb on the exact frame he plants it
     const initialOverlapSet = new Set([this]);
-    const fighters = state.fighters || [];
-    for (let i = 0; i < fighters.length; i++) {
-      const f = fighters[i];
-      if (!f || f === this || f.hp <= 0) continue;
-      const dist = Math.hypot(f.x - tile.x, f.y - tile.y);
-      if (dist <= this.bombRadius + (f.r || 25) + 4) {
-        initialOverlapSet.add(f);
-      }
-    }
 
     const bomb = {
       id: ++this._bombIdCounter,
@@ -1071,17 +1062,26 @@ export class BombermanFighter extends Fighter {
       const dy = f.y - bomb.y;
       const dist = Math.hypot(dx, dy);
 
-      // Clear initial spawn overlap only after the fighter has stepped cleanly outside minDist + 8px
-      if (bomb.initialOverlaps && bomb.initialOverlaps.has(f)) {
-        if (dist >= minDist + 8) {
-          bomb.initialOverlaps.delete(f);
-        } else {
-          continue;
-        }
-      }
+      // Bomberman fighters can pass freely through all bombs without body blocking!
+      const isBomberman = Boolean(
+        f === this ||
+        f.characterId === 'bomberman' ||
+        f.type === 'bomberman' ||
+        f._def?.type === 'bomberman' ||
+        (bomb.owner && f === bomb.owner)
+      );
 
-      if (f === this) {
+      if (isBomberman) {
+        // Clear initial spawn overlap for Bomberman once he steps outside minDist + 8px
+        if (bomb.initialOverlaps && bomb.initialOverlaps.has(f)) {
+          if (dist >= minDist + 8) {
+            bomb.initialOverlaps.delete(f);
+          }
+        }
+
+        // Bomberman can kick his bomb when kick skill is ready and spawn grace expired
         if (
+          f === this &&
           !this.isSwallowedByPacman &&
           !this.isPacmanGhost &&
           this.hp > 0 &&
@@ -1094,10 +1094,8 @@ export class BombermanFighter extends Fighter {
           const contactAngle = Math.atan2(bomb.y - this.y, bomb.x - this.x);
           this.kickBomb(bomb, contactAngle);
         }
-        continue;
+        continue; // Bomberman can get pass through!
       }
-
-      if (typeof this.isTeammate === 'function' && this.isTeammate(f)) continue;
 
       if (dist < minDist) {
         const nx = dist > 0.001 ? dx / dist : 1;
@@ -1179,7 +1177,7 @@ export class BombermanFighter extends Fighter {
             continue;
           }
 
-          // Stationary bombs act as solid physical obstacles for mobile enemy fighters
+          // Stationary bombs act as solid physical obstacles for all non-Bomberman fighters
           f.x += nx * overlap;
           f.y += ny * overlap;
 
@@ -1187,6 +1185,12 @@ export class BombermanFighter extends Fighter {
           if (vn < 0) {
             f.vx -= vn * nx * 1.35;
             f.vy -= vn * ny * 1.35;
+          }
+
+          const vkn = (f.knockbackVx || 0) * nx + (f.knockbackVy || 0) * ny;
+          if (vkn < 0) {
+            f.knockbackVx = 0;
+            f.knockbackVy = 0;
           }
         }
 
