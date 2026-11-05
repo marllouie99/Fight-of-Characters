@@ -1241,7 +1241,15 @@ export class MakiFighter extends Fighter {
       const entry = this.makiLaunchedTargets[i];
       const t = entry.target;
 
-      if (!t || t.isDead || t.hp <= 0) {
+      const isTargetInvincible = Boolean(
+        t.isInvulnerable ||
+        t.isInvincible ||
+        t.invincible ||
+        t.isInvincibleUltimate ||
+        (t.invincibleTimer && t.invincibleTimer > 0) ||
+        (t.invincibilityTimer && t.invincibilityTimer > 0)
+      );
+      if (!t || t.isDead || t.hp <= 0 || isTargetInvincible) {
         this.makiLaunchedTargets.splice(i, 1);
         continue;
       }

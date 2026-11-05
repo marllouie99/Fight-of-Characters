@@ -269,6 +269,8 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
     target.isInvulnerable ||
     target.isInvincible ||
     target.invincible ||
+    target.isInvincibleUltimate ||
+    (target.invincibleTimer && target.invincibleTimer > 0) ||
     (target.invincibilityTimer && target.invincibilityTimer > 0) ||
     (target.isPokemonTrainer && target.activePokemon && (target.activePokemon.hp > 0 || target.activePokemon.isFainting)) ||
     (target.isPokemonTrainer && typeof state !== 'undefined' && state?.arena && isEntityOutsideArena(target, state.arena))
@@ -375,7 +377,7 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
       }
 
       // Trigger global white hit flash visual effect for non-DoT hits
-      if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.isBleed && opts.source !== 'bleed' && !opts.isElectrified) {
+      if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.isBleed && opts.source !== 'bleed' && !opts.isElectrified && !target.isLawnmower && target.characterId !== 'crazydave_lawnmower') {
         target.hitFlashTimer = 8;
       }
 
@@ -2815,6 +2817,8 @@ export class Fighter {
         this.isInvulnerable ||
         this.isInvincible ||
         this.invincible ||
+        this.isInvincibleUltimate ||
+        (this.invincibleTimer && this.invincibleTimer > 0) ||
         (this.isPokemonTrainer && (this.jumpState !== 'inside' || this.isJumpedOut))
       ) {
         return false;
@@ -3062,14 +3066,14 @@ export class Fighter {
       (typeof this.type === 'string' && ['pawn', 'knight', 'bishop', 'rook', 'queen'].includes(this.type.toLowerCase()) && (this.isMinion || this.isChessTroop || this.isChessPiece))
     );
     if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.fromBlackHole && !opts.isPurpleDPS && !opts.isElectrified && !opts.isDomainDPS && !opts.isPureLoveBeam && !opts.isBleed && opts.source !== 'bleed' && !opts.isCurse && opts.source !== 'curse' && !opts.noHitSound && !opts.suppressHitSound && !isTargetSilent && !opts.isNamelessBeam && !opts.isSilent && !isDomainHit) {
-      if (!this.isTurret && !this.isDispenser) {
+      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower') {
         if (!isSecondTurretHit) {
           audioSystem.playSFX('attack_fleshhit', 0.6);
         }
         this.hitFlashTimer = 8;
       }
     } else if (opts.isPurpleDPS) {
-      if (!this.isTurret && !this.isDispenser) {
+      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower') {
         this.hitFlashTimer = 6;
         if (!isTargetSilent) {
           const now = Date.now();
@@ -3080,7 +3084,7 @@ export class Fighter {
         }
       }
     } else if (isDomainHit) {
-      if (!this.isTurret && !this.isDispenser) {
+      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower') {
         this.hitFlashTimer = 6;
       }
     }

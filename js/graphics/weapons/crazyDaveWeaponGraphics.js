@@ -1438,8 +1438,8 @@ export function drawLawnmower(ctx, mower) {
     const frame = LAWNMOWER_RECTS[frameIdx] || LAWNMOWER_RECTS[0];
     const aspect = frame.sw / (frame.sh || 1);
     const drawWidth = drawHeight * aspect;
-    const isHit = (mower.hitFlashTimer || 0) > 0;
-    const flashAlpha = isHit ? Math.min(0.90, (mower.hitFlashTimer / 6) * 0.90) : 0;
+    const isHit = false;
+    const flashAlpha = 0;
     drawSpriteWithHitFlash(
       ctx,
       mowerImg,

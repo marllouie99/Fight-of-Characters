@@ -585,6 +585,22 @@ export class ZenitsuFighter extends Fighter {
       if (this.team !== undefined && this.team !== null && target.team !== undefined && target.team !== null && target.team === this.team) continue;
 
       if ((target.zenitsuStaticDebuffTimer || 0) > 0) {
+        const isTargetInvincible = Boolean(
+          target.isInvulnerable ||
+          target.isInvincible ||
+          target.invincible ||
+          target.isInvincibleUltimate ||
+          (target.invincibleTimer && target.invincibleTimer > 0) ||
+          (target.invincibilityTimer && target.invincibilityTimer > 0)
+        );
+        if (isTargetInvincible) {
+          target.zenitsuStaticDebuffTimer = 0;
+          if (target.staticDebuffSource === 'zenitsu') {
+            target.staticDebuffSource = null;
+          }
+          continue;
+        }
+
         target.zenitsuStaticDebuffTimer--;
 
         // Periodic electric zap damage while debuff is active

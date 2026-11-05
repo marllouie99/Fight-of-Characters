@@ -5,12 +5,15 @@
 
 export const isagiConfig = {
   assets: {
-    hair: 'Assets/model/isagi/isagi-hair.png',
+    hair: 'Assets/model/isagi/Isagi_hair.png',
     kickImpact: 'Assets/model/isagi/kick_impact/kick_impact-b.png',
+    egoAura: 'Assets/model/isagi/ego_aura/ego_aura-b.png',
+    egoAuraDisappear: 'Assets/model/isagi/ego_aura_disappear/ego_aura_disappear-b.png',
+    egoTrail: 'Assets/model/isagi/ego_trail/ego_trail-b.png',
   },
 
   name: 'ISAGI',
-  displayName: 'Isagi Yoichi',
+  displayName: 'Isagi',
   grade: 'A', // Fighter Grade: 'B' | 'A' | 'S' | 'SS' | 'SSR'
   bossTitle: 'The Egoist Striker',
   title: 'Heart of Blue Lock',
@@ -78,33 +81,20 @@ export const isagiConfig = {
   metavisionFlowDuration: 180, // 3.0s Flow State buff window
   metavisionBallInterceptionRange: 160, // Nearby ball proximity threshold to trigger dash to ball
   flowShotSpeedMult: 1.5, // Projectile speed during Flow State
-  flowShotCritMult: 1.35, // Guaranteed critical damage multiplier
 
-  // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Signature Finisher) ───
-  enableStriker: true, // Universal Blue Lock Skill 2 Master toggle
-  enableDirectVolley: true, // Backward-compatible alias
+  // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Direct Volley Finisher) ───
+  enableStriker: true, // Master toggle for Skill 2 (Direct Volley Finisher)
   strikerCooldown: 1080, // 18.0s cooldown
-  directVolleyCooldown: 1080, // Backward-compatible alias
   strikerWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
-  directVolleyWindup: 0,
   strikerDamage: 75, // Massive finishing blast damage
-  directVolleyDamage: 75,
   strikerSpeed: 24.0, // Hypersonic volley velocity
-  directVolleySpeed: 24.0,
   strikerRadius: 20, // Blast collision radius (scaled up)
-  directVolleyRadius: 20,
   strikerKnockback: 20.0, // Blasts opponent backwards into the turf/wall
-  directVolleyKnockback: 20.0,
   strikerKnockbackDuration: 14, // Knockback flight duration (frames) before applying stun afterwards
-  directVolleyKnockbackDuration: 14,
   strikerStunDuration: 100, // Stun debuff duration in frames applied after knockback (~1.6s stun)
-  directVolleyStunDuration: 100,
   strikerShake: 8, // Screen shake intensity (px)
-  directVolleyShake: 8,
   strikerKickSlowDuration: 24, // Brief duration for heavy strike (~0.40s)
-  directVolleyKickSlowDuration: 24,
   strikerKickSlowMultiplier: 0.12, // Movement speed multiplier during recovery
-  directVolleyKickSlowMultiplier: 0.12,
 
   // ─── Passive: Spatial Awareness & One-Two Rebound ───
   sweetSpotDistance: 180, // Distance threshold for sweet spot bonus

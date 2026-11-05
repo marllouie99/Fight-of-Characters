@@ -1140,7 +1140,17 @@ export class SansFighter extends Fighter {
     const tickDmg = cfg.karmaTickDamage || 1;
 
     for (const [target, kData] of this.karmaTargets.entries()) {
-      if (!target || target.hp <= 0 || kData.timer <= 0) {
+      const isTargetInvincible = Boolean(
+        target && (
+          target.isInvulnerable ||
+          target.isInvincible ||
+          target.invincible ||
+          target.isInvincibleUltimate ||
+          (target.invincibleTimer && target.invincibleTimer > 0) ||
+          (target.invincibilityTimer && target.invincibilityTimer > 0)
+        )
+      );
+      if (!target || target.hp <= 0 || kData.timer <= 0 || isTargetInvincible) {
         this.karmaTargets.delete(target);
         continue;
       }
@@ -1152,13 +1162,15 @@ export class SansFighter extends Fighter {
         kData.tickTimer = 0;
         const totalTick = Math.max(1, Math.min(3, Math.floor(kData.stacks * 0.25 * tickDmg)));
         if (target.takeDamage && target.hp > 1) {
-          target.takeDamage(totalTick, this, {
+          const applied = target.takeDamage(totalTick, this, {
             isKarma: true,
             bypassDodge: true,
             damageNumberColor: this.damageNumberColor || '#03d5f1ff',
             skipStandardDamageText: true
           });
-          spawnFloatingText(target.x, target.y - target.r - 10, `-${totalTick}`, this.damageNumberColor || '#03d5f1ff');
+          if (applied) {
+            spawnFloatingText(target.x, target.y - target.r - 10, `-${totalTick}`, this.damageNumberColor || '#03d5f1ff');
+          }
         }
       }
     }

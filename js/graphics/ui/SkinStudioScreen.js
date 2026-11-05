@@ -867,15 +867,15 @@ export const SKIN_STUDIO_FIGHTERS = [
   {
     key: 'isagi',
     label: 'ISAGI YOICHI',
-    asset: 'Assets/model/isagi/isagi-hair.png',
-    assetDims: '1024 x 1024',
-    baseW: 3.05,
-    baseH: 2.25,
-    baseCrownY: -1.35,
-    visW: 708,
-    visH: 749,
-    centerX: 511.5,
-    topY: 153,
+    asset: 'Assets/model/isagi/Isagi_hair.png',
+    assetDims: '1536 x 1024',
+    baseW: 3.10,
+    baseH: 2.40,
+    baseCrownY: -1.50,
+    visW: 1036,
+    visH: 1000,
+    centerX: 775.5,
+    topY: 181,
     themeColor: '#00F0FF',
     forms: [
       { id: 'default', label: 'EGOIST STRIKER' }
@@ -1281,15 +1281,15 @@ function generateJsCode(fDef, custom) {
            `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'isagi') {
-    return `// Calibrated Hair for Isagi (Assets/model/isagi/isagi-hair.png)\n` +
+    return `// Calibrated Hair for Isagi (Assets/model/isagi/Isagi_hair.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
            `const targetHairHeight = r * ${targetH};\n` +
-           `const scaleX = targetHairWidth / 708;\n` +
-           `const scaleY = targetHairHeight / 749;\n` +
-           `const drawW = 1024 * scaleX;\n` +
+           `const scaleX = targetHairWidth / 1036;\n` +
+           `const scaleY = targetHairHeight / 1000;\n` +
+           `const drawW = 1536 * scaleX;\n` +
            `const drawH = 1024 * scaleY;\n` +
-           `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
-           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 153 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+           `const drawX = -775.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 181 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'chigiri') {
     return `// Calibrated Hair for Chigiri (Assets/model/chigiri/Chigiri_hair.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +

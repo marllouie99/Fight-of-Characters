@@ -1392,13 +1392,24 @@ export class EnderDragonFighter extends Fighter {
           if (!target || target === this || target.hp <= 0) continue;
           const d = Math.hypot(target.x - pool.x, target.y - pool.y);
           if (d <= pool.radius) {
-            applyDamageToTarget(target, pool.damagePerTick, this);
-            spawnFloatingText(target.x, target.y - 10, `-${pool.damagePerTick}`, '#A21CAF');
-            this._playAudio('acidTick', 'Assets/Sound Effects/Attacks/fleshhit.mp3', 0.35);
+            const isTargetInvincible = Boolean(
+              target.isInvulnerable ||
+              target.isInvincible ||
+              target.invincible ||
+              target.isInvincibleUltimate ||
+              (target.invincibleTimer && target.invincibleTimer > 0) ||
+              (target.invincibilityTimer && target.invincibilityTimer > 0)
+            );
+            if (isTargetInvincible) continue;
+            const applied = applyDamageToTarget(target, pool.damagePerTick, this);
+            if (applied) {
+              spawnFloatingText(target.x, target.y - 10, `-${pool.damagePerTick}`, '#A21CAF');
+              this._playAudio('acidTick', 'Assets/Sound Effects/Attacks/fleshhit.mp3', 0.35);
 
-            // Apply movement slow
-            target.vx = (target.vx || 0) * 0.85;
-            target.vy = (target.vy || 0) * 0.85;
+              // Apply movement slow
+              target.vx = (target.vx || 0) * 0.85;
+              target.vy = (target.vy || 0) * 0.85;
+            }
           }
         }
       }

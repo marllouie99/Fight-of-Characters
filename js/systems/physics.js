@@ -1775,7 +1775,17 @@ export function resolveBombObstacleCollisions(arena = state.arena) {
         ent.isPlantBarrier ||
         ent.isWallnut
       );
-      if (isImmovable) continue;
+      if (isImmovable) {
+        if (ent.isLawnmower && ent.state === 'charging' && typeof ent.destroyPlantedBomb === 'function') {
+          const er = ent.r || 18;
+          const minDist = br + er;
+          const dist = Math.hypot(ent.x - bomb.x, ent.y - bomb.y);
+          if (dist < minDist) {
+            ent.destroyPlantedBomb(bomb);
+          }
+        }
+        continue;
+      }
 
       const er = ent.r || 25;
       const minDist = br + er;

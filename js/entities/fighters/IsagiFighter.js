@@ -39,7 +39,8 @@ import {
   drawStrikerShockwave,
   drawIsagiKickImpact,
   drawIsagi16BitHitImpact,
-  drawBlueLockEgoAura
+  drawBlueLockEgoAura,
+  drawBlueLockEgoAuraFront
 } from '../../graphics/weapons/isagiWeaponGraphics.js';
 import {
   createSoccerBall,
@@ -61,6 +62,8 @@ import {
   gainBlueLockEgo,
   activateBlueLockEgo,
   updateBlueLockEgo,
+  updateBlueLockEgoTrail,
+  decayBlueLockEgoTrail,
   getBlueLockEgoBuffs
 } from '../../systems/soccerBallSystem.js';
 import { spawnSparks, spawnImpactFlash } from '../../graphics/particles/sparkEffect.js';
@@ -312,6 +315,14 @@ export class IsagiFighter extends Fighter {
    * Top-of-update non-freezing active visual effect decay routine (Rule 25).
    */
   _updateVisualEffects() {
+    // 0. Blue Lock Ego Aura update & decay before freeze guard (Rule 25)
+    // Ensures aura opacity and visual flame animation persist even when movement is stopped by attacks/CC
+    if (this.isEgoActive || this.isMetavisionDashing) {
+      updateBlueLockEgoTrail(this);
+    } else {
+      decayBlueLockEgoTrail(this);
+    }
+
     // 1. Puzzle Particles Decay
     for (let i = this.puzzleParticles.length - 1; i >= 0; i--) {
       const p = this.puzzleParticles[i];
@@ -376,11 +387,11 @@ export class IsagiFighter extends Fighter {
   /**
    * Spawns a 16-bit retro arcade hit impact effect when the soccer ball strikes an enemy.
    */
-  _spawn16BitHitEffect(x, y, impactAngle, isDirectVolley = false, isCrit = false) {
+  _spawn16BitHitEffect(x, y, impactAngle, isDirectVolley = false) {
     const P = 2.0;
     const count = isDirectVolley ? 12 : 8;
     const particles = [];
-    const baseColor = isDirectVolley ? '#00FF88' : (isCrit ? '#FACC15' : '#00F0FF');
+    const baseColor = this.color || '#00F0FF';
 
     for (let i = 0; i < count; i++) {
       // 16-bit quantized radial angles
@@ -407,7 +418,6 @@ export class IsagiFighter extends Fighter {
       timer: isDirectVolley ? 16 : 13,
       maxTimer: isDirectVolley ? 16 : 13,
       isDirectVolley: isDirectVolley,
-      isCrit: isCrit,
       particles: particles
     });
   }
@@ -614,7 +624,6 @@ export class IsagiFighter extends Fighter {
     executeSoccerKick(this, this.soccerBall, angle, kickSpeed, {
       damage: cfg.egoShotDamage || 24,
       reboundDamage: cfg.egoShotReboundDamage || 32,
-      isCrit: this.isFlowStateActive,
       isDirectVolley: false,
       themeColor: '#00F0FF',
       bounceBackChance: bounceChance,
@@ -784,13 +793,14 @@ export class IsagiFighter extends Fighter {
       drawMetavisionAimReticle(ctx, this, this.directVolleyTarget, progress);
     }
 
-    // 2.5 Draw Ego Awakening Aura (when Ego is active)
-    if (this.isEgoActive) {
-      drawBlueLockEgoAura(ctx, this);
-    }
+    // 2.5 Draw Ego Awakening Spectral Flame Spire & Ground Pool Aura (Back Layer & Decaying Wisps)
+    drawBlueLockEgoAura(ctx, this);
 
     // 3. Draw Character Body Skin (Rule 24 Toji Standard)
     this.drawBody(ctx);
+
+    // 3.5 Draw Ego Awakening Front Ground Pool Licks & Flank Rim Wisps (3D Depth Wrapping)
+    drawBlueLockEgoAuraFront(ctx, this);
 
     // 4. Draw THE Single Persistent Soccer Ball (Only primary Blue Lock controller draws to avoid duplicate rendering)
     if (this.soccerBall && isPrimaryBlueLockBallController(this, state) && !this._isPreview && !this._isProfilePreview) {
@@ -837,6 +847,10 @@ export class IsagiFighter extends Fighter {
     if (forceCancelAll) {
       this.activeKickImpacts.length = 0;
       this.active16BitHits.length = 0;
+      if (this._egoTrailNodes) this._egoTrailNodes.length = 0;
+      if (this._egoDroplets) this._egoDroplets.length = 0;
+      if (this._egoFlameWisps) this._egoFlameWisps.length = 0;
+      this._egoAuraOpacity = 0;
     }
   }
 }

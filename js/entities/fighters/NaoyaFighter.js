@@ -745,7 +745,7 @@ export class NaoyaFighter extends Fighter {
     const targets = [];
     if (state.fighters && Array.isArray(state.fighters)) {
       for (const f of state.fighters) {
-        if (f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f)) {
+        if (f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f) && !f.isLawnmower && !f.isUntargetable && !f.untargetable && !f.cannotBeTargeted && f.isTargetable !== false) {
           targets.push(f);
         }
       }
@@ -913,7 +913,7 @@ export class NaoyaFighter extends Fighter {
       // Check devastating Mach 3 kinetic collision with enemies
       const allTargets = [...(state.fighters || []), ...(state.illusions || [])];
       for (const t of allTargets) {
-        if (t && t !== this && !t.isDead && !this.isTeammate(t)) {
+        if (t && t !== this && !t.isDead && !this.isTeammate(t) && !t.isLawnmower && !t.isUntargetable && !t.untargetable && !t.cannotBeTargeted && t.isTargetable !== false) {
           const dist = Math.hypot(t.x - this.x, t.y - this.y);
           if (dist <= (this.r || 25) + (t.r || 25) + 14) {
             const wasFrameFrozen = Boolean(t.isFrameFrozen || (t.frameFreezeTimer && t.frameFreezeTimer > 0));
@@ -1020,7 +1020,7 @@ export class NaoyaFighter extends Fighter {
       });
 
       for (const t of allTargets) {
-        if (t && t !== this && !t.isDead && !this.isTeammate(t)) {
+        if (t && t !== this && !t.isDead && !this.isTeammate(t) && !t.isLawnmower && !t.isUntargetable && !t.untargetable && !t.cannotBeTargeted && t.isTargetable !== false) {
           const dx = t.x - this.x;
           const dy = t.y - this.y;
           const dist = Math.hypot(dx, dy);
@@ -1230,7 +1230,7 @@ export class NaoyaFighter extends Fighter {
     if (this.cellularBleedTimer % bleedInterval === 0) {
       const allTargets = [...(state.fighters || []), ...(state.illusions || [])];
       for (const t of allTargets) {
-        if (!t || t === this || t.isDead || (t.hp || 0) <= 0 || this.isTeammate(t)) continue;
+        if (!t || t === this || t.isDead || (t.hp || 0) <= 0 || this.isTeammate(t) || t.isLawnmower || t.isUntargetable || t.untargetable || t.cannotBeTargeted || t.isTargetable === false) continue;
 
         // Lore Exception: Toji Fushiguro (Heavenly Restriction 0 cursed energy) is completely undetectable & immune!
         if (t.characterId === 'toji' || t.type === 'toji') {
@@ -1303,7 +1303,7 @@ export class NaoyaFighter extends Fighter {
       // Devastating kinetic collision ram damage when flying into enemies at Mach 3
       const allTargets = [...(state.fighters || []), ...(state.illusions || [])];
       for (const t of allTargets) {
-        if (t && t !== this && !t.isDead && !this.isTeammate(t)) {
+        if (t && t !== this && !t.isDead && !this.isTeammate(t) && !t.isLawnmower && !t.isUntargetable && !t.untargetable && !t.cannotBeTargeted && t.isTargetable !== false) {
           const dist = Math.hypot(t.x - this.x, t.y - this.y);
           if (dist <= (this.r || 25) + (t.r || 25)) {
             const ramDmg = cfg.machRamContactDamage || 18;
@@ -1728,7 +1728,7 @@ export class NaoyaFighter extends Fighter {
     const targets = [];
     if (state.fighters && Array.isArray(state.fighters)) {
       for (const f of state.fighters) {
-        if (f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f)) {
+        if (f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f) && !f.isLawnmower && !f.isUntargetable && !f.untargetable && !f.cannotBeTargeted && f.isTargetable !== false) {
           targets.push(f);
         }
       }
@@ -1847,7 +1847,7 @@ export class NaoyaFighter extends Fighter {
       return;
     }
 
-    const target = opponent || (state.fighters ? state.fighters.find(f => f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f)) : null);
+    const target = opponent || (state.fighters ? state.fighters.find(f => f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f) && !f.isLawnmower && !f.isUntargetable && !f.untargetable && !f.cannotBeTargeted && f.isTargetable !== false) : null);
     if (!target || target.isDead || (target.hp || 0) <= 0) return;
 
     const cfg = CONFIG.naoya || {};
@@ -1904,7 +1904,7 @@ export class NaoyaFighter extends Fighter {
           let nextTarget = null;
           let minDist = Infinity;
           for (const f of state.fighters) {
-            if (f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f)) {
+            if (f && f !== this && !f.isDead && (f.hp || 0) > 0 && !this.isTeammate(f) && !f.isLawnmower && !f.isUntargetable && !f.untargetable && !f.cannotBeTargeted && f.isTargetable !== false) {
               const d = Math.hypot(f.x - this.x, f.y - this.y);
               if (d < minDist) {
                 minDist = d;

@@ -4534,7 +4534,7 @@ async function runInteractionTests() {
 
     const { ARENA_THEMES, getSelectedArenaTheme, setSelectedArenaTheme, resolveActiveThemeId, drawArenaThemeSelector, drawArenaThemeModal, getArenaTopWallBlockThickness } = await import('../js/systems/arenaThemeSystem.js');
     const { isArenaDecorationsEnabled, getArenaDecorationTheme } = await import('../js/systems/arenaDecorationSystem.js');
-    assert(Array.isArray(ARENA_THEMES) && ARENA_THEMES.length === 14, `ARENA_THEMES should contain all 14 selectable themes (got ${ARENA_THEMES?.length})`);
+    assert(Array.isArray(ARENA_THEMES) && ARENA_THEMES.length === 15, `ARENA_THEMES should contain all 15 selectable themes (got ${ARENA_THEMES?.length})`);
     assert(ARENA_FLOORS === ARENA_THEMES, 'ARENA_FLOORS must equal ARENA_THEMES for backward compatibility');
 
     // Bomberman "Normal Zone" Theme integration checks & top wall elevation
@@ -12843,6 +12843,47 @@ async function runInteractionTests() {
     assert(damaged === false && bomberman.hp === bmHpBefore, 'Bomberman must take 0 damage from enemy attacks while Invincible is active');
     bomberman.applyHitStun(30);
     assert((bomberman.hitStunTimer || 0) === 0, 'Bomberman must be immune to hitStun while Invincible is active');
+    assert(bomberman.isInvincible === true, 'Bomberman must have isInvincible set to true during Invincible');
+    assert(bomberman.isInvulnerable === true, 'Bomberman must have isInvulnerable set to true during Invincible');
+
+    // Verify status DoTs are blocked while Invincible
+    bomberman.applyBurn(30, 5);
+    assert((bomberman.burnTimer || 0) === 0, 'Burn must not apply to Bomberman while Invincible is active');
+    bomberman.applyPoison(30, 5);
+    assert((bomberman.poisonTicks || 0) === 0, 'Poison must not apply to Bomberman while Invincible is active');
+    bomberman.applyBleed(30, 5);
+    assert((bomberman.bleedTimer || 0) === 0, 'Bleed must not apply to Bomberman while Invincible is active');
+
+    // Verify castInvincible purges existing status DoTs & debuffs
+    bomberman.invincibleTimer = 0;
+    bomberman.isInvincible = false;
+    bomberman.isInvulnerable = false;
+    bomberman.burnTimer = 40;
+    bomberman.poisonTicks = 6;
+    bomberman.bleedTimer = 30;
+    bomberman.electricStunTimer = 20;
+    bomberman.castInvincible();
+    assert((bomberman.burnTimer || 0) === 0, 'castInvincible must purge burnTimer');
+    assert((bomberman.poisonTicks || 0) === 0, 'castInvincible must purge poisonTicks');
+    assert((bomberman.bleedTimer || 0) === 0, 'castInvincible must purge bleedTimer');
+    assert((bomberman.electricStunTimer || 0) === 0, 'castInvincible must purge electricStunTimer');
+
+    // Verify tick damage (e.g. Sans Karma / DoTs) does NOT deal damage and does NOT spawn floating damage text
+    const textCountBefore = globalThis.state?.floatingTexts?.length || 0;
+    const hpBeforeTick = bomberman.hp;
+    const tickResult = bomberman.takeDamage(10, enemy, { skipStandardDamageText: true });
+    assert(tickResult === false, 'Tick damage must return false when Bomberman is invincible');
+    assert(bomberman.hp === hpBeforeTick, 'Bomberman HP must remain unchanged from tick damage');
+    const textCountAfter = globalThis.state?.floatingTexts?.length || 0;
+    assert(textCountAfter === textCountBefore, 'Zero floating damage text must be spawned when Bomberman is invincible');
+
+    // Test with Sans Karma system directly
+    const SansClass = FIGHTER_CLASS_MAP['sans'];
+    const sansForKarma = new SansClass({ x: 200, y: 300, color: '#00BFFF', controls: {} });
+    sansForKarma.karmaTargets.set(bomberman, { karmaHp: 30, timer: 14 });
+    sansForKarma._updateKarma();
+    assert(!sansForKarma.karmaTargets.has(bomberman), 'Sans karmaTargets must immediately purge invincible Bomberman');
+    assert(bomberman.hp === hpBeforeTick, 'Sans Karma must not damage invincible Bomberman');
 
     // Verify multi-cast cooldown consistency: 1st, 2nd, and 3rd casts must keep exact fixed cooldown
     const expectedCd = bomberman.invincibleCooldown || CONFIG.bomberman.invincibleCooldown || 1000;
@@ -12918,6 +12959,7 @@ async function runInteractionTests() {
     mockCtx.resetStackDepth();
     bomberman.draw(mockCtx, enemy);
     assert(mockCtx.getStackDepth() === 0, `Bomberman.draw() must maintain 0 Canvas 2D stack depth (got ${mockCtx.getStackDepth()})`);
+    bomberman.activeBombs.length = 0;
 
     // 7. Verify Bomberman Dedicated Authentic SFX Wiring (explosion.mp3, Place Bomb, Walking 1, Kick - Pressure Block, era_vera Fire Up)
     const cfg = CONFIG.bomberman;
@@ -13001,6 +13043,143 @@ async function runInteractionTests() {
     bomberman._updateVisualExplosions();
     assert(walkingEnemy.hp < 500, 'Enemy walking into active flame arm must take damage during flame burn window');
     state.fighters = state.fighters.filter(f => f !== walkingEnemy);
+
+    // 11. Verify Bomb Stun Gating: Stun is ONLY applied when bomb actually damages the enemy;
+    // dodging/evading/invulnerable enemies or blocked damage MUST receive NO stun or velocity halting.
+    state.floatingTexts = [];
+    bomberman.activeBombs.length = 0;
+    bomberman.maxBombs = 10;
+    const evadingEnemy = new NormalClass({ x: arena.x + 200, y: arena.y + 200, color: '#EF4444', controls: {} });
+    evadingEnemy.maxHp = 500;
+    evadingEnemy.hp = 500;
+    evadingEnemy.isInvulnerable = true;
+    evadingEnemy.vx = 4;
+    evadingEnemy.vy = 2;
+    state.fighters = [bomberman, evadingEnemy];
+
+    const evadeBomb = bomberman.plantBomb(arena, true, evadingEnemy.x, evadingEnemy.y);
+    assert(evadeBomb !== null, 'Planting bomb for evade test must succeed');
+    bomberman._detonateBomb(evadeBomb, arena);
+
+    assert(evadingEnemy.hp === 500, 'Invulnerable/evading enemy must take 0 damage from bomb explosion');
+    assert((evadingEnemy.paralyzeTimer || 0) === 0, 'Invulnerable/evading enemy must NOT receive paralyze when taking 0 damage');
+    assert((evadingEnemy.hitStunTimer || 0) === 0, 'Invulnerable/evading enemy must NOT receive hitStun when taking 0 damage');
+    assert((evadingEnemy.stunTimer || 0) === 0, 'Invulnerable/evading enemy must NOT receive stunTimer when taking 0 damage');
+    assert((evadingEnemy.slowTimer || 0) === 0, 'Invulnerable/evading enemy must NOT receive slowTimer when taking 0 damage');
+    assert(evadingEnemy.vx === 4 && evadingEnemy.vy === 2, 'Invulnerable/evading enemy velocity must NOT be halted on zero damage');
+    assert(state.floatingTexts.length === 0, 'No floating damage text must be spawned when enemy takes 0 damage');
+
+    // Now test a vulnerable enemy that actually takes damage from the bomb:
+    bomberman.activeBombs.length = 0;
+    const vulnerableEnemy = new NormalClass({ x: arena.x + 200, y: arena.y + 200, color: '#EF4444', controls: {} });
+    vulnerableEnemy.maxHp = 500;
+    vulnerableEnemy.hp = 500;
+    vulnerableEnemy.isInvulnerable = false;
+    vulnerableEnemy.vx = 4;
+    vulnerableEnemy.vy = 2;
+    state.fighters = [bomberman, vulnerableEnemy];
+
+    const hitBomb = bomberman.plantBomb(arena, true, vulnerableEnemy.x, vulnerableEnemy.y);
+    assert(hitBomb !== null, 'Planting bomb for hit test must succeed');
+    bomberman._detonateBomb(hitBomb, arena);
+
+    assert(vulnerableEnemy.hp < 500, 'Vulnerable enemy must take damage from bomb explosion');
+    assert(vulnerableEnemy.paralyzeTimer > 0 || vulnerableEnemy.hitStunTimer > 0 || vulnerableEnemy.stunTimer > 0, 'Vulnerable enemy must be stunned when actually damaged');
+    assert(vulnerableEnemy.slowTimer > 0, 'Vulnerable enemy must receive slow debuff when damaged');
+    assert(vulnerableEnemy.vx === 0 && vulnerableEnemy.vy === 0, 'Vulnerable enemy velocity must be halted when damaged');
+    assert(state.floatingTexts.length > 0, 'Floating damage text must be spawned when damage connects');
+    // 11b. Verify Plant and Lawnmower Stun Immunity:
+    // Crazy Dave Plants take explosion damage, but MUST NOT receive any stun or slow debuff!
+    // Lawnmowers take 0 damage, retain full traveling velocity (never halted), and receive zero stun/slow!
+    const { PeashooterEntity, LawnmowerEntity } = await import('../js/entities/fighters/CrazyDaveFighter.js');
+    const plant = new PeashooterEntity(arena.x + 200, arena.y + 200, null, 1, 3);
+    plant.hp = 300;
+    plant.maxHp = 300;
+
+    const lawnmower = new LawnmowerEntity(arena.x + 200, arena.y + 200, null, 1, 3);
+    lawnmower.vx = 8;
+    lawnmower.vy = 0;
+
+    state.fighters = [bomberman, plant, lawnmower];
+    bomberman.activeBombs.length = 0;
+    const plantBomb = bomberman.plantBomb(arena, true, arena.x + 200, arena.y + 200);
+    assert(plantBomb !== null, 'Planting bomb for plant & lawnmower test must succeed');
+    bomberman._detonateBomb(plantBomb, arena);
+
+    // Plant took damage but was NOT stunned or slowed
+    assert(plant.hp < 300, 'Plant must take bomb explosion damage');
+    assert((plant.paralyzeTimer || 0) === 0, 'Plant must NOT receive paralyze from bomb explosion');
+    assert((plant.hitStunTimer || 0) === 0, 'Plant must NOT receive hitStun from bomb explosion');
+    assert((plant.stunTimer || 0) === 0, 'Plant must NOT receive stunTimer from bomb explosion');
+    assert((plant.slowTimer || 0) === 0, 'Plant must NOT receive slowTimer from bomb explosion');
+
+    // Lawnmower retained traveling velocity and was NOT stunned or slowed
+    assert((lawnmower.paralyzeTimer || 0) === 0, 'Lawnmower must NOT receive paralyze from bomb explosion');
+    assert((lawnmower.hitStunTimer || 0) === 0, 'Lawnmower must NOT receive hitStun from bomb explosion');
+    assert((lawnmower.stunTimer || 0) === 0, 'Lawnmower must NOT receive stunTimer from bomb explosion');
+    assert((lawnmower.slowTimer || 0) === 0, 'Lawnmower must NOT receive slowTimer from bomb explosion');
+    assert(lawnmower.vx === 8, 'Lawnmower velocity must NOT be halted by bomb explosion');
+    assert((lawnmower.hitFlashTimer || 0) === 0, 'Lawnmower must receive zero hit-flash from bomb explosion');
+
+    // Test kicked traveling bomb passing through a Lawnmower:
+    // Lawnmower must receive 0 hit effects, 0 hit-flash, 0 stun, and traveling bomb must NOT stop!
+    plant.dead = true; plant.hp = 0;
+    const kickedMowerBomb = bomberman.plantBomb(arena, false, arena.x + 100, arena.y + 200);
+    if (kickedMowerBomb) {
+      kickedMowerBomb.fuseTimer = 999;
+      kickedMowerBomb.isTraveling = true;
+      kickedMowerBomb.vx = 10;
+      kickedMowerBomb.vy = 0;
+      kickedMowerBomb.x = lawnmower.x - 5;
+      kickedMowerBomb.y = lawnmower.y;
+      bomberman._resolveBombCollisions(kickedMowerBomb, arena);
+      assert((lawnmower.hitFlashTimer || 0) === 0, 'Lawnmower must receive 0 hitFlashTimer from traveling bomb');
+      assert(kickedMowerBomb.isTraveling === true, 'Traveling bomb must NOT be stopped by Lawnmower');
+    }
+
+    // Verify Lawnmower destroys planted bombs (charging steamroll & idle trigger crush):
+    bomberman.activeBombs.length = 0;
+    const plantedTargetBomb = bomberman.plantBomb(arena, false, arena.x + 100, arena.y + 200);
+    assert(plantedTargetBomb !== null && bomberman.activeBombs.includes(plantedTargetBomb), 'Planted bomb must exist in activeBombs');
+
+    lawnmower.state = 'charging';
+    lawnmower.facingDirection = 1;
+    lawnmower.x = plantedTargetBomb.x - 2;
+    lawnmower.y = plantedTargetBomb.y;
+    lawnmower.update(bomberman, 0, arena);
+
+    assert(plantedTargetBomb.dead === true, 'Lawnmower must mark planted bomb as dead');
+    assert(plantedTargetBomb.hp === 0, 'Lawnmower must set planted bomb HP to 0');
+    assert(!bomberman.activeBombs.includes(plantedTargetBomb), 'Planted bomb must be removed from bomberman.activeBombs');
+
+    // Test idle lawnmower trips and destroys enemy planted bomb placed in its lane / proximity
+    const nearBomb = bomberman.plantBomb(arena, false, arena.x + 80, arena.y + 120);
+    assert(nearBomb !== null && bomberman.activeBombs.includes(nearBomb), 'Near planted bomb must exist');
+    const idleMower = new LawnmowerEntity(nearBomb.x - 30, nearBomb.y, null, 1, 2);
+    idleMower.update(bomberman, 0, arena);
+    assert(idleMower.state === 'charging', 'Idle lawnmower must trigger into charging when enemy bomb is in its trigger zone');
+    assert(nearBomb.dead === true && !bomberman.activeBombs.includes(nearBomb), 'Triggered lawnmower must destroy the planted bomb');
+
+    // Verify Bomberman CANNOT plant a bomb on an already occupied tile:
+    bomberman.activeBombs.length = 0;
+    bomberman.maxBombs = 10;
+    const tileBomb = bomberman.plantBomb(arena, false, arena.x + 120, arena.y + 120);
+    assert(tileBomb !== null, 'First bomb plant on tile must succeed');
+    // Attempt to plant another bomb on the exact same tile without allowAdjacentIfOccupied
+    const duplicateTileBomb = bomberman.plantBomb(arena, false, arena.x + 120, arena.y + 120);
+    assert(duplicateTileBomb === null, 'Bomberman MUST NOT plant a bomb to an already occupied tile');
+    // Verify when standing on a plant (e.g. Peashooter), planting bomb returns null
+    plant.dead = false;
+    plant.hp = 300;
+    plant.x = arena.x + 180;
+    plant.y = arena.y + 180;
+    plant.col = 3;
+    plant.row = 3;
+    const plantOccupiedBomb = bomberman.plantBomb(arena, false, plant.x, plant.y);
+    assert(plantOccupiedBomb === null, 'Bomberman MUST NOT plant a bomb on a tile occupied by a plant');
+
+    state.floatingTexts = [];
+    state.fighters = [];
 
     console.log('      ✅ Bomber Man (tile-centered bombs, Bomb Up Max 10, Fire Up Max 10, Kick traveling & mid-travel explosion, 30s Invincible, dedicated SFX, basic attack sound registration, active flame hitbox, Rule 18 HUD skill bars & stack balance) verified.');
   }
@@ -16385,8 +16564,8 @@ async function runInteractionTests() {
     const { _drawIsagiHair, drawIsagiSkin } = await import('../js/graphics/fighters/isagiSkin.js');
     const isagiStudioDef = SKIN_STUDIO_FIGHTERS.find(f => f.key === 'isagi');
     assert(isagiStudioDef, 'Isagi must be registered in SKIN_STUDIO_FIGHTERS');
-    assert(isagiStudioDef.visW === 708 && isagiStudioDef.visH === 749, `Isagi hair bounding box must be 708x749 (got ${isagiStudioDef?.visW}x${isagiStudioDef?.visH})`);
-    assert(isagiStudioDef.centerX === 511.5 && isagiStudioDef.topY === 153, 'Isagi centerX and topY must match asset bounding box');
+    assert(isagiStudioDef.visW === 1036 && isagiStudioDef.visH === 1000, `Isagi hair bounding box must be 1036x1000 (got ${isagiStudioDef?.visW}x${isagiStudioDef?.visH})`);
+    assert(isagiStudioDef.centerX === 775.5 && isagiStudioDef.topY === 181, 'Isagi centerX and topY must match asset bounding box');
 
     // Test Canvas 2D render with custom widthScale and heightScale
     state.skinCustomizations = state.skinCustomizations || {};
@@ -17552,8 +17731,49 @@ async function runInteractionTests() {
     assert(chigiri.isPantherSprinting === true, 'isPantherSprinting must be true during sprint dash');
     assert(chigiri.pantherSprintInvulnTimer === 14, `pantherSprintInvulnTimer must be 14 frames, got ${chigiri.pantherSprintInvulnTimer}`);
     assert(chigiri.pantherSpeedBuffTimer === (chigiriConfig.pantherSprintSpeedBuffDuration || 150), `pantherSpeedBuffTimer must be set to 150 frames post-dash speed surge, got ${chigiri.pantherSpeedBuffTimer}`);
+    assert(chigiri.pantherSprintCooldownTimer === (chigiriConfig.pantherSprintCooldown || 240), `pantherSprintCooldownTimer must be set to 240 frames, got ${chigiri.pantherSprintCooldownTimer}`);
+
+    // Verify CD does NOT tick down while duration is active (speed surge or dash)
+    const initialCd = chigiri.pantherSprintCooldownTimer;
+    state.frameCount = (state.frameCount || 0) + 1;
+    chigiri.update(target, 0, arena);
+    assert(chigiri.pantherSprintCooldownTimer === initialCd, `pantherSprintCooldownTimer must hold and NOT tick while duration is active, expected ${initialCd}, got ${chigiri.pantherSprintCooldownTimer}`);
+    assert(chigiri.pantherSpeedBuffTimer < (chigiriConfig.pantherSprintSpeedBuffDuration || 150), 'pantherSpeedBuffTimer must decrement naturally during active duration');
+
+    // Fast-forward duration end
+    chigiri.pantherSpeedBuffTimer = 0;
+    chigiri.isPantherSprinting = false;
+    chigiri.pantherSprintDashTimer = 0;
+    chigiri.pantherSprintInvulnTimer = 0;
+    chigiri.isInvulnerable = false;
+
+    // Verify CD starts to tick once duration ends
+    state.frameCount = (state.frameCount || 0) + 1;
+    chigiri.update(target, 0, arena);
+    assert(chigiri.pantherSprintCooldownTimer === initialCd - 1, `pantherSprintCooldownTimer must start to tick down once duration ends, expected ${initialCd - 1}, got ${chigiri.pantherSprintCooldownTimer}`);
+
+    // Verify HUD Skill Bar reflects duration and cooldown progression
+    const { HUD_SKILL_PROVIDERS } = await import('../js/graphics/ui/hudSkillProviders.js');
+    chigiri.pantherSpeedBuffTimer = 120;
+    const activeSkills = HUD_SKILL_PROVIDERS.chigiri(chigiri);
+    const sprintSkillActive = activeSkills.find(s => s.id === 'panther_sprint');
+    assert(sprintSkillActive && sprintSkillActive.ready === false, 'Skill 1 must NOT be ready while speed surge duration is active');
+    assert(sprintSkillActive.label.includes('SPEED SURGE'), `Skill 1 must display SPEED SURGE label during active duration, got ${sprintSkillActive.label}`);
+
+    chigiri.pantherSpeedBuffTimer = 0;
+    chigiri.pantherSprintCooldownTimer = 180;
+    const cdSkills = HUD_SKILL_PROVIDERS.chigiri(chigiri);
+    const sprintSkillCd = cdSkills.find(s => s.id === 'panther_sprint');
+    assert(sprintSkillCd && sprintSkillCd.ready === false, 'Skill 1 must NOT be ready while cooling down');
+    assert(sprintSkillCd.label.includes('PANTHER SPRINT'), `Skill 1 must display PANTHER SPRINT label during cooldown, got ${sprintSkillCd.label}`);
+
+    chigiri.pantherSprintCooldownTimer = 0;
+    const readySkills = HUD_SKILL_PROVIDERS.chigiri(chigiri);
+    const sprintSkillReady = readySkills.find(s => s.id === 'panther_sprint');
+    assert(sprintSkillReady && sprintSkillReady.ready === true && sprintSkillReady.pct === 100, 'Skill 1 must be ready with 100% pct when cooldown ends');
 
     // Verify speed boost application
+    chigiri.pantherSpeedBuffTimer = 100;
     chigiri.isPantherSprinting = false;
     assert(chigiri.pantherSpeedBuffMultiplier === 1.40, `pantherSpeedBuffMultiplier must be 1.40, got ${chigiri.pantherSpeedBuffMultiplier}`);
 
@@ -18016,6 +18236,325 @@ async function runInteractionTests() {
     state.floatingTexts = [];
     console.log('      ✅ Blue Lock "Ball Kick Steal" Mechanic on Physical Bumps & Interceptions Standard verified cleanly.');
   }
+
+  // 132. Testing "FOOTBALL FIELD" Arena Theme Registration, Canvas 2D Generation, Dark/Night Mode & Selection Integrity Standard
+  {
+    console.log('⚽ Test 132: "FOOTBALL FIELD" Arena Theme Registration, Canvas 2D Generation, Dark/Night Mode & Selection Integrity Standard...');
+    const {
+      ARENA_THEMES,
+      getSelectedArenaTheme,
+      setSelectedArenaTheme,
+      resolveActiveThemeId,
+      generateFootballFieldThemeFloor
+    } = await import('../js/systems/arenaThemeSystem.js');
+
+    assert(Array.isArray(ARENA_THEMES), 'ARENA_THEMES must be an array');
+    const footballTheme = ARENA_THEMES.find(t => t.id === 'football_field');
+    assert(footballTheme, '"football_field" must be registered in ARENA_THEMES');
+    assert(footballTheme.name === 'FOOTBALL FIELD', 'Theme display name must be "FOOTBALL FIELD"');
+
+    // Canvas 2D Floor Generation & Stack Depth Balance
+    mockCtx.resetStackDepth();
+    assert(mockCtx.getStackDepth() === 0, 'Canvas stack depth must be 0 prior to floor generation');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    const floorCanvas = generateFootballFieldThemeFloor(testArena, { isDarkMode: false });
+    assert(floorCanvas && typeof floorCanvas === 'object', 'generateFootballFieldThemeFloor must return a valid canvas');
+    assert(mockCtx.getStackDepth() === 0, 'generateFootballFieldThemeFloor must maintain 100% Canvas stack balance');
+
+    // Selection & Resolution
+    const origTheme = getSelectedArenaTheme();
+    setSelectedArenaTheme('football_field');
+    assert(getSelectedArenaTheme() === 'football_field', 'Selected theme must resolve to "football_field"');
+    assert(resolveActiveThemeId() === 'football_field', 'resolveActiveThemeId must return "football_field"');
+
+    // Restore original theme
+    setSelectedArenaTheme(origTheme);
+    console.log('      ✅ "FOOTBALL FIELD" Arena Theme Registration, Canvas 2D Generation, Dark/Night Mode & Selection Integrity Standard verified cleanly.');
+  }
+
+  // 133. Testing Blue Lock Ego Flow Spectral Flame Spire, Ground Pool & Wisp Trail Effect Standard (Aleksandr Romashov Reference)
+  {
+    console.log('⚽ Test 133: Blue Lock Ego Flow Spectral Flame Spire, Ground Pool & Wisp Trail Effect Standard...');
+    const {
+      drawBlueLockEgoTrail,
+      updateBlueLockEgoTrail,
+      decayBlueLockEgoTrail,
+      drawBlueLockEgoSpectreColumn,
+      drawBlueLockEgoAuraFront,
+      getBlueLockEgoPalette
+    } = await import('../js/graphics/weapons/blueLockEgoTrailRenderer.js');
+    const {
+      drawBlueLockEgoAura
+    } = await import('../js/graphics/weapons/soccerBallGraphics.js');
+
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const isagi = new IsagiFighter({ id: 70, type: 'isagi', name: 'ISAGI', color: '#00F0FF' });
+    const chigiri = new ChigiriFighter({ id: 71, type: 'chigiri', name: 'CHIGIRI', color: '#EC4899' });
+
+    // 1. Verify Spectral Palettes (Isagi Aqua-Mint-Emerald GIF Reference & Chigiri Crimson-Rose)
+    const { EGO_AURA_FRAME_COUNT, getBlueLockEgoAuraFrames, _getIsagiEgoAuraFrames, _getChigiriEgoAuraFrames } = await import('../js/graphics/weapons/blueLockEgoTrailRenderer.js');
+    assert(EGO_AURA_FRAME_COUNT === 18, 'EGO_AURA_FRAME_COUNT must be 18');
+    assert(Array.isArray(getBlueLockEgoAuraFrames(isagi)), 'getBlueLockEgoAuraFrames(isagi) must return an array');
+    assert(Array.isArray(_getIsagiEgoAuraFrames()), '_getIsagiEgoAuraFrames() must return an array');
+    assert(Array.isArray(_getChigiriEgoAuraFrames()), '_getChigiriEgoAuraFrames() must return an array');
+    const isagiPalette = getBlueLockEgoPalette(isagi);
+    const chigiriPalette = getBlueLockEgoPalette(chigiri);
+    assert(isagiPalette && isagiPalette.midFlame.includes('24, 238, 202'), 'Isagi palette must match Aleksandr Romashov Aqua-Mint reference color');
+    assert(chigiriPalette && chigiriPalette.midFlame.includes('255, 38, 92'), 'Chigiri palette must resolve Crimson-Rose spectral flame');
+
+    // 2. Simulate 12 frames of Ego Mode activation & motion
+    isagi.isEgoActive = true;
+    isagi.x = 200;
+    isagi.y = 250;
+    isagi.vx = 8;
+    isagi.vy = 0;
+
+    for (let f = 0; f < 12; f++) {
+      isagi.x += isagi.vx;
+      isagi.y += isagi.vy;
+      updateBlueLockEgoTrail(isagi);
+    }
+
+    assert(Array.isArray(isagi._egoTrailNodes), 'isagi must record _egoTrailNodes during active Ego');
+    assert(isagi._egoTrailNodes.length >= 6, `isagi must accumulate historical spine nodes (got ${isagi._egoTrailNodes.length})`);
+    assert(Array.isArray(isagi._egoDroplets) && isagi._egoDroplets.length > 0, 'isagi must spawn rising spectral ember droplets');
+    assert(Array.isArray(isagi._egoFlameWisps) && isagi._egoFlameWisps.length > 0, 'isagi must spawn rising detached vertical flame wisps');
+    assert(isagi._egoAuraOpacity > 0.8, 'isagi _egoAuraOpacity must ramp up during active Ego');
+
+    // 3. Verify Canvas 2D Rendering & Stack Depth Balance (Back Spire, Front 3D Wrap & Full Fighter Draw)
+    mockCtx.resetStackDepth();
+    assert(mockCtx.getStackDepth() === 0, 'Canvas stack depth must be 0 prior to render');
+    drawBlueLockEgoTrail(mockCtx, isagi);
+    assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoTrail must maintain 100% Canvas stack balance');
+    drawBlueLockEgoSpectreColumn(mockCtx, isagi);
+    assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoSpectreColumn must maintain 100% Canvas stack balance');
+    drawBlueLockEgoAura(mockCtx, isagi);
+    assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoAura must maintain 100% Canvas stack balance');
+    drawBlueLockEgoAuraFront(mockCtx, isagi);
+    assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoAuraFront must maintain 100% Canvas stack balance');
+
+    chigiri.isEgoActive = true;
+    updateBlueLockEgoTrail(chigiri);
+    drawBlueLockEgoAura(mockCtx, chigiri);
+    drawBlueLockEgoAuraFront(mockCtx, chigiri);
+    assert(mockCtx.getStackDepth() === 0, 'Chigiri Ego Aura back & front passes must maintain 100% Canvas stack balance');
+
+    // 4. Test Rule 25 Non-Freezing Active Visual Effects Decay Standard
+    isagi.isEgoActive = false;
+    const initialNodeCount = isagi._egoTrailNodes.length;
+    const initialOpacity = isagi._egoAuraOpacity;
+    for (let decayFrame = 0; decayFrame < 15; decayFrame++) {
+      decayBlueLockEgoTrail(isagi);
+    }
+    assert(isagi._egoTrailNodes.length < initialNodeCount, 'decayBlueLockEgoTrail must naturally age and remove nodes when Ego ends');
+    assert(isagi._egoAuraOpacity < initialOpacity, 'decayBlueLockEgoTrail must smoothly decay _egoAuraOpacity when Ego ends');
+
+    // 5. Test Rule 25 Non-Freezing Active Visual Effects Standard:
+    // When movement is stopped by any attack (freeze, time-stop, stasis, hit-pause), Ego Aura does NOT freeze
+    chigiri.isEgoActive = true;
+    chigiri._egoAuraOpacity = 1.0;
+    chigiri.timeStopTimer = 60;
+    assert(chigiri._handleTimeStop() === true, 'Chigiri must be immobilized by timeStopTimer');
+    chigiri.update(isagi, 1, null);
+    assert(chigiri._egoAuraOpacity > 0.8, 'Ego aura opacity must persist even when immobilized');
+    drawBlueLockEgoAura(mockCtx, chigiri);
+    drawBlueLockEgoAuraFront(mockCtx, chigiri);
+    assert(mockCtx.getStackDepth() === 0, 'Frozen fighter aura render must maintain 100% Canvas stack balance');
+
+    // 6. Test Force Cancel Cleanup (Rule 25)
+    isagi.interruptAttacks(true);
+    assert(isagi._egoTrailNodes.length === 0 && isagi._egoFlameWisps.length === 0 && isagi._egoAuraOpacity === 0, 'interruptAttacks(true) must flush all Ego aura arrays and opacity');
+    console.log('      ✅ Blue Lock Ego Flow Spectral Flame Spire, Ground Pool & Wisp Trail Effect Standard verified cleanly.');
+  }
+
+  // 134. Testing Striker Skill Ball Electric Comet Trail, Lightning Arcs, Needle Streaks & Sparkle Stardust Standard
+  {
+    console.log('⚽ Test 134: Striker Skill Ball Electric Comet Trail, Lightning Arcs, Needle Streaks & Sparkle Stardust Standard...');
+    const {
+      createSoccerBall,
+      resetSoccerBall,
+      executeStrikerSkill,
+      updateSoccerBallPhysics
+    } = await import('../js/systems/soccerBallSystem.js');
+
+    const {
+      drawStrikerBallTrail,
+      updateStrikerBallTrail,
+      decayStrikerBallTrail,
+      drawSoccerBallProjectile,
+      updateBlueLockEgoTrail,
+      drawBlueLockEgoTrail
+    } = await import('../js/graphics/weapons/soccerBallGraphics.js');
+
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const isagi = new IsagiFighter({ id: 70, type: 'isagi', name: 'ISAGI', color: '#00F0FF' });
+    const ball = createSoccerBall(isagi, { egoShotRadius: 16 });
+    const arena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+
+    // 1. Launch Striker Skill Shot & Verify Trail Node Sampling
+    ball.isStriker = true;
+    ball.isDirectVolley = true;
+    ball.kickerThemeColor = '#00F0FF';
+    ball.vx = 14.5;
+    ball.vy = 4.0;
+    ball.x = 100;
+    ball.y = 300;
+
+    for (let frame = 0; frame < 12; frame++) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+      updateStrikerBallTrail(ball);
+    }
+
+    assert(Array.isArray(ball._strikerTrailNodes), 'Ball must initialize _strikerTrailNodes array');
+    assert(ball._strikerTrailNodes.length >= 8, `Striker ball must record trajectory nodes (got ${ball._strikerTrailNodes.length})`);
+    assert(Array.isArray(ball._strikerSparks) && ball._strikerSparks.length > 0, 'Striker ball must spawn diamond stardust sparks');
+
+    // 2. Wall Bounce / Ricochet Trajectory Integrity
+    ball.vx = -14.5; // Simulate wall ricochet turn
+    for (let frame = 0; frame < 6; frame++) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+      updateStrikerBallTrail(ball);
+    }
+    const headNode = ball._strikerTrailNodes[0];
+    assert(headNode.vx === -14.5, 'Head node must reflect ricochet velocity');
+
+    // 3. Canvas 2D Rendering & Stack Depth Balance
+    mockCtx.resetStackDepth();
+    assert(mockCtx.getStackDepth() === 0, 'Canvas stack depth must be 0 prior to ball trail render');
+    drawStrikerBallTrail(mockCtx, ball, '#00F0FF');
+    assert(mockCtx.getStackDepth() === 0, 'drawStrikerBallTrail must maintain 100% Canvas stack balance');
+
+    drawSoccerBallProjectile(mockCtx, ball);
+    assert(mockCtx.getStackDepth() === 0, 'drawSoccerBallProjectile must maintain 100% Canvas stack balance');
+
+    // 4. Chigiri Hot Rose & Golden Lightning Theme & Skill Execution Support
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const chigiri = new ChigiriFighter({ id: 71, type: 'chigiri', name: 'CHIGIRI', color: '#EC4899' });
+    const chigiriBall = createSoccerBall(chigiri, { egoShotRadius: 16 });
+    chigiri.soccerBall = chigiriBall;
+    const dummyTarget = { x: 400, y: 300, r: 25, hp: 500, isDead: false };
+
+    // Verify initial cooldown is 0 so skill is ready on first possession
+    assert(chigiri.strikerCooldownTimer === 0, 'Chigiri strikerCooldownTimer must be initialized to 0');
+    chigiri._unleashStrikerSkill(dummyTarget, arena);
+
+    assert(chigiriBall.isStriker === true, 'Chigiri striker skill must set ball.isStriker = true');
+    assert(chigiriBall.kickerThemeColor === '#EC4899', 'Chigiri striker skill must set kickerThemeColor to #EC4899');
+    assert(Math.hypot(chigiriBall.vx, chigiriBall.vy) >= 25.0, `Chigiri striker skill must launch with hypersonic speed >= 25 (got ${Math.hypot(chigiriBall.vx, chigiriBall.vy)})`);
+    assert(Array.isArray(chigiriBall._strikerTrailNodes) && chigiriBall._strikerTrailNodes.length >= 2, 'Chigiri striker skill must instantly seed trail nodes for frame 0 continuity');
+
+    mockCtx.resetStackDepth();
+    drawStrikerBallTrail(mockCtx, chigiriBall, '#EC4899');
+    assert(mockCtx.getStackDepth() === 0, 'Chigiri drawStrikerBallTrail must maintain 100% Canvas stack balance');
+
+    // Verify Chigiri Panther Sprint cosmic aura trail activation
+    chigiri.isPantherSprinting = true;
+    chigiri.vx = 14;
+    chigiri.vy = 2;
+    for (let f = 0; f < 5; f++) {
+      chigiri.x += chigiri.vx;
+      chigiri.y += chigiri.vy;
+      updateBlueLockEgoTrail(chigiri);
+    }
+    assert(Array.isArray(chigiri._egoTrailNodes) && chigiri._egoTrailNodes.length >= 4, 'Chigiri Panther Sprint must generate cosmic silk aura trail nodes');
+    mockCtx.resetStackDepth();
+    drawBlueLockEgoTrail(mockCtx, chigiri);
+    assert(mockCtx.getStackDepth() === 0, 'Chigiri drawBlueLockEgoTrail must maintain 100% Canvas stack balance');
+
+    // 5. Rule 25 Non-Freezing Active Visual Effects Decay Standard
+    const prevNodeCount = ball._strikerTrailNodes.length;
+    for (let decayFrame = 0; decayFrame < 15; decayFrame++) {
+      decayStrikerBallTrail(ball);
+    }
+    assert(ball._strikerTrailNodes.length < prevNodeCount, 'decayStrikerBallTrail must naturally age and decay nodes');
+
+    // 6. Reset & Cleanup
+    resetSoccerBall(ball, isagi, {}, arena);
+    assert(ball._strikerTrailNodes.length === 0, 'resetSoccerBall must clear striker trail nodes');
+    assert(ball._strikerSparks.length === 0, 'resetSoccerBall must clear striker sparks');
+
+    console.log('      ✅ Striker Skill Ball Electric Comet Trail, Lightning Arcs, Needle Streaks & Sparkle Stardust Standard verified cleanly.');
+  }
+
+  // ── TEST 135: Blue Lock 12-Frame Ego Aura Disappearing Animation & Non-Freezing Dissipation Standard ──
+  console.log('⚽ Test 135: Blue Lock 12-Frame Ego Aura Disappearing Animation & Non-Freezing Dissipation Standard...');
+  {
+    const {
+      EGO_AURA_DISAPPEAR_FRAME_COUNT,
+      _getIsagiEgoAuraDisappearFrames,
+      _getChigiriEgoAuraDisappearFrames,
+      getBlueLockEgoAuraDisappearFrames,
+      drawBlueLockEgoSpectreColumn,
+      drawBlueLockEgoAuraFront,
+      decayBlueLockEgoTrail,
+      updateBlueLockEgoTrail
+    } = await import('../js/graphics/weapons/blueLockEgoTrailRenderer.js');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { updateBlueLockEgo } = await import('../js/systems/soccerBallSystem.js');
+
+    // 1. Frame Count & Getter Verification
+    assert(EGO_AURA_DISAPPEAR_FRAME_COUNT === 12, 'EGO_AURA_DISAPPEAR_FRAME_COUNT must be exactly 12');
+    const isagiFrames = _getIsagiEgoAuraDisappearFrames();
+    const chigiriFrames = _getChigiriEgoAuraDisappearFrames();
+    assert(Array.isArray(isagiFrames), 'Isagi disappear frames must be an array');
+    assert(Array.isArray(chigiriFrames), 'Chigiri disappear frames must be an array');
+
+    const isagi = new IsagiFighter({ id: 70, type: 'isagi', name: 'ISAGI', color: '#10B981' });
+    const chigiri = new ChigiriFighter({ id: 71, type: 'chigiri', name: 'CHIGIRI', color: '#EC4899' });
+
+    assert(getBlueLockEgoAuraDisappearFrames(isagi) === isagiFrames, 'getBlueLockEgoAuraDisappearFrames(isagi) must return Isagi disappear frame sequence');
+    assert(getBlueLockEgoAuraDisappearFrames(chigiri) === chigiriFrames, 'getBlueLockEgoAuraDisappearFrames(chigiri) must return Chigiri disappear frame sequence');
+
+    // 2. Ego Expiration Trigger in updateBlueLockEgo
+    isagi.isEgoActive = true;
+    isagi.isEgoAwakened = true;
+    isagi.egoDurationTimer = 1; // 1 frame left before expiration
+    updateBlueLockEgo(isagi, {});
+
+    assert(isagi.isEgoActive === false, 'isEgoActive must become false when egoDurationTimer hits 0');
+    assert(isagi._egoAuraDisappearing === true, '_egoAuraDisappearing must be set to true on Ego expiration');
+    assert(isagi._egoAuraDisappearTimer === 24, '_egoAuraDisappearTimer must be initialized to 24 ticks (12 frames @ 2 ticks/frame)');
+    assert(isagi._egoAuraDisappearMax === 24, '_egoAuraDisappearMax must be 24');
+
+    // 3. Smooth Step-by-Step Dissipation Lifecycle (Rule 25 Non-Freezing)
+    for (let f = 0; f < 24; f++) {
+      assert(isagi._egoAuraDisappearTimer === 24 - f, `_egoAuraDisappearTimer must decrement smoothly (expected ${24 - f}, got ${isagi._egoAuraDisappearTimer})`);
+      assert(isagi._egoAuraOpacity > 0, 'Aura opacity must smoothly fade down during disappearance');
+      decayBlueLockEgoTrail(isagi);
+    }
+    assert(isagi._egoAuraDisappearTimer === 0, '_egoAuraDisappearTimer must reach 0 after 24 decay ticks');
+    assert(isagi._egoAuraDisappearing === false, '_egoAuraDisappearing must cleanly reset to false when complete');
+    assert(isagi._egoAuraOpacity === 0, '_egoAuraOpacity must be 0 after disappearance');
+
+    // 4. Chigiri Sprint Active -> Inactive Automatic Transition Trigger
+    updateBlueLockEgoTrail(chigiri);
+    assert(chigiri._wasEgoAuraActive === true, 'updateBlueLockEgoTrail must record _wasEgoAuraActive = true');
+    chigiri.isEgoActive = false;
+    chigiri.isPantherSprinting = false;
+    chigiri.pantherSpeedBuffTimer = 0;
+
+    // First decay tick detects transition and starts 12-frame disappearance sequence
+    decayBlueLockEgoTrail(chigiri);
+    assert(chigiri._egoAuraDisappearing === true, 'Chigiri must trigger _egoAuraDisappearing on sprint expiration');
+    assert(chigiri._egoAuraDisappearTimer === 23, 'Chigiri _egoAuraDisappearTimer must be 23 after 1st decrement of 24');
+
+    // 5. Canvas 2D Transform Stack Integrity (Rule 2.4)
+    mockCtx.resetStackDepth();
+    drawBlueLockEgoSpectreColumn(mockCtx, chigiri);
+    assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoSpectreColumn during disappearance must maintain 100% Canvas stack balance');
+
+    mockCtx.resetStackDepth();
+    drawBlueLockEgoAuraFront(mockCtx, chigiri);
+    assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoAuraFront during disappearance must maintain 100% Canvas stack balance');
+
+    console.log('      ✅ Blue Lock 12-Frame Ego Aura Disappearing Animation & Non-Freezing Dissipation Standard verified cleanly.');
+  }
+
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 

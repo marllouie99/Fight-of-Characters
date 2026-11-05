@@ -1709,16 +1709,30 @@ export class CJFighter extends Fighter {
       const dx = ent.x - backX;
       const dy = ent.y - backY;
       if (dx * dx + dy * dy <= hitRadiusSq) {
+        const isEntInvincible = Boolean(
+          ent.isInvulnerable ||
+          ent.isInvincible ||
+          ent.invincible ||
+          ent.isInvincibleUltimate ||
+          (ent.invincibleTimer && ent.invincibleTimer > 0) ||
+          (ent.invincibilityTimer && ent.invincibilityTimer > 0)
+        );
+        if (isEntInvincible) return;
+
+        let applied = false;
         if (typeof ent.takeDamage === 'function') {
-          ent.takeDamage(burnDmg, this, { isMelee: false });
+          applied = Boolean(ent.takeDamage(burnDmg, this, { isMelee: false }));
         } else {
           ent.hp -= burnDmg;
+          applied = true;
         }
-        if (typeof spawnFloatingText === 'function') {
-          spawnFloatingText(ent.x, ent.y - ent.r - 10, `${burnDmg}`, '#EA580C');
-        }
-        if (typeof spawnSparks === 'function') {
-          spawnSparks(ent.x, ent.y, '#F97316', 3);
+        if (applied) {
+          if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText(ent.x, ent.y - ent.r - 10, `${burnDmg}`, '#EA580C');
+          }
+          if (typeof spawnSparks === 'function') {
+            spawnSparks(ent.x, ent.y, '#F97316', 3);
+          }
         }
       }
     };

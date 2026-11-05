@@ -313,27 +313,7 @@ export function drawChigiriSkin(ctx, fighter) {
   // 3. Hair Asset Overlay (Rule 22)
   _drawChigiriHair(ctx, r, facingLeft);
 
-  // 4. Red Panther Speed Trails & Aerodynamic Slipstream (Active during Sprint / Post-Dash Boost / Ego)
-  const isSprinting = Boolean(fighter.isPantherSprinting || (fighter.pantherSpeedBuffTimer && fighter.pantherSpeedBuffTimer > 0) || fighter.isEgoActive);
-  if (isSprinting) {
-    ctx.save();
-    // Sleek rose-pink aerodynamic wind streaks behind head/shoulders
-    ctx.strokeStyle = fighter.isEgoActive ? '#EC4899' : 'rgba(236, 72, 153, 0.70)';
-    ctx.lineWidth = 1.5;
-    const time = (typeof performance !== 'undefined' ? performance.now() : Date.now()) * 0.02;
-
-    for (let i = -1; i <= 1; i += 2) {
-      const trailY = i * r * 0.45;
-      const trailLen = r * 0.90 + Math.sin(time + i) * 6;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.70, trailY);
-      ctx.lineTo(-r * 0.70 - trailLen, trailY + i * 2);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // 5. Status Overlays (Stun, Freeze, etc.)
+  // 4. Status Overlays (Stun, Freeze, etc.)
   if (typeof fighter.drawStatusOverlays === 'function') {
     fighter.drawStatusOverlays(ctx, r);
   }

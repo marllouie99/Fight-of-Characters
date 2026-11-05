@@ -448,6 +448,15 @@ export class WardenFighter extends Fighter {
     const targets = this._getFrontalArcTargets(reach, arcAngle, opponent);
     for (const target of targets) {
       if (!target || target.hp <= 0) continue;
+      const isTargetInvincible = Boolean(
+        target.isInvulnerable ||
+        target.isInvincible ||
+        target.invincible ||
+        target.isInvincibleUltimate ||
+        (target.invincibleTimer && target.invincibleTimer > 0) ||
+        (target.invincibilityTimer && target.invincibilityTimer > 0)
+      );
+      if (isTargetInvincible) continue;
 
       target.hp = Math.max(0, target.hp - dmg);
       target._lastHitBy = this;
@@ -535,6 +544,16 @@ export class WardenFighter extends Fighter {
     }
 
     // Root opponent in place with sculk tendril trap
+    const isOpponentInvincible = Boolean(
+      opponent.isInvulnerable ||
+      opponent.isInvincible ||
+      opponent.invincible ||
+      opponent.isInvincibleUltimate ||
+      (opponent.invincibleTimer && opponent.invincibleTimer > 0) ||
+      (opponent.invincibilityTimer && opponent.invincibilityTimer > 0)
+    );
+    if (isOpponentInvincible) return;
+
     if (typeof opponent.applyHitStun === 'function') {
       opponent.applyHitStun(cfg.trapDuration || 45);
     }
@@ -637,6 +656,16 @@ export class WardenFighter extends Fighter {
       if (proj > 0 && proj <= reach) {
         const perpDist = Math.abs(-dx * Math.sin(this.skillCastAngle) + dy * Math.cos(this.skillCastAngle));
         if (perpDist <= (beamWidth / 2) + (f.r || 25)) {
+          const isTargetInvincible = Boolean(
+            f.isInvulnerable ||
+            f.isInvincible ||
+            f.invincible ||
+            f.isInvincibleUltimate ||
+            (f.invincibleTimer && f.invincibleTimer > 0) ||
+            (f.invincibilityTimer && f.invincibilityTimer > 0)
+          );
+          if (isTargetInvincible) continue;
+
           // Unblockable piercing damage
           f.hp = Math.max(0, f.hp - dmg);
           f._lastHitBy = this;

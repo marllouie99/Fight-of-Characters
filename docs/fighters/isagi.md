@@ -69,13 +69,13 @@ Isagi's fighter model, facial silhouette, jersey layers, and proportion zoning a
   - Axis-aligned offscreen canvas buffer caching (`_cachedIsagiBodyCanvas`) at $P = 2.0\text{px}$ discrete pixel resolution, blitting via `ctx.drawImage` with `imageSmoothingEnabled = false`.
 
 ### 2. Hair Asset & Head Silhouette (Rule 22 & Rule 24 Standard)
-- **Asset Path**: `Assets/model/isagi/isagi-hair.png`.
+- **Asset Path**: `Assets/model/isagi/Isagi_hair.png`.
 - **Eager Loader & Cache**: Managed by `_getIsagiHairImage()` with proactive module-level initialization.
-- **Bounding Box Calibration**: Calibrated from the true visible pixel art bounding box ($809 \times 748\text{px}$ on $1024 \times 1024$ canvas).
+- **Bounding Box Calibration**: Calibrated from the true visible pixel art bounding box ($1036 \times 1000\text{px}$ on $1536 \times 1024$ canvas).
 - **Volume & Placement**:
-  - Width: $r \times 3.05$ (~$76\text{px}$).
-  - Height: $r \times 2.25$ (~$56\text{px}$).
-  - Crown Apex Anchor: `drawY = -r * 1.35`, framing the upper head circle seamlessly with full anime volume matching Toji and Gojo standards.
+  - Width: $r \times 3.10$ (~$77.5\text{px}$).
+  - Height: $r \times 2.40$ (~$60\text{px}$).
+  - Crown Apex Anchor: `drawY = -r * 1.50 - 181 * scaleY`, framing the upper head circle seamlessly with full anime volume matching Toji and Gojo standards.
 - **Skin Studio Customization**: Full support for real-time scale, offsets, rotation, and flipping via `state.skinCustomizations.isagi`.
 
 ### 3. Canonical Default Hands (Rule 20 Standard)
@@ -126,17 +126,17 @@ Isagi's fighter model, facial silhouette, jersey layers, and proportion zoning a
 | **Body Radius ($r$)** | `25px` | `25px` | Universal humanoid collision boundary (Rule 24) |
 | **Basic Projectile** | **Suppressed (`0`)** | **Suppressed (`0`)** | **Rule 23: Default `shoot()` suppressed in favor of physical ball kicks** |
 | **Soccer Ball Radius** | `16px` | `16px` | Prominent arcade ball visibility and physical collision |
-| **Ego Shot Damage** | `24` (Direct) | `32` (Crit: `1.35x`) | High-velocity direct strike |
-| **Bank Volley Damage** | `32` (+33% bonus) | `43` (Crit: `1.35x`) | Bonus kinetic energy off wall rebound |
+| **Ego Shot Damage** | `24` (Direct) | `24` | High-velocity direct strike |
+| **Bank Volley Damage** | `32` (+33% bonus) | `32` | Bonus kinetic energy off wall rebound |
 | **Ego Shot Velocity** | `14.5 px/f` | `21.75 px/f` (+50%) | High travel speed, surging in Flow State |
 | **Attack Cadence** | `34 frames` (~`0.57s`) | `0 frames` (Instant) | Cooldown resets immediately upon interception or pass return |
 | **Kick Follow-Through Slow** | `18 frames` at `18%` speed | `18 frames` at `18%` speed | Brief recovery slowdown on Isagi when launching a kick |
 | **Metavision Slip CD** | `8.0s` (`480 frames`) | — | Tactical blind-spot repositioning dash |
 | **Metavision Dash Dist** | `210px` | — | Dashing intercept distance toward the loose ball |
 | **Invulnerability Window** | `14 frames` (~`0.23s`) | — | Evades all non-guaranteed attacks and continuous laser beams |
-| **Flow State Duration** | `3.0s` (`180 frames`) | — | Buff window: +50% ball speed, +35% guaranteed crit |
+| **Flow State Duration** | `3.0s` (`180 frames`) | — | Buff window: +50% ball speed and instant cadence reset |
 | **Direct Volley CD** | `18.0s` (`1080 frames`) | — | Signature game-winning volley finisher |
-| **Direct Volley Damage** | `75` | `101` (Flow Crit) | Colossal finishing blast damage |
+| **Direct Volley Damage** | `75` | `75` | Colossal finishing blast damage |
 | **Direct Volley Velocity** | `24.0 px/f` | `36.0 px/f` | Supersonic travel velocity |
 | **Direct Volley Knockback** | `18.0 px/f` | `18.0 px/f` | Launches opponents violently across the pitch |
 | **Direct Volley Stun** | `100 frames` (~`1.67s`) | `100 frames` | Paralyzes and hit-stuns opponent on wall/impact |
@@ -241,13 +241,12 @@ Unlike typical fighters that spawn transient projectiles into a shared array, Is
     - Glowing cyan puzzle-eye pupils illuminate on his face.
     - `shootCooldown` immediately resets to **0**, allowing an instant kick upon meeting the ball.
     - **+50% Ball Velocity**: Incoming kick launches at **$21.75\text{ px/f}$**.
-    - **+35% Guaranteed Critical Damage**: Next shot deals $1.35\times$ critical damage!
 
 ---
 
 ### 5. Ultimate: Direct Volley (Signature Game-Winning Finisher)
 - **Initial Cooldown**: `6.0s` (`360 frames`) | **Cooldown**: `18.0s` (`1080 frames`)
-- **Damage**: `75` (Base) / `101` (Flow State Crit) | **Speed**: `24.0 px/f` | **Knockback**: `18.0 px/f`
+- **Damage**: `75` (Base) | **Speed**: `24.0 px/f` | **Knockback**: `18.0 px/f`
 - **Execution (Zero Trap Delay)**:
   - *"I won't trap it... A direct volley, in stride!"*
   - When Direct Volley is off cooldown and Isagi meets the ball, he does not pause or wind up (`directVolleyWindup = 0`). He instantly volleys the ball at hypersonic speed!
@@ -344,7 +343,7 @@ skills.push({
 2. **Chain the One-Two Return**:
    - When a bank pass triggers, do not dodge away! Maintain position along the return vector; Isagi's `shootCooldown` is reset to 0, allowing an immediate double-volley that will decimate enemy HP bars.
 3. **Save Metavision for Ball Recovery**:
-   - Metavision Slip triggers when you are within $160\text{px}$ of the ball. Use this to instantly recover loose balls, enter Flow State, and fire an unstoppable $21.75\text{ px/f}$ critical missile!
+   - Metavision Slip triggers when you are within $160\text{px}$ of the ball. Use this to instantly recover loose balls, enter Flow State, and fire an unstoppable $21.75\text{ px/f}$ high-speed missile!
 4. **Direct Volley as a Wall Finisher**:
    - Direct Volley packs $18.0\text{ px/f}$ knockback. Aiming an opponent into a nearby wall guarantees wall-splat damage while they are immobilized by the $100\text{-frame}$ stun debuff.
 

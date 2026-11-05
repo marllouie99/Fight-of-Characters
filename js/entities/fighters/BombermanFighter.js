@@ -14,6 +14,7 @@ import { CONFIG } from '../../core/config.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { getTileGridInfo, getNearestTileCenter } from '../../systems/arenaTileSystem.js';
+import { getArenaCenterObstacle, isPointInsidePlusObstacle } from '../../systems/arenaObstacleSystem.js';
 import { drawBombermanSkin } from '../../graphics/fighters/bombermanSkin.js';
 import {
   spawnAnimePunchImpactFrame,
@@ -89,6 +90,8 @@ export class BombermanFighter extends Fighter {
     this.invincibleCooldownTimer = this.invincibleInitialCooldown;
     this.invincibleTimer = 0;
     this.isInvincibleUltimate = false;
+    this.isInvincible = false;
+    this.isInvulnerable = false;
     this.invincibleSpeedMultiplier = cfg.invincibleSpeedMultiplier ?? 1.15;
     this._invincibleDeflectTextCooldown = 0;
 
@@ -204,6 +207,8 @@ export class BombermanFighter extends Fighter {
         canTickCooldown: (fighter) => (fighter.invincibleTimer || 0) <= 0,
         onExpire: (fighter) => {
           fighter.isInvincibleUltimate = false;
+          fighter.isInvincible = false;
+          fighter.isInvulnerable = false;
         },
       });
     }
@@ -254,6 +259,8 @@ export class BombermanFighter extends Fighter {
     this.invincibleCooldownTimer = this.invincibleInitialCooldown;
     this.invincibleTimer = 0;
     this.isInvincibleUltimate = false;
+    this.isInvincible = false;
+    this.isInvulnerable = false;
     this._invincibleDeflectTextCooldown = 0;
 
     this.activeBombs = [];
@@ -324,6 +331,73 @@ export class BombermanFighter extends Fighter {
   }
 
   /**
+   * Returns true if a tile (col, row) is already occupied by:
+   * 1. Any active bomb (stationary or traveling) in the match.
+   * 2. Any stationary tile minion, plant, turret, dispenser, or chess piece.
+   * 3. An arena center obstacle (+ wall).
+   */
+  isTileOccupied(col, row, arena = state.arena, excludeBomb = null) {
+    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const grid = getTileGridInfo(activeArena);
+    const arenaX = activeArena.x ?? 45;
+    const arenaY = activeArena.y ?? 240;
+    const exactX = arenaX + (col + 0.5) * grid.cellW;
+    const exactY = arenaY + (row + 0.5) * grid.cellH;
+    const cellThreshold = Math.min(grid.cellW, grid.cellH) * 0.45;
+
+    // 1. Center Plus Wall Obstacle check
+    const plusObs = getArenaCenterObstacle(activeArena);
+    if (plusObs && isPointInsidePlusObstacle(exactX, exactY, plusObs.cx, plusObs.cy, plusObs.halfSize, plusObs.halfThick)) {
+      return true;
+    }
+
+    // 2. Active bombs & stationary tile occupants check
+    const occupants = this._getBombAndTileOccupants(excludeBomb);
+    for (let i = 0; i < occupants.length; i++) {
+      const occ = occupants[i];
+      if (!occ || occ.hp <= 0 || occ.dead) continue;
+      // Grid coordinate match
+      if (typeof occ.col === 'number' && typeof occ.row === 'number' && occ.col === col && occ.row === row) {
+        return true;
+      }
+      // Spatial proximity match to tile center
+      if (Math.hypot(occ.x - exactX, occ.y - exactY) < cellThreshold) {
+        return true;
+      }
+    }
+
+    // Also check traveling bombs in activeBombs by their CURRENT physical tile
+    for (let i = 0; i < this.activeBombs.length; i++) {
+      const b = this.activeBombs[i];
+      if (!b || b === excludeBomb || b.hp <= 0) continue;
+      if (!b.isTraveling) {
+        if (b.col === col && b.row === row) return true;
+        if (Math.hypot(b.x - exactX, b.y - exactY) < cellThreshold) return true;
+      } else {
+        const curBCol = Math.max(0, Math.min(grid.cols - 1, Math.floor((b.x - arenaX + 0.001) / grid.cellW)));
+        const curBRow = Math.max(0, Math.min(grid.rows - 1, Math.floor((b.y - arenaY + 0.001) / grid.cellH)));
+        if (curBCol === col && curBRow === row) return true;
+        if (Math.hypot(b.x - exactX, b.y - exactY) < cellThreshold) return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if the tile block containing (targetX, targetY) is currently occupied.
+   */
+  isTileOccupiedAtPoint(targetX, targetY, arena = state.arena) {
+    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const grid = getTileGridInfo(activeArena);
+    const arenaX = activeArena.x ?? 45;
+    const arenaY = activeArena.y ?? 240;
+    const col = Math.max(0, Math.min(grid.cols - 1, Math.floor((targetX - arenaX + 0.001) / grid.cellW)));
+    const row = Math.max(0, Math.min(grid.rows - 1, Math.floor((targetY - arenaY + 0.001) / grid.cellH)));
+    return this.isTileOccupied(col, row, activeArena);
+  }
+
+  /**
    * Computes the exact center of the arena tile block containing (targetX, targetY).
    * Always returns coordinates snapped strictly to `arenaX + (col + 0.5) * cellW`
    * and `arenaY + (row + 0.5) * cellH`.
@@ -335,18 +409,16 @@ export class BombermanFighter extends Fighter {
     const arenaY = activeArena.y ?? 240;
     const col = Math.max(
       0,
-      Math.min(grid.cols - 1, Math.floor((targetX - arenaX) / grid.cellW))
+      Math.min(grid.cols - 1, Math.floor((targetX - arenaX + 0.001) / grid.cellW))
     );
     const row = Math.max(
       0,
-      Math.min(grid.rows - 1, Math.floor((targetY - arenaY) / grid.cellH))
+      Math.min(grid.rows - 1, Math.floor((targetY - arenaY + 0.001) / grid.cellH))
     );
     const exactX = arenaX + (col + 0.5) * grid.cellW;
     const exactY = arenaY + (row + 0.5) * grid.cellH;
 
-    const occupiedOnThisTile = this.activeBombs.some(
-      (b) => b && b.hp > 0 && !b.isTraveling && b.col === col && b.row === row
-    );
+    const occupiedOnThisTile = this.isTileOccupied(col, row, activeArena);
 
     if (!occupiedOnThisTile) {
       return {
@@ -361,9 +433,10 @@ export class BombermanFighter extends Fighter {
     }
 
     if (allowAdjacentIfOccupied) {
-      const nearest = getNearestTileCenter(targetX, targetY, activeArena, this.activeBombs);
+      const nearest = getNearestTileCenter(targetX, targetY, activeArena, this._getBombAndTileOccupants());
       const nCol = nearest.col ?? col;
       const nRow = nearest.row ?? row;
+      const isNearestOccupied = this.isTileOccupied(nCol, nRow, activeArena);
       return {
         x: arenaX + (nCol + 0.5) * grid.cellW,
         y: arenaY + (nRow + 0.5) * grid.cellH,
@@ -371,7 +444,7 @@ export class BombermanFighter extends Fighter {
         row: nRow,
         cellW: grid.cellW,
         cellH: grid.cellH,
-        alreadyOccupied: false,
+        alreadyOccupied: isNearestOccupied,
       };
     }
 
@@ -400,7 +473,7 @@ export class BombermanFighter extends Fighter {
       return null;
     }
 
-    if (this.activeBombs.some((b) => !b.isTraveling && b.col === tile.col && b.row === tile.row)) {
+    if (this.isTileOccupied(tile.col, tile.row, arena)) {
       return null;
     }
 
@@ -705,12 +778,32 @@ export class BombermanFighter extends Fighter {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.bomberman) ? CONFIG.bomberman : bombermanConfig;
     this.invincibleTimer = this.invincibleDuration;
     this.isInvincibleUltimate = true;
+    this.isInvincible = true;
+    this.isInvulnerable = true;
     const cd = this.invincibleCooldownMax || cfg.invincibleCooldown || 1000;
     this.invincibleCooldownTimer = Math.max(60, cd);
 
     this.hitStunTimer = 0;
     this.paralyzeTimer = 0;
     this.slowTimer = 0;
+
+    // Purge active DoTs and debuffs on entering Invincible mode
+    this.burnTimer = 0;
+    this.burnDamageTimer = 0;
+    this.burnDamagePerTick = null;
+    this.burnInterval = null;
+    this.poisonTicks = 0;
+    this.poisonTimer = 0;
+    this.lastPoisonAttacker = null;
+    this.bleedTimer = 0;
+    this.bleedDamageTimer = 0;
+    this.lastBleedAttacker = null;
+    this.electricStunTimer = 0;
+    this.crimsonElectrifiedTimer = 0;
+    this.dubstepStunTimer = 0;
+    this.zenitsuStaticDebuffTimer = 0;
+    this.staticDebuffSource = null;
+    this.nanamiArmorFractureTimer = 0;
 
     this._playSfx('invincibleStart');
     triggerGlobalScreenShake(4.5, 10);
@@ -732,7 +825,8 @@ export class BombermanFighter extends Fighter {
    * Ultimate: Invincible — 100% immunity to incoming enemy attacks while `invincibleTimer > 0`.
    */
   takeDamage(amount, attacker = null, opts = {}) {
-    if (this.invincibleTimer > 0 && amount > 0 && !opts?.isHeal) {
+    const isInv = (this.invincibleTimer || 0) > 0 || this.isInvincible || this.isInvulnerable || this.isInvincibleUltimate;
+    if (isInv && amount > 0 && !opts?.isHeal) {
       if (this._invincibleDeflectTextCooldown <= 0) {
         this._invincibleDeflectTextCooldown = 24;
         this._playSfx('invincibleDeflect');
@@ -744,22 +838,22 @@ export class BombermanFighter extends Fighter {
   }
 
   applyHitStun(duration) {
-    if (this.invincibleTimer > 0) return;
+    if (this.invincibleTimer > 0 || this.isInvincible || this.isInvulnerable) return;
     super.applyHitStun(duration);
   }
 
   applyKnockback(vx, vy) {
-    if (this.invincibleTimer > 0) return;
+    if (this.invincibleTimer > 0 || this.isInvincible || this.isInvulnerable) return;
     super.applyKnockback(vx, vy);
   }
 
   applyParalyze(duration) {
-    if (this.invincibleTimer > 0) return;
+    if (this.invincibleTimer > 0 || this.isInvincible || this.isInvulnerable) return;
     super.applyParalyze(duration);
   }
 
   applyTimeStop(duration) {
-    if (this.invincibleTimer > 0) return;
+    if (this.invincibleTimer > 0 || this.isInvincible || this.isInvulnerable) return;
     super.applyTimeStop(duration);
   }
 
@@ -882,6 +976,13 @@ export class BombermanFighter extends Fighter {
       const target = candidates[i];
       if (!target || target === this || target.hp <= 0) continue;
 
+      const isLawnmower = Boolean(
+        target.isLawnmower ||
+        target.characterId === 'crazydave_lawnmower' ||
+        target.type === 'Lawnmower'
+      );
+      if (isLawnmower) continue;
+
       // Teammate immunity check
       if (typeof this.isTeammate === 'function') {
         if (this.isTeammate(target)) continue;
@@ -927,7 +1028,41 @@ export class BombermanFighter extends Fighter {
 
       const pushAngle = Math.atan2(dy, dx) || 0;
 
-      // 2a. Global Hit Effects on hit target:
+      // 2a. Centralized damage application with explosion options (knockback suppressed)
+      let damageResult = false;
+      const prevHp = (typeof target.hp === 'number') ? target.hp : null;
+
+      if (typeof applyDamageToTarget === 'function') {
+        damageResult = Boolean(applyDamageToTarget(target, dmg, this, {
+          isExplosion: true,
+          isAOE: true,
+          damageAngle: pushAngle,
+          knockbackForce: 0,
+          skipKnockback: true,
+        }));
+      } else if (typeof target.takeDamage === 'function') {
+        damageResult = Boolean(target.takeDamage(dmg, this, {
+          isExplosion: true,
+          isAOE: true,
+          damageAngle: pushAngle,
+          knockbackForce: 0,
+          skipKnockback: true,
+        }));
+      } else if (typeof target.hp === 'number') {
+        target.hp = Math.max(0, target.hp - dmg);
+        damageResult = (prevHp !== null && target.hp < prevHp);
+      }
+
+      // Damage is strictly confirmed only if HP was reduced or the damage call returned true
+      const damageActuallyDealt = (prevHp !== null) ? (target.hp < prevHp) : Boolean(damageResult);
+
+      // If the target successfully dodged, evaded, was invulnerable, blocked, or took zero damage,
+      // DO NOT apply stun, slow, velocity halting, or flesh hit impact reactions to the target!
+      if (!damageActuallyDealt) {
+        continue;
+      }
+
+      // 2b. Global Hit Effects on successfully damaged target:
       if (typeof spawnAnimePunchImpactFrame === 'function') {
         spawnAnimePunchImpactFrame(target.x, target.y, 65, pushAngle, 'orange');
       }
@@ -945,38 +1080,50 @@ export class BombermanFighter extends Fighter {
         audioSystem.playSFX('attack_fleshhit', 0.65);
       }
 
-      // 2b. Centralized damage application with explosion options (knockback suppressed)
-      if (typeof applyDamageToTarget === 'function') {
-        applyDamageToTarget(target, dmg, this, {
-          isExplosion: true,
-          isAOE: true,
-          damageAngle: pushAngle,
-          knockbackForce: 0,
-          skipKnockback: true,
-        });
-      } else if (typeof target.takeDamage === 'function') {
-        target.takeDamage(dmg, this, {
-          isExplosion: true,
-          isAOE: true,
-          damageAngle: pushAngle,
-          knockbackForce: 0,
-          skipKnockback: true,
-        });
-      } else {
-        target.hp = Math.max(0, target.hp - dmg);
+      const isPlant = Boolean(
+        target.isPlant ||
+        target.isPlantMinion ||
+        target.isPlantBarrier ||
+        target.isWallnut ||
+        target.characterId === 'crazydave_plant' ||
+        (typeof target.characterId === 'string' && target.characterId.startsWith('crazydave_'))
+      );
+
+      const isDeployableOrBuilding = Boolean(
+        target.isTurret ||
+        target.isDispenser ||
+        target.isDeployable ||
+        target.isBuilding ||
+        target.isChessTroop ||
+        target.isChessMinion ||
+        target.isChessPiece ||
+        target.isEndCrystal
+      );
+
+      // Halt the victim in place directly upon blast contact (zero knockback impulse),
+      // but NEVER halt traveling lawnmowers so they continue driving unimpeded!
+      if (!isLawnmower) {
+        target.vx = 0;
+        target.vy = 0;
+        target.knockbackVx = 0;
+        target.knockbackVy = 0;
       }
 
-      // Halt the victim in place directly upon blast contact (zero knockback impulse)
-      target.vx = 0;
-      target.vy = 0;
-      target.knockbackVx = 0;
-      target.knockbackVy = 0;
-
-      if (target.isStatusImmune || target.suppressDebuffs || target.isChessTroop || target.isChessMinion || target.hp <= 0 || target.dead) {
+      // Plants, lawnmowers, deployable buildings (turrets/dispensers), and chess troops
+      // are completely immune to stun, paralyze, time-stop, and slow debuffs!
+      if (
+        target.isStatusImmune ||
+        target.suppressDebuffs ||
+        isPlant ||
+        isLawnmower ||
+        isDeployableOrBuilding ||
+        target.hp <= 0 ||
+        target.dead
+      ) {
         continue;
       }
 
-      // 2c. Stun Effect on hit target (replaces explosion knockback)
+      // 2c. Stun Effect on hit target (replaces explosion knockback - ONLY when damaged)
       const stunDur = this.bombStunDuration || 45;
       if (typeof target.interruptAttacks === 'function') {
         target.interruptAttacks(true);
@@ -1017,11 +1164,19 @@ export class BombermanFighter extends Fighter {
    * onto a tile center already occupied by a tile-planted entity.
    */
   _getBombAndTileOccupants(excludeBomb = null) {
-    const occupants = this.activeBombs.filter((b) => b && b !== excludeBomb && b.hp > 0 && !b.isTraveling);
+    const occupants = this.activeBombs.filter((b) => b && b !== excludeBomb && b.hp > 0);
     const fighters = (typeof state !== 'undefined' && Array.isArray(state.fighters)) ? state.fighters : [];
     for (let i = 0; i < fighters.length; i++) {
       const f = fighters[i];
       if (!f || f.hp <= 0 || f.dead) continue;
+      if (f !== this && Array.isArray(f.activeBombs)) {
+        for (let j = 0; j < f.activeBombs.length; j++) {
+          const ob = f.activeBombs[j];
+          if (ob && ob !== excludeBomb && ob.hp > 0) {
+            occupants.push(ob);
+          }
+        }
+      }
       if (f.isChessTroop || f.isChessMinion || f.isTurret || f.isDispenser || f.isPlant || f.isPlantMinion || f.isPlantBarrier || f.isWallnut) {
         occupants.push(f);
       }
@@ -1103,6 +1258,15 @@ export class BombermanFighter extends Fighter {
         const overlap = minDist - dist;
 
         if (bomb.isTraveling) {
+          const isLawnmower = Boolean(
+            f.isLawnmower ||
+            f.characterId === 'crazydave_lawnmower' ||
+            f.type === 'Lawnmower'
+          );
+          if (isLawnmower) {
+            continue; // Lawnmower is immune, receives 0 hit effects, and traveling bomb passes through unimpeded
+          }
+
           if (bomb.hitEnemiesDuringTravel && !bomb.hitEnemiesDuringTravel.has(f)) {
             bomb.hitEnemiesDuringTravel.add(f);
             if (!this._isBlockedByGojoInfinity(f)) {
@@ -1174,6 +1338,22 @@ export class BombermanFighter extends Fighter {
         } else {
           // Immovable tile-planted entities (such as Shiro's chess troops) must NEVER be pushed off their tile center
           if (isImmovableTileEntity) {
+            const isLawnmower = Boolean(
+              f.isLawnmower ||
+              f.characterId === 'crazydave_lawnmower' ||
+              f.type === 'Lawnmower'
+            );
+            if (isLawnmower && f.state === 'charging') {
+              if (typeof f.destroyPlantedBomb === 'function') {
+                f.destroyPlantedBomb(bomb);
+              } else {
+                bomb.hp = 0;
+                bomb.dead = true;
+                bomb.isDead = true;
+                const idx = this.activeBombs.indexOf(bomb);
+                if (idx !== -1) this.activeBombs.splice(idx, 1);
+              }
+            }
             continue;
           }
 
@@ -1235,6 +1415,8 @@ export class BombermanFighter extends Fighter {
         } else {
           bomb.x += bomb.vx || 0;
           bomb.y += bomb.vy || 0;
+          bomb.col = Math.max(0, Math.min(grid.cols - 1, Math.floor((bomb.x - arenaX + 0.001) / grid.cellW)));
+          bomb.row = Math.max(0, Math.min(grid.rows - 1, Math.floor((bomb.y - arenaY + 0.001) / grid.cellH)));
 
           const minX = arenaX + bomb.r;
           const maxX = arenaX + activeArena.width - bomb.r;
@@ -1420,7 +1602,17 @@ export class BombermanFighter extends Fighter {
     if (this.kickAnimTimer > 0) {
       this.kickAnimTimer--;
     }
-    this.isInvincibleUltimate = (this.invincibleTimer || 0) > 0;
+    const isInvincibleActive = (this.invincibleTimer || 0) > 0;
+    this.isInvincibleUltimate = isInvincibleActive;
+    this.isInvincible = isInvincibleActive;
+    this.isInvulnerable = isInvincibleActive;
+    if (isInvincibleActive) {
+      if (this.burnTimer > 0) { this.burnTimer = 0; this.burnDamageTimer = 0; }
+      if (this.poisonTicks > 0) { this.poisonTicks = 0; this.poisonTimer = 0; }
+      if (this.bleedTimer > 0) { this.bleedTimer = 0; this.bleedDamageTimer = 0; }
+      if (this.crimsonElectrifiedTimer > 0) this.crimsonElectrifiedTimer = 0;
+      if (this.zenitsuStaticDebuffTimer > 0) this.zenitsuStaticDebuffTimer = 0;
+    }
 
     // 1. Mandatory Rule 1.1 Freeze & TimeStop Guard
     const isFrozen = this._handleTimeStop();
@@ -1444,7 +1636,10 @@ export class BombermanFighter extends Fighter {
     if (!this.skillManager) {
       if (this.invincibleTimer > 0) {
         this.invincibleTimer--;
-        this.isInvincibleUltimate = this.invincibleTimer > 0;
+        const isStillInv = this.invincibleTimer > 0;
+        this.isInvincibleUltimate = isStillInv;
+        this.isInvincible = isStillInv;
+        this.isInvulnerable = isStillInv;
       }
       if (this.fireUpTimer > 0) this.fireUpTimer--;
       if (this.bombKickTimer > 0) this.bombKickTimer--;
@@ -1477,7 +1672,8 @@ export class BombermanFighter extends Fighter {
       this.plantCooldownTimer <= 0 &&
       this.layStepTimer <= 0 &&
       this.activeBombs.length < this.maxBombs &&
-      !this._isTileInActiveExplosion(this.x, this.y)
+      !this._isTileInActiveExplosion(this.x, this.y) &&
+      !this.isTileOccupiedAtPoint(this.x, this.y, arena)
     ) {
       this.plantBomb(arena, false);
     }

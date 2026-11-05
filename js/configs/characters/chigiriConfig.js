@@ -6,10 +6,13 @@
 export const chigiriConfig = {
   assets: {
     hair: 'Assets/model/chigiri/Chigiri_hair.png',
+    egoAura: 'Assets/model/chigiri/ego_aura/ego_aura-b.png',
+    egoAuraDisappear: 'Assets/model/chigiri/ego_aura_disappear/ego_aura_disappear-b.png',
+    egoTrail: 'Assets/model/chigiri/ego_trail/ego_trail-b.png',
   },
 
   name: 'CHIGIRI',
-  displayName: 'Hyoma Chigiri',
+  displayName: 'Chigiri',
   grade: 'S', // Fighter Grade: 'B' | 'A' | 'S' | 'SS' | 'SSR'
   bossTitle: 'The Red Panther',
   title: '44-Panther Mach Pace',
@@ -45,7 +48,7 @@ export const chigiriConfig = {
   pantherShotReboundDamage: 28, // Rebound bank shot damage
   pantherShotSpeed: 15.0, // High-speed travel velocity
   pantherShotRadius: 16, // Collision radius
-  pantherShotCooldown: 100, // Rapid attack cadence (~0.53s)
+  pantherShotCooldown: 200, // Rapid attack cadence (~0.53s)
   pantherShotMaxRebounds: 1, // Bounces once off arena walls
   kickSlowDuration: 14, // Brief duration in frames (~0.23s) of kick recovery
   kickSlowMultiplier: 0.25, // Agile recovery movement
@@ -83,14 +86,14 @@ export const chigiriConfig = {
 
   // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Signature Finisher) ───
   enableStriker: true, // Universal Blue Lock Skill 2 Master toggle
-  strikerCooldown: 1080, // 18.0s cooldown
+  strikerCooldown: 720, // 12.0s cooldown
   strikerWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
   strikerDamage: 72, // Heavy finishing strike damage
-  strikerSpeed: 10.0, // Hypersonic volley velocity (fastest strike in Blue Lock)
+  strikerSpeed: 26.0, // Hypersonic volley velocity (fastest strike in Blue Lock)
   strikerRadius: 20, // Blast collision radius
   strikerKnockback: 22.0, // Blasts opponent backwards
   strikerKnockbackDuration: 14, // Knockback flight duration (frames) before applying stun afterwards
-  strikerStunDuration: 90, // Stun debuff duration in frames applied after knockback (~1.5s stun)
+  strikerStunDuration: 40, // Stun debuff duration in frames applied after knockback (~1.5s stun)
   strikerShake: 8, // Screen shake intensity (px)
   strikerKickSlowDuration: 22, // Brief recovery duration
   strikerKickSlowMultiplier: 0.15,

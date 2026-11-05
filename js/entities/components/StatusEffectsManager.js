@@ -150,7 +150,7 @@ export class StatusEffectsManager {
   // --- Poison ---
   applyPoison(attacker) {
     if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune || this.fighter.isPoisonImmune || this.fighter.immuneToPoison) return;
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive) return;
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0)) return;
     const grenadierCfg = CONFIG.grenadier || {};
     const ticks = (typeof grenadierCfg.poisonTicks === 'number')
       ? grenadierCfg.poisonTicks
@@ -162,7 +162,7 @@ export class StatusEffectsManager {
   }
 
   handlePoison() {
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive) {
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0)) {
       this.fighter.poisonTicks = 0;
       this.fighter.poisonTimer = 0;
       return;
@@ -192,7 +192,7 @@ export class StatusEffectsManager {
   // --- Burn ---
   applyBurn(attacker, duration, damage, interval) {
     if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune || this.fighter.immuneToBurn || this.fighter.isImmuneToBurn) return;
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.characterId === 'escanor') return;
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0) || this.fighter.characterId === 'escanor') return;
     const finalDuration = duration ?? CONFIG.orange?.burnDuration ?? 180;
     this.fighter.burnTimer = Math.max(this.fighter.burnTimer || 0, finalDuration);
     this.fighter.burnDamageTimer = 0;
@@ -206,7 +206,7 @@ export class StatusEffectsManager {
   }
 
   handleBurn() {
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive) {
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0)) {
       this.fighter.burnTimer = 0;
       this.fighter.burnDamageTimer = 0;
       this.fighter.burnDamagePerTick = null;
@@ -238,7 +238,7 @@ export class StatusEffectsManager {
   applyBleed(attacker, duration, damagePerTick, intervalFrames) {
     if (!this.fighter) return;
     if (this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive) return;
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0)) return;
     if (this.fighter.isBloodImmune || this.fighter.noBlood || this.fighter.suppressBlood || this.fighter.bleedImmune || this.fighter.isStatusImmune || this.fighter.dead || this.fighter.isDead || (this.fighter.hp !== undefined && this.fighter.hp <= 0)) return;
     const bleedCfg = CONFIG.bleed || {};
     const finalDuration = duration ?? bleedCfg.defaultDuration ?? 180;
@@ -254,7 +254,7 @@ export class StatusEffectsManager {
 
   handleBleed() {
     if (!this.fighter) return;
-    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isBloodImmune || this.fighter.noBlood || this.fighter.suppressBlood || this.fighter.bleedImmune || this.fighter.isStatusImmune || this.fighter.dead || this.fighter.isDead || (this.fighter.hp !== undefined && this.fighter.hp <= 0)) {
+    if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0) || this.fighter.isBloodImmune || this.fighter.noBlood || this.fighter.suppressBlood || this.fighter.bleedImmune || this.fighter.isStatusImmune || this.fighter.dead || this.fighter.isDead || (this.fighter.hp !== undefined && this.fighter.hp <= 0)) {
       this.fighter.bleedTimer = 0;
       this.fighter.bleedDamageTimer = 0;
       return;
@@ -293,7 +293,7 @@ export class StatusEffectsManager {
     if (!this.fighter || this.fighter.isTurret || this.fighter.isDispenser || this.fighter.isBuilding || this.fighter.immuneToDebuffs || this.fighter.isDebuffImmune) return;
     // Only apply if not immune (Frame stasis & Makima chains bypass generic CC immunity)
     if (!opts.isFrameStasis && !opts.isNaoya) {
-      if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.domainImmunity || this.fighter.characterId === 'toji' || this.fighter.type === 'toji' || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) {
+      if (this.fighter.isBaguvixActive || this.fighter.isGodModeActive || this.fighter.isInvincible || this.fighter.isInvulnerable || this.fighter.invincible || this.fighter.isInvincibleUltimate || (this.fighter.invincibleTimer && this.fighter.invincibleTimer > 0) || (this.fighter.invincibilityTimer && this.fighter.invincibilityTimer > 0) || this.fighter.domainImmunity || this.fighter.characterId === 'toji' || this.fighter.type === 'toji' || this.fighter.isCountering || (this.fighter._counterPunchTimer && this.fighter._counterPunchTimer > 0) || (this.fighter._postCounterRecoveryTimer && this.fighter._postCounterRecoveryTimer > 0)) {
         return;
       }
     }
@@ -351,7 +351,8 @@ export class StatusEffectsManager {
     }
 
     const isDomainImmuneMahoraga = (fighter.gojoDomainAdapted || fighter.gojoAdapted?.domain) && (fighter.characterId === 'mahoraga' || fighter.type === 'mahoraga');
-    if ((fighter.isBaguvixActive || fighter.isGodModeActive || fighter.domainImmunity || isDomainImmuneMahoraga || fighter.characterId === 'toji' || fighter.type === 'toji' || fighter.immuneToCC || fighter.characterId === 'escanor' || fighter.type === 'escanor' || fighter.isCountering || (fighter._counterPunchTimer && fighter._counterPunchTimer > 0) || (fighter._postCounterRecoveryTimer && fighter._postCounterRecoveryTimer > 0)) && !fighter.isChainedByMakima && !fighter.isFrameFrozen && (!fighter.frameFreezeTimer || fighter.frameFreezeTimer <= 0) && !fighter.isCaughtInNaoyaUlt && !fighter.isCurrentlyWallPinnedByNaoya) {
+    const isFighterInvincible = Boolean(fighter.isInvincible || fighter.isInvulnerable || fighter.invincible || fighter.isInvincibleUltimate || (fighter.invincibleTimer && fighter.invincibleTimer > 0) || (fighter.invincibilityTimer && fighter.invincibilityTimer > 0));
+    if ((fighter.isBaguvixActive || fighter.isGodModeActive || isFighterInvincible || fighter.domainImmunity || isDomainImmuneMahoraga || fighter.characterId === 'toji' || fighter.type === 'toji' || fighter.immuneToCC || fighter.characterId === 'escanor' || fighter.type === 'escanor' || fighter.isCountering || (fighter._counterPunchTimer && fighter._counterPunchTimer > 0) || (fighter._postCounterRecoveryTimer && fighter._postCounterRecoveryTimer > 0)) && !fighter.isChainedByMakima && !fighter.isFrameFrozen && (!fighter.frameFreezeTimer || fighter.frameFreezeTimer <= 0) && !fighter.isCaughtInNaoyaUlt && !fighter.isCurrentlyWallPinnedByNaoya) {
       fighter.timeStopTimer = 0;
       fighter.isFrozenByInfinity = false;
       fighter.electricStunTimer = 0;

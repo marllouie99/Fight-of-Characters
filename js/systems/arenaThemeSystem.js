@@ -14,6 +14,7 @@ import { getOrCreateDungeonFloorCanvas } from '../graphics/renderers/dungeonFloo
 import { getOrCreateEndStoneFloorCanvas } from '../graphics/renderers/endStoneFloorRenderer.js';
 import { getOrCreateEndStoneBricksFloorCanvas } from '../graphics/renderers/endStoneBricksFloorRenderer.js';
 import { getOrCreateMossyStoneFloorCanvas } from '../graphics/renderers/mossyStoneFloorRenderer.js';
+import { getOrCreateFootballFieldFloorCanvas, _renderFootballFieldFloor } from '../graphics/renderers/footballFieldRenderer.js';
 
 export const ARENA_THEME_STORAGE_KEY = 'circle_selected_arena_theme';
 export const LEGACY_ARENA_FLOOR_STORAGE_KEY = 'circle_selected_arena_floor';
@@ -27,6 +28,17 @@ export const ARENA_THEMES = [
     themeColor: '#64748b',
     features: '8x8 TILES • ESPORTS STANDARD',
     desc: '8x8 Esports-grade minimalist pixel arena with 8-bit stepped corner brackets and discrete intersection crosshairs.',
+    hasDecorations: false,
+    decorationTheme: 'none'
+  },
+  {
+    id: 'football_field',
+    name: 'FOOTBALL FIELD',
+    shortName: 'FOOTBALL',
+    icon: '⚽',
+    themeColor: '#22c55e',
+    features: '8-BIT PITCH • RETRO TURF & CHALK',
+    desc: 'Authentic 8-bit championship football pitch with stepped pixel turf bands, dithered lawn cuts, 8-bit regulation chalk markings, pixel center circle, and goal areas.',
     hasDecorations: false,
     decorationTheme: 'none'
   },
@@ -1303,6 +1315,9 @@ export function getOrCreateThemeCanvas(themeId, arena, isDark = false, fBleed = 
   if (themeId === 'mossy_stone') {
     return getOrCreateMossyStoneFloorCanvas(arena, isDark, fBleed);
   }
+  if (themeId === 'football_field') {
+    return getOrCreateFootballFieldFloorCanvas(arena, isDark, fBleed);
+  }
 
   const width = Math.max(64, Math.ceil(arena.width + fBleed * 2));
   const height = Math.max(64, Math.ceil(arena.height + fBleed * 2));
@@ -1332,6 +1347,10 @@ export function getOrCreateThemeCanvas(themeId, arena, isDark = false, fBleed = 
   const cellH = height / rows;
 
   switch (themeId) {
+    case 'football_field':
+      _renderFootballFieldFloor(oc, width, height, cols, rows, cellW, cellH, isDark);
+      break;
+
     case 'bomberman_normal':
       _renderBombermanFloor(oc, width, height, cols, rows, cellW, cellH, isDark);
       break;
@@ -1460,7 +1479,18 @@ function getOrCreateMiniPreviewCanvas(themeDef, w, h) {
     }
 
     // Mini decorative accent on preview for Halloween
-    if (themeDef.id === 'halloween') {
+    if (themeDef.id === 'football_field') {
+      // Crisp white center circle & kickoff spot on mini preview card
+      const pcx = Math.round(w / 2);
+      const pcy = Math.round(h / 2);
+      oc.strokeStyle = '#ffffff';
+      oc.lineWidth = 1.0;
+      oc.beginPath();
+      oc.arc(pcx, pcy, Math.max(3, Math.round(w * 0.20)), 0, Math.PI * 2);
+      oc.stroke();
+      oc.fillStyle = '#ffffff';
+      oc.fillRect(pcx - 1, pcy - 1, 2, 2);
+    } else if (themeDef.id === 'halloween') {
       // Miniature glowing pumpkin dot in center
       oc.fillStyle = '#f97316';
       oc.fillRect(Math.round(w / 2 - 2), Math.round(h / 2 - 2), 5, 4);
@@ -1536,8 +1566,9 @@ export function drawArenaThemeModal(ctx) {
   if (!ctx || !state.canvas) return;
 
   const canvas = state.canvas;
-  const modalW = Math.min(canvas.width - 24, 520);
-  const modalH = Math.min(canvas.height - 24, 650);
+  const isHorizontal = typeof state !== 'undefined' && state.viewOrientation === 'horizontal';
+  const modalW = isHorizontal ? Math.min(canvas.width - 48, 860) : Math.min(canvas.width - 24, 520);
+  const modalH = isHorizontal ? Math.min(canvas.height - 24, 516) : Math.min(canvas.height - 24, 720);
   const mx = (canvas.width - modalW) / 2;
   const my = (canvas.height - modalH) / 2;
 
@@ -1600,14 +1631,14 @@ export function drawArenaThemeModal(ctx) {
   ctx.fillRect(mx + 18, my + 42, modalW - 36, 2);
 
   // 3. Theme Option Cards (2 Columns x Rows)
-  const cols = 2;
+  const cols = isHorizontal ? 3 : 2;
   const padX = 16;
   const gapX = 10;
   const gapY = 5;
   const numRows = Math.ceil(ARENA_THEMES.length / cols);
   const availHeight = modalH - 46 - 26; // Header & footer space
   const cardH = Math.min(84, Math.floor((availHeight - (numRows - 1) * gapY) / numRows));
-  const cardW = Math.floor((modalW - padX * 2 - gapX) / cols);
+  const cardW = Math.floor((modalW - padX * 2 - gapX * (cols - 1)) / cols);
   const startCardsY = my + 46;
 
   const currentSelection = getSelectedArenaTheme();
@@ -1720,3 +1751,22 @@ export const openArenaFloorModal = openArenaThemeModal;
 export const closeArenaFloorModal = closeArenaThemeModal;
 export const toggleArenaFloorModal = toggleArenaThemeModal;
 
+
+// ─────────────────────────────────────────────
+// EXPLICIT THEME CANVAS GENERATORS
+// ─────────────────────────────────────────────
+
+export { getOrCreateFootballFieldFloorCanvas };
+
+/**
+ * Procedurally generates or retrieves the cached 8-bit Football Field floor canvas.
+ *
+ * @param {object} arena - Arena bounding rect
+ * @param {object|boolean} [opts={}] - Options or boolean isDark
+ * @returns {HTMLCanvasElement|null}
+ */
+export function generateFootballFieldThemeFloor(arena, opts = {}) {
+  const isDark = typeof opts === 'boolean' ? opts : !!opts?.isDarkMode;
+  const fBleed = opts?.fBleed || 0;
+  return getOrCreateFootballFieldFloorCanvas(arena, isDark, fBleed);
+}

@@ -489,4 +489,15 @@ Whenever creating, extracting, formatting, or rendering visual effects, sprite a
 - **Canonical 12-Frame Weapon Slash Attack Template & Skill**: Whenever the user asks to generate, extract, format, or implement an animation for any weapon attack, melee strike, blade slash, or sword cleave, the agent **MUST ALWAYS look for the canonical slash template in `Assets/effects/Slash Attack/` FIRST** before searching anywhere else (see dedicated skill `slash-animation-generator` at `.agents/skills/slash-animation-generator/SKILL.md`). The slash effect MUST spawn at the very tip of the weapon (`get[Weapon]TipWorldPos()`), envelop the blade reach with anchor `(95, 135)`, trail strictly behind the cutting blade during Phase 3, and preserve $>20\text{px}$ clearance from the fighter's head/body.
 - **Mandatory YouTube Video Title & Matchup Packaging Skill**: Whenever the user asks for a YouTube video title, Shorts hook, clickbait angle, unique title, or packaging for any matchup or character in Circle Mini-Battle / Fight of Characters, the agent **MUST ALWAYS activate the `youtube-title-generator` skill (`.agents/skills/youtube-title-generator/SKILL.md`)** to provide structured titles across the 5 canonical tiers (Unique/Thematic Contrasts, High-CTR Shorts Hooks, Debate Drivers, Cinematic Manga One-Liners, and Clean SEO Channel Branding) with a highlighted top recommendation.
 
+### 4.6 Strict Prohibition of Unprompted / Hard-Coded Crit Mechanics (Rule 34)
+When designing, implementing, tuning, or balancing fighters, skills, weapons, or projectile combat systems:
+- **STRICT PROHIBITION of Unprompted / Arbitrary Crit Mechanics**: Agents **MUST NEVER** arbitrarily inject crit rates, critical chances, guaranteed crits (`guaranteedCrit: true`, `isCrit: this.isFlowStateActive`, `ball.isCrit = true`), or hidden crit multipliers (`flowShotCritMult`) into character kits or weapons unless explicitly requested by the user or required by explicit canon anime fighting lore (e.g., Nanami Kento's 7:3 Ratio Technique).
+- **Preservation of Theme-Colored Floating Combat Text**:
+  - In `fighter.js` (`applyDamageToTarget`), passing `isCrit: true` forces damage numbers into bright red (`#FF3B30`) with a `CRIT!` prefix. This completely overrides and suppresses the fighter's unique theme-colored damage numbers (`#00F0FF`, `#EC4899`, etc.), homogenizing visual identity.
+  - All character damage scaling, buffs, and awakened forms MUST derive cleanly and transparently from configured stat multipliers (`damageMultiplier`, `strikerDamage`, `damage`) and display floating numbers cleanly in the character's designated theme color (`f.color` or `cfg.themeColor`).
+- **Clean HUD Card Standard**:
+  - HUD cards MUST NEVER display artificial `Crit Rate: 100% (FLOW 1.85x)` or `(EGO CRIT)` indicators for non-crit characters.
+  - The HUD stats array must accurately reflect authentic character attributes (Damage, Speed, Kick Speed, Evade, Dribble Control, CDR) without manufactured RPG crit statistics.
+
+
 

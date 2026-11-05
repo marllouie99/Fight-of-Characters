@@ -2409,12 +2409,7 @@ export function getBlueLockFighterStatsInfo(f) {
     info.push(`<b>KICK SPD:</b> ${baseKickSpd.toFixed(1)}`);
   }
 
-  // 4. Lore Weapon Buffs & Critical / Evasion / Defense / CDR Stats
-  if (isFlow) {
-    info.push(`<b>Crit Rate:</b> 100% <span style="color: #00F0FF; font-size: 10px; font-weight: bold;">(FLOW 1.85x) ▲</span>`);
-  } else if (isEgo && egoBuffs.guaranteedCrit) {
-    info.push(`<b>Crit Rate:</b> 100% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">(EGO CRIT) ▲</span>`);
-  }
+  // 4. Lore Weapon Buffs & Evasion / Defense / CDR Stats
 
   // Evade chance: active during Panther Speed Surge or Ego Awakening
   const hasSpeedSurge = Boolean(f.pantherSpeedBuffTimer && f.pantherSpeedBuffTimer > 0);
@@ -2440,6 +2435,9 @@ export function getBlueLockFighterStatsInfo(f) {
   if (isEgo && typeof egoBuffs.reboundBounceChance === 'number') {
     info.push(`<b>PASSBACK:</b> ${Math.round(egoBuffs.reboundBounceChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
   }
+  if (isFlow) {
+    info.push(`<b>Crit Rate:</b> 100% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (FLOW 1.85x)</span>`);
+  }
 
   // 5. Dribble & Ball Control Status (Reflects character control archetype while moving with ball)
   const isDribbling = Boolean(f.soccerBall && f.soccerBall.dribbler === f && f.shootCooldown > 0);
@@ -2456,7 +2454,7 @@ export function getBlueLockFighterStatsInfo(f) {
   }
 
   // If no dynamic buff was pushed, display base kick accuracy
-  if (!isFlow && (!isEgo || (!egoBuffs.guaranteedCrit && !egoBuffs.dodgeChance && !egoBuffs.defenseMultiplier && !egoBuffs.cooldownRate && !egoBuffs.curvedShotRate && !egoBuffs.reboundBounceChance))) {
+  if (!isFlow && (!isEgo || (!egoBuffs.dodgeChance && !egoBuffs.defenseMultiplier && !egoBuffs.cooldownRate && !egoBuffs.curvedShotRate && !egoBuffs.reboundBounceChance))) {
     const accPct = Math.round((f.kickAccuracy !== undefined ? f.kickAccuracy : (cfg.kickAccuracy ?? 1.0)) * 100);
     info.push(`<b>ACCURACY:</b> ${accPct}%`);
   }

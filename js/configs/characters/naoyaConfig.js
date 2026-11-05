@@ -23,8 +23,8 @@ export const naoyaConfig = {
   hp: 190,
   speed: 6.6,
   moveSpeed: 12.6,
-  r: 25,
-  radius: 25,
+  r: 24,
+  radius: 24,
   color: '#76E042', // Electric Lime
   themeColor: '#76E042',
   secondaryColor: '#C8E64A', // Pale Gold

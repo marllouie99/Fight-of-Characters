@@ -17,7 +17,20 @@ import { state, spawnFloatingText, triggerGlobalScreenShake } from '../core/stat
 import { playSound } from './soundSystem.js';
 import { spawnSparks } from '../graphics/particles/sparkEffect.js';
 import { applyDamageToTarget, isSkillEnabled } from '../entities/fighter.js';
-import { stepSoccerBall3DRotation } from '../graphics/weapons/soccerBallGraphics.js';
+import {
+  stepSoccerBall3DRotation,
+  updateBlueLockEgoTrail,
+  decayBlueLockEgoTrail,
+  updateStrikerBallTrail,
+  decayStrikerBallTrail
+} from '../graphics/weapons/soccerBallGraphics.js';
+
+export {
+  updateBlueLockEgoTrail,
+  decayBlueLockEgoTrail,
+  updateStrikerBallTrail,
+  decayStrikerBallTrail
+};
 
 /**
  * Universal Blue Lock Character Registry.
@@ -73,8 +86,7 @@ export const BLUE_LOCK_EGO_REGISTRY = Object.freeze({
       damageMultiplier: 1.45,    // Massive +45% lethal strike damage
       kickSpeedMultiplier: 1.35,
       curvedShotRate: 1.6,       // Extreme trivela rotational curve
-      armorPenetration: 0.30,
-      guaranteedCrit: true
+      armorPenetration: 0.30
     })
   }),
   bachira: Object.freeze({
@@ -124,7 +136,6 @@ export const BLUE_LOCK_EGO_REGISTRY = Object.freeze({
       damageMultiplier: 1.40,
       strikerRadiusMultiplier: 1.50, // 50% wider aerial blast radius
       kickSpeedMultiplier: 1.50,
-      guaranteedCrit: true,
       speedMultiplier: 1.20
     })
   }),
@@ -327,6 +338,8 @@ export function resetSoccerBall(ball, kicker, cfg = {}, arena = null, stateRef =
   ball.shouldBounceBackToIsagi = false;
   ball.rotSpeed = 0;
   ball.lastKicker = kicker || null;
+  if (ball._strikerTrailNodes) ball._strikerTrailNodes.length = 0;
+  if (ball._strikerSparks) ball._strikerSparks.length = 0;
   ball.kickerThemeColor = kicker ? (kicker.color || '#00F0FF') : '#00F0FF';
 
   // Single Shared Ball Kick-off standard:
@@ -377,6 +390,7 @@ export function initBlueLockEgo(fighter, cfg = {}) {
     : { ...registryDef.buffs };
   fighter.egoTitle = cfg.egoTitle || registryDef.title;
   fighter._egoAuraTimer = 0;
+  fighter._egoAuraOpacity = 0;
 }
 
 /**
@@ -423,6 +437,8 @@ export function activateBlueLockEgo(fighter, cfg = {}) {
   fighter.isEgoAwakened = true;
   fighter.egoMaxDuration = cfg.egoDuration || 360;
   fighter.egoDurationTimer = fighter.egoMaxDuration;
+  fighter._egoAuraOpacity = 0.65;
+  updateBlueLockEgoTrail(fighter);
 
   const themeColor = fighter.color || cfg.themeColor || '#00F0FF';
 
@@ -467,6 +483,9 @@ export function updateBlueLockEgo(fighter, cfg = {}) {
     fighter.egoDurationTimer--;
     fighter._egoAuraTimer = (fighter._egoAuraTimer || 0) + 1;
 
+    // High-octane stylized Dark Flame & Ribbon Ego Trail (Rule 11 & Rule 25)
+    updateBlueLockEgoTrail(fighter);
+
     // Synchronize egoMeter with remaining active duration for HUD progression
     const maxDur = fighter.egoMaxDuration || cfg.egoDuration || 360;
     fighter.egoMeter = Math.max(0, (fighter.egoDurationTimer / maxDur) * (fighter.maxEgoMeter || 100));
@@ -487,11 +506,18 @@ export function updateBlueLockEgo(fighter, cfg = {}) {
       fighter.isEgoAwakened = false;
       fighter.egoMeter = 0;
       fighter.egoDurationTimer = 0;
+      fighter._wasEgoAuraActive = false;
+      fighter._egoAuraDisappearing = true;
+      fighter._egoAuraDisappearTimer = 24;
+      fighter._egoAuraDisappearMax = 24;
       spawnFloatingText('EGO EXHAUSTED', fighter.x, fighter.y - 24, '#94A3B8');
       if (typeof fighter.onEgoEnd === 'function') {
         fighter.onEgoEnd(cfg);
       }
     }
+  } else {
+    // Lingering Ego Trail natural decay when inactive (Rule 25)
+    decayBlueLockEgoTrail(fighter);
   }
 }
 
@@ -608,9 +634,6 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
     if (typeof egoBuffs.kickSpeedMultiplier === 'number') {
       speed *= egoBuffs.kickSpeedMultiplier;
     }
-    if (egoBuffs.guaranteedCrit) {
-      options.isCrit = true;
-    }
     if (typeof egoBuffs.reboundBounceChance === 'number' && options.bounceBackChance === undefined) {
       options.bounceBackChance = egoBuffs.reboundBounceChance;
     }
@@ -637,7 +660,7 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
 
   // 3. Combat Flags
   const isStrikerShot = Boolean(options.isStriker || options.isDirectVolley || options.isSuperShot);
-  ball.isCrit = Boolean(options.isCrit || isStrikerShot || (egoBuffs && egoBuffs.guaranteedCrit));
+  ball.isCrit = Boolean(options.isCrit || (egoBuffs && egoBuffs.guaranteedCrit));
   ball.isDirectVolley = isStrikerShot;
   ball.isStriker = isStrikerShot;
   ball.isSuperShot = isStrikerShot;
@@ -670,6 +693,16 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
       isStriker: isStrikerShot,
       color: themeColor
     });
+  }
+
+  // Instant seed for Striker ball electric comet trail (frame 0 visual continuity)
+  if (isStrikerShot) {
+    const spd = Math.hypot(ball.vx, ball.vy);
+    ball._strikerTrailNodes = [
+      { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, speed: spd, angle: finalAngle, age: 0, r: ball.r || 16 },
+      { x: kicker.x, y: kicker.y, vx: ball.vx, vy: ball.vy, speed: spd, angle: finalAngle, age: 0.1, r: ball.r || 16 }
+    ];
+    ball._strikerTrailTimer = 1;
   }
 
   // 5. Audio & Sparks
@@ -740,7 +773,6 @@ export function executeStrikerSkill(kicker, ball, opponent, arena, cfg = {}, opt
   const maxSpread = options.maxKickSpread ?? cfg.maxKickSpread;
 
   executeSoccerKick(kicker, ball, angle, speed, {
-    isCrit: true,
     isDirectVolley: true, // backward-compatible flag
     isStriker: true,      // universal Blue Lock striker flag
     isSuperShot: true,
@@ -918,6 +950,13 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
   ball.y += ball.vy;
   ball.rotation += ball.rotSpeed;
   stepSoccerBall3DRotation(ball, ball.vx, ball.vy);
+
+  // 1b. Update Epic Striker Ball Electric Comet Trail (Rule 25 compliant)
+  if (ball.isStriker || ball.isDirectVolley || ball.isSuperShot) {
+    updateStrikerBallTrail(ball);
+  } else if ((ball._strikerTrailNodes && ball._strikerTrailNodes.length > 0) || (ball._strikerSparks && ball._strikerSparks.length > 0)) {
+    decayStrikerBallTrail(ball);
+  }
 
   // 2. Turf Friction / Rolling Deceleration
   ball.vx *= 0.992;
@@ -1100,10 +1139,6 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           ? (kickerCfg.strikerDamage || kickerCfg.directVolleyDamage || 75)
           : (ball.isRebound ? (ball.reboundDamage || kickerCfg.reboundDamage || 32) : (ball.baseDamage || kickerCfg.damage || kickerCfg.pantherShotDamage || kickerCfg.egoShotDamage || 24));
 
-        if (ball.isCrit) {
-          damage = Math.round(damage * (kickerCfg.flowShotCritMult || cfg.flowShotCritMult || 1.35));
-        }
-
         // Active Ego Mode Damage Multiplier (Attacker Buff)
         const kickerEgoBuffs = getBlueLockEgoBuffs(activeKicker);
         if (kickerEgoBuffs && typeof kickerEgoBuffs.damageMultiplier === 'number') {
@@ -1133,7 +1168,7 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
         }
 
         // Apply Damage via Universal Combat Helper
-        applyDamageToTarget(target, damage, activeKicker, { isSoccerKick: true, isSuper, isCrit: ball.isCrit, arena });
+        applyDamageToTarget(target, damage, activeKicker, { isSoccerKick: true, isSuper, arena });
 
         // Universal Blue Lock "EGO" Meter Charge on Hit
         if (activeKicker && isBlueLockFighter(activeKicker)) {
@@ -1193,7 +1228,7 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
               maxR: 95,
               progress: 0.0,
               speed: 0.08,
-              color: '#00FF88'
+              color: themeColor
             });
           }
           triggerGlobalScreenShake(kickerCfg.strikerShake || kickerCfg.directVolleyShake || 8, 14);
@@ -1259,7 +1294,7 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           const hitX = (ball.x + target.x) * 0.5;
           const hitY = (ball.y + target.y) * 0.5;
           const hitAngle = Math.atan2(target.y - ball.y, target.x - ball.x);
-          activeKicker._spawn16BitHitEffect(hitX, hitY, hitAngle, wasSuper, ball.isCrit);
+          activeKicker._spawn16BitHitEffect(hitX, hitY, hitAngle, wasSuper);
         }
 
         spawnSparks(ball.x, ball.y, 12, themeColor);
@@ -1671,7 +1706,6 @@ export function attemptBallKickSteal(dribbler, tackler, ball, arena = null, opti
         ? Math.atan2(dribbler.y - tackler.y, dribbler.x - tackler.x)
         : tacklerAngle;
       executeSoccerKick(tackler, ball, aimAngle, kickSpeed * 1.15, {
-        isCrit: Boolean(tackler.isEgoActive || tackler.isFlowStateActive),
         isDirectVolley: false,
         themeColor: tacklerTheme,
         bounceBackChance: 0.40,
@@ -1725,7 +1759,6 @@ export function attemptBallKickSteal(dribbler, tackler, ball, arena = null, opti
 export function spawn16BitHitEffect(effectsArray, x, y, impactAngle, options = {}) {
   if (!Array.isArray(effectsArray)) return;
   const isDirectVolley = Boolean(options.isDirectVolley);
-  const isCrit = Boolean(options.isCrit);
   const color = options.color || (isDirectVolley ? '#00FF88' : '#00F0FF');
 
   const particleCount = isDirectVolley ? 12 : 7;
@@ -1748,7 +1781,6 @@ export function spawn16BitHitEffect(effectsArray, x, y, impactAngle, options = {
     timer: isDirectVolley ? 18 : 12,
     maxTimer: isDirectVolley ? 18 : 12,
     isDirectVolley,
-    isCrit,
     color,
     particles
   });

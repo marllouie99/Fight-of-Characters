@@ -33,7 +33,8 @@ import {
   drawStrikerShockwave,
   drawKickImpact,
   draw16BitHitImpact,
-  drawBlueLockEgoAura
+  drawBlueLockEgoAura,
+  drawBlueLockEgoAuraFront
 } from '../../graphics/weapons/soccerBallGraphics.js';
 import {
   createSoccerBall,
@@ -53,7 +54,11 @@ import {
   gainBlueLockEgo,
   activateBlueLockEgo,
   updateBlueLockEgo,
-  getBlueLockEgoBuffs
+  updateBlueLockEgoTrail,
+  decayBlueLockEgoTrail,
+  decayStrikerBallTrail,
+  getBlueLockEgoBuffs,
+  spawn16BitHitEffect
 } from '../../systems/soccerBallSystem.js';
 import { playSound } from '../../systems/soundSystem.js';
 
@@ -110,8 +115,8 @@ export class ChigiriFighter extends Fighter {
     this.pantherSprintEvadeChance = cfg.pantherSprintEvadeChance !== undefined ? cfg.pantherSprintEvadeChance : 0.35;
 
     // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate) ───
-    this.strikerCooldownMax = cfg.strikerCooldown || 1080;
-    this.strikerCooldownTimer = 360; // Initial warmup
+    this.strikerCooldownMax = cfg.strikerCooldown || 720;
+    this.strikerCooldownTimer = 0; // Ready immediately on first ball possession!
     this.isStrikerWindingUp = false;
     this.strikerWindupTimer = 0;
     this.strikerWindupMax = cfg.strikerWindup || 0;
@@ -124,6 +129,42 @@ export class ChigiriFighter extends Fighter {
     // ─── Post-Kick Movement Slow (Brief Recovery Follow-Through) ───
     this.kickSlowTimer = 0;
     this.kickSlowMultiplier = 1.0;
+
+    // ─── Declarative SkillManager Registration (Rule 18 & Cooldown Stasis Architecture) ───
+    if (this.skillManager) {
+      const skills = [
+        {
+          id: 'panther_sprint',
+          name: 'Panther Sprint',
+          type: 'active',
+          isSignature: true,
+          signature: true,
+          cooldownKey: 'pantherSprintCooldownTimer',
+          cooldownMaxKey: 'pantherSprintCooldownMax',
+          durationKey: 'pantherSpeedBuffTimer',
+          durationMaxKey: 'pantherSpeedBuffDuration',
+          activeKey: 'isPantherSprinting',
+          canTickCooldown: (fighter) => !fighter.isPantherSprinting && (fighter.pantherSprintDashTimer || 0) <= 0 && (fighter.pantherSpeedBuffTimer || 0) <= 0,
+          onExpire: (fighter) => {
+            fighter.isPantherSprinting = false;
+          }
+        },
+        {
+          id: 'striker',
+          name: 'STRIKER!',
+          type: 'ultimate',
+          isSignature: true,
+          signature: true,
+          isUltimate: true,
+          cooldownKey: 'strikerCooldownTimer',
+          cooldownMaxKey: 'strikerCooldownMax',
+          activeKey: 'isStrikerWindingUp'
+        }
+      ];
+      this.skillManager.registerSkills(skills);
+      this.skillManager.cooldownKeyMap.set('pantherSprintCooldown', skills[0]);
+      this.skillManager.cooldownKeyMap.set('strikerCooldown', skills[1]);
+    }
 
     // ─── Universal Blue Lock Trait: EGO Awakening & Potential Unlocked ───
     initBlueLockEgo(this, cfg);
@@ -167,6 +208,13 @@ export class ChigiriFighter extends Fighter {
     this.pantherSprintDashTimer = 0;
     this.pantherSprintInvulnTimer = 0;
     this.pantherSpeedBuffTimer = 0;
+    this.strikerCooldownTimer = 0;
+    if (this.skillManager) {
+      const s1 = this.skillManager.getSkill('panther_sprint');
+      const s2 = this.skillManager.getSkill('striker');
+      if (s1) this.skillManager.cooldownKeyMap.set('pantherSprintCooldown', s1);
+      if (s2) this.skillManager.cooldownKeyMap.set('strikerCooldown', s2);
+    }
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.chigiri) ? CONFIG.chigiri : chigiriConfig;
     initBlueLockEgo(this, cfg);
     this._syncSharedSoccerBall();
@@ -377,9 +425,32 @@ export class ChigiriFighter extends Fighter {
   }
 
   /**
+   * Spawns a 16-bit retro arcade hit impact effect when the soccer ball strikes an enemy.
+   */
+  _spawn16BitHitEffect(x, y, impactAngle, isDirectVolley = false) {
+    spawn16BitHitEffect(this.active16BitHits, x, y, impactAngle, {
+      isDirectVolley,
+      color: this.color || '#EC4899'
+    });
+  }
+
+  /**
    * Top-of-update non-freezing active visual effect decay routine (Rule 25).
    */
   _updateVisualEffects() {
+    // 0. Blue Lock Ego Aura update & decay before freeze guard (Rule 25)
+    // Ensures aura opacity and visual flame animation persist even when movement is stopped by attacks/CC
+    if (this.isEgoActive || this.isPantherSprinting || (this.pantherSpeedBuffTimer || 0) > 0) {
+      updateBlueLockEgoTrail(this);
+    } else {
+      decayBlueLockEgoTrail(this);
+    }
+
+    // 0b. Striker Ball Comet Trail Decay (Rule 25)
+    if (this.soccerBall && !this.soccerBall.isStriker && !this.soccerBall.isDirectVolley) {
+      decayStrikerBallTrail(this.soccerBall);
+    }
+
     // 1. Puzzle Particles Decay
     for (let i = this.puzzleParticles.length - 1; i >= 0; i--) {
       const p = this.puzzleParticles[i];
@@ -471,8 +542,18 @@ export class ChigiriFighter extends Fighter {
 
     // Decrement Skill Cooldowns
     if (this.shootCooldown > 0) this.shootCooldown--;
-    if (this.pantherSprintCooldownTimer > 0) this.pantherSprintCooldownTimer--;
-    if (this.strikerCooldownTimer > 0) this.strikerCooldownTimer--;
+
+    // Skill 1: Panther Sprint Cooldown & Speed Buff Timer
+    // Managed declaratively via SkillManager with duration gating; fallback if skillManager is not present
+    if (!this.skillManager) {
+      if (!this.isPantherSprinting && this.pantherSprintDashTimer <= 0 && this.pantherSpeedBuffTimer <= 0) {
+        if (this.pantherSprintCooldownTimer > 0) this.pantherSprintCooldownTimer--;
+      }
+      if (this.strikerCooldownTimer > 0) this.strikerCooldownTimer--;
+      if (this.pantherSpeedBuffTimer > 0) {
+        this.pantherSpeedBuffTimer--;
+      }
+    }
 
     // Invulnerability timer from Panther Sprint
     if (this.pantherSprintInvulnTimer > 0) {
@@ -480,11 +561,6 @@ export class ChigiriFighter extends Fighter {
       this.isInvulnerable = true;
     } else {
       this.isInvulnerable = false;
-    }
-
-    // Lingering Speed Surge timer from Panther Sprint
-    if (this.pantherSpeedBuffTimer > 0) {
-      this.pantherSpeedBuffTimer--;
     }
 
     // 1b. Universal Blue Lock EGO Awakening Lifecycle & Cooldown Recovery
@@ -623,12 +699,14 @@ export class ChigiriFighter extends Fighter {
     this.angle = angle;
 
     const kickSpeed = cfg.pantherShotSpeed || 15.0;
+    const isEmpowered = Boolean(this.isEgoActive || (this.pantherSpeedBuffTimer > 0));
 
-    executeSoccerKick(this, this.soccerBall, angle, kickSpeed, {
+    executeSoccerKick(this, this.soccerBall, angle, isEmpowered ? kickSpeed * 1.30 : kickSpeed, {
       damage: cfg.pantherShotDamage || 22,
       reboundDamage: cfg.pantherShotReboundDamage || 28,
-      isCrit: this.isEgoActive,
-      isDirectVolley: false,
+      isDirectVolley: isEmpowered,
+      isStriker: isEmpowered,
+      isSuperShot: isEmpowered,
       themeColor: '#EC4899',
       bounceBackChance: 0.50,
       rotSpeed: 0.28,
@@ -645,6 +723,7 @@ export class ChigiriFighter extends Fighter {
    * Dashing grants invulnerability and immediately triggers a lingering speed boost!
    */
   _executePantherSprint(targetEntity, cfg) {
+    this.pantherSprintCooldownMax = cfg.pantherSprintCooldown || this.pantherSprintCooldownMax || 240;
     this.pantherSprintCooldownTimer = this.pantherSprintCooldownMax;
     this.isPantherSprinting = true;
     this._hasPassedThroughText = false;
@@ -714,6 +793,7 @@ export class ChigiriFighter extends Fighter {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.chigiri) ? CONFIG.chigiri : chigiriConfig;
 
     return executeStrikerSkill(this, this.soccerBall, opponent, arena, cfg, {
+      speed: cfg.strikerSpeed || 26.0,
       themeColor: '#EC4899',
       shoutText: 'STRIKER!!',
       kickAccuracy: cfg.kickAccuracy !== undefined ? cfg.kickAccuracy : this.kickAccuracy,
@@ -761,13 +841,14 @@ export class ChigiriFighter extends Fighter {
       drawChigiriGhostSkin(ctx, img.x, img.y, img.angle, img.r, img.alpha);
     }
 
-    // 2. Draw Ego Awakening Aura (when Ego is active)
-    if (this.isEgoActive) {
-      drawBlueLockEgoAura(ctx, this);
-    }
+    // 2. Draw Ego Awakening Spectral Flame Spire & Ground Pool Aura (Back Layer & Decaying Wisps)
+    drawBlueLockEgoAura(ctx, this);
 
     // 3. Draw Character Body Skin (Rule 24 Standard)
     this.drawBody(ctx);
+
+    // 3.5 Draw Ego Awakening Front Ground Pool Licks & Flank Rim Wisps (3D Depth Wrapping)
+    drawBlueLockEgoAuraFront(ctx, this);
 
     // 4. Draw THE Single Persistent Soccer Ball (Only primary Blue Lock controller draws)
     if (this.soccerBall && isPrimaryBlueLockBallController(this, state) && !this._isPreview && !this._isProfilePreview) {
@@ -810,8 +891,14 @@ export class ChigiriFighter extends Fighter {
     this.isPantherSprinting = false;
     this.pantherSprintDashTimer = 0;
     if (forceCancelAll) {
+      this.pantherSpeedBuffTimer = 0;
+      this.pantherSprintInvulnTimer = 0;
       this.activeKickImpacts.length = 0;
       this.active16BitHits.length = 0;
+      if (this._egoTrailNodes) this._egoTrailNodes.length = 0;
+      if (this._egoDroplets) this._egoDroplets.length = 0;
+      if (this._egoFlameWisps) this._egoFlameWisps.length = 0;
+      this._egoAuraOpacity = 0;
     }
   }
 }

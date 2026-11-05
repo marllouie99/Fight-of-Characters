@@ -3655,8 +3655,13 @@ export const HUD_SKILL_PROVIDERS = {
 
       if ((f.pantherSpeedBuffTimer || 0) > 0) {
         pct = Math.max(0, Math.min(100, ((f.pantherSpeedBuffTimer || 0) / (cfg.pantherSprintSpeedBuffDuration || 150)) * 100));
-        ready = true;
+        ready = false;
         label = `SPEED SURGE (${((f.pantherSpeedBuffTimer || 0) / 60).toFixed(1)}S)`;
+      } else if (f.isPantherSprinting) {
+        const dashMax = cfg.pantherSprintDashFrames || 22;
+        pct = Math.max(0, Math.min(100, ((f.pantherSprintDashTimer || 0) / dashMax) * 100));
+        ready = false;
+        label = 'PANTHER SPRINT';
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
@@ -3666,9 +3671,11 @@ export const HUD_SKILL_PROVIDERS = {
       skills.push({
         id: 'panther_sprint',
         pct,
-        ready,
+        ready: ready && cdTimer <= 0 && (f.pantherSpeedBuffTimer || 0) <= 0 && !f.isPantherSprinting,
         color: themeColor,
-        label
+        label,
+        isSignature: true,
+        signature: true
       });
     }
 

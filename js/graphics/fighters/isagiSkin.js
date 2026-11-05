@@ -28,10 +28,10 @@ export function _getIsagiHairImage() {
       _isagiHairImageLoading = false;
     };
     img.onerror = (e) => {
-      console.warn('Failed to load Isagi hair image at Assets/model/isagi/isagi-hair.png', e);
+      console.warn('Failed to load Isagi hair image at Assets/model/isagi/Isagi_hair.png', e);
       _isagiHairImageLoading = false;
     };
-    img.src = 'Assets/model/isagi/isagi-hair.png?v=3';
+    img.src = 'Assets/model/isagi/Isagi_hair.png?v=4';
     _isagiHairImage = img;
   }
   return _isagiHairImage;
@@ -42,7 +42,7 @@ if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
 }
 
 /**
- * Draws Isagi's dark spiky anime hair from Assets/model/isagi/isagi-hair.png (Rule 22 & Rule 24).
+ * Draws Isagi's dark spiky anime hair from Assets/model/isagi/Isagi_hair.png (Rule 22 & Rule 24).
  * Calibrated using the true bounding box of the hair asset matching the Toji Reference Standard.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} r - Character body radius
@@ -63,18 +63,18 @@ export function _drawIsagiHair(ctx, r, facingLeft = false) {
     const flipX = custom.flipX ? -1 : 1;
     const flipY = custom.flipY ? -1 : 1;
 
-    // isagi-hair.png (1024x1024). True visible hair bounding box:
-    // X: [158, 861] (width 704, horizontal center at 509.5)
-    // Y: [153, 901] (content height 749, sprout apex at 153, dome apex at 230)
+    // Isagi_hair.png (1536x1024). True visible hair bounding box:
+    // X: [258, 1293] (width 1036, horizontal center at 775.5)
+    // Y: [6, 1005] (content height 1000, sprout apex at 6, dome apex at 181)
     // Calibrated to seamlessly frame the upper circle matching Toji Reference Standard (Rule 24):
-    const targetHairWidth = r * 3.15 * wMult;
-    const targetHairHeight = r * 2.05 * hMult;
-    const scaleX = targetHairWidth / 704;
-    const scaleY = targetHairHeight / 749;
-    const drawW = 1024 * scaleX;
+    const targetHairWidth = r * 3.10 * wMult;
+    const targetHairHeight = r * 2.40 * hMult;
+    const scaleX = targetHairWidth / 1036;
+    const scaleY = targetHairHeight / 1000;
+    const drawW = 1536 * scaleX;
     const drawH = 1024 * scaleY;
-    const drawX = -509.5 * scaleX + offX;
-    const drawY = -r * 1.38 - 153 * scaleY + offY;
+    const drawX = -775.5 * scaleX + offX;
+    const drawY = -r * 1.50 - 181 * scaleY + offY;
 
     if (rot !== 0 || flipX !== 1 || flipY !== 1) {
       ctx.translate(drawX + drawW / 2, drawY + drawH / 2);

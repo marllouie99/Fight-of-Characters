@@ -54,6 +54,15 @@ function getCrazyDaveSoundVolume(config, key) {
  */
 function dealPlantDamage(target, amount, attacker, opts = {}) {
   if (!target) return false;
+  const isTargetInvincible = Boolean(
+    target.isInvulnerable ||
+    target.isInvincible ||
+    target.invincible ||
+    target.isInvincibleUltimate ||
+    (target.invincibleTimer && target.invincibleTimer > 0) ||
+    (target.invincibilityTimer && target.invincibilityTimer > 0)
+  );
+  if (isTargetInvincible) return false;
   const cfg = (typeof CONFIG !== 'undefined' && CONFIG.crazydave) ? CONFIG.crazydave : crazyDaveConfig;
   const unifiedColor = getCrazyDaveSetting(cfg, 'damageNumberColor') || getCrazyDaveSetting(cfg, 'color') || '#84CC16';
   const plantDamageOpts = {
@@ -2445,6 +2454,9 @@ export class LawnmowerEntity extends Fighter {
     this.hideHpText = true;
     this.hideHealthBar = true;
     this.invulnerable = true;
+    this.isInvulnerable = true;
+    this.isInvincible = true;
+    this.hitFlashTimer = 0;
     this.maxHp = 99999;
     this.hp = 99999;
 
@@ -2466,7 +2478,7 @@ export class LawnmowerEntity extends Fighter {
   }
 
   takeDamage() {
-    return 0; // Lawnmower is invulnerable
+    return false; // Lawnmower is invulnerable
   }
 
   canAim() {
@@ -2496,7 +2508,117 @@ export class LawnmowerEntity extends Fighter {
     }
   }
 
-  _checkTripCondition(arena, cfg) {
+  /**
+   * Retrieves all active planted bombs from enemy fighters.
+   */
+  _getEnemyPlantedBombs(opponent = null) {
+    const list = [];
+    const checkedFighters = new Set();
+    if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+      for (let i = 0; i < state.fighters.length; i++) {
+        const f = state.fighters[i];
+        if (f) checkedFighters.add(f);
+      }
+    }
+    if (opponent) checkedFighters.add(opponent);
+    if (this.owner) checkedFighters.add(this.owner);
+
+    for (const f of checkedFighters) {
+      if (!f || !Array.isArray(f.activeBombs)) continue;
+      // Exclude allies/teammates
+      const isAlly = Boolean(
+        f === this ||
+        f === this.owner ||
+        (this.owner && typeof this.owner.isTeammate === 'function' && this.owner.isTeammate(f)) ||
+        (typeof this.isTeammate === 'function' && this.isTeammate(f)) ||
+        (this.team && f.team && this.team === f.team)
+      );
+      if (isAlly) continue;
+
+      for (let j = 0; j < f.activeBombs.length; j++) {
+        const b = f.activeBombs[j];
+        if (!b || b.dead || b.isDead || (b.hp !== undefined && b.hp <= 0)) continue;
+        list.push(b);
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Destroys an active/planted bomb: steamrolls and crushes the bomb without allowing it to detonate.
+   */
+  destroyPlantedBomb(bomb, cfg = null) {
+    if (!bomb || bomb.dead || bomb.isDead || (bomb.hp !== undefined && bomb.hp <= 0)) return false;
+    cfg = cfg || ((typeof CONFIG !== 'undefined' && CONFIG.crazydave) ? CONFIG.crazydave : crazyDaveConfig);
+
+    // 1. Mark bomb as dead / destroyed
+    bomb.hp = 0;
+    bomb.dead = true;
+    bomb.isDead = true;
+
+    // 2. Remove bomb from owner's activeBombs array (and all fighters)
+    if (bomb.owner && Array.isArray(bomb.owner.activeBombs)) {
+      const idx = bomb.owner.activeBombs.indexOf(bomb);
+      if (idx !== -1) bomb.owner.activeBombs.splice(idx, 1);
+    }
+    if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+      for (let i = 0; i < state.fighters.length; i++) {
+        const fighter = state.fighters[i];
+        if (fighter && Array.isArray(fighter.activeBombs)) {
+          const idx = fighter.activeBombs.indexOf(bomb);
+          if (idx !== -1) fighter.activeBombs.splice(idx, 1);
+        }
+      }
+    }
+
+    // 3. Audio & Visual feedback: Mower steamrolls and crushes the bomb
+    spawnFloatingText(bomb.x, bomb.y - 20, 'CRUSHED!', '#DC2626');
+    if (typeof spawnImpactFlash === 'function') {
+      spawnImpactFlash(bomb.x, bomb.y, 40, '#F59E0B');
+    }
+    spawnSparks(bomb.x, bomb.y, 16, '#DC2626');
+    spawnSparks(bomb.x, bomb.y, 12, '#FBBF24');
+    spawnSparks(bomb.x, bomb.y, 8, '#475569');
+
+    if (typeof triggerGlobalScreenShake === 'function') {
+      triggerGlobalScreenShake(3.5, 6);
+    }
+
+    const playSfx = typeof audioSystem.playSFX === 'function' ? audioSystem.playSFX : audioSystem.playSound;
+    if (typeof playSfx === 'function') {
+      playSfx.call(audioSystem, getCrazyDaveSound(cfg, 'lawnmowerHit'), getCrazyDaveSoundVolume(cfg, 'lawnmowerHit'));
+    }
+
+    return true;
+  }
+
+  /**
+   * Shreds/crushes any active planted bombs in the mower's lane or collision zone.
+   */
+  _shredBombs(cfg, opponent = null) {
+    const enemyBombs = this._getEnemyPlantedBombs(opponent);
+    if (!enemyBombs || enemyBombs.length === 0) return;
+
+    const rowH = ((state && state.arena && state.arena.height) || 450) / ARENA_TILE_COUNT;
+    const halfRowH = rowH * 0.55;
+
+    for (let i = enemyBombs.length - 1; i >= 0; i--) {
+      const bomb = enemyBombs[i];
+      if (!bomb || bomb.dead || bomb.isDead || (bomb.hp !== undefined && bomb.hp <= 0)) continue;
+
+      const hitDist = this.r + (bomb.r || 15) + 8;
+      const dist = Math.hypot(bomb.x - this.x, bomb.y - this.y);
+      const dy = Math.abs(bomb.y - this.y);
+      const inHitRadius = dist <= hitDist;
+      const inLaneOverlap = dy <= halfRowH && Math.abs(bomb.x - this.x) <= hitDist;
+
+      if (inHitRadius || inLaneOverlap) {
+        this.destroyPlantedBomb(bomb, cfg);
+      }
+    }
+  }
+
+  _checkTripCondition(arena, cfg, opponent = null) {
     if (!state) return;
 
     const rowH = arena.height / ARENA_TILE_COUNT;
@@ -2513,6 +2635,7 @@ export class LawnmowerEntity extends Fighter {
       // Direct proximity trigger
       if (dist <= this._triggerRadius) {
         this.trigger();
+        this._shredBombs(cfg, opponent);
         return;
       }
 
@@ -2520,9 +2643,38 @@ export class LawnmowerEntity extends Fighter {
       if (dy <= halfRowH) {
         if (this.facingDirection === 1 && f.x <= this.x + this._triggerRadius + 12) {
           this.trigger();
+          this._shredBombs(cfg, opponent);
           return;
         } else if (this.facingDirection === -1 && f.x >= this.x - this._triggerRadius - 12) {
           this.trigger();
+          this._shredBombs(cfg, opponent);
+          return;
+        }
+      }
+    }
+
+    // Lane breach trigger / direct proximity from enemy planted bombs
+    const enemyBombs = this._getEnemyPlantedBombs(opponent);
+    for (const b of enemyBombs) {
+      if (!b || b.dead || b.isDead || (b.hp !== undefined && b.hp <= 0)) continue;
+      const dy = Math.abs(b.y - this.y);
+      const dx = Math.abs(b.x - this.x);
+      const dist = Math.hypot(dx, dy);
+
+      if (dist <= this._triggerRadius) {
+        this.trigger();
+        this._shredBombs(cfg, opponent);
+        return;
+      }
+
+      if (dy <= halfRowH) {
+        if (this.facingDirection === 1 && b.x <= this.x + this._triggerRadius + 12) {
+          this.trigger();
+          this._shredBombs(cfg, opponent);
+          return;
+        } else if (this.facingDirection === -1 && b.x >= this.x - this._triggerRadius - 12) {
+          this.trigger();
+          this._shredBombs(cfg, opponent);
           return;
         }
       }
@@ -2651,6 +2803,7 @@ export class LawnmowerEntity extends Fighter {
   update(opponent, ownerIndex, arena) {
     if (this.state === 'despawned') return;
 
+    this.hitFlashTimer = 0; // Lawnmower is immune and never retains hit flash
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.crazydave) ? CONFIG.crazydave : crazyDaveConfig;
     arena = arena || (state && state.arena) || { x: 0, y: 0, width: 460, height: 460 };
 
@@ -2666,7 +2819,7 @@ export class LawnmowerEntity extends Fighter {
       this.gunAngle = (this.facingDirection === -1) ? Math.PI : 0;
       this.angle = 0;
 
-      this._checkTripCondition(arena, cfg);
+      this._checkTripCondition(arena, cfg, opponent);
     } else if (this.state === 'charging') {
       this.x += this.facingDirection * this._speed;
       this.y = this._fixedY;
@@ -2714,6 +2867,7 @@ export class LawnmowerEntity extends Fighter {
       }
 
       this._shredEnemies(cfg);
+      this._shredBombs(cfg, opponent);
 
       const outLeft = this.facingDirection === -1 && this.x < arena.x - 60;
       const outRight = this.facingDirection === 1 && this.x > arena.x + arena.width + 60;

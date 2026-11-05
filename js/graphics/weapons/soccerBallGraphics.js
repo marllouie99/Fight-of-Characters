@@ -11,6 +11,56 @@
 // - Rule 26: Clean Concentric Shockwaves (No Cobweb / Mesh Lines)
 // ─────────────────────────────────────────────
 
+import {
+  EGO_TRAIL_FRAME_COUNT,
+  getBlueLockEgoTrailFrames,
+  _getIsagiEgoTrailFrames,
+  _getChigiriEgoTrailFrames,
+  EGO_AURA_FRAME_COUNT,
+  EGO_AURA_DISAPPEAR_FRAME_COUNT,
+  getBlueLockEgoAuraFrames,
+  getBlueLockEgoAuraDisappearFrames,
+  _getIsagiEgoAuraFrames,
+  _getIsagiEgoAuraDisappearFrames,
+  _getChigiriEgoAuraFrames,
+  _getChigiriEgoAuraDisappearFrames,
+  drawBlueLockEgoTrail,
+  updateBlueLockEgoTrail,
+  decayBlueLockEgoTrail,
+  drawBlueLockEgoSpectreColumn,
+  drawBlueLockEgoAuraFront,
+  getBlueLockEgoPalette
+} from './blueLockEgoTrailRenderer.js';
+import {
+  drawStrikerBallTrail,
+  updateStrikerBallTrail,
+  decayStrikerBallTrail
+} from './strikerBallTrailRenderer.js';
+
+export {
+  EGO_TRAIL_FRAME_COUNT,
+  getBlueLockEgoTrailFrames,
+  _getIsagiEgoTrailFrames,
+  _getChigiriEgoTrailFrames,
+  EGO_AURA_FRAME_COUNT,
+  EGO_AURA_DISAPPEAR_FRAME_COUNT,
+  getBlueLockEgoAuraFrames,
+  getBlueLockEgoAuraDisappearFrames,
+  _getIsagiEgoAuraFrames,
+  _getIsagiEgoAuraDisappearFrames,
+  _getChigiriEgoAuraFrames,
+  _getChigiriEgoAuraDisappearFrames,
+  drawBlueLockEgoTrail,
+  updateBlueLockEgoTrail,
+  decayBlueLockEgoTrail,
+  drawBlueLockEgoSpectreColumn,
+  drawBlueLockEgoAuraFront,
+  getBlueLockEgoPalette,
+  drawStrikerBallTrail,
+  updateStrikerBallTrail,
+  decayStrikerBallTrail
+};
+
 /**
  * Draws a stylized procedural puzzle piece (Ego Shard) particle.
  * Can be themed per Blue Lock character (Isagi Cyan, Rin Teal/Violet, Bachira Yellow, etc.).
@@ -290,14 +340,84 @@ function _orthonormalize3x3(M) {
 }
 
 /**
+ * Converts any hex or rgb color string to an rgba string with custom alpha.
+ * Complies with Rule 11 (layered concentric semi-transparent discs, zero shadowBlur).
+ */
+export function hexToRgba(color, alpha = 1.0) {
+  if (!color) return `rgba(0, 240, 255, ${alpha})`;
+  if (color.startsWith('#')) {
+    let hex = color.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    if (hex.length >= 6) {
+      const num = parseInt(hex.slice(0, 6), 16);
+      if (!isNaN(num)) {
+        const r = (num >> 16) & 255;
+        const g = (num >> 8) & 255;
+        const b = num & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+    }
+  } else if (color.startsWith('rgb')) {
+    return color.replace(/rgba?\(([^)]+)\)/, (_, vals) => {
+      const parts = vals.split(',').map(s => s.trim());
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+    });
+  }
+  return color;
+}
+
+/**
+ * Derives a high-luminance lighter tint from any color for radiant core highlights.
+ */
+export function getLighterTint(color, factor = 0.5) {
+  if (!color) return '#FFFFFF';
+  if (color.startsWith('#')) {
+    let hex = color.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    if (hex.length >= 6) {
+      const num = parseInt(hex.slice(0, 6), 16);
+      if (!isNaN(num)) {
+        const r = Math.min(255, Math.round(((num >> 16) & 255) + (255 - ((num >> 16) & 255)) * factor));
+        const g = Math.min(255, Math.round(((num >> 8) & 255) + (255 - ((num >> 8) & 255)) * factor));
+        const b = Math.min(255, Math.round((num & 255) + (255 - (num & 255)) * factor));
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+    }
+  }
+  return '#FFFFFF';
+}
+
+/**
+ * Derives a deeper shade from any color for 3D sphere shadow regions.
+ */
+export function getDarkerShade(color, factor = 0.45) {
+  if (!color) return '#18181B';
+  if (color.startsWith('#')) {
+    let hex = color.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    if (hex.length >= 6) {
+      const num = parseInt(hex.slice(0, 6), 16);
+      if (!isNaN(num)) {
+        const r = Math.round(((num >> 16) & 255) * (1.0 - factor));
+        const g = Math.round(((num >> 8) & 255) * (1.0 - factor));
+        const b = Math.round((num & 255) * (1.0 - factor));
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+    }
+  }
+  return '#18181B';
+}
+
+/**
  * Renders the true 3D spherical Telstar soccer ball onto an offscreen 16-bit pixel canvas.
  * Complies with Rule 19 & Rule 24:
  * - Quantized pixel grid (P = 1.0 or 1.5)
  * - 4-neighbor attached outer manga border (#0E0F14)
  * - Diffuse spherical lighting with top-left keylight and soft bottom-right ambient bounce
- * - 12 Black Pentagons & 90 curved seam edges
+ * - 12 Pentagons & 90 curved seam edges
+ * - Dynamic theme-color lighting when striker skills are active
  */
-function _render3D16BitSoccerBallToCanvas(destCanvas, r, isDirectVolley = false, rotM = null) {
+function _render3D16BitSoccerBallToCanvas(destCanvas, r, isDirectVolley = false, rotM = null, strikerColor = '#00F0FF') {
   const P = 1.0;
   const snapR = Math.round(r);
   const size = (snapR + 2) * 2;
@@ -441,13 +561,9 @@ function _render3D16BitSoccerBallToCanvas(destCanvas, r, isDirectVolley = false,
       }
 
       if (isPentagon) {
-        if (isDirectVolley) {
-          destCtx.fillStyle = (normLight > 0.25) ? '#00F0FF' : '#0369A1';
-        } else {
-          if (normLight > 0.35) destCtx.fillStyle = '#27272A';
-          else if (normLight > -0.10) destCtx.fillStyle = '#18181B';
-          else destCtx.fillStyle = '#09090B';
-        }
+        if (normLight > 0.35) destCtx.fillStyle = '#27272A';
+        else if (normLight > -0.10) destCtx.fillStyle = '#18181B';
+        else destCtx.fillStyle = '#09090B';
       } else if (isSeam) {
         destCtx.fillStyle = '#0E0F14';
       } else {
@@ -479,19 +595,25 @@ export function drawSoccerBallProjectile(ctx, proj, options = {}) {
   const r = proj.r || 16;
   const isDirectVolley = Boolean(proj.isDirectVolley || proj.isStriker || proj.isSuperShot || proj.isSpecialKick);
   const isKicked = Boolean(proj.isKickedByIsagi || proj.isKicked || proj.lastKicker);
+  const kickerColor = options.auraColor || proj.kickerThemeColor || (proj.lastKicker?.color) || (proj.lastKicker?.themeColor) || '#00F0FF';
 
   // Step 3D rotation matrix if position/rotation changed since last step
   stepSoccerBall3DRotation(proj);
+
+  // 0. Render world-space supersonic Striker electric comet trail behind the ball
+  drawStrikerBallTrail(ctx, proj, kickerColor);
 
   if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
     if (!proj._ball3DCanvas) {
       proj._ball3DCanvas = document.createElement('canvas');
       proj._needs3DRender = true;
     }
-    if (proj._needs3DRender || proj._lastRenderedR !== r || proj._lastRenderedVolley !== isDirectVolley) {
-      _render3D16BitSoccerBallToCanvas(proj._ball3DCanvas, r, isDirectVolley, proj._rotMatrix);
+    const colorKey = isDirectVolley ? kickerColor : 'normal';
+    if (proj._needs3DRender || proj._lastRenderedR !== r || proj._lastRenderedVolley !== isDirectVolley || proj._lastRenderedColorKey !== colorKey) {
+      _render3D16BitSoccerBallToCanvas(proj._ball3DCanvas, r, isDirectVolley, proj._rotMatrix, kickerColor);
       proj._lastRenderedR = r;
       proj._lastRenderedVolley = isDirectVolley;
+      proj._lastRenderedColorKey = colorKey;
       proj._needs3DRender = false;
     }
   }
@@ -507,9 +629,7 @@ export function drawSoccerBallProjectile(ctx, proj, options = {}) {
     // Outer turf control disc
     ctx.beginPath();
     ctx.arc(0, 0, r * (1.25 + control * 0.25), 0, Math.PI * 2);
-    ctx.fillStyle = dribbleColor.startsWith('#')
-      ? `${dribbleColor}20`
-      : 'rgba(0, 240, 255, 0.12)';
+    ctx.fillStyle = hexToRgba(dribbleColor, 0.15);
     ctx.fill();
 
     // High Control inner magnetized ring (Isagi 96% / Chigiri 90%+)
@@ -517,38 +637,38 @@ export function drawSoccerBallProjectile(ctx, proj, options = {}) {
       ctx.beginPath();
       ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
       ctx.lineWidth = 1.2;
-      ctx.strokeStyle = dribbleColor.startsWith('#')
-        ? `${dribbleColor}44`
-        : 'rgba(0, 240, 255, 0.26)';
+      ctx.strokeStyle = hexToRgba(dribbleColor, 0.35);
       ctx.stroke();
     }
   } else if (isKicked) {
-    const kickerColor = options.auraColor || proj.kickerThemeColor || (proj.lastKicker?.color) || '#00F0FF';
-    const superColor = options.superAuraColor || '#00FF88';
+    // Supersonic kinetic comet wake strictly behind high-speed travel (No overlapping circular discs/green ball visual)
+    const spd = Math.hypot(proj.vx || 0, proj.vy || 0);
+    if (spd > 4.0 && isDirectVolley) {
+      const moveAngle = Math.atan2(proj.vy, proj.vx);
+      const backAngle = moveAngle + Math.PI;
+      const tailLength = Math.min(36, spd * 1.6);
 
-    if (isDirectVolley) {
-      // Supersonic Flow Aura (Double concentric discs)
+      ctx.save();
+      ctx.rotate(backAngle);
+
+      // Trailing needle wake strictly BEHIND the ball (offset > r)
       ctx.beginPath();
-      ctx.arc(0, 0, r * 2.2, 0, Math.PI * 2);
-      ctx.fillStyle = kickerColor.startsWith('#')
-        ? `${kickerColor}28` // ~16% alpha
-        : 'rgba(0, 240, 255, 0.16)';
+      ctx.moveTo(r * 0.9, -r * 0.4);
+      ctx.lineTo(r * 0.9 + tailLength, 0);
+      ctx.lineTo(r * 0.9, r * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(kickerColor, 0.28);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(0, 0, r * 1.6, 0, Math.PI * 2);
-      ctx.fillStyle = superColor.startsWith('#')
-        ? `${superColor}47` // ~28% alpha
-        : 'rgba(0, 255, 136, 0.28)';
+      ctx.moveTo(r * 1.05, -r * 0.18);
+      ctx.lineTo(r * 1.05 + tailLength * 0.6, 0);
+      ctx.lineTo(r * 1.05, r * 0.18);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba('#FFFFFF', 0.55);
       ctx.fill();
-    } else {
-      // Normal Kick Aura
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 1.45, 0, Math.PI * 2);
-      ctx.fillStyle = kickerColor.startsWith('#')
-        ? `${kickerColor}26` // ~15% alpha
-        : 'rgba(0, 240, 255, 0.15)';
-      ctx.fill();
+
+      ctx.restore();
     }
   }
 
@@ -811,10 +931,9 @@ export function draw16BitHitImpact(ctx, hit) {
   }
 
   const isDirectVolley = Boolean(hit.isDirectVolley || hit.isStriker);
-  const isCrit = !!hit.isCrit;
   const P = 2.0;
   const baseColor = hit.color || (isDirectVolley ? '#00FF88' : '#00F0FF');
-  const accentColor = isCrit ? '#FACC15' : '#FFFFFF';
+  const accentColor = '#FFFFFF';
 
   // 1. Quantized Expanding Shock Diamond
   const diamondR = Math.round((8 + p * (isDirectVolley ? 36 : 22)) / P) * P;
@@ -892,70 +1011,30 @@ export function draw16BitHitImpact(ctx, hit) {
 export const drawIsagi16BitHitImpact = draw16BitHitImpact;
 
 /**
- * Draws the high-octane Blue Lock EGO Awakening Aura around a fighter.
- * Features concentric pulsing aura discs, crisp theme-colored boundary rings,
- * and orbiting procedural puzzle pieces (Ego Shards).
+ * Draws the Blue Lock EGO Awakening Spectral Flame Spire & Ground Pool Aura around a fighter.
+ * Based on Aleksandr Romashov's Spectral Flame Column VFX:
+ * - Swirling multi-lobed ground energy pool & floor puddle tendrils at the character's feet
+ * - Tall dark charcoal-tinted smoke shroud & pinnacle spire rising high above the crown
+ * - 4-layer upward-advecting spectral flame sheets (outer emerald/theme, mid neon, bright aqua, white-hot core)
+ * - Flanking vertical double-tapered flame ribbons & pinched upper spire packets
  *
  * Complies with:
- * - Rule 11: Prohibition of shadowBlur CPU filters (uses concentric transparent geometries)
+ * - Rule 11: Prohibition of shadowBlur CPU filters (uses layered translucent vector geometry)
  * - Rule 19: Upright Minimalist Manga Aesthetic
  * - Rule 24: Toji Baseline Proportions
- * - Rule 26: Clean Concentric Rings (Zero web meshes / spoke needles)
+ * - Rule 25: Non-Freezing Active Visual Effects Decay
+ * - Rule 26: Clean Continuous Curves (Zero web meshes / spoke needles)
  *
  * @param {CanvasRenderingContext2D} ctx
- * @param {object} fighter - Blue Lock fighter entity with active Ego
+ * @param {object} fighter - Blue Lock fighter entity
  */
 export function drawBlueLockEgoAura(ctx, fighter) {
-  if (!ctx || !fighter || !fighter.isEgoActive) return;
+  if (!ctx || !fighter) return;
 
-  const x = fighter.x;
-  const y = fighter.y;
-  const r = fighter.r || 25;
-  const themeColor = fighter.color || '#00F0FF';
-  const timer = fighter._egoAuraTimer || 0;
-
-  ctx.save();
-  ctx.translate(x, y);
-
-  // 1. Concentric Pulsing Outer Aura Discs (Zero shadowBlur - layered semi-transparency)
-  const pulse1 = Math.sin(timer * 0.08) * 0.12 + 0.88;
-  const pulse2 = Math.cos(timer * 0.11) * 0.12 + 0.88;
-
-  // Outer ethereal aura wash
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 1.55 * pulse1, 0, Math.PI * 2);
-  ctx.fillStyle = themeColor;
-  ctx.globalAlpha = 0.10;
-  ctx.fill();
-
-  // Mid-density inner aura flame
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 1.28 * pulse2, 0, Math.PI * 2);
-  ctx.fillStyle = themeColor;
-  ctx.globalAlpha = 0.18;
-  ctx.fill();
-
-  // 2. Crisp Supersonic Ionization Ring
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 1.38 * pulse1, 0, Math.PI * 2);
-  ctx.strokeStyle = themeColor;
-  ctx.lineWidth = 1.5;
-  ctx.globalAlpha = 0.45;
-  ctx.stroke();
-
-  // 3. Orbiting Procedural Ego Shards (Puzzle Pieces)
-  const shardCount = 4;
-  const orbitR = r * 1.62;
-  for (let i = 0; i < shardCount; i++) {
-    const orbitAngle = (timer * 0.04) + (i * (Math.PI * 2 / shardCount));
-    const sx = Math.cos(orbitAngle) * orbitR;
-    const sy = Math.sin(orbitAngle) * orbitR * 0.82; // Perspective oval
-    const pieceSize = 7 + (i % 2) * 2;
-    drawPuzzlePiece(ctx, sx, sy, pieceSize, orbitAngle + Math.PI / 4, themeColor, 0.75);
-  }
-
-  ctx.restore();
+  // Render Aleksandr Romashov 18-Frame Spectral Flame Spire, Dark Smoke Column & Ground Energy Pool
+  drawBlueLockEgoSpectreColumn(ctx, fighter);
 }
 
-// Backward-compatible alias
+// Backward-compatible aliases
 export const drawIsagiEgoAura = drawBlueLockEgoAura;
+export const drawIsagiEgoAuraFront = drawBlueLockEgoAuraFront;

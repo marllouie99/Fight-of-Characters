@@ -313,6 +313,17 @@ Whenever creating, scaffolding, designing, or implementing a new fighter charact
       - Test assertions in `scripts/testInteractions.mjs` and verification via `npm run verify`.
 - **Existing Fighters Backlog**: Whenever working on, refactoring, or tuning a fighter that currently lacks a `docs/fighters/<characterId>.md` file, the agent must proactively author and commit the missing documentation file.
 
+## Strict Prohibition of Unprompted / Hard-Coded Crit Mechanics (Rule 34)
+
+When designing, implementing, tuning, or balancing fighters, skills, weapons, or projectile combat systems:
+- **STRICT PROHIBITION of Unprompted / Arbitrary Crit Mechanics**: Agents **MUST NEVER** arbitrarily inject crit rates, critical chances, guaranteed crits (`guaranteedCrit: true`, `isCrit: this.isFlowStateActive`, `ball.isCrit = true`), or hidden crit multipliers (`flowShotCritMult`) into character kits or weapons unless explicitly requested by the user or required by explicit canon anime fighting lore (e.g., Nanami Kento's 7:3 Ratio Technique).
+- **Preservation of Theme-Colored Floating Combat Text**:
+  - In `fighter.js` (`applyDamageToTarget`), passing `isCrit: true` forces damage numbers into bright red (`#FF3B30`) with a `CRIT!` prefix. This completely overrides and suppresses the fighter's unique theme-colored damage numbers (`#00F0FF`, `#EC4899`, etc.), homogenizing visual identity.
+  - All character damage scaling, buffs, and awakened forms MUST derive cleanly and transparently from configured stat multipliers (`damageMultiplier`, `strikerDamage`, `damage`) and display floating numbers cleanly in the character's designated theme color (`f.color` or `cfg.themeColor`).
+- **Clean HUD Card Standard**:
+  - HUD cards MUST NEVER display artificial `Crit Rate: 100% (FLOW 1.85x)` or `(EGO CRIT)` indicators for non-crit characters.
+  - The HUD stats array must accurately reflect authentic character attributes (Damage, Speed, Kick Speed, Evade, Dribble Control, CDR) without manufactured RPG crit statistics.
+
 ## Post-Change Suggestions
 
 This applies to any chat-based AI coding assistant working in this repository, regardless of IDE, extension, model, or provider, whenever these project instructions are loaded.
