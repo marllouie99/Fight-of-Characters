@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Ramball Fight" />
+  <meta name="apple-mobile-web-app-title" content="Fight of Characters" />
   <meta name="theme-color" content="#000000" />
   <link rel="manifest" href="manifest.json" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data: blob: file:; img-src 'self' data: blob: file: https:; media-src 'self' data: blob: file:; connect-src 'self' data: blob: file:;" />
@@ -242,6 +242,9 @@
         </button>
         <button id="quickBtnSound" class="quick-btn" title="Mute / Unmute" aria-label="Mute / Unmute">
           <span class="quick-icon" id="quickIconSound">🔊</span>
+        </button>
+        <button id="quickBtnInstall" class="quick-btn quick-btn-install" title="Install App (Add to Home Screen)" aria-label="Install App" style="display: none;">
+          <span class="quick-icon">📲</span>
         </button>
       </div>
 
@@ -1776,6 +1779,21 @@
       });
     }
   </script>
+
+  <!-- Progressive Web App (PWA) Mobile Add-to-Home-Screen Floating Banner -->
+  <aside id="pwaInstallBanner" class="pwa-install-banner" aria-label="Install App" style="display: none;">
+    <div class="pwa-banner-left">
+      <img src="Assets/weapon/KnightSword.png" alt="Fight of Characters" class="pwa-banner-icon" width="40" height="40" />
+      <div class="pwa-banner-text">
+        <strong class="pwa-banner-title">Fight of Characters</strong>
+        <span id="pwaBannerDesc" class="pwa-banner-desc">Play fullscreen with zero lag & offline instant boot!</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button id="pwaInstallActionBtn" class="pwa-action-btn" type="button">INSTALL</button>
+      <button id="pwaDismissBtn" class="pwa-dismiss-btn" title="Dismiss" aria-label="Dismiss banner" type="button">✕</button>
+    </div>
+  </aside>
 
   <script type="module" src="js/core/main.js?v=81"></script>
 </body>

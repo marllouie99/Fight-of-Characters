@@ -63,8 +63,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.release_tag || github.ref_name }}
-          name: Ramball Fight Simulator ${{ inputs.release_tag || github.ref_name }}
-          files: dist/ramball-fight-simulator-web.zip
+          name: Fight of Characters ${{ inputs.release_tag || github.ref_name }}
+          files: |
+            dist/*.zip
           generate_release_notes: true
           draft: false
           prerelease: false

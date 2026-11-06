@@ -23,6 +23,7 @@ import { BossEntranceSequence } from '../bosses/index.js';
 import { setViewportOrientation, toggleViewportOrientation, getViewportOrientation } from './viewportManager.js';
 import { initHorizontalTeamSelectScreen, handleHorizontalTeamSelectClick } from '../graphics/ui/HorizontalTeamSelectScreen.js';
 import { toggleArenaDecorations, setArenaDecorationsEnabled, setArenaDecorationTheme, isArenaDecorationsEnabled } from '../systems/arenaDecorationSystem.js';
+import { initPwaInstallManager, promptPwaInstall } from '../systems/pwaInstallManager.js';
 // ─────────────────────────────────────────────
 // FLAME CANVAS INITIALIZATION
 // ─────────────────────────────────────────────
@@ -1684,6 +1685,7 @@ const quickIconFullscreen = document.getElementById('quickIconFullscreen');
 const quickBtnCamera = document.getElementById('quickBtnCamera');
 const quickBtnSound = document.getElementById('quickBtnSound');
 const quickIconSound = document.getElementById('quickIconSound');
+const quickBtnInstall = document.getElementById('quickBtnInstall');
 
 let _isMuted = false;
 
@@ -1837,6 +1839,16 @@ if (quickBtnSound) {
     }
   });
 }
+
+if (quickBtnInstall) {
+  quickBtnInstall.addEventListener('click', (e) => {
+    e.stopPropagation();
+    promptPwaInstall();
+  });
+}
+
+// Initialize Progressive Web App Add-to-Home-Screen workflows
+initPwaInstallManager();
 
 export function shouldShowQuickBar() {
   const mode = state.quickBarMode || 'auto';

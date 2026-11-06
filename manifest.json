@@ -1,6 +1,6 @@
 {
-  "name": "Ramball Mini-Battle Fight Simulator",
-  "short_name": "Ramball Fight",
+  "name": "Fight of Characters",
+  "short_name": "FOC",
   "description": "High-octane anime mini-battle arena fight simulator with custom combat arts and responsive physics",
   "start_url": "./index.html",
   "display": "standalone",

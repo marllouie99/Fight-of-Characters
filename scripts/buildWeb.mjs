@@ -287,10 +287,12 @@ function createZipArchive(sourceDir, outZipPath) {
   return { filesCount: entries.length, zipSize: finalZip.length };
 }
 
-const outZip = path.join(distDir, 'ramball-fight-simulator-web.zip');
+const outZip = path.join(distDir, 'fight-of-characters-web.zip');
 const zipStats = createZipArchive(distDir, outZip);
+const legacyZip = path.join(distDir, 'ramball-fight-simulator-web.zip');
+fs.copyFileSync(outZip, legacyZip);
 const zipSizeMB = (zipStats.zipSize / (1024 * 1024)).toFixed(2);
-console.log(`   ✅ Release ZIP generated: dist/ramball-fight-simulator-web.zip (${zipSizeMB} MB, ${zipStats.filesCount} compressed files).`);
+console.log(`   ✅ Release ZIP generated: dist/fight-of-characters-web.zip & dist/ramball-fight-simulator-web.zip (${zipSizeMB} MB, ${zipStats.filesCount} compressed files).`);
 
 console.log('\n🎉 [BUILD & RELEASE COMPLETE] Protected web distribution is ready in dist/ !');
 console.log('   1. Upload "dist/ramball-fight-simulator-web.zip" directly to itch.io or web hosting.');
