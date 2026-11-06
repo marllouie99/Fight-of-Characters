@@ -235,6 +235,7 @@ export const CONFIG = {
   },
   blackFlash: blackFlashConfig,
   hudShowFighterDescription: true, // Set to true to display fighter description in HUD card instead of skill progress bars
+  mobileCanvasHudEnabled: 'auto', // 'auto' = direct 60 FPS canvas HUD on mobile; true = force canvas; false = HTML DOM
   hudLayoutStyle: 'duel',       // Preferred HUD layout (Settings → HUD & INTERFACE): 'duel' = top portrait/HP cards own the match names + health, 'classic' = match names drawn above the arena wall + HP bar inside each bottom card
   darkModeShowHudSkillBars: 0,  // Toggle on/off to display HUD skill progress bars across Light and Dark mode (1 = show all, 0 = signature skills only, -1/hide = hide all)
   darkModeShowHudStats: 0,      // Toggle on/off to display HUD fighter stats info (DMG, SPD, ATK, etc.) across Light and Dark mode (1 = show, 0 = hide)

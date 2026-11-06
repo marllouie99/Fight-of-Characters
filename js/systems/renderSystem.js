@@ -34,6 +34,7 @@ import { drawFightBanner } from '../graphics/renderers/PokeBallSummonRenderer.js
 import { beginForegroundFxPass, flushForegroundFxPass, endForegroundFxPass } from '../graphics/renderers/foregroundFxPass.js';
 import { drawHorizontalTeamSelectScreen } from '../graphics/ui/HorizontalTeamSelectScreen.js';
 import { drawHorizontalPanoramicHud } from '../graphics/ui/horizontalHudManager.js';
+import { drawMobileCanvasHud, isMobileCanvasHudActive, syncMobileDomHudVisibility } from '../graphics/ui/canvasMobileHud.js';
 import { flamewardenFlameSystem } from '../graphics/weapons/flamewardenWeaponGraphics.js';
 import { burnEffectSystem } from '../graphics/particles/burnEffectVisuals.js';
 import { bomberExplosionSystem } from '../graphics/particles/bomberExplosionVisuals.js';
@@ -672,7 +673,11 @@ export function renderGame() {
         if (isGrandBattle) {
           state._topLevelUiDirty = true;
           drawHorizontalPanoramicHud(state.topLevelUiCtx || state.ctx);
+        } else if (isMobileCanvasHudActive()) {
+          state._topLevelUiDirty = true;
+          drawMobileCanvasHud(state.topLevelUiCtx || state.ctx);
         } else if (state.gameState === 'playing' || state.gameState === 'countdown') {
+          syncMobileDomHudVisibility(false);
           drawHUD();
         }
       }

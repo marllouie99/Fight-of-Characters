@@ -1259,6 +1259,21 @@
                     </div>
                   </div>
 
+                  <div class="tactical-card system-card" data-action="toggle-canvas-hud">
+                    <div class="card-left-emblem">
+                      <svg class="pixel-icon" viewBox="0 0 16 16" width="20" height="20" fill="none" shape-rendering="crispEdges">
+                        <path d="M1 3h14v10H1V3z" fill="#ffffff"/>
+                        <path d="M3 5h10v2H3V5z M3 9h6v2H3V9z" fill="#38bdf8"/>
+                      </svg>
+                    </div>
+                    <div class="card-content">
+                      <div class="card-title-row">
+                        <span class="card-title">CANVAS HUD (MOBILE)</span>
+                        <button id="btn-canvas-hud" class="tactical-chip-btn">AUTO (MOBILE)</button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="tactical-card system-card" data-action="toggle-viewport-orientation">
                     <div class="card-left-emblem">
                       <span style="font-size: 18px;">🖥️</span>
@@ -1777,7 +1792,7 @@
   <script>
     if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=86').catch((err) => {
+        navigator.serviceWorker.register('./sw.js?v=87').catch((err) => {
           console.warn('[PWA] Service worker registration skipped:', err);
         });
       });

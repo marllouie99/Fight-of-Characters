@@ -24,6 +24,7 @@ import { setViewportOrientation, toggleViewportOrientation, getViewportOrientati
 import { initHorizontalTeamSelectScreen, handleHorizontalTeamSelectClick } from '../graphics/ui/HorizontalTeamSelectScreen.js';
 import { toggleArenaDecorations, setArenaDecorationsEnabled, setArenaDecorationTheme, isArenaDecorationsEnabled } from '../systems/arenaDecorationSystem.js';
 import { initPwaInstallManager, promptPwaInstall } from '../systems/pwaInstallManager.js';
+import { syncMobileDomHudVisibility, isMobileCanvasHudActive } from '../graphics/ui/canvasMobileHud.js';
 // ─────────────────────────────────────────────
 // FLAME CANVAS INITIALIZATION
 // ─────────────────────────────────────────────
@@ -794,6 +795,15 @@ if (todoBgmBtn) {
 }
 
 state.performanceMode = localStorage.getItem('performanceMode') === 'true';
+const savedCanvasHud = (typeof localStorage !== 'undefined') ? localStorage.getItem('ramball_canvas_hud') : null;
+if (savedCanvasHud === 'true') CONFIG.mobileCanvasHudEnabled = true;
+else if (savedCanvasHud === 'false') CONFIG.mobileCanvasHudEnabled = false;
+else CONFIG.mobileCanvasHudEnabled = 'auto';
+
+const canvasHudBtn = document.getElementById('btn-canvas-hud');
+if (canvasHudBtn) {
+  canvasHudBtn.innerText = CONFIG.mobileCanvasHudEnabled === true ? 'ON (ALWAYS)' : (CONFIG.mobileCanvasHudEnabled === false ? 'OFF (HTML DOM)' : 'AUTO (MOBILE)');
+}
 const engineBtn = document.getElementById('btn-render-engine');
 if (engineBtn) {
   engineBtn.innerText = (state.rendererMode === 'webgl') ? 'WEBGL HYBRID' : 'CANVAS 2D (5% CPU)';
@@ -1304,6 +1314,16 @@ export function executeTacticalAction(action) {
     localStorage.setItem('disableDimEffects', state.disableDimEffects);
     const btn = document.getElementById('btn-dimeffects');
     if (btn) btn.innerText = state.disableDimEffects ? 'OFF' : 'ON';
+  } else if (action === 'toggle-canvas-hud') {
+    let next;
+    if (CONFIG.mobileCanvasHudEnabled === 'auto') next = true;
+    else if (CONFIG.mobileCanvasHudEnabled === true) next = false;
+    else next = 'auto';
+    CONFIG.mobileCanvasHudEnabled = next;
+    localStorage.setItem('ramball_canvas_hud', String(next));
+    syncMobileDomHudVisibility(isMobileCanvasHudActive());
+    const btn = document.getElementById('btn-canvas-hud');
+    if (btn) btn.innerText = next === true ? 'ON (ALWAYS)' : (next === false ? 'OFF (HTML DOM)' : 'AUTO (MOBILE)');
   } else if (action === 'toggle-render-engine') {
     const cur = (typeof localStorage !== 'undefined') ? localStorage.getItem('ramball_renderer_engine') : null;
     const next = (cur === 'webgl') ? 'canvas2d' : 'webgl';
@@ -1515,6 +1535,11 @@ document.getElementById('btn-dimeffects')?.addEventListener('click', (e) => {
   state.disableDimEffects = !state.disableDimEffects;
   localStorage.setItem('disableDimEffects', state.disableDimEffects);
   e.target.innerText = state.disableDimEffects ? 'OFF' : 'ON';
+});
+
+document.getElementById('btn-canvas-hud')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  executeTacticalAction('toggle-canvas-hud');
 });
 
 document.getElementById('btn-render-engine')?.addEventListener('click', (e) => {
