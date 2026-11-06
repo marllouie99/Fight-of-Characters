@@ -72,8 +72,10 @@ After completing ANY code modification, update, or fix in the project, the agent
   - Every fighter skin (`js/graphics/fighters/*Skin.js`), pixel hand (`drawPixelHand`), and pixel-grid weapon/orb (`js/graphics/weapons/*WeaponGraphics.js`) MUST bake its pixel grid once onto an offscreen `<canvas>` cache and blit it via `ctx.drawImage(cachedCanvas, ...)`.
 - **Pre-Baked Radial Glows Over Per-Frame Gradient Shaders**:
   - Avoid calling `ctx.createRadialGradient()` or `ctx.createLinearGradient()` inside per-frame projectile/particle loops; bake radial glows into cached offscreen canvases and blit with `ctx.drawImage` + `ctx.globalAlpha`.
-- **Dirty-Flagged Full-Screen Canvases & Mobile HUD Discipline**:
+- **Dirty-Flagged Full-Screen Canvases, Pre-Battle Pre-Warming, Pooling & Mobile HUD Discipline**:
   - Keep `flameCanvas` and `topLevelUiCanvas` gated by `_flameCanvasDirty` and `state._topLevelUiDirty`.
+  - Pre-warm only the active match fighters' images, offscreen skin canvases, and GPU textures (`1×1` `drawImage` behind a pre-battle loading curtain) before combat starts (`SceneLoadingCurtain` pattern).
+  - Pool high-frequency projectiles, afterimages, and damage popups (apply crowd-control density scaling on mobile floating text and gate ghost trails by minimum velocity + distance traveled).
   - Preserve `mobileAssetScaler.js` lazy on-demand asset loading + 2-slot mip caching, `160×160` mobile HUD portrait canvases, and zero multi-pass CSS `drop-shadow` / `backdrop-filter` rules on mobile (`body.mobile-device`).
 
 ---

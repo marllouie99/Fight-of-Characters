@@ -1095,7 +1095,8 @@ export function drawMahoragaSummon(ctx, minion) {
   // 4. Ground Emergence & Ascension:
   const target = minion._target || minion.target || (typeof minion._findClosestEnemy === 'function' ? minion._findClosestEnemy() : null);
 
-  const riseDist = r * 2.35;
+  // Calibrate riseDist so the iconic Eight-Handled Wheel crowns immediately out of the shadow pool from frame 0
+  const riseDist = r * 1.50;
   const easeRise = isAscending ? (0.5 - 0.5 * Math.cos(progress * Math.PI)) : 1.0;
   const riseOffset = (1.0 - easeRise) * riseDist;
 
@@ -1108,7 +1109,7 @@ export function drawMahoragaSummon(ctx, minion) {
     }
   }
 
-  if (isAscending && riseOffset > 0.5) {
+  if (isAscending && progress < 0.99) {
     ctx.save();
     // Clip region: everything strictly above the ground shadow pool plane (groundY)
     ctx.beginPath();
@@ -1116,7 +1117,9 @@ export function drawMahoragaSummon(ctx, minion) {
     ctx.clip();
 
     // Translate downward by riseOffset so as riseOffset decreases, Mahoraga emerges upward out of the floor
-    ctx.translate(0, riseOffset);
+    if (riseOffset > 0.05) {
+      ctx.translate(0, riseOffset);
+    }
     minion.draw(ctx, target);
 
     // Draw bound chains wrapped directly over Mahoraga's body while not shattered
@@ -1125,21 +1128,24 @@ export function drawMahoragaSummon(ctx, minion) {
     }
     ctx.restore();
 
-    // 5. Front Lip of the Liquid Shadow Pool (overlaps the ground-level emergence plane)
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(10, 4, 16, 0.88)';
-    ctx.beginPath();
-    ctx.ellipse(minion.x, groundY, poolRadiusX * 0.85, poolRadiusY * 0.45, 0, 0, Math.PI); // Front bottom half of ellipse
-    ctx.fill();
+    // 5. Front Lip of the Liquid Shadow Pool (overlaps the ground-level emergence plane, smoothly fades out as emergence completes)
+    const lipAlpha = Math.max(0, 1.0 - progress);
+    if (lipAlpha > 0.02) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = `rgba(10, 4, 16, ${(0.88 * lipAlpha).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.ellipse(minion.x, groundY, poolRadiusX * 0.85, poolRadiusY * 0.45, 0, 0, Math.PI); // Front bottom half of ellipse
+      ctx.fill();
 
-    // Golden liquid meniscus rim
-    ctx.strokeStyle = `rgba(255, 215, 0, ${(0.65 - progress * 0.35).toFixed(2)})`;
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.ellipse(minion.x, groundY, poolRadiusX * 0.85, poolRadiusY * 0.45, 0, 0, Math.PI);
-    ctx.stroke();
-    ctx.restore();
+      // Golden liquid meniscus rim
+      ctx.strokeStyle = `rgba(255, 215, 0, ${((0.65 - progress * 0.35) * lipAlpha).toFixed(2)})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.ellipse(minion.x, groundY, poolRadiusX * 0.85, poolRadiusY * 0.45, 0, 0, Math.PI);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Front Anchor Chain (connecting from center chest medallion down to front pool rim)
     if (!chainsShattered) {

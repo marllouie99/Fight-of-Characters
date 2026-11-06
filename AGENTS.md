@@ -11,8 +11,10 @@ Whenever creating, scaffolding, optimizing, or modifying any fighter skin (`js/g
   - Avoid calling `ctx.createRadialGradient()` or `ctx.createLinearGradient()` inside high-frequency per-frame projectile or particle loops; use cached offscreen radial glow canvases (`ctx.drawImage`) + `ctx.globalAlpha` to prevent mobile shader/LUT allocation stalls.
 - **Dirty-Flagged Full-Screen Secondary Canvases**:
   - Full-screen `540×960` overlay canvases (`flameCanvas`, `topLevelUiCanvas`) MUST remain gated by dirty flags (`_flameCanvasDirty`, `state._topLevelUiDirty`) so idle frames perform zero full-screen clears or `drawImage` blits.
-- **Lazy On-Demand Asset Decoding & Mobile HUD Budget**:
+- **Lazy On-Demand Asset Decoding, Pre-Battle GPU Pre-Warming & Mobile HUD Budget**:
   - Preserve lazy on-demand image loading and 2-slot mip caching in `js/graphics/mobileAssetScaler.js`.
+  - Pre-warm only the active match fighters' images, offscreen skin canvases, and GPU textures (`1×1` `drawImage` upload behind the pre-battle loading curtain) before Round 1 starts to prevent 100–300 ms first-skill lag spikes (`SceneLoadingCurtain` pattern).
+  - Use object pooling + swap-and-pop removal for projectiles, trails, and floating damage numbers (capping simultaneous mobile damage popups via density scaling, and gating afterimage trails by minimum velocity and distance traveled).
   - Keep mobile HUD portrait canvases at `160×160` (`state.isMobileDevice`) and avoid multi-pass CSS `filter: drop-shadow(...)` or `backdrop-filter: blur(...)` rules on mobile HUD elements.
 - **Reference Blueprint & Skill**: Always consult [`docs/MOBILE_OPTIMIZATION_BLUEPRINT.md`](docs/MOBILE_OPTIMIZATION_BLUEPRINT.md) and `.agents/skills/mobile-60fps-optimizer/SKILL.md`.
 

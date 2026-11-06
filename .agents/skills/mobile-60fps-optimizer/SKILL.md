@@ -33,3 +33,8 @@ Use this skill whenever creating, optimizing, or reviewing fighter skins, weapon
 - Keep mobile top HUD portrait canvases (`renderTopHudProfileCanvas` in `js/graphics/hudManager.js`) at `160x160` (`102 KB` VRAM) instead of desktop `1400x1400` (`7.84 MB` VRAM).
 - Strip multi-pass CSS `filter: drop-shadow(...)` and `backdrop-filter: blur(...)` under `body.mobile-device` in `css/style.css`.
 
+### 5. Pre-Battle Loading Curtain, GPU Pre-Warming & Object Pooling
+- **Pre-Battle Loading Curtain (`SceneLoadingCurtain` Pattern)**: Before starting Round 1, decode and draw (`1x1` `ctx.drawImage`) only the active match fighters' sprite sheets and offscreen skin/weapon canvases behind a loading curtain so mobile GPUs upload textures before combat begins.
+- **Object Pooling & Density Scaling (`SimplePool` / `DamagePopupPool` / `GhostTrail2D` Pattern)**: Reuse pooled projectiles/particles with swap-and-pop array removal, cap mobile floating damage texts via density scaling, and gate afterimage trails by minimum velocity and distance traveled.
+
+

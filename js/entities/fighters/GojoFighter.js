@@ -2921,7 +2921,6 @@ export class GojoFighter extends Fighter {
     state.fighters.forEach((f, idx) => {
       if (f && f !== this && f.hp > 0) {
         // Heavenly Restriction & Mahoraga Domain Adaptation: Immune to domain sure-hit effects & traps!
-        // Heavenly Restriction & Mahoraga Domain Adaptation: Immune to domain sure-hit effects & traps!
         if (f.domainImmunity || f.gojoDomainAdapted || (f.gojoAdapted && f.gojoAdapted.domain) || f.characterId === 'toji' || f.type === 'toji') return;
 
         const isEnemy = myTeam === null || state.getFighterTeam(idx) !== myTeam;
@@ -2965,7 +2964,8 @@ export class GojoFighter extends Fighter {
             }
           }
           
-          if (ill.domainImmunity || ill.gojoDomainAdapted) return;
+          if (ill.domainImmunity || ill.gojoDomainAdapted || (ill.gojoAdapted && ill.gojoAdapted.domain) || ill.isAscending || (ill.spawnTimer || 0) > 0) return;
+          if (ill.owner && (ill.owner.domainActive || ill.owner.isDomainActive || ill.owner.stolenDomainActive)) return;
 
           if (true) { // Freeze EVERYONE (including teammates' illusions)
             if (typeof ill.interruptAttacks === 'function') ill.interruptAttacks(true);

@@ -430,7 +430,9 @@ export function drawMahoragaFighter(ctx, fighter, opponent) {
     fighter.angle = 0;
     fighter.gunAngle = 0;
   }
-  const isGojoDomainActive = !fighter.domainImmunity && !fighter.gojoDomainAdapted && !fighter.gojoAdapted?.domain && typeof state !== 'undefined' && (
+  const isOwnerDomainClashing = Boolean(fighter.owner && (fighter.owner.domainActive || fighter.owner.isDomainActive || fighter.owner.stolenDomainActive));
+  const isEmerging = Boolean(fighter.isAscending || (fighter.spawnTimer && fighter.spawnTimer > 0));
+  const isGojoDomainActive = !isOwnerDomainClashing && !isEmerging && !fighter.domainImmunity && !fighter.gojoDomainAdapted && !fighter.gojoAdapted?.domain && typeof state !== 'undefined' && (
     state.activeDomain === 'unlimited_void' || 
     state.domainActive === 'unlimited_void' || 
     (state.fighters && state.fighters.some(f => f && (f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo') && f.domainActive))

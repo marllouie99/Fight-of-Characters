@@ -1144,11 +1144,13 @@ export function drawArena() {
         // In native Canvas 2D mode with dim effects disabled, render active domain background here.
         // When dim effects are enabled, renderSystem.js repaints the active domain background ON TOP of the dim wash,
         // so skipping it here eliminates a duplicate full-screen domain background render pass every frame.
-        const activeDomainFighter = state.fighters?.find(f => f && (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
-        if (activeDomainFighter) {
+        const activeDomainFighters = (state.fighters || []).filter(f => f && (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) && typeof f.drawDomainBackground === 'function');
+        if (activeDomainFighters.length > 0) {
           ctx.save();
           applyCameraToCtx(ctx);
-          activeDomainFighter.drawDomainBackground(ctx);
+          for (let dIdx = 0; dIdx < activeDomainFighters.length; dIdx++) {
+            activeDomainFighters[dIdx].drawDomainBackground(ctx, dIdx > 0);
+          }
           ctx.restore();
         }
       }

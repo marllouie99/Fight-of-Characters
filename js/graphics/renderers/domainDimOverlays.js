@@ -76,6 +76,11 @@ export function createSafeLinearGradient(ctx, x0, y0, x1, y1) {
 // GOJO INFINITY CUTOUT HELPER
 // ──────────────────────────────────────────
 export function excludeGojoInfinityFromDim(ctx) {
+  // In Native Canvas 2D mode, destination-out punches directly into the main arena canvas,
+  // erasing the arena floor & fighters and causing violent flickering during melee mode flips.
+  // Matching applyDomainArenaVignetteCutout, skip destination-out in native 2D mode.
+  if (typeof state !== 'undefined' && !state.pixiApp) return;
+
   const fighters = state.fighters;
   if (!fighters) return;
   let isSaitamaCounterActive = false;
@@ -531,8 +536,8 @@ export function drawPurpleDimScreen() {
     }
   }
 
-  // Exclude Rika from Gojo's Purple dim screen overlay
-  if (state.fighters) {
+  // Exclude Rika from Gojo's Purple dim screen overlay (WebGL only; in 2D mode destination-out erases main canvas)
+  if (state.fighters && (typeof state === 'undefined' || state.pixiApp)) {
     const rikaHoleCanvas = getCachedRadialGradientCanvas('gojo_infinity_hole_mask', 128, GOJO_INFINITY_HOLE_STOPS);
     for (const f of state.fighters) {
       if (!f || !f.rika || !f.rika.active || !f.rikaAlpha || f.rikaAlpha <= 0) continue;
@@ -846,8 +851,8 @@ export function drawSukunaDomainDimScreen() {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // 2. Subtle radial lighter pocket centered on Sukuna (so the action area isn't completely crushed)
-  if (opacity * 0.12 >= 0.01) {
+  // 2. Subtle radial lighter pocket centered on Sukuna (WebGL only; in 2D mode destination-out erases main canvas)
+  if (opacity * 0.12 >= 0.01 && (typeof state === 'undefined' || state.pixiApp)) {
     const screenPos = sukunaFighter ? worldToScreen(sukunaFighter.x, sukunaFighter.y - (sukunaFighter.z || 0)) : { x: w / 2, y: h / 2 };
     const rawCx = (screenPos && Number.isFinite(screenPos.x)) ? screenPos.x : w / 2;
     const rawCy = (screenPos && Number.isFinite(screenPos.y)) ? screenPos.y : h / 2;

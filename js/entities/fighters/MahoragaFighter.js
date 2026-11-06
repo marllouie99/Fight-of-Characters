@@ -919,7 +919,9 @@ export class MahoragaFighter extends Fighter {
     const threshold = this.maxHp * (CONFIG.mahoraga?.fatalDamageThresholdPct ?? 0.15);
 
     // ── GOJO DOMAIN EXPOSURE & ADAPTATION RELEASE TICK ──
-    const isInsideGojoDomain = !this.gojoDomainAdapted && !this.gojoAdapted?.domain && typeof state !== 'undefined' && (
+    const isOwnerDomainClashing = Boolean(this.owner && (this.owner.domainActive || this.owner.isDomainActive || this.owner.stolenDomainActive));
+    const isEmerging = Boolean(this.isAscending || (this.spawnTimer && this.spawnTimer > 0));
+    const isInsideGojoDomain = !isOwnerDomainClashing && !isEmerging && !this.gojoDomainAdapted && !this.gojoAdapted?.domain && typeof state !== 'undefined' && (
       state.activeDomain === 'unlimited_void' || 
       state.domainActive === 'unlimited_void' || 
       (state.fighters && state.fighters.some(f => f && (f.characterId === 'gojo' || f.type === 'gojo') && f.domainActive))

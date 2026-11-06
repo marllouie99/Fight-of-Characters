@@ -81,8 +81,11 @@ function _hasAnyActiveDomain(fighters) {
   return false;
 }
 
-function _findActiveDomainFighterFor2D(fighters) {
-  if (!fighters) return null;
+const DOMAIN_2D_Z_ORDER = ['sukuna', 'gojo', 'rubbick', 'mahito', 'naoya', 'cj', 'yuta'];
+
+function _findAllActiveDomainFightersFor2D(fighters) {
+  if (!fighters) return [];
+  const list = [];
   for (let i = 0; i < fighters.length; i++) {
     const f = fighters[i];
     if (
@@ -90,10 +93,17 @@ function _findActiveDomainFighterFor2D(fighters) {
       (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) &&
       typeof f.drawDomainBackground === 'function'
     ) {
-      return f;
+      list.push(f);
     }
   }
-  return null;
+  if (list.length <= 1) return list;
+  return list.sort((a, b) => {
+    const idA = a.characterId || a.type || '';
+    const idB = b.characterId || b.type || '';
+    const idxA = DOMAIN_2D_Z_ORDER.indexOf(idA);
+    const idxB = DOMAIN_2D_Z_ORDER.indexOf(idB);
+    return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+  });
 }
 
 function _isGojoOrStolenVoidActive(fighters) {
@@ -409,8 +419,8 @@ export function renderGame() {
         // that cutout is suppressed (it would erase the arena art itself), so the active domain background
         // is repainted here — clipped to the arena — restoring the artwork after the dim wash.
         if (!state.pixiApp && !state.disableDimEffects && state.fighters) {
-          const activeDomainFighter = _findActiveDomainFighterFor2D(state.fighters);
-          if (activeDomainFighter) {
+          const activeDomainFighters = _findAllActiveDomainFightersFor2D(state.fighters);
+          if (activeDomainFighters.length > 0) {
             const domainArena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena;
             state.ctx.save();
             applyCameraToCtx(state.ctx);
@@ -426,7 +436,9 @@ export function renderGame() {
               }
               state.ctx.clip();
             }
-            activeDomainFighter.drawDomainBackground(state.ctx);
+            for (let dIdx = 0; dIdx < activeDomainFighters.length; dIdx++) {
+              activeDomainFighters[dIdx].drawDomainBackground(state.ctx, dIdx > 0);
+            }
             state.ctx.restore();
           }
         }

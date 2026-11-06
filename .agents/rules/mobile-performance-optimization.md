@@ -26,3 +26,8 @@ Whenever creating, scaffolding, optimizing, or modifying any fighter skin (`js/g
 - Keep `.hud-top-profile__canvas` sized at `160x160` on mobile (`state.isMobileDevice`) with proportional `resScale = w / 1400` in `renderTopHudProfileCanvas()`.
 - Never apply multi-pass CSS `filter: drop-shadow(...)` or `backdrop-filter: blur(...)` rules to animated HUD overlays on mobile (`body.mobile-device`).
 
+## 6. Pre-Battle Loading Curtain, GPU Texture Pre-Warming & Object Pooling
+- **Pre-Battle GPU Pre-Warming (`SceneLoadingCurtain` Pattern)**: Decode and pre-draw (`1x1` `drawImage`) only the active match fighters' sprites and offscreen skin/hand/weapon canvases behind a brief loading curtain before Round 1 starts so mobile GPUs never stall for `100-300ms` on the first skill cast.
+- **Object Pooling & Density Scaling (`SimplePool` & `DamagePopupPool` Pattern)**: Reuse pooled projectile/particle objects via swap-and-pop removal, cap simultaneous mobile floating damage numbers with density scaling, and gate afterimage trails by minimum speed and distance traveled (`GhostTrail2D` pattern).
+
+
