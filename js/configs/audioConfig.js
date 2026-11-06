@@ -272,6 +272,8 @@ export const AUDIO_CONFIG = {
   // Unarmed (Earclacks Fighting)
   'unarmed_wall_bump': 'Assets/Sound Effects/UnarmedSFX/unarmed_wall_bump.mp3',
   'unarmed_wallbounce': 'Assets/Sound Effects/UnarmedSFX/unarmed_wall_bump.mp3',
+  'unarmed_enemy_bump': 'Assets/Sound Effects/Attacks/heavypunch3.mp3',
+  'unarmed_slam': 'Assets/Sound Effects/Attacks/heavypunch3.mp3',
 
   // Bomberman (Classic Arcade)
   'bomberman_bomb_explode': 'Assets/Sound Effects/Attacks/explosion.mp3',

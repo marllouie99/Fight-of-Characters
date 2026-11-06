@@ -278,13 +278,14 @@ export function drawElectricStunEffect(ctx, baseRadius, useAggressiveMode, fight
 
   // 5. Classic anime dizzy stun stars orbiting overhead
   ctx.save();
-  if (fighter) {
-    const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
-    const facingLeft = Math.abs(angle) > Math.PI / 2;
-    if (facingLeft && !fighter.isSpinning) {
-      ctx.scale(1, -1);
+  if (typeof ctx.getTransform === 'function') {
+    const m = ctx.getTransform();
+    if (m) {
+      const currentAngle = Math.atan2(m.b, m.a);
+      const isFlipped = (m.a * m.d - m.b * m.c) < 0;
+      if (isFlipped) ctx.scale(1, -1);
+      if (Math.abs(currentAngle) > 0.0001) ctx.rotate(-currentAngle);
     }
-    ctx.rotate(-angle);
   }
 
   const starTime = now * 0.005;
@@ -367,6 +368,17 @@ export function drawDubstepStunEffect(ctx, baseRadius, timer = 45) {
   }
 
   // 3. Spinning "dizzy" music notes around their head
+  ctx.save();
+  if (typeof ctx.getTransform === 'function') {
+    const m = ctx.getTransform();
+    if (m) {
+      const currentAngle = Math.atan2(m.b, m.a);
+      const isFlipped = (m.a * m.d - m.b * m.c) < 0;
+      if (isFlipped) ctx.scale(1, -1);
+      if (Math.abs(currentAngle) > 0.0001) ctx.rotate(-currentAngle);
+    }
+  }
+
   const numNotes = 3;
   const orbitRadius = baseRadius + 15;
   const speed = t / 350; // orbit speed
@@ -383,6 +395,8 @@ export function drawDubstepStunEffect(ctx, baseRadius, timer = 45) {
     ctx.fillStyle = rgbColors[(colorIdx + i) % rgbColors.length];
     ctx.fillText(notes[i], nx, ny);
   }
+
+  ctx.restore();
 
   ctx.restore();
 }
@@ -1098,14 +1112,15 @@ const _FALLBACK_BOIL_SEEDS = [
 export function drawParalyzeEffect(ctx, baseRadius, isMahito = false, paralyzeTimer = 45, color = '#FFEE58', entity = null) {
   ctx.save();
 
-  // Counteract fighter body rotation and vertical flipping so the halo stays strictly upright above the head in world space
-  if (entity) {
-    const angle = entity._isWinnerReveal ? 0 : (entity.gunAngle !== undefined ? entity.gunAngle : (entity.angle || 0));
-    const facingLeft = Math.abs(angle) > Math.PI / 2;
-    if (facingLeft && !entity.isSpinning) {
-      ctx.scale(1, -1);
+  // Counteract any active canvas rotation/reflection so the halo stays strictly upright above the head in world space
+  if (typeof ctx.getTransform === 'function') {
+    const m = ctx.getTransform();
+    if (m) {
+      const currentAngle = Math.atan2(m.b, m.a);
+      const isFlipped = (m.a * m.d - m.b * m.c) < 0;
+      if (isFlipped) ctx.scale(1, -1);
+      if (Math.abs(currentAngle) > 0.0001) ctx.rotate(-currentAngle);
     }
-    ctx.rotate(-angle);
   }
 
   const time = (typeof state !== 'undefined' && state.frameCount) ? (state.frameCount * 0.0667) : (Date.now() * 0.004);

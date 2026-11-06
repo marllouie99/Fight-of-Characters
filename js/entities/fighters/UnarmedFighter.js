@@ -1,4 +1,4 @@
-import { Fighter } from '../fighter.js';
+import { Fighter, applyDamageToTarget } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { spawnFloatingText, triggerGlobalScreenShake, state } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -43,7 +43,7 @@ export class UnarmedFighter extends Fighter {
     this.wallBounceMultiplier = cfg.wallBounceMultiplier || 1.0;
     this.damage = cfg.baseCollisionDamage || cfg.damage || 30;
 
-    // 3. Kinetic Evade Mechanic (Gains evade chance for each hit)
+    // 3. Kinetic Evade Mechanic (Gains evade chance for each hit landed that damages an enemy)
     this.evadeHits = 0;
     this.evadeChance = cfg.baseEvadeChance ?? 0.05;
     this.evadeBuffTimer = 999999;
@@ -172,7 +172,7 @@ export class UnarmedFighter extends Fighter {
   }
 
   /**
-   * Synchronizes dynamic evade chance based on accumulated hits (deals or takes).
+   * Synchronizes dynamic evade chance based on accumulated hits that actually damage an opponent.
    */
   _syncEvadeChance() {
     const cfg = CONFIG.unarmed || {};
@@ -187,11 +187,11 @@ export class UnarmedFighter extends Fighter {
     const maxEvade = cfg.maxEvadeChance ?? 0.65;
     const hits = this.evadeHits || 0;
 
-    let chance = baseEvade + hits * evadeGain;
+    let chance = Number((baseEvade + hits * evadeGain).toFixed(4));
     if (this.isSuperUnarmed || this.isTerminalVelocity) {
       chance = Math.max(chance, maxEvade);
     }
-    this.evadeChance = Math.min(maxEvade, chance);
+    this.evadeChance = Number(Math.min(maxEvade, chance).toFixed(4));
     this.evadeBuffTimer = 999999;
   }
 
@@ -253,15 +253,17 @@ export class UnarmedFighter extends Fighter {
    */
   _syncLiveDamageAndSpeed() {
     const cfg = CONFIG.unarmed || {};
-    const scaledSpeed = this.baseSpeed + this.momentumStacks * this.speedPerHit;
+    const isScalingEnabled = this.isSkillEnabled(cfg.enableMomentumScaling, true);
+    const effectiveStacks = isScalingEnabled ? (this.momentumStacks || 0) : 0;
+    const scaledSpeed = this.baseSpeed + effectiveStacks * this.speedPerHit;
     this.speed = (this.maxTerminalVelocity && isFinite(this.maxTerminalVelocity))
       ? Math.min(this.maxTerminalVelocity, scaledSpeed)
       : scaledSpeed;
 
     const baseDmg = cfg.baseCollisionDamage || cfg.damage || 30;
-    const speedScale = cfg.speedDamageScale !== undefined ? cfg.speedDamageScale : 1.0;
-    const speedBonus = Math.max(0, this.speed - this.baseSpeed) * speedScale;
-    let totalDmg = Math.round(baseDmg + this.momentumStacks * this.damagePerHit + speedBonus);
+    const speedScale = (isScalingEnabled && cfg.speedDamageScale !== undefined) ? cfg.speedDamageScale : 1.0;
+    const speedBonus = isScalingEnabled ? (Math.max(0, this.speed - this.baseSpeed) * speedScale) : 0;
+    let totalDmg = Math.round(baseDmg + effectiveStacks * this.damagePerHit + speedBonus);
 
     if (this.isSuperUnarmed || this.isTerminalVelocity) {
       totalDmg = Math.round(totalDmg * (cfg.superUnarmedDamageMult || 1.6));
@@ -273,6 +275,12 @@ export class UnarmedFighter extends Fighter {
   interruptAttacks(forceCancelAll = false) {
     super.interruptAttacks?.(forceCancelAll);
     this.surgeTimer = 0;
+    const isGhost = Boolean((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman);
+    if (forceCancelAll || isGhost) {
+      this.hasWallRebounded = false;
+      if (this.visualShockwaves) this.visualShockwaves.length = 0;
+      if (this.afterimages) this.afterimages.length = 0;
+    }
   }
 
   isStationarySkillActive() {
@@ -303,12 +311,6 @@ export class UnarmedFighter extends Fighter {
   takeDamage(amount, attacker, hitAngle) {
     const res = super.takeDamage(amount, attacker, hitAngle);
 
-    if (res && amount > 0) {
-      // Gains evade chance for each hit taken
-      this.evadeHits = (this.evadeHits || 0) + 1;
-      this._syncEvadeChance();
-    }
-
     if (!this.isSuperUnarmed && !this.isTerminalVelocity) {
       this.vx *= 0.88;
       this.vy *= 0.88;
@@ -318,8 +320,9 @@ export class UnarmedFighter extends Fighter {
   }
 
   _castKineticSurge(opponent) {
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
     if (!this.isSkillEnabled(CONFIG.unarmed?.enableKineticSurge, true)) return;
-    if (!opponent) return;
+    if (!opponent || !this._isValidCombatTarget(opponent)) return;
     this.kineticSurgeCooldown = this.kineticSurgeCooldownMax;
 
     // Direct aim lock towards enemy (Rule 1.4)
@@ -343,13 +346,16 @@ export class UnarmedFighter extends Fighter {
 
     spawnFloatingText(this.x, this.y - this.r - 20, 'KINETIC SURGE!', '#F4F4F5');
     triggerGlobalScreenShake(4, 6);
-    audioSystem.playSFX('attack_fleshhit', 0.85);
+    const surgeSound = CONFIG.unarmed?.sounds?.kineticSurge || 'Assets/Sound Effects/Attacks/groundSmash.mp3';
+    const surgeVol = CONFIG.unarmed?.soundVolumes?.kineticSurge ?? 0.85;
+    audioSystem.playSFX(surgeSound, surgeVol);
 
     // Rule 26 Concentric Supersonic Shockwave
     this._spawnShockwave(this.x, this.y, 70, 18, 3, '#F4F4F5');
   }
 
   _castSuperUnarmed(opponent) {
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
     if (!this.isSkillEnabled(CONFIG.unarmed?.enableSuperUnarmed, true)) return;
     this.superUnarmedCooldown = this.superUnarmedCooldownMax;
     this.isSuperUnarmed = true;
@@ -376,7 +382,9 @@ export class UnarmedFighter extends Fighter {
 
     spawnFloatingText(this.x, this.y - this.r - 25, 'SUPER UNARMED!', '#FFFFFF');
     triggerGlobalScreenShake(9, 14);
-    audioSystem.playSFX('attack_fleshhit', 1.0);
+    const superSound = CONFIG.unarmed?.sounds?.terminalVelocity || 'Assets/Sound Effects/Attacks/heavypunch3.mp3';
+    const superVol = CONFIG.unarmed?.soundVolumes?.terminalVelocity ?? 1.0;
+    audioSystem.playSFX(superSound, superVol);
 
     // Heavy detonation blast (Rule 26)
     this._spawnShockwave(this.x, this.y, 95, 24, 4, '#FFFFFF');
@@ -388,6 +396,16 @@ export class UnarmedFighter extends Fighter {
   }
 
   _spawnShockwave(x, y, maxRadius, maxTimer = 20, waveCount = 3, color = '#E4E4E7') {
+    if (
+      (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) ||
+      this.isSwallowedByPacman ||
+      this.isDead ||
+      this.dead ||
+      this.hp <= 0 ||
+      (typeof this.areAttackEffectsSuppressed === 'function' && this.areAttackEffectsSuppressed())
+    ) {
+      return;
+    }
     this.visualShockwaves.push({
       x,
       y,
@@ -499,6 +517,18 @@ export class UnarmedFighter extends Fighter {
     }
 
     if (bounced) {
+      const curAngle = Math.atan2(this.vy, this.vx);
+      this.gunAngle = curAngle;
+
+      const isGhost = Boolean((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman);
+      if (isGhost) {
+        this.hasWallRebounded = false;
+        if (this.visualShockwaves && this.visualShockwaves.length > 0) {
+          this.visualShockwaves.length = 0;
+        }
+        return bounced;
+      }
+
       // Wall rebounce primes Unarmed's damage capability (Earclacks Standard)
       this.hasWallRebounded = true;
 
@@ -510,10 +540,8 @@ export class UnarmedFighter extends Fighter {
         ? Math.min(this.maxTerminalVelocity, uncappedTarget)
         : uncappedTarget;
 
-      const curAngle = Math.atan2(this.vy, this.vx);
       this.vx = Math.cos(curAngle) * targetSpeed;
       this.vy = Math.sin(curAngle) * targetSpeed;
-      this.gunAngle = curAngle;
 
       // Concussive audio: Official Earclacks wall bump THUD & screen shake feedback
       const wallSound = CONFIG.unarmed?.sounds?.wallBounce || 'Assets/Sound Effects/UnarmedSFX/unarmed_wall_bump.mp3';
@@ -530,11 +558,35 @@ export class UnarmedFighter extends Fighter {
   }
 
   /**
+   * Evaluates whether an entity is a valid, hittable combat target for kinetic collisions.
+   * Strictly filters out lawnmowers, untargetable entities, teammates, and dead entities.
+   */
+  _isValidCombatTarget(target) {
+    if (!target || target === this) return false;
+    if (target.isDead || target.dead || (typeof target.hp === 'number' && target.hp <= 0)) return false;
+    if (
+      target.isLawnmower ||
+      target.characterId === 'crazydave_lawnmower' ||
+      target.type === 'Lawnmower' ||
+      target.isUntargetable ||
+      target.untargetable ||
+      target.cannotBeTargeted ||
+      target.isTargetable === false
+    ) {
+      return false;
+    }
+    if (typeof this.isTeammate === 'function' && this.isTeammate(target)) return false;
+    if (this.team !== undefined && target.team !== undefined && this.team === target.team) return false;
+    return true;
+  }
+
+  /**
    * Universal Engine Physics Collision Hook (invoked by physics.js lines 312-313 & 1316).
    * Delivers Unarmed's iconic kinetic slam / basic attack body bump!
    */
   onCollide(opponent) {
-    if (!opponent) return;
+    if (!opponent || !this._isValidCombatTarget(opponent)) return;
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
     this._handleKineticBumpCollision(opponent);
   }
 
@@ -544,10 +596,10 @@ export class UnarmedFighter extends Fighter {
    * Hits apply a brief movement slow for BOTH Unarmed and the enemy on impact.
    */
   _handleKineticBumpCollision(target) {
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
     if (!this.isSkillEnabled(CONFIG.unarmed?.enableKineticBump, true)) return;
     if (this.collisionCooldown > 0) return;
-    if (!target || target.isDead || (typeof target.hp === 'number' && target.hp <= 0)) return;
-    if (typeof this.isTeammate === 'function' && this.isTeammate(target)) return;
+    if (!this._isValidCombatTarget(target)) return;
     if (this.isCaughtInBeam() || this.isWallPinnedByMakima || this.isWallPinnedBySaitama) return;
 
     const dx = target.x - this.x;
@@ -556,8 +608,23 @@ export class UnarmedFighter extends Fighter {
 
     const curSpeed = Math.hypot(this.vx, this.vy);
     const cfg = CONFIG.unarmed || {};
+    const isWallnutOrBarrier = Boolean(
+      target.isWallnut ||
+      target.isPlantBarrier ||
+      target.isBuilding ||
+      target.isTurret ||
+      target.isDispenser ||
+      target.isIceWall ||
+      target.isBarrier ||
+      (target.isImmovable && (target.isPlant || target.isMinion))
+    );
+    const isSmallMinion = Boolean(
+      (target.isMinion || target.isIllusion || target.isServantOfCthulhu || target.isPlant || target.isPlantMinion) &&
+      !isWallnutOrBarrier
+    );
     const requireRebound = this.isSkillEnabled(cfg.requireWallBounceForDamage, true);
-    const canDealDamage = !requireRebound || this.hasWallRebounded;
+    // Small minions take collision damage directly when rammed; primary fighters, Wall-nuts & barriers require wall rebound priming
+    const canDealDamage = isSmallMinion || !requireRebound || this.hasWallRebounded;
 
     if (!canDealDamage) {
       // Unarmed bumped an enemy WITHOUT rebouncing to the wall first:
@@ -572,12 +639,22 @@ export class UnarmedFighter extends Fighter {
       this.vy = -ny * reboundBaseSpeed;
       this.gunAngle = Math.atan2(this.vy, this.vx);
 
-      // Resolve physical overlap on target
-      target.vx = (target.vx || 0) + nx * 3.5;
-      target.vy = (target.vy || 0) + ny * 3.5;
+      // Resolve physical overlap on target (push Unarmed outside immovable barriers)
+      const minDist = this.r + (target.r || 24);
+      if (dist < minDist && dist > 0) {
+        if (target.isImmovable || target.cannotBeDisplaced) {
+          this.x = target.x - nx * (minDist + 2);
+          this.y = target.y - ny * (minDist + 2);
+        } else {
+          target.vx = (target.vx || 0) + nx * 3.5;
+          target.vy = (target.vy || 0) + ny * 3.5;
+        }
+      }
 
-      this.collisionCooldown = 12;
-      audioSystem.playSFX('dash_light', 0.45);
+      this.collisionCooldown = 14;
+      const deflectSound = CONFIG.unarmed?.sounds?.enemyBump || CONFIG.unarmed?.sounds?.slam || 'Assets/Sound Effects/Attacks/heavypunch3.mp3';
+      const deflectVol = (CONFIG.unarmed?.soundVolumes?.enemyBump ?? CONFIG.unarmed?.soundVolumes?.slam ?? 1.0) * 0.6;
+      audioSystem.playSFX(deflectSound, deflectVol);
       triggerGlobalScreenShake(1.5, 3);
       const midX = (this.x + target.x) / 2;
       const midY = (this.y + target.y) / 2;
@@ -595,13 +672,45 @@ export class UnarmedFighter extends Fighter {
     }
 
     // Deal kinetic slam damage (Unparriable body impact basic attack)
+    const targetPrevHp = (target && typeof target.hp === 'number') ? target.hp : null;
+    let dmgResult = false;
+    let dealtDamageAmount = 0;
+
     if (typeof target.takeDamage === 'function') {
-      target.takeDamage(totalDmg, this, {
+      dmgResult = target.takeDamage(totalDmg, this, {
         isMelee: true,
         isBasicAttack: true,
         isKineticBump: true,
         unparriable: true
       });
+      if (dmgResult !== false && dmgResult !== 0 && dmgResult !== undefined && dmgResult !== null) {
+        dealtDamageAmount = typeof dmgResult === 'number' ? dmgResult : totalDmg;
+      }
+    } else if (typeof applyDamageToTarget === 'function') {
+      dmgResult = applyDamageToTarget(target, totalDmg, this, {
+        isMelee: true,
+        isBasicAttack: true,
+        isKineticBump: true,
+        unparriable: true
+      });
+      if (dmgResult !== false && dmgResult !== 0 && dmgResult !== undefined && dmgResult !== null) {
+        dealtDamageAmount = typeof dmgResult === 'number' ? dmgResult : totalDmg;
+      }
+    } else if (typeof target.hp === 'number') {
+      const prev = target.hp;
+      target.hp = Math.max(0, target.hp - totalDmg);
+      dealtDamageAmount = prev - target.hp;
+      dmgResult = dealtDamageAmount > 0;
+    }
+
+    // Determine strictly whether Unarmed actually damaged the entity:
+    let actuallyDamagedEntity = false;
+    if (targetPrevHp !== null && typeof target.hp === 'number') {
+      if (target.hp < targetPrevHp || (targetPrevHp > 0 && (target.isDead || target.dead))) {
+        actuallyDamagedEntity = true;
+      }
+    } else if (dmgResult !== false && dmgResult !== 0 && dmgResult !== undefined && dmgResult !== null) {
+      actuallyDamagedEntity = true;
     }
 
     // Hit Slow Movement for BOTH Unarmed and the enemy for a brief moment (Gated by enableHitSlow)
@@ -612,14 +721,16 @@ export class UnarmedFighter extends Fighter {
     const enemySlowMult = isSlowEnabled ? (cfg.enemyHitSlowMultiplier || slowMult) : 1.0;
 
     if (isSlowEnabled) {
-      // 1. Apply hit slow movement to target
-      if (typeof target.applySlow === 'function') {
-        target.applySlow(enemySlowDur, enemySlowMult, { isUnarmedImpact: true });
-      } else if (target.statusEffects && typeof target.statusEffects.applySlow === 'function') {
-        target.statusEffects.applySlow(enemySlowDur, enemySlowMult, { isUnarmedImpact: true });
-      } else {
-        target.slowTimer = Math.max(target.slowTimer || 0, enemySlowDur);
-        target.slowMultiplier = enemySlowMult;
+      // 1. Apply hit slow movement to target only if actually damaged
+      if (actuallyDamagedEntity) {
+        if (typeof target.applySlow === 'function') {
+          target.applySlow(enemySlowDur, enemySlowMult, { isUnarmedImpact: true });
+        } else if (target.statusEffects && typeof target.statusEffects.applySlow === 'function') {
+          target.statusEffects.applySlow(enemySlowDur, enemySlowMult, { isUnarmedImpact: true });
+        } else {
+          target.slowTimer = Math.max(target.slowTimer || 0, enemySlowDur);
+          target.slowMultiplier = enemySlowMult;
+        }
       }
 
       // 2. Apply hit slow movement to Unarmed
@@ -656,9 +767,31 @@ export class UnarmedFighter extends Fighter {
     const rawKbForce = kbBase + (curSpeed / this.baseSpeed) * kbScale * 5;
     const kbForce = rawKbForce * enemySlowMult;
 
-    // Target receives forward impulse along normal while conserving tangential momentum
-    target.vx = (v2t * tx + nx * (v2n + kbForce)) * enemySlowMult;
-    target.vy = (v2t * ty + ny * (v2n + kbForce)) * enemySlowMult;
+    // Target receives forward impulse along normal while conserving tangential momentum (immovable targets resist impulse)
+    if (!target.isImmovable && !target.cannotBeKnockbacked && !target.immuneToPush && !target.immuneToKnockback) {
+      const targetKbVx = (v2t * tx + nx * (v2n + kbForce)) * enemySlowMult;
+      const targetKbVy = (v2t * ty + ny * (v2n + kbForce)) * enemySlowMult;
+      target.vx = targetKbVx;
+      target.vy = targetKbVy;
+      if (typeof target.applyKnockback === 'function') {
+        target.applyKnockback(targetKbVx, targetKbVy);
+      }
+    }
+
+    // Resolve physical overlap on collision: push Unarmed cleanly outside immovable barriers
+    const hitMinDist = this.r + (target.r || 24);
+    if (dist < hitMinDist && dist > 0) {
+      if (target.isImmovable || target.cannotBeDisplaced) {
+        this.x = target.x - nx * (hitMinDist + 2);
+        this.y = target.y - ny * (hitMinDist + 2);
+      } else {
+        const overlap = (hitMinDist - dist) * 0.5;
+        this.x -= nx * overlap;
+        this.y -= ny * overlap;
+        target.x += nx * overlap;
+        target.y += ny * overlap;
+      }
+    }
 
     // Cancel active kinetic surge dash so surge speed does not bypass hit slow
     this.surgeTimer = 0;
@@ -676,8 +809,16 @@ export class UnarmedFighter extends Fighter {
         : Math.max(reboundBaseSpeed, 18.0);
       this.vx = (sVx / sSpd) * superTopSpeed * slowMult;
       this.vy = (sVy / sSpd) * superTopSpeed * slowMult;
+    } else if (isSmallMinion) {
+      // Smashing into a small minion: Unarmed plows through with slight damping rather than full rebound
+      const punchThroughNormal = Math.max(v1n * 0.65, 3.0);
+      let pVx = (nx * punchThroughNormal + tx * v1t);
+      let pVy = (ny * punchThroughNormal + ty * v1t);
+      const pSpd = Math.hypot(pVx, pVy) || 1;
+      this.vx = (pVx / pSpd) * reboundBaseSpeed;
+      this.vy = (pVy / pSpd) * reboundBaseSpeed;
     } else {
-      // Normal Unarmed rebounds elastically off target normal while retaining full tangential momentum
+      // Normal Unarmed, Wall-nuts & barriers rebound elastically off target normal while retaining full tangential momentum
       const reboundNormal = -Math.max(Math.abs(v1n) * 0.85, 4.0);
       const reboundSpeed = reboundBaseSpeed * slowMult;
       let rVx = nx * reboundNormal + tx * v1t;
@@ -688,62 +829,113 @@ export class UnarmedFighter extends Fighter {
     }
     this.gunAngle = Math.atan2(this.vy, this.vx);
 
-    this.collisionCooldown = Math.max(14, slowDur + 2);
+    // Small minion hits have a shorter recovery cooldown so Unarmed doesn't feel sluggish mowing through swarms.
+    // Wall-nuts, barriers, and primary fighters enforce full recovery collision cooldown.
+    this.collisionCooldown = isSmallMinion ? 6 : Math.max(14, slowDur + 2);
 
-    if (this.isSkillEnabled(CONFIG.unarmed?.enableMomentumScaling, true)) {
-      const maxStacks = (this.maxMomentumStacks && isFinite(this.maxMomentumStacks))
-        ? this.maxMomentumStacks
-        : Infinity;
-      this.momentumStacks = Math.min(maxStacks, this.momentumStacks + 1);
-      this._syncLiveDamageAndSpeed();
+    if (actuallyDamagedEntity) {
+      // ── 1. Official Earclacks Gimmick: Permanent Momentum & Speed Scaling ──
+      // Strictly granted ONLY when Unarmed actually damages an entity!
+      if (this.isSkillEnabled(CONFIG.unarmed?.enableMomentumScaling, true)) {
+        const maxStacks = (this.maxMomentumStacks && isFinite(this.maxMomentumStacks))
+          ? this.maxMomentumStacks
+          : Infinity;
+        this.momentumStacks = Math.min(maxStacks, this.momentumStacks + 1);
+        this._syncLiveDamageAndSpeed();
+      }
+
+      // Gains evade chance for each hit connected that actually damages
+      this.evadeHits = (this.evadeHits || 0) + 1;
+      this._syncEvadeChance();
+
+      // Signature loud "THUD" audio & screen shake (heavypunch3 impact)
+      const bumpSound = CONFIG.unarmed?.sounds?.enemyBump || CONFIG.unarmed?.sounds?.slam || 'Assets/Sound Effects/Attacks/heavypunch3.mp3';
+      const bumpVol = CONFIG.unarmed?.soundVolumes?.enemyBump ?? CONFIG.unarmed?.soundVolumes?.slam ?? 1.0;
+      audioSystem.playSFX(bumpSound, bumpVol);
+      triggerGlobalScreenShake(Math.min(13, 3 + curSpeed * 0.55), 8);
+
+      // Impact flash & spark effects
+      const midX = (this.x + target.x) / 2;
+      const midY = (this.y + target.y) / 2;
+      spawnImpactFlash(midX, midY, 32, this.isSuperUnarmed ? '#FFFFFF' : '#E4E4E7');
+      spawnSparks(midX, midY, 8, '#FFFFFF');
+
+      // Concentric Supersonic Shockwave at collision point (Rule 26)
+      this._spawnShockwave(midX, midY, 65 + this.momentumStacks * 2.5, 20, 3, this.isSuperUnarmed ? '#FFFFFF' : '#F4F4F5');
+    } else {
+      // Attack was blocked, immune, or dealt 0 damage (e.g. Gojo Infinity, i-frames, invulnerability):
+      // Zero momentum gained, lighter deflect audio & subtle spark feedback
+      const deflectSound = CONFIG.unarmed?.sounds?.enemyBump || CONFIG.unarmed?.sounds?.slam || 'Assets/Sound Effects/Attacks/heavypunch3.mp3';
+      const deflectVol = (CONFIG.unarmed?.soundVolumes?.enemyBump ?? CONFIG.unarmed?.soundVolumes?.slam ?? 1.0) * 0.5;
+      audioSystem.playSFX(deflectSound, deflectVol);
+      triggerGlobalScreenShake(1.5, 3);
+      const midX = (this.x + target.x) / 2;
+      const midY = (this.y + target.y) / 2;
+      spawnSparks(midX, midY, 4, '#A1A1AA');
     }
 
-    // Gains evade chance for each hit connected
-    this.evadeHits = (this.evadeHits || 0) + 1;
-    this._syncEvadeChance();
-
-    // Signature loud "THUD" audio & screen shake
-    audioSystem.playSFX('attack_fleshhit', 1.0);
-    triggerGlobalScreenShake(Math.min(13, 3 + curSpeed * 0.55), 8);
-
-    // Impact flash & spark effects
-    const midX = (this.x + target.x) / 2;
-    const midY = (this.y + target.y) / 2;
-    spawnImpactFlash(midX, midY, 32, this.isSuperUnarmed ? '#FFFFFF' : '#E4E4E7');
-    spawnSparks(midX, midY, 8, '#FFFFFF');
-
-    // Concentric Supersonic Shockwave at collision point (Rule 26)
-    this._spawnShockwave(midX, midY, 65 + this.momentumStacks * 2.5, 20, 3, this.isSuperUnarmed ? '#FFFFFF' : '#F4F4F5');
-
-    // Consumes wall rebounce charge: must rebounce to the arena wall first to deal damage again!
-    this.hasWallRebounded = false;
+    // Consumes wall rebounce charge: must rebounce to the arena wall first to deal damage again to primary fighters and Wall-nuts/barriers!
+    if (!isSmallMinion) {
+      this.hasWallRebounded = false;
+    }
   }
 
   /**
    * Proximity collision check for update() loop (supports multi-target / standalone simulations).
    */
   _checkFighterCollision(opponent) {
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
     if (!this.isSkillEnabled(CONFIG.unarmed?.enableKineticBump, true)) return;
     if (this.collisionCooldown > 0) return;
 
     // Gather valid enemy targets (supports 1v1, 1v2, 2v2, Tag Match, minions/illusions)
     const targets = [];
-    if (state.fighters && Array.isArray(state.fighters)) {
+    if (typeof this._getAllValidEnemyTargets === 'function') {
+      const all = this._getAllValidEnemyTargets(opponent);
+      if (Array.isArray(all)) {
+        for (const t of all) {
+          if (this._isValidCombatTarget(t) && !targets.includes(t)) {
+            targets.push(t);
+          }
+        }
+      }
+    }
+
+    // Direct fallback for fighters if _getAllValidEnemyTargets returned no targets
+    if (targets.length === 0 && state.fighters && Array.isArray(state.fighters)) {
       for (const f of state.fighters) {
-        if (f && f !== this && !f.isDead && f.hp > 0 && !this.isTeammate(f)) {
+        if (this._isValidCombatTarget(f) && !targets.includes(f)) {
           targets.push(f);
         }
       }
     }
-    if (targets.length === 0 && opponent && !opponent.isDead && opponent.hp > 0) {
+
+    // Explicitly check state.illusions (Eye of Cthulhu minions/servants, Mahoraga, clones, Rika)
+    if (state.illusions && Array.isArray(state.illusions)) {
+      for (const ill of state.illusions) {
+        if (this._isValidCombatTarget(ill) && !targets.includes(ill)) {
+          targets.push(ill);
+        }
+      }
+    }
+
+    if (targets.length === 0 && opponent && this._isValidCombatTarget(opponent)) {
       targets.push(opponent);
     }
 
+    // Sort by proximity so the closest enemy target is collided with first
+    targets.sort((a, b) => {
+      const da = Math.hypot((a.x || 0) - this.x, (a.y || 0) - this.y);
+      const db = Math.hypot((b.x || 0) - this.x, (b.y || 0) - this.y);
+      return da - db;
+    });
+
     for (const target of targets) {
-      const dx = target.x - this.x;
-      const dy = target.y - this.y;
+      const dx = (target.x || 0) - this.x;
+      const dy = (target.y || 0) - this.y;
       const dist = Math.hypot(dx, dy);
-      const minDist = this.r + target.r;
+      const targetR = target.r || (target.scale ? target.scale * 12 : 20);
+      const minDist = this.r + targetR;
 
       if (dist <= minDist + 8 && dist > 0) {
         this._handleKineticBumpCollision(target);
@@ -777,6 +969,15 @@ export class UnarmedFighter extends Fighter {
     const isFrozen = this._handleTimeStop();
     if (isFrozen || this.isTargetOfAmbush) {
       this.interruptAttacks();
+      return;
+    }
+
+    // 1.5. Pac-Man Ghost & Swallowed State Guard
+    if (this._handlePacmanGhostState ? this._handlePacmanGhostState(arena, opponent) : ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman)) {
+      this.hasWallRebounded = false;
+      this.surgeTimer = 0;
+      if (this.visualShockwaves && this.visualShockwaves.length > 0) this.visualShockwaves.length = 0;
+      if (this.afterimages && this.afterimages.length > 0) this.afterimages.length = 0;
       return;
     }
 
@@ -817,8 +1018,9 @@ export class UnarmedFighter extends Fighter {
     // 8. Sleek Earclacks Ghost Afterimage Trail Generation (Reduced count & Anti-Summon Bug Fix)
     const isPlaying = typeof state !== 'undefined' && (!state.gameState || state.gameState === 'playing' || state.gameState === 'running');
     const isSummoningOrSpawning = Boolean(this.isSpawning || (this.invulnerableTimer && this.invulnerableTimer > 40) || (this._tagInGlowTimer && this._tagInGlowTimer > 0));
+    const isGhostForm = Boolean((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman);
 
-    if (!isPlaying || isSummoningOrSpawning) {
+    if (!isPlaying || isSummoningOrSpawning || isGhostForm) {
       this._lastTrailX = this.x;
       this._lastTrailY = this.y;
       if (this.afterimages) this.afterimages.length = 0;
@@ -907,6 +1109,12 @@ export class UnarmedFighter extends Fighter {
   }
 
   draw(ctx, opponent) {
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) {
+      this.drawHealth(ctx);
+      this.drawFreezeTimer(ctx);
+      return;
+    }
+
     // 1. Draw ghost afterimage trails in world space
     drawUnarmedAfterimages(ctx, this);
 

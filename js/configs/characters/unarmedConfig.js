@@ -14,7 +14,7 @@ export const unarmedConfig = {
   hp: 1100,
   maxHp: 1100,
   speed: 5.0,
-  moveSpeed: 5.0,
+  moveSpeed: 2.0,
   r: 25,
   radius: 25,
   hideHands: true,                  // Official Earclacks standard: Unarmed is a pure weaponless & handless physics ball
@@ -45,13 +45,15 @@ export const unarmedConfig = {
 
   // Audio references (Official Earclacks wall bump THUD & concussive impacts)
   sounds: {
-    slam: 'Assets/Sound Effects/Attacks/heavypunch2.mp3',
+    slam: 'Assets/Sound Effects/Attacks/heavypunch3.mp3',
+    enemyBump: 'Assets/Sound Effects/Attacks/heavypunch3.mp3',
     wallBounce: 'Assets/Sound Effects/UnarmedSFX/unarmed_wall_bump.mp3',
     kineticSurge: 'Assets/Sound Effects/Attacks/groundSmash.mp3',
     terminalVelocity: 'Assets/Sound Effects/Attacks/heavypunch3.mp3',
   },
   soundVolumes: {
-    slam: 0.95,
+    slam: 1.0,
+    enemyBump: 1.0,
     wallBounce: 0.90,
     kineticSurge: 0.85,
     terminalVelocity: 1.0,
@@ -67,7 +69,7 @@ export const unarmedConfig = {
   wallBounceMultiplier: 1.0,        // Wall bounces conserve natural velocity without artificial acceleration
   permanentSpeedScaling: true,      // Gained speed and momentum never decay over time
   baseCollisionDamage: 30,          // Base kinetic damage on opponent collision
-  speedDamageScale: 1.0,            // Additional damage per unit of velocity above base
+  speedDamageScale: 0.0,            // Additional damage per unit of velocity above base
   collisionKnockbackBase: 14,       // Base knockback impulse
   collisionKnockbackScale: 1.5,     // Knockback multiplier per unit of velocity
   hitMomentumLoss: 0,               // Stacks are permanent; taking a hit only causes momentary velocity drop
@@ -103,9 +105,9 @@ export const unarmedConfig = {
 
   // ── 6. Evade Mechanic: Kinetic Evasion (Gains evade chance for each hit) ──
   enableEvade: true,                // Master toggle for Evade mechanic
-  baseEvadeChance: 0.05,            // 5% baseline evade chance
-  evadeBonusPerHit: 0.03,           // +3% evade chance gained per hit
-  maxEvadeChance: 0.65,             // 65% max evade cap
+  baseEvadeChance: 0.00,            // 5% baseline evade chance
+  evadeBonusPerHit: 0.01,           // +3% evade chance gained per hit
+  maxEvadeChance: 1.0,             // 65% max evade cap
   maxEvadeStacks: 20,               // Max hits counted for evade scaling
 
   // ── 7. Visual Trail Settings ──

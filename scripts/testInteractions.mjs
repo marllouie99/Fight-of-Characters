@@ -12347,7 +12347,8 @@ async function runInteractionTests() {
     unarmed._syncLiveDamageAndSpeed();
     assert(unarmed.damage > (unarmedConfig.baseCollisionDamage || 30), 'Unarmed dynamic damage must increase when gaining momentum');
     assert(unarmed.speed > (unarmedConfig.speed || 5.0), 'Unarmed dynamic speed must increase when gaining momentum');
-    assert(unarmed.evadeChance >= 0.20, 'Unarmed evade chance must increase with hit stacks');
+    const expectedMinEvade = (unarmedConfig.baseEvadeChance ?? 0.05) + 5 * (unarmedConfig.evadeBonusPerHit ?? 0.03);
+    assert(unarmed.evadeChance >= Math.min(expectedMinEvade, unarmedConfig.maxEvadeChance ?? 0.65) - 0.001, 'Unarmed evade chance must increase with hit stacks');
 
     clearHealthHud(true);
     drawHUD();
@@ -18553,6 +18554,496 @@ async function runInteractionTests() {
     assert(mockCtx.getStackDepth() === 0, 'drawBlueLockEgoAuraFront during disappearance must maintain 100% Canvas stack balance');
 
     console.log('      ✅ Blue Lock 12-Frame Ego Aura Disappearing Animation & Non-Freezing Dissipation Standard verified cleanly.');
+  }
+
+  // ── TEST 136: Unarmed vs Eye of Cthulhu Servants & Minions Collision Damage Standard ──
+  console.log('👁️ Test 136: Unarmed vs Eye of Cthulhu Servants & Minions Collision Damage Standard...');
+  {
+    const { UnarmedFighter } = await import('../js/entities/fighters/UnarmedFighter.js');
+    const EyeClass = FIGHTER_CLASS_MAP['eye_of_cthulhu'];
+    assert(UnarmedFighter && EyeClass, 'Unarmed and Eye of Cthulhu classes must exist');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const unarmed = new UnarmedFighter({ x: 200, y: 300, team: 0 });
+    const eye = new EyeClass({ x: 380, y: 300, team: 1 });
+
+    state.fighters = [unarmed, eye];
+    state.illusions = [];
+    state.arena = testArena;
+
+    // Spawn a Servant of Cthulhu minion in front of Unarmed
+    const servantR = 12;
+    const initialServantHp = 120;
+    const servant = {
+      x: 230,
+      y: 300,
+      vx: 0,
+      vy: 0,
+      r: servantR,
+      scale: 1,
+      hp: initialServantHp,
+      maxHp: initialServantHp,
+      damage: 12,
+      owner: eye,
+      ownerIndex: 1,
+      team: 1,
+      isMinion: true,
+      isIllusion: true,
+      isServantOfCthulhu: true,
+      isGhostTerrain: true,
+      color: '#E11D48',
+      knockbackVx: 0,
+      knockbackVy: 0,
+      takeDamage(amount, attacker, opts) {
+        this.hp = Math.max(0, this.hp - amount);
+        return amount;
+      },
+      applyKnockback(vx, vy) {
+        this.knockbackVx = vx;
+        this.knockbackVy = vy;
+      }
+    };
+    state.illusions.push(servant);
+
+    // 1. Unarmed moving towards Servant of Cthulhu
+    unarmed.x = 210;
+    unarmed.y = 300;
+    unarmed.vx = 6.0;
+    unarmed.vy = 0;
+    unarmed.hasWallRebounded = true;
+
+    // Run collision check / update
+    unarmed._checkFighterCollision(eye);
+
+    // Verify Servant of Cthulhu took damage from Unarmed
+    assert(servant.hp < initialServantHp, `Servant of Cthulhu must take damage from Unarmed (expected < 120, got ${servant.hp})`);
+    assert(servant.knockbackVx > 0 || servant.vx > 0, 'Servant of Cthulhu must receive knockback impulse away from Unarmed');
+    assert(unarmed.hasWallRebounded === true, 'Hitting a minion must NOT consume Unarmed wall rebound charge for the primary boss');
+
+    // 2. Test Unarmed continuing and hitting Eye of Cthulhu with remaining wall rebound
+    unarmed.x = 350;
+    unarmed.y = 300;
+    unarmed.collisionCooldown = 0;
+    const initialEyeHp = eye.hp;
+    unarmed._checkFighterCollision(eye);
+
+    assert(eye.hp < initialEyeHp, `Eye of Cthulhu must take primed kinetic bump damage (expected < ${initialEyeHp}, got ${eye.hp})`);
+    assert(unarmed.hasWallRebounded === false, 'Hitting a primary fighter must consume Unarmed wall rebound charge');
+
+    // Cleanup
+    state.illusions = [];
+    state.fighters = [];
+    console.log('      ✅ Unarmed vs Eye of Cthulhu Servants & Minions Collision Damage Standard verified cleanly.');
+  }
+
+  // ── TEST 137: Unarmed Momentum & Speed Scaling Damage-Gated Standard ──
+  console.log('⚡ Test 137: Unarmed Momentum & Speed Scaling Damage-Gated Standard...');
+  {
+    const { UnarmedFighter } = await import('../js/entities/fighters/UnarmedFighter.js');
+    const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+    assert(UnarmedFighter && GojoClass, 'Unarmed and Gojo classes must exist');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const unarmed = new UnarmedFighter({ x: 200, y: 300, team: 0 });
+    const gojo = new GojoClass({ x: 235, y: 300, team: 1 });
+
+    state.fighters = [unarmed, gojo];
+    state.illusions = [];
+    state.arena = testArena;
+
+    // Activate Gojo Infinity
+    gojo.infinityActive = true;
+    gojo.infinityCooldown = 0;
+    gojo.infinityBarrierHp = 350;
+    const initialGojoHp = gojo.hp;
+
+    unarmed.momentumStacks = 0;
+    unarmed.speed = unarmed.baseSpeed;
+    unarmed.evadeHits = 0;
+    unarmed.hasWallRebounded = true;
+    unarmed.collisionCooldown = 0;
+
+    // Bump into Gojo while Infinity is up (Infinity absorbs/blocks collision damage)
+    unarmed.x = gojo.x - 5;
+    unarmed.y = gojo.y;
+    unarmed.vx = 10.0;
+    unarmed.vy = 0;
+
+    unarmed._checkFighterCollision(gojo);
+
+    assert(gojo.hp === initialGojoHp, 'Gojo must take 0 direct HP damage when Infinity is active');
+    assert(unarmed.momentumStacks === 0, 'Unarmed must NOT gain momentum stacks when collision deals zero damage (blocked by Infinity)');
+    assert(unarmed.speed === unarmed.baseSpeed, 'Unarmed speed must NOT scale when collision deals zero damage (blocked by Infinity)');
+    assert(unarmed.evadeHits === 0, 'Unarmed evadeHits must NOT increment when collision deals zero damage');
+
+    // Verify taking damage does NOT increment evadeHits or momentumStacks
+    const prevEvadeHits = unarmed.evadeHits;
+    const prevMomentum = unarmed.momentumStacks;
+    unarmed.takeDamage(50, gojo);
+    assert(unarmed.evadeHits === prevEvadeHits, 'Unarmed taking damage must NOT grant evadeHits');
+    assert(unarmed.momentumStacks === prevMomentum, 'Unarmed taking damage must NOT grant momentumStacks');
+
+    // Now disable Infinity so Unarmed deals real damage
+    gojo.infinityActive = false;
+    gojo.infinityCooldown = 999;
+    unarmed.hasWallRebounded = true;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = gojo.x - 5;
+    unarmed.y = gojo.y;
+    unarmed.vx = 10.0;
+    unarmed.vy = 0;
+
+    unarmed._checkFighterCollision(gojo);
+
+    assert(gojo.hp < initialGojoHp, 'Gojo must take real HP damage when Infinity is inactive');
+    assert(unarmed.momentumStacks === 1, 'Unarmed must gain exactly 1 momentum stack when it actually damages an entity');
+    assert(unarmed.speed === unarmed.baseSpeed + unarmed.speedPerHit, 'Unarmed speed must scale when it actually damages an entity');
+    assert(unarmed.evadeHits === 1, 'Unarmed evadeHits must increment when it actually damages an entity');
+
+    // Test damaging a minion also increments momentum
+    const minion = {
+      x: 230,
+      y: 300,
+      r: 15,
+      scale: 1,
+      hp: 100,
+      maxHp: 100,
+      team: 1,
+      owner: gojo,
+      ownerIndex: 1,
+      isMinion: true,
+      takeDamage(amount) {
+        this.hp -= amount;
+        return amount;
+      }
+    };
+    state.illusions.push(minion);
+
+    unarmed.collisionCooldown = 0;
+    unarmed.x = 225;
+    unarmed.y = 300;
+    unarmed._checkFighterCollision(gojo);
+
+    assert(minion.hp < 100, 'Minion must take damage from Unarmed collision');
+    assert(unarmed.momentumStacks === 2, 'Unarmed must gain momentum stack when actually damaging a minion entity');
+    assert(unarmed.speed === unarmed.baseSpeed + 2 * unarmed.speedPerHit, 'Unarmed speed must scale permanently after damaging minion');
+
+    // Cleanup
+    state.illusions = [];
+    state.fighters = [];
+    console.log('      ✅ Unarmed Momentum & Speed Scaling Damage-Gated Standard verified cleanly.');
+  }
+
+  // ── TEST 138: Unarmed Pac-Man Ghost Wall Bounce Shockwave Suppression Standard ──
+  console.log('Test 138: Unarmed Pac-Man Ghost Wall Bounce Shockwave Suppression Standard');
+  {
+    const { UnarmedFighter } = await import('../js/entities/fighters/UnarmedFighter.js');
+    const { drawKineticShockwaves, drawUnarmedAfterimages } = await import('../js/graphics/fighters/unarmedSkin.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const unarmed = new UnarmedFighter({ x: 200, y: 300, team: 0 });
+    const dummy = { x: 300, y: 300, r: 25, hp: 100, maxHp: 100, team: 1 };
+    state.fighters = [unarmed, dummy];
+    state.arena = testArena;
+
+    // 1. Regular wall bounce produces shockwave and rebound priming
+    unarmed.x = testArena.x - 5;
+    unarmed.vx = -4.0;
+    unarmed.vy = 2.0;
+    unarmed.resolveWallBounce(testArena, dummy);
+    assert(unarmed.hasWallRebounded === true, 'Regular wall bounce must prime hasWallRebounded');
+    assert(unarmed.visualShockwaves.length > 0, 'Regular wall bounce must spawn shockwave');
+
+    // 2. Transform into Pac-Man Ghost
+    unarmed.isPacmanGhost = true;
+    unarmed.pacmanGhostTimer = 300;
+    unarmed.pacmanGhostMaxTimer = 300;
+    unarmed.interruptAttacks(true);
+
+    assert(unarmed.hasWallRebounded === false, 'Transforming into ghost must clear hasWallRebounded');
+    assert(unarmed.visualShockwaves.length === 0, 'Transforming into ghost must clear active visualShockwaves');
+    assert(unarmed.afterimages.length === 0, 'Transforming into ghost must clear active afterimages');
+
+    // 3. Wall bounce while in Pac-Man Ghost state
+    unarmed.x = testArena.x - 5;
+    unarmed.vx = -4.0;
+    unarmed.vy = 2.0;
+    const bounced = unarmed.resolveWallBounce(testArena, dummy);
+    assert(bounced === true, 'Ghost must still bounce off wall to maintain arena containment');
+    assert(unarmed.vx > 0, 'Ghost horizontal velocity must reflect outward after wall bounce');
+    assert(unarmed.hasWallRebounded === false, 'Wall bounce while in ghost state must NOT prime hasWallRebounded');
+    assert(unarmed.visualShockwaves.length === 0, 'Wall bounce while in ghost state must NOT spawn shockwaves');
+
+    // 4. Calling _spawnShockwave directly while ghosted must be suppressed
+    unarmed._spawnShockwave(200, 300, 50);
+    assert(unarmed.visualShockwaves.length === 0, '_spawnShockwave must be suppressed while in ghost state');
+
+    // 5. Verify renderers suppress shockwaves and afterimages while in ghost state
+    unarmed.visualShockwaves.push({ x: 200, y: 300, timer: 10, maxTimer: 20, waveCount: 3, maxRadius: 50 });
+    unarmed.afterimages.push({ x: 200, y: 300, timer: 5, maxTimer: 5 });
+    mockCtx.resetStackDepth();
+    drawKineticShockwaves(mockCtx, unarmed);
+    drawUnarmedAfterimages(mockCtx, unarmed);
+    assert(mockCtx.getStackDepth() === 0, 'Shockwave and afterimage renderers must maintain 0 stack depth');
+
+    // 6. Normalization on ghost expiration
+    unarmed.isPacmanGhost = false;
+    unarmed.pacmanGhostTimer = 0;
+    unarmed.visualShockwaves.length = 0;
+    unarmed.x = testArena.x - 5;
+    unarmed.vx = -4.0;
+    unarmed.vy = 2.0;
+    unarmed.resolveWallBounce(testArena, dummy);
+    assert(unarmed.visualShockwaves.length > 0, 'Wall bounce after ghost state expires must resume spawning shockwaves');
+    assert(unarmed.hasWallRebounded === true, 'Wall bounce after ghost state expires must resume priming hasWallRebounded');
+
+    // Cleanup
+    state.fighters = [];
+    console.log('      ✅ Unarmed Pac-Man Ghost Wall Bounce Shockwave Suppression Standard verified cleanly.');
+  }
+
+  // ── TEST 139: Universal Stun Effect Head Placement & Upright Orientation Standard ──
+  console.log('Test 139: Universal Stun Effect Head Placement & Upright Orientation Standard');
+  {
+    const { drawParalyzeEffect, drawElectricStunEffect, drawDubstepStunEffect } = await import('../js/graphics/statusEffects.js');
+
+    // 1. Verify that across various aim angles (aiming down, left, up, diagonal),
+    // stun halos and dizzy stars remain strictly anchored above the head in world space (y < 0, x == 0).
+    const testAngles = [
+      0,                  // Facing right
+      Math.PI / 2,        // Aiming straight down
+      Math.PI,            // Facing left
+      -Math.PI / 2,       // Aiming straight up
+      2.5                 // Aiming down-left
+    ];
+
+    for (const angle of testAngles) {
+      const dummyFighter = {
+        characterId: 'toji',
+        x: 200,
+        y: 200,
+        r: 25,
+        gunAngle: angle,
+        angle: angle,
+        isParalyzed: true
+      };
+
+      // Mock context in unrotated world coordinates (as called from EntityRenderer.js)
+      let rotationsApplied = [];
+      let scalesApplied = [];
+      let ringYOffsets = [];
+
+      const testCtx = Object.assign(Object.create(mockCtx), {
+        getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: dummyFighter.x, f: dummyFighter.y }),
+        rotate: (rad) => { rotationsApplied.push(rad); },
+        scale: (sx, sy) => { scalesApplied.push({ sx, sy }); },
+        translate: (tx, ty) => {
+          // Track orbit ring placement
+          if (tx === 0 && ty < 0) {
+            ringYOffsets.push(ty);
+          }
+        }
+      });
+
+      mockCtx.resetStackDepth();
+
+      // Test drawParalyzeEffect
+      drawParalyzeEffect(testCtx, dummyFighter.r, false, 45, '#FFEE58', dummyFighter);
+      assert(mockCtx.getStackDepth() === 0, `drawParalyzeEffect must maintain 0 stack depth at angle ${angle}`);
+      
+      // The context in EntityRenderer is unrotated. The effect must NOT introduce a -gunAngle rotation on the base context!
+      // Any rotation must be part of inner ring spins (e.g. angleOffset = i * PI + time).
+      assert(
+        !rotationsApplied.includes(-angle) || Math.abs(angle) < 0.001,
+        `drawParalyzeEffect must NOT rotate unrotated world context by -gunAngle (${-angle})`
+      );
+      assert(ringYOffsets.length >= 2, `drawParalyzeEffect must draw at least 2 orbit rings above head`);
+      for (const yOff of ringYOffsets) {
+        assert(yOff <= -dummyFighter.r, `Ring Y offset (${yOff}) must be positioned above the head (<= -${dummyFighter.r})`);
+      }
+
+      // Test drawElectricStunEffect
+      rotationsApplied = [];
+      scalesApplied = [];
+      drawElectricStunEffect(testCtx, dummyFighter.r, false, dummyFighter);
+      assert(mockCtx.getStackDepth() === 0, `drawElectricStunEffect must maintain 0 stack depth at angle ${angle}`);
+      assert(
+        !rotationsApplied.includes(-angle) || Math.abs(angle) < 0.001,
+        `drawElectricStunEffect must NOT rotate unrotated world context by -gunAngle (${-angle})`
+      );
+
+      // Test drawDubstepStunEffect
+      drawDubstepStunEffect(testCtx, dummyFighter.r, 45);
+      assert(mockCtx.getStackDepth() === 0, `drawDubstepStunEffect must maintain 0 stack depth at angle ${angle}`);
+    }
+
+    // 2. Test in rotated & flipped context (e.g., inside a car or custom transformed skin)
+    // Verify that matrix counteraction properly un-rotates and un-flips the context
+    {
+      const carAngle = 1.25; // ~71 degrees
+      let counterRotations = [];
+      let counterScales = [];
+
+      // Context transformed by rotate(carAngle)
+      const cosA = Math.cos(carAngle);
+      const sinA = Math.sin(carAngle);
+      const rotatedCtx = Object.assign(Object.create(mockCtx), {
+        getTransform: () => ({ a: cosA, b: sinA, c: -sinA, d: cosA, e: 100, f: 100 }),
+        rotate: (rad) => { counterRotations.push(rad); },
+        scale: (sx, sy) => { counterScales.push({ sx, sy }); }
+      });
+
+      mockCtx.resetStackDepth();
+      drawParalyzeEffect(rotatedCtx, 44, false, 45, '#FFEE58', null);
+      assert(mockCtx.getStackDepth() === 0, 'drawParalyzeEffect must maintain 0 stack depth in rotated context');
+      const hasUnrotate = counterRotations.some(rad => Math.abs(rad - (-carAngle)) < 0.001);
+      assert(hasUnrotate, 'drawParalyzeEffect must un-rotate rotated canvas context to remain upright');
+
+      // Context transformed by rotate(angle) and scale(1, -1) (Rule 19 Upright POV when facing left)
+      const skinAngle = 2.4;
+      const cosS = Math.cos(skinAngle);
+      const sinS = Math.sin(skinAngle);
+      // M = R(skinAngle) * S(1, -1) => [cos, sin; sin, -cos]
+      const flippedMatrix = { a: cosS, b: sinS, c: sinS, d: -cosS, e: 200, f: 200 };
+      counterRotations = [];
+      counterScales = [];
+
+      const flippedCtx = Object.assign(Object.create(mockCtx), {
+        getTransform: () => flippedMatrix,
+        rotate: (rad) => { counterRotations.push(rad); },
+        scale: (sx, sy) => { counterScales.push({ sx, sy }); }
+      });
+
+      mockCtx.resetStackDepth();
+      drawParalyzeEffect(flippedCtx, 25, false, 45, '#FFEE58', null);
+      assert(mockCtx.getStackDepth() === 0, 'drawParalyzeEffect must maintain 0 stack depth in flipped context');
+      assert(counterScales.some(s => s.sx === 1 && s.sy === -1), 'drawParalyzeEffect must un-flip Y axis when reflection detected');
+      assert(counterRotations.some(rad => Math.abs(rad - (-skinAngle)) < 0.001), 'drawParalyzeEffect must un-rotate angle when reflection detected');
+    }
+
+    console.log('      ✅ Universal Stun Effect Head Placement & Upright Orientation Standard verified cleanly.');
+  }
+
+  // ── TEST 140: Unarmed vs Crazy Dave Lawnmowers Non-Collision & Non-Targeting Standard ──
+  console.log('Test 140: Unarmed vs Crazy Dave Lawnmowers Non-Collision & Non-Targeting Standard');
+  {
+    const { UnarmedFighter } = await import('../js/entities/fighters/UnarmedFighter.js');
+    const { LawnmowerEntity, CrazyDaveFighter } = await import('../js/entities/fighters/CrazyDaveFighter.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const unarmed = new UnarmedFighter({ x: 100, y: 300, team: 0 });
+    const dave = new CrazyDaveFighter({ startX: 400, startY: 300, team: 1 });
+    const mower = new LawnmowerEntity(105, 300, dave, 1, 0);
+
+    state.fighters = [unarmed, dave, mower];
+    state.arena = testArena;
+
+    // 1. Verify Unarmed._isValidCombatTarget strictly excludes lawnmowers
+    assert(unarmed._isValidCombatTarget(mower) === false, 'Unarmed must consider Lawnmower an invalid combat target');
+    assert(unarmed._isValidCombatTarget(dave) === true, 'Unarmed must consider Crazy Dave a valid combat target');
+
+    // 2. Unarmed positioned right on top of a lawnmower with wall rebound primed
+    unarmed.x = mower.x;
+    unarmed.y = mower.y;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+    unarmed.hasWallRebounded = true;
+    unarmed.collisionCooldown = 0;
+
+    // Trigger proximity collision check
+    unarmed._checkFighterCollision(dave);
+
+    assert(unarmed.hasWallRebounded === true, 'Unarmed must NOT consume wall rebound when overlapping a lawnmower');
+    assert(unarmed.collisionCooldown === 0, 'Unarmed must NOT enter collision cooldown from a lawnmower');
+    assert(mower.vx === 0 && mower.vy === 0, 'Lawnmower must NOT receive collision impulse from Unarmed');
+
+    // 3. Engine physics onCollide hook directly called on lawnmower
+    unarmed.onCollide(mower);
+    assert(unarmed.hasWallRebounded === true, 'onCollide on a lawnmower must NOT consume wall rebound');
+    assert(unarmed.collisionCooldown === 0, 'onCollide on a lawnmower must NOT trigger bump cooldown');
+
+    // 4. Kinetic surge aim check must not lock onto lawnmowers
+    unarmed._castKineticSurge(mower);
+    assert(unarmed.surgeTimer === 0, 'Unarmed must NOT cast Kinetic Surge towards a lawnmower');
+
+    // Cleanup
+    state.fighters = [];
+    console.log('      ✅ Unarmed vs Crazy Dave Lawnmowers Non-Collision & Non-Targeting Standard verified cleanly.');
+  }
+
+  // ── TEST 141: Unarmed vs Wall-nut Barrier Collision, Rebound Priming & Anti-Rapid-Buff Standard ──
+  console.log('Test 141: Unarmed vs Wall-nut Barrier Collision, Rebound Priming & Anti-Rapid-Buff Standard');
+  {
+    const { UnarmedFighter } = await import('../js/entities/fighters/UnarmedFighter.js');
+    const { WallnutEntity, CrazyDaveFighter } = await import('../js/entities/fighters/CrazyDaveFighter.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const unarmed = new UnarmedFighter({ x: 200, y: 300, team: 0 });
+    const dave = new CrazyDaveFighter({ startX: 400, startY: 300, team: 1 });
+    const wallnut = new WallnutEntity(250, 300, dave, 1);
+
+    state.fighters = [unarmed, dave, wallnut];
+    state.arena = testArena;
+
+    // 1. Initial bump WITHOUT wall rebound (hasWallRebounded = false)
+    unarmed.momentumStacks = 0;
+    unarmed.evadeHits = 0;
+    unarmed.speed = unarmed.baseSpeed;
+    unarmed.hasWallRebounded = false;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = 220;
+    unarmed.y = 300;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+
+    const initialWallnutHp = wallnut.hp;
+    unarmed._handleKineticBumpCollision(wallnut);
+
+    // Wall-nut must take 0 damage and Unarmed must gain 0 buffs
+    assert(wallnut.hp === initialWallnutHp, 'Wall-nut must take 0 damage when Unarmed has not rebounded off arena wall');
+    assert(unarmed.momentumStacks === 0, 'Unarmed must NOT gain momentum stacks on non-primed Wall-nut collision');
+    assert(unarmed.evadeHits === 0, 'Unarmed must NOT gain evade hits on non-primed Wall-nut collision');
+    assert(unarmed.vx < 0, 'Unarmed must deflect backwards away from Wall-nut');
+    assert(Math.hypot(wallnut.x - unarmed.x, wallnut.y - unarmed.y) >= unarmed.r + wallnut.r, 'Unarmed must be pushed outside Wall-nut radius');
+    assert(unarmed.collisionCooldown > 0, 'Unarmed must enter collision cooldown after deflecting from Wall-nut');
+
+    // 2. Primed bump WITH wall rebound (hasWallRebounded = true)
+    unarmed.collisionCooldown = 0;
+    unarmed.hasWallRebounded = true;
+    unarmed.x = 220;
+    unarmed.y = 300;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+
+    unarmed._handleKineticBumpCollision(wallnut);
+
+    assert(wallnut.hp < initialWallnutHp, `Wall-nut must take primed kinetic bump damage (expected < ${initialWallnutHp}, got ${wallnut.hp})`);
+    assert(unarmed.momentumStacks === 1, 'Unarmed must gain exactly 1 momentum stack on primed Wall-nut hit');
+    assert(unarmed.evadeHits === 1, 'Unarmed must gain exactly 1 evade hit on primed Wall-nut hit');
+    assert(unarmed.hasWallRebounded === false, 'Hitting a Wall-nut barrier must consume Unarmed wall rebound charge');
+    assert(unarmed.vx < 0, 'Unarmed must elastically rebound backwards after hitting Wall-nut');
+    assert(Math.hypot(wallnut.x - unarmed.x, wallnut.y - unarmed.y) >= unarmed.r + wallnut.r, 'Unarmed must be resolved outside Wall-nut radius after impact');
+    assert(unarmed.collisionCooldown >= 14, 'Unarmed must enforce full collision cooldown after striking Wall-nut');
+
+    // 3. Immediate consecutive bump WITHOUT bouncing off arena wall first (hasWallRebounded is now false)
+    unarmed.collisionCooldown = 0;
+    unarmed.x = 220;
+    unarmed.y = 300;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+
+    const hpAfterFirstHit = wallnut.hp;
+    unarmed._handleKineticBumpCollision(wallnut);
+
+    // Verify anti-rapid-bump guarantee: 0 damage, 0 additional momentum, 0 additional evade
+    assert(wallnut.hp === hpAfterFirstHit, 'Consecutive bump without wall rebound must deal 0 additional damage to Wall-nut');
+    assert(unarmed.momentumStacks === 1, 'Unarmed must NOT gain additional momentum stacks without wall rebound');
+    assert(unarmed.evadeHits === 1, 'Unarmed must NOT gain additional evade hits without wall rebound');
+    assert(unarmed.vx < 0, 'Unarmed must deflect backwards away from Wall-nut on second contact');
+
+    // Cleanup
+    state.fighters = [];
+    console.log('      ✅ Unarmed vs Wall-nut Barrier Collision, Rebound Priming & Anti-Rapid-Buff Standard verified cleanly.');
   }
 
 

@@ -180,6 +180,7 @@ export function drawUnarmedCenterHpOverlay(ctx, fighter) {
  */
 export function drawKineticShockwaves(ctx, fighter) {
   if (!fighter.visualShockwaves || fighter.visualShockwaves.length === 0) return;
+  if ((fighter.isPacmanGhost && (fighter.pacmanGhostTimer || 0) > 0) || fighter.isSwallowedByPacman || (typeof fighter.areAttackEffectsSuppressed === 'function' && fighter.areAttackEffectsSuppressed())) return;
 
   for (let i = 0; i < fighter.visualShockwaves.length; i++) {
     const sw = fighter.visualShockwaves[i];
@@ -223,6 +224,7 @@ export function drawKineticShockwaves(ctx, fighter) {
  */
 export function drawUnarmedAfterimages(ctx, fighter) {
   if (!fighter.afterimages || fighter.afterimages.length === 0) return;
+  if ((fighter.isPacmanGhost && (fighter.pacmanGhostTimer || 0) > 0) || fighter.isSwallowedByPacman || (typeof fighter.areAttackEffectsSuppressed === 'function' && fighter.areAttackEffectsSuppressed())) return;
 
   const r = fighter.r || 25;
   const isSuper = fighter.isSuperUnarmed || fighter.isTerminalVelocity;

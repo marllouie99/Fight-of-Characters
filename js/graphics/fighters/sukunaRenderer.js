@@ -254,11 +254,9 @@ export class SukunaRenderer {
     fighter.drawHealth(ctx);
     fighter.drawFreezeTimer(ctx);
 
-    // Use already declared isParalyzed from the top of draw method
+    // Use already declared isParalyzed from the top of draw method:
+    // When paralyzed, skip drawing hands (EntityRenderer universally renders drawParalyzeEffect at fighter.x, fighter.y overhead)
     if (isParalyzed) {
-      if (typeof drawParalyzeEffect === 'function') {
-        drawParalyzeEffect(ctx, fighter.r);
-      }
       return;
     }
 
