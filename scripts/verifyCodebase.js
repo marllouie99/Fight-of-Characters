@@ -27,6 +27,7 @@ if (typeof globalThis.removeEventListener === 'undefined') globalThis.removeEven
 if (typeof globalThis.dispatchEvent === 'undefined') globalThis.dispatchEvent = () => {};
 if (typeof globalThis.matchMedia === 'undefined') globalThis.matchMedia = () => ({ addEventListener: () => {}, removeEventListener: () => {}, matches: false });
 if (typeof globalThis.devicePixelRatio === 'undefined') globalThis.devicePixelRatio = 1;
+if (typeof globalThis.navigator === 'undefined') globalThis.navigator = { userAgent: 'Node', maxTouchPoints: 0 };
 
 const createMockCanvas = () => ({
   width: 540,

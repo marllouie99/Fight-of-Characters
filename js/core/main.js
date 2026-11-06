@@ -1843,8 +1843,8 @@ export function shouldShowQuickBar() {
   if (mode === 'off') return false;
   if (mode === 'on') return true;
   // 'auto': Only show on mobile / touch devices where physical keyboard is missing
-  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTouchDevice = (typeof window !== 'undefined' && ('ontouchstart' in window)) || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0);
+  const isMobileUA = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
   const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   return Boolean((isCoarse || isMobileUA) && isTouchDevice && !window.electronAPI);
 }

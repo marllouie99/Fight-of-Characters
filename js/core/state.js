@@ -169,7 +169,7 @@ if (shouldUsePixi) {
  * while preserving explicit user choices saved in localStorage.
  */
 export function detectOptimalAspectScaling() {
-  const isTouch = (typeof window !== 'undefined' && (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)));
+  const isTouch = (typeof window !== 'undefined' && (('ontouchstart' in window) || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)));
   const isMobileUA = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
   const winW = (typeof window !== 'undefined' && ((window.visualViewport && window.visualViewport.width) || window.innerWidth || (document.documentElement && document.documentElement.clientWidth))) || 540;
 
