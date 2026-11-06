@@ -1777,7 +1777,7 @@
   <script>
     if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=81').catch((err) => {
+        navigator.serviceWorker.register('./sw.js?v=82').catch((err) => {
           console.warn('[PWA] Service worker registration skipped:', err);
         });
       });
@@ -1799,7 +1799,7 @@
     </div>
   </aside>
 
-  <script type="module" src="js/core/main.js?v=81"></script>
+  <script type="module" src="js/core/main.js?v=82"></script>
 </body>
 
 </html>

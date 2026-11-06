@@ -5,8 +5,8 @@
 // 2. ASSETS_CACHE: Persistent static textures & assets (survives code deploys; invalidated on version bumps)
 // ─────────────────────────────────────────────
 
-const SHELL_CACHE = 'ramball-shell-v1.0.0';
-const ASSETS_CACHE = 'ramball-assets-v1.0.0';
+const SHELL_CACHE = 'foc-shell-v1.0.1';
+const ASSETS_CACHE = 'foc-assets-v1.0.1';
 
 // Minimal core application shell assets pre-cached on install
 const PRECACHE_SHELL_ASSETS = [
@@ -102,6 +102,27 @@ self.addEventListener('fetch', (event) => {
 
   if (!isSameOrigin || !isAllowedPath) return;
 
+  const isCode = url.pathname.includes('/js/') || url.pathname.includes('/css/') || url.pathname.endsWith('.json');
+
+  // Code files: Network-First to guarantee instant updates on code deploys, falling back to cache when offline
+  if (isCode) {
+    event.respondWith(
+      fetch(req)
+        .then((networkResp) => {
+          if (networkResp && networkResp.status === 200) {
+            const copy = networkResp.clone();
+            caches.open(SHELL_CACHE).then((cache) => {
+              cache.put(req, copy).catch(() => {});
+            });
+          }
+          return networkResp;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // 3. Static Media Assets & Libraries: Cache-First
   event.respondWith(
     caches.match(req).then((cachedResp) => {
       if (cachedResp) {
