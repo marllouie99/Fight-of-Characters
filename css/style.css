@@ -169,8 +169,8 @@ body.fit-window-mode .game-container {
 ───────────────────────────────────────────── */
 .mobile-quick-bar {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: calc(14px + env(safe-area-inset-right, 0px));
   z-index: 95;
   display: flex;
   align-items: center;
@@ -1669,7 +1669,7 @@ canvas {
     border-radius: 8px;
   }
 
-  /* ── Mobile Performance Optimizations: Disable GPU-heavy Backdrop Blur on Touch/Mobile ── */
+  /* ── Mobile Performance Optimizations: Disable GPU-heavy Backdrop Blur & Drop-Shadow Filters on Touch/Mobile ── */
   .mobile-quick-bar,
   .health-card,
   .hud-top-card,
@@ -1679,6 +1679,28 @@ canvas {
   .modal-overlay {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+  }
+
+  .hud-top-profile__canvas,
+  .hud-top-timer {
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+
+  .hud-skill-box,
+  .health-card,
+  .hud-top-card {
+    contain: layout style;
+  }
+
+  /* Lock touch pan/pinch gesture recognizers during active combat to eliminate mobile touch compositor delay */
+  html.in-combat-touch-lock,
+  body.in-combat-touch-lock,
+  .in-combat-touch-lock .game-container,
+  .in-combat-touch-lock .game-box,
+  .in-combat-touch-lock canvas {
+    touch-action: none !important;
+    overscroll-behavior: none !important;
   }
 }
 
@@ -6128,4 +6150,126 @@ body.hud-layout-classic .health-card.arena-dark-mode .health-card__info span {
   -webkit-text-stroke: 0px !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7) !important;
 }
+
+/* ─────────────────────────────────────────────
+   Mobile & Performance Mode Compositor Overrides (Late-Cascade Rule)
+   Eliminates per-frame GPU backdrop-filter blurs, multi-pass drop-shadow filters,
+   and full-screen SVG feTurbulence noise overlays on mobile/touch devices.
+───────────────────────────────────────────── */
+@media (max-width: 768px), (pointer: coarse) {
+  .mobile-quick-bar,
+  .balance-debug-overlay,
+  .cinefilm-color-grade,
+  .health-card,
+  .hud-top-card,
+  .debug-panel,
+  .champion-announcement-card,
+  .settings-modal,
+  .modal-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .mobile-quick-bar,
+  .balance-debug-overlay {
+    background: rgba(15, 15, 22, 0.94) !important;
+  }
+
+  .hud-top-profile__canvas,
+  .hud-top-timer,
+  .sans-bolt-wrapper,
+  .hud-top-player.hud-top-p1 .hud-top-bar .sans-bolt-wrapper,
+  .hud-top-player.hud-top-p2 .hud-top-bar .sans-bolt-wrapper {
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+
+  .cinefilm-color-grade {
+    mix-blend-mode: normal !important;
+  }
+
+  .cinefilm-grain {
+    display: none !important;
+  }
+}
+
+html.mobile-device .mobile-quick-bar,
+html.mobile-device .balance-debug-overlay,
+html.mobile-device .cinefilm-color-grade,
+html.mobile-device .health-card,
+html.mobile-device .hud-top-card,
+html.mobile-device .debug-panel,
+html.mobile-device .champion-announcement-card,
+html.mobile-device .settings-modal,
+html.mobile-device .modal-overlay,
+body.performance-mode .mobile-quick-bar,
+body.performance-mode .balance-debug-overlay,
+body.performance-mode .cinefilm-color-grade,
+body.performance-mode .health-card,
+body.performance-mode .hud-top-card,
+body.performance-mode .debug-panel,
+body.performance-mode .champion-announcement-card,
+body.performance-mode .settings-modal,
+body.performance-mode .modal-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.mobile-device .mobile-quick-bar,
+html.mobile-device .balance-debug-overlay,
+body.performance-mode .mobile-quick-bar,
+body.performance-mode .balance-debug-overlay {
+  background: rgba(15, 15, 22, 0.94) !important;
+}
+
+html.mobile-device .hud-top-profile__canvas,
+html.mobile-device .hud-top-timer,
+html.mobile-device .sans-bolt-wrapper,
+html.mobile-device .hud-top-player.hud-top-p1 .hud-top-bar .sans-bolt-wrapper,
+html.mobile-device .hud-top-player.hud-top-p2 .hud-top-bar .sans-bolt-wrapper,
+body.performance-mode .hud-top-profile__canvas,
+body.performance-mode .hud-top-timer,
+body.performance-mode .sans-bolt-wrapper,
+body.performance-mode .hud-top-player.hud-top-p1 .hud-top-bar .sans-bolt-wrapper,
+body.performance-mode .hud-top-player.hud-top-p2 .hud-top-bar .sans-bolt-wrapper {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+html.mobile-device .cinefilm-color-grade,
+body.performance-mode .cinefilm-color-grade {
+  mix-blend-mode: normal !important;
+}
+
+html.mobile-device .cinefilm-grain,
+body.performance-mode .cinefilm-grain {
+  display: none !important;
+}
+
+/* Orientation-Agnostic Mobile Combat Touch Lock (No Gestural Latency / Accidental Scroll) */
+html.mobile-device.in-combat-touch-lock,
+body.mobile-device.in-combat-touch-lock,
+html.mobile-device .in-combat-touch-lock,
+html.mobile-device .in-combat-touch-lock .game-container,
+html.mobile-device .in-combat-touch-lock .game-box,
+html.mobile-device .in-combat-touch-lock canvas {
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
+/* Safe Area Inset Support for Notched Mobile Screens & System Home Indicators */
+@supports (padding: env(safe-area-inset-top)) {
+  .game-container {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .horizontal-viewport-mode .game-container {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+
 

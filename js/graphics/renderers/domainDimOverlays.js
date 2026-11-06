@@ -3,6 +3,43 @@ import { CONFIG } from '../../core/config.js';
 import { worldToScreen } from '../../systems/cameraSystem.js';
 import { isInsideRubbickStolenVoid } from '../../entities/fighters/rubbick/rubbickThemes.js';
 import { isTodoTakadaOverlayActive } from './specialOverlayRenderer.js';
+import { getCachedRadialGradientCanvas } from '../graphicsCache.js';
+
+const GOJO_INFINITY_HOLE_STOPS = [
+  [0, 'rgba(0, 0, 0, 1.0)'],
+  [0.70, 'rgba(0, 0, 0, 0.85)'],
+  [1.0, 'rgba(0, 0, 0, 0)']
+];
+const GOJO_PURPLE_RED_BLOOM_STOPS = [
+  [0, 'rgba(255, 60, 60, 1.0)'],
+  [0.25, 'rgba(255, 0, 0, 0.90)'],
+  [0.60, 'rgba(180, 0, 0, 0.60)'],
+  [1.0, 'rgba(80, 0, 0, 0)']
+];
+const GOJO_PURPLE_BLUE_BLOOM_STOPS = [
+  [0, 'rgba(80, 220, 255, 1.0)'],
+  [0.25, 'rgba(0, 120, 255, 0.90)'],
+  [0.60, 'rgba(0, 50, 220, 0.60)'],
+  [1.0, 'rgba(0, 20, 140, 0)']
+];
+const TOJI_ULT_VIOLET_SPOT_STOPS = [
+  [0, 'rgba(215, 140, 255, 0.85)'],
+  [0.30, 'rgba(160, 48, 255, 0.55)'],
+  [0.65, 'rgba(100, 20, 180, 0.25)'],
+  [1.0, 'rgba(0, 0, 0, 0)']
+];
+const TOJI_ULT_CRIMSON_SPOT_STOPS = [
+  [0, 'rgba(255, 90, 130, 0.85)'],
+  [0.30, 'rgba(255, 30, 86, 0.55)'],
+  [0.65, 'rgba(180, 15, 50, 0.25)'],
+  [1.0, 'rgba(0, 0, 0, 0)']
+];
+const NANAMI_OVERTIME_SPOT_STOPS = [
+  [0, 'rgba(255, 235, 140, 0.28)'],
+  [0.35, 'rgba(212, 175, 55, 0.15)'],
+  [0.70, 'rgba(150, 105, 15, 0.05)'],
+  [1.0, 'rgba(0, 0, 0, 0)']
+];
 
 // ──────────────────────────────────────────
 // SAFE GRADIENT HELPERS (Non-finite / NaN immune)
@@ -39,15 +76,26 @@ export function createSafeLinearGradient(ctx, x0, y0, x1, y1) {
 // GOJO INFINITY CUTOUT HELPER
 // ──────────────────────────────────────────
 export function excludeGojoInfinityFromDim(ctx) {
-  if (!state.fighters) return;
-  const isSaitamaCounterActive = state.fighters.some(f => 
-    f && (f.characterId === 'saitama' || f.type === 'saitama') && 
-    ((f._counterPunchTimer && f._counterPunchTimer > 0) || 
-     (f._postCounterRecoveryTimer && f._postCounterRecoveryTimer > 0) || 
-     (f._counterWindupTimer && f._counterWindupTimer > 0) ||
-     f.isCountering)
-  );
-  for (const f of state.fighters) {
+  const fighters = state.fighters;
+  if (!fighters) return;
+  let isSaitamaCounterActive = false;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (
+      f &&
+      (f.characterId === 'saitama' || f.type === 'saitama') &&
+      ((f._counterPunchTimer && f._counterPunchTimer > 0) ||
+       (f._postCounterRecoveryTimer && f._postCounterRecoveryTimer > 0) ||
+       (f._counterWindupTimer && f._counterWindupTimer > 0) ||
+       f.isCountering)
+    ) {
+      isSaitamaCounterActive = true;
+      break;
+    }
+  }
+  const holeCanvas = getCachedRadialGradientCanvas('gojo_infinity_hole_mask', 128, GOJO_INFINITY_HOLE_STOPS);
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
     if (!f || f.hp <= 0) continue;
     const isGojo = (f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo' || f._def?.type === 'gojo');
     if (!isGojo) continue;
@@ -68,15 +116,19 @@ export function excludeGojoInfinityFromDim(ctx) {
 
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
-    const holeGrad = createSafeRadialGradient(ctx, drawX, drawY, 0, drawX, drawY, cutoutRadius);
-    if (holeGrad) {
-      holeGrad.addColorStop(0, 'rgba(0, 0, 0, 1.0)');
-      holeGrad.addColorStop(0.70, 'rgba(0, 0, 0, 0.85)');
-      holeGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = holeGrad;
-      ctx.beginPath();
-      ctx.arc(drawX, drawY, cutoutRadius, 0, Math.PI * 2);
-      ctx.fill();
+    if (holeCanvas && holeCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+      ctx.drawImage(holeCanvas, drawX - cutoutRadius, drawY - cutoutRadius, cutoutRadius * 2, cutoutRadius * 2);
+    } else {
+      const holeGrad = createSafeRadialGradient(ctx, drawX, drawY, 0, drawX, drawY, cutoutRadius);
+      if (holeGrad) {
+        holeGrad.addColorStop(0, 'rgba(0, 0, 0, 1.0)');
+        holeGrad.addColorStop(0.70, 'rgba(0, 0, 0, 0.85)');
+        holeGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = holeGrad;
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, cutoutRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }
@@ -142,15 +194,25 @@ export function drawRedDimScreen() {
   const { ctx, canvas, arena } = state;
   if (!ctx || !canvas || !arena) return;
 
-  // Find Gojo or Rubbick channeling or detonating Reversal Red
-  const redFighter = state.fighters?.find(f => {
-    if (!f || f.hp <= 0) return false;
-    const isGojo = (f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo' || f._def?.type === 'gojo');
-    if (isGojo && (f.redBuildupPhase || (f.redEffectTimer && f.redEffectTimer > 0))) return true;
-    const isRubbick = (f.characterId === 'rubbick' || f.type === 'rubbick' || f.characterId === 'trickster' || f.type === 'trickster' || f._def?.id === 'rubbick');
-    if (isRubbick && f.stolenType === 'gojo_red' && f.stolenWindUpTimer > 0) return true;
-    return false;
-  });
+  // Find Gojo or Rubbick channeling or detonating Reversal Red (zero-allocation loop)
+  let redFighter = null;
+  const fighters = state.fighters;
+  if (fighters) {
+    for (let i = 0; i < fighters.length; i++) {
+      const f = fighters[i];
+      if (!f || f.hp <= 0) continue;
+      const isGojo = (f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo' || f._def?.type === 'gojo');
+      if (isGojo && (f.redBuildupPhase || (f.redEffectTimer && f.redEffectTimer > 0))) {
+        redFighter = f;
+        break;
+      }
+      const isRubbick = (f.characterId === 'rubbick' || f.type === 'rubbick' || f.characterId === 'trickster' || f.type === 'trickster' || f._def?.id === 'rubbick');
+      if (isRubbick && f.stolenType === 'gojo_red' && f.stolenWindUpTimer > 0) {
+        redFighter = f;
+        break;
+      }
+    }
+  }
 
   let targetOpacity = 0;
   let cx = canvas.width / 2;
@@ -424,30 +486,42 @@ export function drawPurpleDimScreen() {
       const bloomScale = is200 ? (0.20 + 0.80 * easeGrow) : 1.0;
       const bloomRadius = (is200 ? 110 : 80) * bloomScale * camZoom;
       ctx.save();
-      ctx.globalCompositeOperation = 'screen';
+      if (!(typeof state !== 'undefined' && state.isMobileDevice)) {
+        ctx.globalCompositeOperation = 'screen';
+      }
       ctx.globalAlpha = opacity * (1.0 - progress * 0.3) * easeFade;
 
-      // 1. Red Bloom Halo
-      const redGrad = ctx.createRadialGradient(redCanvasX, redCanvasY, 0, redCanvasX, redCanvasY, bloomRadius);
-      redGrad.addColorStop(0, 'rgba(255, 60, 60, 1.0)');
-      redGrad.addColorStop(0.25, 'rgba(255, 0, 0, 0.90)');
-      redGrad.addColorStop(0.60, 'rgba(180, 0, 0, 0.60)');
-      redGrad.addColorStop(1.0, 'rgba(80, 0, 0, 0)');
-      ctx.fillStyle = redGrad;
-      ctx.beginPath();
-      ctx.arc(redCanvasX, redCanvasY, bloomRadius, 0, Math.PI * 2);
-      ctx.fill();
+      // 1. Red Bloom Halo (Cached radial gradient canvas)
+      const redBloomCanvas = getCachedRadialGradientCanvas('gojo_purple_red_bloom', 128, GOJO_PURPLE_RED_BLOOM_STOPS);
+      if (redBloomCanvas && redBloomCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+        ctx.drawImage(redBloomCanvas, redCanvasX - bloomRadius, redCanvasY - bloomRadius, bloomRadius * 2, bloomRadius * 2);
+      } else {
+        const redGrad = ctx.createRadialGradient(redCanvasX, redCanvasY, 0, redCanvasX, redCanvasY, bloomRadius);
+        redGrad.addColorStop(0, 'rgba(255, 60, 60, 1.0)');
+        redGrad.addColorStop(0.25, 'rgba(255, 0, 0, 0.90)');
+        redGrad.addColorStop(0.60, 'rgba(180, 0, 0, 0.60)');
+        redGrad.addColorStop(1.0, 'rgba(80, 0, 0, 0)');
+        ctx.fillStyle = redGrad;
+        ctx.beginPath();
+        ctx.arc(redCanvasX, redCanvasY, bloomRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      // 2. Blue Bloom Halo
-      const blueGrad = ctx.createRadialGradient(blueCanvasX, blueCanvasY, 0, blueCanvasX, blueCanvasY, bloomRadius);
-      blueGrad.addColorStop(0, 'rgba(80, 220, 255, 1.0)');
-      blueGrad.addColorStop(0.25, 'rgba(0, 120, 255, 0.90)');
-      blueGrad.addColorStop(0.60, 'rgba(0, 50, 220, 0.60)');
-      blueGrad.addColorStop(1.0, 'rgba(0, 20, 140, 0)');
-      ctx.fillStyle = blueGrad;
-      ctx.beginPath();
-      ctx.arc(blueCanvasX, blueCanvasY, bloomRadius, 0, Math.PI * 2);
-      ctx.fill();
+      // 2. Blue Bloom Halo (Cached radial gradient canvas)
+      const blueBloomCanvas = getCachedRadialGradientCanvas('gojo_purple_blue_bloom', 128, GOJO_PURPLE_BLUE_BLOOM_STOPS);
+      if (blueBloomCanvas && blueBloomCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+        ctx.drawImage(blueBloomCanvas, blueCanvasX - bloomRadius, blueCanvasY - bloomRadius, bloomRadius * 2, bloomRadius * 2);
+      } else {
+        const blueGrad = ctx.createRadialGradient(blueCanvasX, blueCanvasY, 0, blueCanvasX, blueCanvasY, bloomRadius);
+        blueGrad.addColorStop(0, 'rgba(80, 220, 255, 1.0)');
+        blueGrad.addColorStop(0.25, 'rgba(0, 120, 255, 0.90)');
+        blueGrad.addColorStop(0.60, 'rgba(0, 50, 220, 0.60)');
+        blueGrad.addColorStop(1.0, 'rgba(0, 20, 140, 0)');
+        ctx.fillStyle = blueGrad;
+        ctx.beginPath();
+        ctx.arc(blueCanvasX, blueCanvasY, bloomRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.restore();
     }
@@ -455,6 +529,7 @@ export function drawPurpleDimScreen() {
 
   // Exclude Rika from Gojo's Purple dim screen overlay
   if (state.fighters) {
+    const rikaHoleCanvas = getCachedRadialGradientCanvas('gojo_infinity_hole_mask', 128, GOJO_INFINITY_HOLE_STOPS);
     for (const f of state.fighters) {
       if (!f || !f.rika || !f.rika.active || !f.rikaAlpha || f.rikaAlpha <= 0) continue;
       const rk = f.rika;
@@ -463,17 +538,22 @@ export function drawPurpleDimScreen() {
       const rkX = rkScreen.x;
       const rkY = rkScreen.y;
       const cutoutRadius = Math.max(90, ((rk.r || 35) * rScale * 3.0 + 60) * camZoom);
+      const alphaMult = Math.min(1.0, f.rikaAlpha || 1.0);
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
-      const holeGrad = ctx.createRadialGradient(rkX, rkY, 0, rkX, rkY, cutoutRadius);
-      const alphaMult = Math.min(1.0, f.rikaAlpha || 1.0);
-      holeGrad.addColorStop(0, `rgba(0, 0, 0, ${alphaMult})`);
-      holeGrad.addColorStop(0.60, `rgba(0, 0, 0, ${alphaMult * 0.85})`);
-      holeGrad.addColorStop(1.0, `rgba(0, 0, 0, 0)`);
-      ctx.fillStyle = holeGrad;
-      ctx.beginPath();
-      ctx.arc(rkX, rkY, cutoutRadius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.globalAlpha = alphaMult;
+      if (rikaHoleCanvas && rikaHoleCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+        ctx.drawImage(rikaHoleCanvas, rkX - cutoutRadius, rkY - cutoutRadius, cutoutRadius * 2, cutoutRadius * 2);
+      } else {
+        const holeGrad = ctx.createRadialGradient(rkX, rkY, 0, rkX, rkY, cutoutRadius);
+        holeGrad.addColorStop(0, `rgba(0, 0, 0, ${alphaMult})`);
+        holeGrad.addColorStop(0.60, `rgba(0, 0, 0, ${alphaMult * 0.85})`);
+        holeGrad.addColorStop(1.0, `rgba(0, 0, 0, 0)`);
+        ctx.fillStyle = holeGrad;
+        ctx.beginPath();
+        ctx.arc(rkX, rkY, cutoutRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
   }
@@ -1565,7 +1645,9 @@ export function drawTojiUltimateOverlay() {
   // ── SPOTLIGHT HIGHLIGHTS: Illuminates Toji and the Target through the dark ultimate overlay ──
   if (toji) {
     ctx.save();
-    ctx.globalCompositeOperation = 'screen';
+    if (!(typeof state !== 'undefined' && state.isMobileDevice)) {
+      ctx.globalCompositeOperation = 'screen';
+    }
     
     // 1. Toji Cinematic Spotlight / Ethereal Backlight
     const tojiZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
@@ -1573,15 +1655,20 @@ export function drawTojiUltimateOverlay() {
     const tojiScreenX = tojiScreen.x;
     const tojiScreenY = tojiScreen.y;
     const tojiSpotR = (toji.r || 25) * 5.0 * tojiZoom; // ~125px radius bloom
-    const tojiGrad = ctx.createRadialGradient(tojiScreenX, tojiScreenY, 10 * tojiZoom, tojiScreenX, tojiScreenY, tojiSpotR);
-    tojiGrad.addColorStop(0,    'rgba(215, 140, 255, 0.85)'); // Electric Violet Core
-    tojiGrad.addColorStop(0.30, 'rgba(160, 48, 255, 0.55)');
-    tojiGrad.addColorStop(0.65, 'rgba(100, 20, 180, 0.25)');
-    tojiGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = tojiGrad;
-    ctx.beginPath();
-    ctx.arc(tojiScreenX, tojiScreenY, tojiSpotR, 0, Math.PI * 2);
-    ctx.fill();
+    const tojiSpotCanvas = getCachedRadialGradientCanvas('toji_ult_violet_spot', 128, TOJI_ULT_VIOLET_SPOT_STOPS);
+    if (tojiSpotCanvas && tojiSpotCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+      ctx.drawImage(tojiSpotCanvas, tojiScreenX - tojiSpotR, tojiScreenY - tojiSpotR, tojiSpotR * 2, tojiSpotR * 2);
+    } else {
+      const tojiGrad = ctx.createRadialGradient(tojiScreenX, tojiScreenY, 10 * tojiZoom, tojiScreenX, tojiScreenY, tojiSpotR);
+      tojiGrad.addColorStop(0,    'rgba(215, 140, 255, 0.85)');
+      tojiGrad.addColorStop(0.30, 'rgba(160, 48, 255, 0.55)');
+      tojiGrad.addColorStop(0.65, 'rgba(100, 20, 180, 0.25)');
+      tojiGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = tojiGrad;
+      ctx.beginPath();
+      ctx.arc(tojiScreenX, tojiScreenY, tojiSpotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 2. Target Cinematic Threat Spotlight (The Enemy)
     const target = toji.ultimateTarget;
@@ -1590,15 +1677,20 @@ export function drawTojiUltimateOverlay() {
       const targetScreenX = targetScreen.x;
       const targetScreenY = targetScreen.y;
       const targetSpotR = (target.r || 25) * 5.0 * tojiZoom; // ~125px radius bloom
-      const targetGrad = ctx.createRadialGradient(targetScreenX, targetScreenY, 10 * tojiZoom, targetScreenX, targetScreenY, targetSpotR);
-      targetGrad.addColorStop(0,    'rgba(255, 90, 130, 0.85)'); // Radiant Crimson Core
-      targetGrad.addColorStop(0.30, 'rgba(255, 30, 86, 0.55)');
-      targetGrad.addColorStop(0.65, 'rgba(180, 15, 50, 0.25)');
-      targetGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = targetGrad;
-      ctx.beginPath();
-      ctx.arc(targetScreenX, targetScreenY, targetSpotR, 0, Math.PI * 2);
-      ctx.fill();
+      const targetSpotCanvas = getCachedRadialGradientCanvas('toji_ult_crimson_spot', 128, TOJI_ULT_CRIMSON_SPOT_STOPS);
+      if (targetSpotCanvas && targetSpotCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+        ctx.drawImage(targetSpotCanvas, targetScreenX - targetSpotR, targetScreenY - targetSpotR, targetSpotR * 2, targetSpotR * 2);
+      } else {
+        const targetGrad = ctx.createRadialGradient(targetScreenX, targetScreenY, 10 * tojiZoom, targetScreenX, targetScreenY, targetSpotR);
+        targetGrad.addColorStop(0,    'rgba(255, 90, 130, 0.85)');
+        targetGrad.addColorStop(0.30, 'rgba(255, 30, 86, 0.55)');
+        targetGrad.addColorStop(0.65, 'rgba(180, 15, 50, 0.25)');
+        targetGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = targetGrad;
+        ctx.beginPath();
+        ctx.arc(targetScreenX, targetScreenY, targetSpotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.restore();
@@ -1693,19 +1785,26 @@ export function drawNanamiOvertimeArenaOverlay() {
   // 4. Subtle Warm Gold Cursed Energy Backlight / Spotlight for Nanami (significantly softened)
   if (nanami) {
     ctx.save();
-    ctx.globalCompositeOperation = 'screen';
+    if (!(typeof state !== 'undefined' && state.isMobileDevice)) {
+      ctx.globalCompositeOperation = 'screen';
+    }
     const nanamiZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
     const nanamiScreen = worldToScreen(nanami.x, nanami.y - (nanami.z || 0));
     const spotR = (nanami.r || 25) * 4.0 * nanamiZoom;
-    const spotGrad = ctx.createRadialGradient(nanamiScreen.x, nanamiScreen.y, 4 * nanamiZoom, nanamiScreen.x, nanamiScreen.y, spotR);
-    spotGrad.addColorStop(0,    'rgba(255, 235, 140, 0.28)'); // Soft warm golden core
-    spotGrad.addColorStop(0.35, 'rgba(212, 175, 55, 0.15)');  // Gentle gold radiance
-    spotGrad.addColorStop(0.70, 'rgba(150, 105, 15, 0.05)');
-    spotGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = spotGrad;
-    ctx.beginPath();
-    ctx.arc(nanamiScreen.x, nanamiScreen.y, spotR, 0, Math.PI * 2);
-    ctx.fill();
+    const nanamiSpotCanvas = getCachedRadialGradientCanvas('nanami_overtime_spot', 128, NANAMI_OVERTIME_SPOT_STOPS);
+    if (nanamiSpotCanvas && nanamiSpotCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+      ctx.drawImage(nanamiSpotCanvas, nanamiScreen.x - spotR, nanamiScreen.y - spotR, spotR * 2, spotR * 2);
+    } else {
+      const spotGrad = ctx.createRadialGradient(nanamiScreen.x, nanamiScreen.y, 4 * nanamiZoom, nanamiScreen.x, nanamiScreen.y, spotR);
+      spotGrad.addColorStop(0,    'rgba(255, 235, 140, 0.28)'); // Soft warm golden core
+      spotGrad.addColorStop(0.35, 'rgba(212, 175, 55, 0.15)');  // Gentle gold radiance
+      spotGrad.addColorStop(0.70, 'rgba(150, 105, 15, 0.05)');
+      spotGrad.addColorStop(1.0,  'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = spotGrad;
+      ctx.beginPath();
+      ctx.arc(nanamiScreen.x, nanamiScreen.y, spotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 

@@ -1,6 +1,7 @@
 import { state } from '../core/state.js';
 import { spawnImpactFlash, spawnSparks } from '../graphics/particles/sparkEffect.js';
 import { audioSystem } from './audioSystem.js';
+import { ARENA_VERTICAL } from '../configs/arenaConstants.js';
 
 /**
  * Centralized Pokémon Trainer System
@@ -492,7 +493,7 @@ export function updateTrainerCornerMovement(trainer, arena, opponent = null, opt
  * @returns {{ type: string, wall: string, x: number, y: number }}
  */
 export function pickTrainerOutsideSidelineSpot(trainer, arena, opponent = null) {
-  const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 45, y: 240, width: 450, height: 450 };
+  const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || ARENA_VERTICAL;
   const isCircle = curArena.shape === 'circle' || curArena.radius !== undefined;
 
   const fighters = (typeof state !== 'undefined' && Array.isArray(state.fighters)) ? state.fighters : [];
@@ -717,7 +718,7 @@ export function pickTrainerOutsideSidelineSpot(trainer, arena, opponent = null) 
  * @returns {{ x: number, y: number }}
  */
 export function pickTrainerInsideLandingSpot(trainer, arena) {
-  const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 45, y: 240, width: 450, height: 450 };
+  const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || ARENA_VERTICAL;
   const isCircle = curArena.shape === 'circle' || curArena.radius !== undefined;
 
   const tx = typeof trainer?.x === 'number' ? trainer.x : (curArena.x + curArena.width * 0.5);

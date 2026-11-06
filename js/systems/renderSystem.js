@@ -53,6 +53,77 @@ let _cachedHudMain = null;
 let _cachedHudLeft = null;
 let _cachedHudRight = null;
 
+const _NON_BATTLE_STATES = new Set([
+  'title', 'select', 'index', 'indexDetail', 'leaderboard', 'weapons',
+  'weaponDetail', 'weaponStudio', 'skinStudio', 'survivorStudio', 'faceoff'
+]);
+
+const _TOP_UI_STATES = new Set([
+  'boss_intro', 'countdown', 'paused', 'roundEnd', 'matchEnd'
+]);
+
+function _hasSpecialDeathEffect(effects) {
+  if (!effects) return false;
+  for (let i = 0; i < effects.length; i++) {
+    const e = effects[i];
+    if (e && (e.isEnderDragonDeath || e.isSansHeartShatter)) return true;
+  }
+  return false;
+}
+
+function _hasAnyActiveDomain(fighters) {
+  if (!fighters) return false;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (f && (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive)) return true;
+  }
+  return false;
+}
+
+function _findActiveDomainFighterFor2D(fighters) {
+  if (!fighters) return null;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (
+      f && f.hp > 0 &&
+      (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) &&
+      typeof f.drawDomainBackground === 'function'
+    ) {
+      return f;
+    }
+  }
+  return null;
+}
+
+function _isGojoOrStolenVoidActive(fighters) {
+  if (!fighters) return false;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (!f || f.hp <= 0) continue;
+    if ((f.type === 'gojo' || (f._def && f._def.id === 'gojo')) && f.domainActive) return true;
+    const isRubbick = (f.type === 'rubbick' || f.characterId === 'rubbick' || f.type === 'trickster' || f.characterId === 'trickster' || f._def?.id === 'rubbick' || f._def?.id === 'trickster');
+    if (isRubbick && (f.stolenDomainActive || (f.domainActive && f.stolenType === 'gojo_domain') || (f.stolenType === 'gojo_domain' && f.stolenWindUpTimer > 0))) return true;
+  }
+  return false;
+}
+
+function _hasActiveSuperBeam(fighters) {
+  if (!fighters) return false;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (
+      f && f.hp > 0 &&
+      ((f.destroyerFireTimer && f.destroyerFireTimer > 0) ||
+       (f.destroyerWindupTimer && f.destroyerWindupTimer > 0) ||
+       (f.disintegratorFireTimer && f.disintegratorFireTimer > 0) ||
+       (f.disintegratorWindupTimer && f.disintegratorWindupTimer > 0))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function renderGame() {
     // Update dynamic tracking camera positions and distance-adaptive zoom
     updateCamera();
@@ -67,7 +138,7 @@ export function renderGame() {
 
     // Toggle WebGL layers visibility based on game state to prevent leftover battle visuals
     // and dim effects from glitching behind/above panels on menu/select/index screens.
-    const isBattleState = !['title', 'select', 'index', 'indexDetail', 'leaderboard', 'weapons', 'weaponDetail', 'weaponStudio', 'skinStudio', 'survivorStudio', 'faceoff'].includes(state.gameState);
+    const isBattleState = !_NON_BATTLE_STATES.has(state.gameState);
     if (state.pixiLayers) {
       if (state.pixiLayers.background) state.pixiLayers.background.visible = isBattleState;
       if (state.pixiLayers.arena) state.pixiLayers.arena.visible = isBattleState;
@@ -80,8 +151,9 @@ export function renderGame() {
 
     let stateDim = 0;
     if (Boolean(state._isChampionLayoutActive)) {
-      const isDragonDying = Boolean(state._hadDragonDeath || (state.deathEffects && state.deathEffects.some(e => e && e.isEnderDragonDeath)));
-      const isSansDying = Boolean(state._hadSansDeath || (state.deathEffects && state.deathEffects.some(e => e && e.isSansHeartShatter)));
+      const isDragonOrSansDying = Boolean(state._hadDragonDeath || state._hadSansDeath || _hasSpecialDeathEffect(state.deathEffects));
+      const isDragonDying = isDragonOrSansDying;
+      const isSansDying = isDragonOrSansDying;
       const hasMissionOverlay = Boolean(state._hadMissionOverlay || state._isRespectMusicPlaying || (state.missionPassedOverlay && state.missionPassedOverlay.active) || (state.wastedOverlay && state.wastedOverlay.active));
       const dimStartFrame = hasMissionOverlay ? 160 : ((isDragonDying || isSansDying) ? 135 : 60);
       if (state.gameState === 'matchEnd') {
@@ -290,7 +362,7 @@ export function renderGame() {
       try {
         // Clear any residual PIXI masks on effects and environment layers
         if (state.pixiLayers?.effects?.mask) state.pixiLayers.effects.mask = null;
-        if (state.pixiLayers?.environment?.mask && !state.fighters?.some(f => f && (f.domainActive || f.stolenDomainActive || f._mahitoDomainActive))) {
+        if (state.pixiLayers?.environment?.mask && !_hasAnyActiveDomain(state.fighters)) {
           state.pixiLayers.environment.mask = null;
         }
 
@@ -335,11 +407,11 @@ export function renderGame() {
         // that cutout is suppressed (it would erase the arena art itself), so the active domain background
         // is repainted here — clipped to the arena — restoring the artwork after the dim wash.
         if (!state.pixiApp && !state.disableDimEffects && state.fighters) {
-          const activeDomainFighter = state.fighters.find(f =>
-            f && f.hp > 0 &&
-            (f.domainActive || f.isDomainActive || f.stolenDomainActive || f._mahitoDomainActive || (f.characterId === 'cj' && (f.isBaguvixActive || f.isGodModeActive))) &&
-            typeof f.drawDomainBackground === 'function'
-          );
+          const activeDomainFighter = _findActiveDomainFighterFor2D(state.fighters);
+          // Zero-allocation domain lookup handled by _findActiveDomainFighterFor2D
+          // (domainActive / stolenDomainActive / _mahitoDomainActive / CJ Baguvix)
+          // drawDomainBackground check
+          // end domain lookup
           if (activeDomainFighter) {
             const domainArena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena;
             state.ctx.save();
@@ -372,10 +444,10 @@ export function renderGame() {
           drawFocMap(state.ctx, focMap);
         }
 
-        const isGojoDomainActive = state.fighters && state.fighters.some(f => f && f.hp > 0 && (
-          ((f.type === 'gojo' || (f._def && f._def.id === 'gojo')) && f.domainActive) ||
-          ((f.type === 'rubbick' || f.characterId === 'rubbick' || f.type === 'trickster' || f.characterId === 'trickster' || f._def?.id === 'rubbick' || f._def?.id === 'trickster') && (f.stolenDomainActive || (f.domainActive && f.stolenType === 'gojo_domain') || (f.stolenType === 'gojo_domain' && f.stolenWindUpTimer > 0)))
-        ));
+        const isGojoDomainActive = _isGojoOrStolenVoidActive(state.fighters);
+        // Gojo / Rubbick stolen Unlimited Void active check handled by _isGojoOrStolenVoidActive
+        // (zero per-frame closure allocation)
+        // end Gojo domain check
 
         if (!isGojoDomainActive) {
           drawFlames(); // Draw all flames to offscreen canvas (batched for performance)
@@ -476,7 +548,7 @@ export function renderGame() {
 
 
 
-        const isDomainClash = state.fighters && (state.fighters.filter(f => f && f.domainActive).length > 1);
+        // Domain clash rift is rendered via hybrid/domain visual systems
 
         // WebGL particles are rendered automatically by the PixiJS scene graph.
 
@@ -603,8 +675,8 @@ export function renderGame() {
           state.mode === '2v2v2v2 Quad Battle' ||
           state.mode === '2v2v2v2 Quad' ||
           state.mode === 'Grand Colosseum' ||
-          state.mode === 'Classic Minimalist Arena'
-        ));
+          state.mode === 'Classic Minimalist Arena')); //
+        // end Gojo domain check
         if (isGrandBattle) {
           drawHorizontalPanoramicHud(state.topLevelUiCtx || state.ctx);
         } else if (state.gameState === 'playing' || state.gameState === 'countdown') {
@@ -702,12 +774,12 @@ export function renderGame() {
       if (isDomAttached) {
         state.topLevelUiSprite.visible = false;
       } else {
-        const hasSuperBeam = Boolean(state.fighters && state.fighters.some(f => f && f.hp > 0 && (
-          (f.destroyerFireTimer && f.destroyerFireTimer > 0) ||
-          (f.destroyerWindupTimer && f.destroyerWindupTimer > 0) ||
-          (f.disintegratorFireTimer && f.disintegratorFireTimer > 0) ||
-          (f.disintegratorWindupTimer && f.disintegratorWindupTimer > 0)
-        )));
+        const hasSuperBeam = _hasActiveSuperBeam(state.fighters);
+        // Super-beam check handled by _hasActiveSuperBeam
+        // (destroyer / disintegrator timers)
+        // (zero per-frame closure allocation)
+        // (windup check)
+        // end super-beam check
         const hasTopUi = Boolean(
           hasSuperBeam ||
           (state.battleStartFadeTimer && state.battleStartFadeTimer > 0) ||
@@ -717,7 +789,7 @@ export function renderGame() {
           (state.killFeed && state.killFeed.length > 0) ||
           (state.cameraToast && state.cameraToast.timer > 0) ||
           BossEntranceSequence.isActive ||
-          ['boss_intro', 'countdown', 'paused', 'roundEnd', 'matchEnd'].includes(state.gameState)
+          _TOP_UI_STATES.has(state.gameState)
         );
         state.topLevelUiSprite.visible = hasTopUi;
         if (hasTopUi) {

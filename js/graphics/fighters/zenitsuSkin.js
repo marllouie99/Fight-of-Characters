@@ -167,10 +167,12 @@ export function _getZenitsuDashDisappearanceImage() {
 
 if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
   _getZenitsuHairImage();
-  _getZenitsuLightningSpriteImage();
-  _getZenitsuDashSpriteImage('blue');
-  _getZenitsuDashSpriteImage('gold');
-  _getZenitsuDashDisappearanceImage();
+  if (!(typeof state !== 'undefined' && state.isMobileDevice)) {
+    _getZenitsuLightningSpriteImage();
+    _getZenitsuDashSpriteImage('blue');
+    _getZenitsuDashSpriteImage('gold');
+    _getZenitsuDashDisappearanceImage();
+  }
 }
 
 /**

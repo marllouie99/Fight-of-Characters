@@ -5,6 +5,7 @@ export function isSurvivorModeActive() {
 
 import { state } from '../core/state.js';
 import { CONFIG } from '../core/config.js';
+import { ARENA_VERTICAL } from '../configs/arenaConstants.js';
 import { GAME_MODES } from '../core/modeConfig.js';
 import { interactionManager } from '../interactions/index.js';
 import { isFfaMode } from '../core/viewportManager.js';
@@ -17,7 +18,7 @@ import { isPokemonTrainer } from './pokemonTrainerSystem.js';
  */
 
 export function initCameraState() {
-  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || { x: 45, y: 240, width: 450, height: 450 };
+  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || ARENA_VERTICAL;
   const centerX = arena.x + arena.width / 2;
   const centerY = arena.y + arena.height / 2;
 
@@ -93,7 +94,7 @@ export function resetCamera(immediate = false) {
     return;
   }
 
-  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || { x: 45, y: 240, width: 450, height: 450 };
+  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || ARENA_VERTICAL;
   const centerX = arena.x + arena.width / 2;
   const centerY = arena.y + arena.height / 2;
   const isGrandBattle = isGrandBattleActive();
@@ -205,7 +206,7 @@ export function updateCamera() {
 
   const camera = state.camera;
   const camCfg = CONFIG.camera || {};
-  const arena = state.arena || CONFIG.arena || { x: 45, y: 240, width: 450, height: 450 };
+  const arena = state.arena || CONFIG.arena || ARENA_VERTICAL;
   const arenaCenterX = arena.x + arena.width / 2;
   const arenaCenterY = arena.y + arena.height / 2;
 
@@ -713,7 +714,7 @@ export function updateCamera() {
 
 export function applyCameraToCtx(ctx) {
   const cam = state.camera;
-  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || { x: 45, y: 240, width: 450, height: 450 };
+  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || ARENA_VERTICAL;
   const arenaCenterX = (arena.x || 0) + (arena.width || 450) / 2;
   const arenaCenterY = (arena.y || 0) + (arena.height || 450) / 2;
   const screenCenterX = (state.canvas && Number.isFinite(state.canvas.width)) ? (state.canvas.width / 2) : 270;
@@ -755,7 +756,7 @@ export function applyCameraToCtx(ctx) {
  */
 export function worldToScreen(worldX, worldY) {
   const cam = state.camera;
-  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || { x: 45, y: 240, width: 450, height: 450 };
+  const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || ARENA_VERTICAL;
   const arenaCenterX = (arena.x || 0) + (arena.width || 450) / 2;
   const arenaCenterY = (arena.y || 0) + (arena.height || 450) / 2;
   const screenCenterX = (state.canvas && Number.isFinite(state.canvas.width)) ? (state.canvas.width / 2) : 270;

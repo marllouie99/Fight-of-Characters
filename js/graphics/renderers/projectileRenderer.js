@@ -26,6 +26,30 @@ import { projectileSystem } from '../../systems/projectileSystem.js';
 import { drawPixelFlameProjectile } from '../weapons/flamewardenWeaponGraphics.js';
 import { drawServantOfCthulhuProjectile } from '../fighters/eyeOfCthulhuSkin.js';
 import { drawYutaPureLoveBeam } from '../weapons/yutaLoveBeamGraphics.js';
+import { getCachedRadialGradientCanvas } from '../graphicsCache.js';
+
+const LAYLA_VOID_AURA_STOPS = [
+  [0, 'rgba(0, 229, 255, 0.45)'],
+  [0.5, 'rgba(0, 150, 255, 0.2)'],
+  [1, 'rgba(0, 150, 255, 0)']
+];
+const LAYLA_VOID_SPHERE_STOPS = [
+  [0, '#E0FFFF'],
+  [0.3, '#00E5FF'],
+  [0.7, '#0088CC'],
+  [1, '#004488']
+];
+const NAMELESS_DAGGER_HALO1_STOPS = [
+  [0.0, 'rgba(255, 255, 255, 0.75)'],
+  [0.35, 'rgba(0, 240, 255, 0.45)'],
+  [0.75, 'rgba(108, 255, 188, 0.20)'],
+  [1.0, 'rgba(0, 240, 255, 0.00)']
+];
+const NAMELESS_DAGGER_HALO2_STOPS = [
+  [0.0, 'rgba(255, 255, 255, 0.50)'],
+  [0.40, 'rgba(161, 127, 224, 0.35)'],
+  [1.0, 'rgba(161, 127, 224, 0.00)']
+];
 let _fugaLocalTrailPool = [];
 
 export function drawProjectiles() {
@@ -1381,16 +1405,22 @@ export function drawLaylaVoidProjectile(ctx, p) {
   const radius = p.r || 10;
   const time = now * 0.003;
 
-  // 1. Pulsating outer aura (soft transparent cyan)
+  // 1. Pulsating outer aura (soft transparent cyan, cached offscreen radial gradient)
   const pulse = 1.0 + Math.sin(now * 0.015) * 0.1;
-  const auraGrad = ctx.createRadialGradient(0, 0, radius * 0.5, 0, 0, radius * 2.5 * pulse);
-  auraGrad.addColorStop(0, 'rgba(0, 229, 255, 0.45)');
-  auraGrad.addColorStop(0.5, 'rgba(0, 150, 255, 0.2)');
-  auraGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
-  ctx.fillStyle = auraGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius * 2.5 * pulse, 0, Math.PI * 2);
-  ctx.fill();
+  const auraR = radius * 2.5 * pulse;
+  const auraCanvas = getCachedRadialGradientCanvas('layla_void_aura', 64, LAYLA_VOID_AURA_STOPS);
+  if (auraCanvas && auraCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+    ctx.drawImage(auraCanvas, -auraR, -auraR, auraR * 2, auraR * 2);
+  } else {
+    const auraGrad = ctx.createRadialGradient(0, 0, radius * 0.5, 0, 0, auraR);
+    auraGrad.addColorStop(0, 'rgba(0, 229, 255, 0.45)');
+    auraGrad.addColorStop(0.5, 'rgba(0, 150, 255, 0.2)');
+    auraGrad.addColorStop(1, 'rgba(0, 150, 255, 0)');
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, auraR, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // 2. Swirling void energy trails (concentric fading dust orbs behind it)
   if (p.history && p.history.length > 1) {
@@ -1430,17 +1460,21 @@ export function drawLaylaVoidProjectile(ctx, p) {
   }
   ctx.restore();
 
-  // 4. Orb sphere body (radial gradient from hot-white center to deep violet edges)
-  const sphereGrad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, 0, 0, 0, radius);
-  sphereGrad.addColorStop(0, '#E0FFFF'); // Light cyan-white hot core
-  sphereGrad.addColorStop(0.3, '#00E5FF'); // Cyan blue
-  sphereGrad.addColorStop(0.7, '#0088CC'); // Deep blue
-  sphereGrad.addColorStop(1, '#004488'); // Dark blue edge outline
-  
-  ctx.fillStyle = sphereGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.fill();
+  // 4. Orb sphere body (cached radial gradient from hot-white center to deep blue edges)
+  const sphereCanvas = getCachedRadialGradientCanvas('layla_void_sphere', 48, LAYLA_VOID_SPHERE_STOPS);
+  if (sphereCanvas && sphereCanvas.width > 0 && typeof ctx.drawImage === 'function') {
+    ctx.drawImage(sphereCanvas, -radius, -radius, radius * 2, radius * 2);
+  } else {
+    const sphereGrad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, 0, 0, 0, radius);
+    sphereGrad.addColorStop(0, '#E0FFFF'); // Light cyan-white hot core
+    sphereGrad.addColorStop(0.3, '#00E5FF'); // Cyan blue
+    sphereGrad.addColorStop(0.7, '#0088CC'); // Deep blue
+    sphereGrad.addColorStop(1, '#004488'); // Dark blue edge outline
+    ctx.fillStyle = sphereGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // 5. Electrical static crackles inside/around the sphere
   ctx.strokeStyle = '#FFFFFF';
@@ -2107,30 +2141,43 @@ export function drawStarlightDart(ctx, p) {
   const rot2 = -now * 0.006 + dartId * 1.5;
 
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
+  if (!(typeof state !== 'undefined' && state.isMobileDevice)) {
+    ctx.globalCompositeOperation = 'lighter';
+  }
 
   // Halo 1 (Clockwise Cyan / Mint Starlight Halo)
   ctx.rotate(rot1);
-  const haloGrad1 = ctx.createRadialGradient(0, 0, 1, 0, 0, haloR);
-  haloGrad1.addColorStop(0.0, 'rgba(255, 255, 255, 0.75)');
-  haloGrad1.addColorStop(0.35, 'rgba(0, 240, 255, 0.45)');
-  haloGrad1.addColorStop(0.75, 'rgba(108, 255, 188, 0.20)');
-  haloGrad1.addColorStop(1.0, 'rgba(0, 240, 255, 0.00)');
-  ctx.fillStyle = haloGrad1;
-  ctx.beginPath();
-  ctx.arc(0, 0, haloR, 0, Math.PI * 2);
-  ctx.fill();
+  const haloCanvas1 = getCachedRadialGradientCanvas('nameless_dagger_halo1', 64, NAMELESS_DAGGER_HALO1_STOPS);
+  if (haloCanvas1 && haloCanvas1.width > 0 && typeof ctx.drawImage === 'function') {
+    ctx.drawImage(haloCanvas1, -haloR, -haloR, haloR * 2, haloR * 2);
+  } else {
+    const haloGrad1 = ctx.createRadialGradient(0, 0, 1, 0, 0, haloR);
+    haloGrad1.addColorStop(0.0, 'rgba(255, 255, 255, 0.75)');
+    haloGrad1.addColorStop(0.35, 'rgba(0, 240, 255, 0.45)');
+    haloGrad1.addColorStop(0.75, 'rgba(108, 255, 188, 0.20)');
+    haloGrad1.addColorStop(1.0, 'rgba(0, 240, 255, 0.00)');
+    ctx.fillStyle = haloGrad1;
+    ctx.beginPath();
+    ctx.arc(0, 0, haloR, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Halo 2 (Counter-Clockwise Cosmic Violet / Azure Starlight Halo)
   ctx.rotate(rot2 - rot1);
-  const haloGrad2 = ctx.createRadialGradient(0, 0, 1, 0, 0, haloR * 1.15);
-  haloGrad2.addColorStop(0.0, 'rgba(255, 255, 255, 0.50)');
-  haloGrad2.addColorStop(0.40, 'rgba(161, 127, 224, 0.35)');
-  haloGrad2.addColorStop(1.0, 'rgba(161, 127, 224, 0.00)');
-  ctx.fillStyle = haloGrad2;
-  ctx.beginPath();
-  ctx.arc(0, 0, haloR * 1.15, 0, Math.PI * 2);
-  ctx.fill();
+  const haloR2 = haloR * 1.15;
+  const haloCanvas2 = getCachedRadialGradientCanvas('nameless_dagger_halo2', 64, NAMELESS_DAGGER_HALO2_STOPS);
+  if (haloCanvas2 && haloCanvas2.width > 0 && typeof ctx.drawImage === 'function') {
+    ctx.drawImage(haloCanvas2, -haloR2, -haloR2, haloR2 * 2, haloR2 * 2);
+  } else {
+    const haloGrad2 = ctx.createRadialGradient(0, 0, 1, 0, 0, haloR2);
+    haloGrad2.addColorStop(0.0, 'rgba(255, 255, 255, 0.50)');
+    haloGrad2.addColorStop(0.40, 'rgba(161, 127, 224, 0.35)');
+    haloGrad2.addColorStop(1.0, 'rgba(161, 127, 224, 0.00)');
+    ctx.fillStyle = haloGrad2;
+    ctx.beginPath();
+    ctx.arc(0, 0, haloR2, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 

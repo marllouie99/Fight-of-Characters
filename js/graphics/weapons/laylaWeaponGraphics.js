@@ -63,7 +63,12 @@ function _buildGradients(ctx) {
   syr.addColorStop(0.5, c.goldLight);
   syr.addColorStop(1,   c.goldDark);
 
-  _cachedGradients = { stock, butt, rec, horn, rib, syr };
+  const ring     = ctx.createRadialGradient(-3, -2, 2, 0, 1, 10);
+  ring.addColorStop(0,   c.goldBright);
+  ring.addColorStop(0.5, c.goldLight);
+  ring.addColorStop(1,   c.goldDark);
+
+  _cachedGradients = { stock, butt, rec, horn, rib, syr, ring };
   return _cachedGradients;
 }
 
@@ -139,12 +144,6 @@ export function drawLaylaGun(ctx, x, y, gunAngle, r = 25, options = {}) {
   // ─────────────────────────────────────────────
   // Shortened horizontally to make it compact and proportional:
   // Heel at x = -46 (was -60), toe at x = -53 (was -68).
-  const stockGrad = ctx.createLinearGradient(-53, 18, -15, -5);
-  stockGrad.addColorStop(0, colors.woodHighlight);
-  stockGrad.addColorStop(0.35, colors.woodLight);
-  stockGrad.addColorStop(0.7, colors.woodMid);
-  stockGrad.addColorStop(1, colors.woodDark);
-
   ctx.beginPath();
   ctx.moveTo(-15, -5); // Top junction at receiver
   ctx.bezierCurveTo(-24, -5, -32, 4, -40, 5); // S-curve drop
@@ -169,11 +168,6 @@ export function drawLaylaGun(ctx, x, y, gunAngle, r = 25, options = {}) {
   ctx.stroke();
 
   // Flared Slanted Gold Metal Buttplate (Capping end of stock)
-  const buttGrad = ctx.createLinearGradient(-53, 18, -46, 5);
-  buttGrad.addColorStop(0, colors.goldBright);
-  buttGrad.addColorStop(0.5, colors.goldLight);
-  buttGrad.addColorStop(1, colors.goldDark);
-
   ctx.beginPath();
   ctx.moveTo(-46, 5);
   ctx.quadraticCurveTo(-49, 6, -48, 8);
@@ -209,10 +203,6 @@ export function drawLaylaGun(ctx, x, y, gunAngle, r = 25, options = {}) {
   // 2. RECEIVER BODY & ORNATE DETAILS
   // ─────────────────────────────────────────────
   // Main Receiver Dark Mahogany Housing
-  const recGrad = ctx.createLinearGradient(-15, -8, 20, 8);
-  recGrad.addColorStop(0, colors.woodMid);
-  recGrad.addColorStop(1, colors.woodDark);
-
   ctx.beginPath();
   ctx.moveTo(-15, -6);
   ctx.lineTo(20, -6);
@@ -323,14 +313,9 @@ export function drawLaylaGun(ctx, x, y, gunAngle, r = 25, options = {}) {
   const coreR = 10;
 
   // Outer Brass Housing Ring
-  const ringGrad = ctx.createRadialGradient(coreX - 3, coreY - 3, 2, coreX, coreY, coreR);
-  ringGrad.addColorStop(0, colors.goldBright);
-  ringGrad.addColorStop(0.5, colors.goldLight);
-  ringGrad.addColorStop(1, colors.goldDark);
-
   ctx.beginPath();
   ctx.arc(coreX, coreY, coreR, 0, Math.PI * 2);
-  ctx.fillStyle = ringGrad;
+  ctx.fillStyle = grads.ring;
   ctx.fill();
   ctx.strokeStyle = colors.blackOutline;
   ctx.lineWidth = strokeW;
@@ -397,11 +382,6 @@ export function drawLaylaGun(ctx, x, y, gunAngle, r = 25, options = {}) {
   // 5. RIBBED BARREL COLLAR RINGS
   // ─────────────────────────────────────────────
   const ribX = 22;
-  const ribW = 8;
-  const ribGrad = ctx.createLinearGradient(ribX, -8, ribX + ribW, 8);
-  ribGrad.addColorStop(0, colors.goldBright);
-  ribGrad.addColorStop(0.5, colors.goldLight);
-  ribGrad.addColorStop(1, colors.goldDark);
 
   // Concentric Rings — reuse cached gradient
   for (let i = 0; i < 3; i++) {
@@ -468,11 +448,6 @@ export function drawLaylaGun(ctx, x, y, gunAngle, r = 25, options = {}) {
 
   // --- CENTRAL NEEDLE SYRINGE EMITTER BARREL ---
   // Syringe Base Cylinder
-  const syrGrad = ctx.createLinearGradient(prongStart, -3, 62, 3);
-  syrGrad.addColorStop(0, colors.goldBright);
-  syrGrad.addColorStop(0.5, colors.goldLight);
-  syrGrad.addColorStop(1, colors.goldDark);
-
   ctx.beginPath();
   ctx.moveTo(prongStart, -3);
   ctx.lineTo(48, -2.5);

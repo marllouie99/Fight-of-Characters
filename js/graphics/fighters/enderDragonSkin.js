@@ -100,8 +100,8 @@ export function getEnderDragonDisintegrationImages() {
   return { dis1: _disintegration1, dis2: _disintegration2 };
 }
 
-// Pre-initialize on load if in browser environment
-if (typeof window !== 'undefined') {
+// Pre-initialize on load if in desktop browser environment (lazy-loaded on demand on mobile)
+if (typeof window !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   getEnderDragonTextureSkinImage();
   getEnderDragonWingsSheet();
   getEnderDragonTailsSheet();

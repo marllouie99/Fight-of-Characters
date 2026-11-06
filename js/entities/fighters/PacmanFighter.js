@@ -4,6 +4,7 @@
 
 import { Fighter } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
+import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { pacmanConfig } from '../../configs/characters/pacmanConfig.js';
 import {
   state,
@@ -193,7 +194,7 @@ export class PacmanFighter extends Fighter {
    * Initializes all dots across the arena tile grid (8x8 grid = 64 dots).
    */
   initDots(arena = state.arena) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     const grid = getTileGridInfo(activeArena);
     const cols = grid.cols || 8;
     const rows = grid.rows || 8;
@@ -234,7 +235,7 @@ export class PacmanFighter extends Fighter {
    * Refills all dots on each arena tile when Chomp Mode expires.
    */
   refillDots(arena = state.arena) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     if (!this._dotsInitialized || this.dots.length === 0) {
       this.initDots(activeArena);
     } else {
@@ -954,7 +955,7 @@ export class PacmanFighter extends Fighter {
       return;
     }
 
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     const spitAngle = (this.gunAngle !== undefined) ? this.gunAngle : (this.angle || 0);
 
     for (const enemy of this.swallowedEnemies) {
@@ -1047,7 +1048,7 @@ export class PacmanFighter extends Fighter {
    * Adheres to natural arena rebouncing standards (moving & bouncing naturally like an ordinary fighter).
    */
   update(opponent, ownerIndex, arena = state.arena) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
 
     // 0. Rule 25: Update visual effects lifecycles & ghost audio cutoff BEFORE freeze guard
     this._updateVisualEffects();

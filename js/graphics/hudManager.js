@@ -46,39 +46,58 @@ export function formatFighterNameHTML(name) {
   return `<span class="kuhaku-bracket kuhaku-bracket-left">『</span><span class="kuhaku-inner-name">${match[1]}</span><span class="kuhaku-bracket kuhaku-bracket-right">』</span>`;
 }
 
+const _mainFightersScratch = [];
+function _getMainFighters(fighters) {
+  _mainFightersScratch.length = 0;
+  if (!fighters) return _mainFightersScratch;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (f && !f.isTurret && !f.isEndCrystal && !f.isMinion && !f.isDeployable) {
+      _mainFightersScratch.push(f);
+    }
+  }
+  return _mainFightersScratch;
+}
+
 /**
  * Checks if the screen is currently dimmed by an active Domain Expansion (or active non-Purple ultimate strike).
  * Strictly excludes skill channeling / windup phases, and excludes Hollow Purple per explicit requirements.
  */
 export function isScreenDimmedActive() {
   if (typeof state === 'undefined' || !state.fighters) return false;
-
-  // 1. Any active Domain Expansion (deployed barrier phase, NOT during slide or channeling/windup)
-  const isAnyDomainActive = state.fighters.some(f => 
-    f && f.domainActive && 
-    !f.isChannelingDomainExpansion && 
-    !f.isChannelingDomain && 
-    !f.isDomainPreSlide
-  );
-  if (isAnyDomainActive) return true;
-
-  // 2. Active non-domain ultimate strikes (e.g. Toji Swarm, Sukuna Fuga Arrow)
-  const hasNonPurpleDimEffect = state.fighters.some(f => f && (
-    ((f.characterId === 'toji' || f.type === 'toji') && f.ultimateActive && f.ultimatePhase !== 'CHANNELING' && !f.isChannelingDomain) ||
-    (f.furnaceFireArrowTimer || 0) > 0
-  ));
-  if (hasNonPurpleDimEffect) return true;
-
-  // 3. Gojo Hollow Purple channeling, active orb flight, or post-fire recovery (dark purple dim screen active)
+  const fighters = state.fighters;
   const isDarkTheme = (state.arenaTheme === 'dark');
-  if (!isDarkTheme) {
-    const isHollowPurpleActive = state.fighters.some(f => f && (
-      (f.characterId === 'gojo' || f.type === 'gojo') && (
-        f.isChannelingPurple ||
-        (f.purpleRecoveryTimer && f.purpleRecoveryTimer > 0)
-      )
-    ));
-    if (isHollowPurpleActive) return true;
+
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (!f) continue;
+
+    // 1. Any active Domain Expansion (deployed barrier phase, NOT during slide or channeling/windup)
+    if (
+      f.domainActive &&
+      !f.isChannelingDomainExpansion &&
+      !f.isChannelingDomain &&
+      !f.isDomainPreSlide
+    ) {
+      return true;
+    }
+
+    // 2. Active non-domain ultimate strikes (e.g. Toji Swarm, Sukuna Fuga Arrow)
+    if (
+      ((f.characterId === 'toji' || f.type === 'toji') && f.ultimateActive && f.ultimatePhase !== 'CHANNELING' && !f.isChannelingDomain) ||
+      (f.furnaceFireArrowTimer || 0) > 0
+    ) {
+      return true;
+    }
+
+    // 3. Gojo Hollow Purple channeling, active orb flight, or post-fire recovery (dark purple dim screen active)
+    if (
+      !isDarkTheme &&
+      (f.characterId === 'gojo' || f.type === 'gojo') &&
+      (f.isChannelingPurple || (f.purpleRecoveryTimer && f.purpleRecoveryTimer > 0))
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -394,7 +413,7 @@ export function drawHUD() {
 
   const isHorizontal = (typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
   const isTactical = isTacticalMatch(state);
-  const mainFighters = (fighters || []).filter(f => f && !f.isTurret && !f.isEndCrystal && !f.isMinion && !f.isDeployable);
+  const mainFighters = _getMainFighters(fighters);
   const is1v1Mode = mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.TACTICAL_1V1 || mode === 'Tactical 1v1' || (isTactical && mainFighters && mainFighters.length === 2 && !mode.includes('2v2') && !mode.includes('4v4'));
   const isStandOffMode = mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TACTICAL_STANDOFF || mode === 'Tactical Stand Off' || mode === GAME_MODES.TACTICAL_RANDOM || mode === 'Tactical Random';
   const is2v2Mode = mode === GAME_MODES.TWO_VS_TWO || mode === '2v2' || mode === GAME_MODES.TACTICAL_2V2 || mode === 'Tactical 2v2' || mode === GAME_MODES.TACTICAL_4V4 || mode === 'Tactical 4v4';
@@ -485,11 +504,11 @@ export function drawHUD() {
     }
   }
   if (containerLeft) {
-    const isH = (typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
-    const mainF = (fighters || []).filter(f => f && !f.isTurret && !f.isEndCrystal && !f.isMinion && !f.isDeployable);
+    const isH = isHorizontal;
+    const mainF = mainFighters;
     const isSide1v1 = isH && !isDuelTopHud && (mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TLFS || mode === 'TLFS' || mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.HORIZONTAL_1V1 || (mainF && mainF.length <= 4 && mode !== GAME_MODES.TWO_VS_TWO && mode !== '2v2'));
     const sideOpacity = (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
-    if (sideOpacity <= 0 || !containerLeft.children || !containerLeft.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTacticalMatch(state) && mainF.length <= 4)) {
+    if (sideOpacity <= 0 || !containerLeft.children || !containerLeft.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4)) {
       containerLeft.style.visibility = 'hidden';
       containerLeft.style.pointerEvents = 'none';
       containerLeft.style.display = 'none';
@@ -501,11 +520,11 @@ export function drawHUD() {
     }
   }
   if (containerRight) {
-    const isH = (typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
-    const mainF = (fighters || []).filter(f => f && !f.isTurret && !f.isEndCrystal && !f.isMinion && !f.isDeployable);
+    const isH = isHorizontal;
+    const mainF = mainFighters;
     const isSide1v1 = isH && !isDuelTopHud && (mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TLFS || mode === 'TLFS' || mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.HORIZONTAL_1V1 || (mainF && mainF.length <= 4 && mode !== GAME_MODES.TWO_VS_TWO && mode !== '2v2'));
     const sideOpacity = (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
-    if (sideOpacity <= 0 || !containerRight.children || !containerRight.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTacticalMatch(state) && mainF.length <= 4)) {
+    if (sideOpacity <= 0 || !containerRight.children || !containerRight.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4)) {
       containerRight.style.visibility = 'hidden';
       containerRight.style.pointerEvents = 'none';
       containerRight.style.display = 'none';
@@ -2518,35 +2537,6 @@ function updateHealthHud() {
   }
 
   // OPTIMIZATION: Throttling HUD updates to prevent extreme DOM reflow lag from progress bars.
-  const isTactical = isTacticalMatch(state);
-  const isH = (typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
-  const mainFighters = fighters.filter(f => f && !f.isTurret && !f.isEndCrystal && !f.isMinion && !f.isDeployable);
-  const is1v1 = mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.TACTICAL_1V1 || mode === 'Tactical 1v1' || mode === GAME_MODES.HORIZONTAL_1V1 || mode === '1v1 Widescreen Duel' || (mainFighters.length === 2 && !mode.includes('2v2') && !mode.includes('4v4'));
-  const isStandOff = mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TACTICAL_STANDOFF || mode === 'Tactical Stand Off' || mode === GAME_MODES.TACTICAL_RANDOM || mode === 'Tactical Random';
-  const isRegular1v2 = mode === GAME_MODES.ONE_VS_TWO || mode === '1v2';
-  const isBossBattle = mode === GAME_MODES.STAND_OFF_1V2 || mode === GAME_MODES.BOSS_BATTLE || mode === 'Boss Battle' || mode === '1v2 Stand Off' || mode === 'STAND_OFF_1V2';
-  const isSoloBoss = isBossBattle && Boolean(state.bossBattleNoTeammate) && mainFighters.length === 2;
-  const is1v2 = isRegular1v2 || (isBossBattle && !isSoloBoss);
-  const is2v2 = mode === GAME_MODES.TWO_VS_TWO || mode === '2v2' || mode === GAME_MODES.TACTICAL_2V2 || mode === 'Tactical 2v2' || mode === GAME_MODES.TACTICAL_4V4 || mode === 'Tactical 4v4';
-  const isTLFS = mode === GAME_MODES.TLFS || mode === 'TLFS';
-  const isCameraTracking = (!state.camera || state.camera.mode === 'dynamic');
-  const isFfa = mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.TACTICAL_FFA || mode === 'Tactical FFA';
-  const isTeamSingleColumn = isCameraTracking && (is2v2 || is1v2 || isFfa || mainFighters.length > 2);
-  const isSingleColumnMode = (typeof state !== 'undefined' && state.viewOrientation === 'horizontal') || ((is1v1 || isStandOff || isTLFS || isFfa) && !isTactical) || isTeamSingleColumn;
-  const currentHpStr = mainFighters.map(f => f ? Math.round(f.hp) : 0).join(',');
-  const q = (v) => Math.round((v || 0) / 4);
-  const currentSkillsStr = mainFighters.map(f => {
-    if (!f) return '';
-    const illCount = (f.characterId === 'doppleganger' || f.type === 'doppleganger' || f.characterId === 'doppelganger' || f.type === 'doppelganger')
-      ? (state.illusions ? state.illusions.filter(ill => ill && ill.isDoppelganger && ill.hp > 0).length : 0) : 0;
-    return `${f.isReloading || false},${f.magazineBullets || 0},${q(f.skillCooldown)},${q(f.cooldownTimer)},${f.domainActive || false},${q(f.beamCharge)},${q(f.beamTimer)},${q(f.shootCooldown)},${illCount},${q(f.totalAccumDamage)},${q(f.fatalAdaptCooldown)},${q(f.throwCooldown)},${q(f.shoutCooldown)},${q(f.reverseCursedTechniqueCooldown)},${q(f.divergentDashCooldown)},${f.isTakadaUltActive || false},${q(f.takadaUltTimer)},${f.isTakadaChanneling || false},${q(f.takadaChannelTimer)},${q(f.timeStopTimer)},${q(f.evadeBuffTimer)},${f.isRolling || false},${q(f.rollCooldown)},${f.isSelfDestructing || false},${f.isJetpackActive || false},${q(f.jetpackTimer)},${f.isBaguvixActive || false},${q(f.hesoyamShield)},${q(f.respect)},${q(f.jetpackCooldown)},${q(f.driveByCooldown)},${q(f.baguvixCooldown)},${q(f.baguvixTimer)},${q(f.driveByTimer)},${f.hasUsedHesoyam || false},${f.hasUsedTakadaUlt || false},${f.isDriveByActive || false},${f.isTypingCheat || false}`;
-  }).join('|');
-  const hpChanged = currentHpStr !== state._lastHpStr;
-  const skillsChanged = currentSkillsStr !== state._lastSkillsStr;
-
-  state._lastHpStr = currentHpStr;
-  state._lastSkillsStr = currentSkillsStr;
-
   state._hudFrameCount = (state._hudFrameCount || 0) + 1;
 
   // Update Top Duel Center Timer (dirty-checked, updates only once per second)
@@ -2581,7 +2571,7 @@ function updateHealthHud() {
     }
   }
 
-  // Performance: Throttle expensive HUD innerHTML writes to avoid layout reflow stalls
+  // Performance: Throttle expensive HUD DOM updates to avoid layout reflow stalls on mobile & desktop
   const isLowQuality = (typeof state !== 'undefined' && (state.performanceMode || (state.qualityLevel && state.qualityLevel < 0.5) || (state.fps && state.fps < 45)));
   const throttleInterval = isLowQuality ? 8 : 4;
   const isCriticalState = ['roundEnd', 'matchEnd', 'countdown'].includes(state.gameState);
@@ -2590,6 +2580,22 @@ function updateHealthHud() {
   if (!isCriticalState && !isInitialCacheEmpty && (state._hudFrameCount % throttleInterval !== 0)) {
     return; // Skip DOM update this frame to preserve CPU and lock 60 FPS
   }
+
+  const isTactical = isTacticalMatch(state);
+  const isH = (typeof state !== 'undefined' && state.viewOrientation === 'horizontal');
+  const mainFighters = _getMainFighters(fighters);
+  const is1v1 = mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.TACTICAL_1V1 || mode === 'Tactical 1v1' || mode === GAME_MODES.HORIZONTAL_1V1 || mode === '1v1 Widescreen Duel' || (mainFighters.length === 2 && !mode.includes('2v2') && !mode.includes('4v4'));
+  const isStandOff = mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TACTICAL_STANDOFF || mode === 'Tactical Stand Off' || mode === GAME_MODES.TACTICAL_RANDOM || mode === 'Tactical Random';
+  const isRegular1v2 = mode === GAME_MODES.ONE_VS_TWO || mode === '1v2';
+  const isBossBattle = mode === GAME_MODES.STAND_OFF_1V2 || mode === GAME_MODES.BOSS_BATTLE || mode === 'Boss Battle' || mode === '1v2 Stand Off' || mode === 'STAND_OFF_1V2';
+  const isSoloBoss = isBossBattle && Boolean(state.bossBattleNoTeammate) && mainFighters.length === 2;
+  const is1v2 = isRegular1v2 || (isBossBattle && !isSoloBoss);
+  const is2v2 = mode === GAME_MODES.TWO_VS_TWO || mode === '2v2' || mode === GAME_MODES.TACTICAL_2V2 || mode === 'Tactical 2v2' || mode === GAME_MODES.TACTICAL_4V4 || mode === 'Tactical 4v4';
+  const isTLFS = mode === GAME_MODES.TLFS || mode === 'TLFS';
+  const isCameraTracking = (!state.camera || state.camera.mode === 'dynamic');
+  const isFfa = mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.TACTICAL_FFA || mode === 'Tactical FFA';
+  const isTeamSingleColumn = isCameraTracking && (is2v2 || is1v2 || isFfa || mainFighters.length > 2);
+  const isSingleColumnMode = isH || ((is1v1 || isStandOff || isTLFS || isFfa) && !isTactical) || isTeamSingleColumn;
 
   // Already declared above: const is1v2 = mode === GAME_MODES.STAND_OFF_1V2;
   // Already declared above: const teamMode = mode === GAME_MODES.TWO_VS_TWO || is1v2;

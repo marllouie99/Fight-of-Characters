@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────
 import { Fighter, applyDamageToTarget } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
+import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { enderDragonConfig } from '../../configs/characters/enderDragonConfig.js';
 import {
   drawEnderDragonSkin,
@@ -276,7 +277,7 @@ export class EnderDragonFighter extends Fighter {
       return;
     }
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const cornerDefs = getCornerEndCrystals(curArena);
     // Remove stale/residual crystals first
     state.fighters = state.fighters.filter(f => !f.isEndCrystal);
@@ -731,7 +732,7 @@ export class EnderDragonFighter extends Fighter {
 
   // ── Dynamic Linear Roaming & Decision Matrix (No Circling, Bounces Naturally) ──
   _updatePatrolState(opponent, arena, cfg) {
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const targetSpeed = (this.speed || cfg.speed || 4.4) * (this.phaseSpeedMult || 1.0);
 
     // Natural linear flight: maintain continuous momentum floor
@@ -856,7 +857,7 @@ export class EnderDragonFighter extends Fighter {
 
   _updatePerchDescent(arena, cfg) {
     this.stateTimer--;
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const anchorX = curArena.x + curArena.width / 2;
     const anchorY = curArena.y + curArena.height / 2;
 
@@ -887,7 +888,7 @@ export class EnderDragonFighter extends Fighter {
 
   _updatePerchGrounded(opponent, arena, cfg) {
     this.stateTimer--;
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
 
@@ -1002,7 +1003,7 @@ export class EnderDragonFighter extends Fighter {
     }
 
     this.targetAltitude = cfg.highAltitude || 1.7;
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const targetSpeed = (this.speed || cfg.speed || 4.4) * (this.phaseSpeedMult || 1.0);
 
     // Natural linear cruising across arena
@@ -1638,7 +1639,7 @@ export class EnderDragonFighter extends Fighter {
     this.isTelegraphingDivebomb = false;
     this.isDivebombing = false;
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
     const ar = (curArena.radius || (curArena.width / 2));
@@ -1670,7 +1671,7 @@ export class EnderDragonFighter extends Fighter {
   _updateDivebombSetup(opponent, arena, cfg) {
     this.stateTimer--;
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
     const ar = (curArena.radius || (curArena.width / 2));
@@ -1945,7 +1946,7 @@ export class EnderDragonFighter extends Fighter {
   _updateDivebombStrike(opponent, arena, cfg) {
     this.stateTimer--;
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
 
     // Trail vivid amethyst afterimages
     if (this.stateTimer % 2 === 0) {
@@ -2217,7 +2218,7 @@ export class EnderDragonFighter extends Fighter {
       }
     }
 
-    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
 
@@ -2312,7 +2313,7 @@ export class EnderDragonFighter extends Fighter {
     this.isTelegraphingDivebomb = false;
     this.isDivebombing = false;
     if (this.draggedVictims) {
-      const curArena = (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+      const curArena = (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
       for (let victim of this.draggedVictims) {
         if (victim) {
           victim.isDraggedByDragon = false;

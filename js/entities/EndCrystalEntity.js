@@ -8,6 +8,7 @@ import { Fighter, applyDamageToTarget, resolveDamageNumberColor } from './fighte
 import { state, triggerGlobalScreenShake, spawnFloatingText } from '../core/state.js';
 import { spawnSparks, spawnImpactFlash } from '../graphics/particles/sparkEffect.js';
 import { audioSystem } from '../systems/audioSystem.js';
+import { ARENA_VERTICAL } from '../configs/arenaConstants.js';
 
 let _crystalSheetImg = null;
 let _crystalSheetLoaded = false;
@@ -519,7 +520,7 @@ export class EndCrystalEntity extends Fighter {
  * Strictly aligns each crystal to the exact center of the arena's 4 outermost corner tiles (8x8 grid).
  */
 export function getCornerEndCrystals(arena) {
-  const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+  const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
   const cols = 8;
   const rows = 8;
   const cellW = curArena.width / cols;

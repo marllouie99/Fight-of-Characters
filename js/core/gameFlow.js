@@ -33,6 +33,7 @@ import { clearCarExplosions } from '../graphics/particles/cjCarExplosion.js';
 import { clearBamEffects } from '../graphics/particles/bamImpactEffect.js';
 import { clearHybridProjectiles } from '../graphics/renderers/hybridProjectileRenderer.js';
 import { resetCamera } from '../systems/cameraSystem.js';
+import { preloadImage, preloadActiveMatchFighterVisuals, releaseInactiveMatchGraphicsMemory } from '../graphics/graphicsCache.js';
 import { resetComboTrackers } from '../systems/comboTracker.js';
 import { EndCrystalEntity } from '../entities/EndCrystalEntity.js';
 import { BossManager, BossEntranceSequence } from '../bosses/index.js';
@@ -151,8 +152,7 @@ export function preloadFighterAssets(fighterOrId, isPriority = false) {
   // 5. Preload character hair model asset if configured in character assets
   if (typeof Image !== 'undefined' && cfg?.assets?.hair) {
     try {
-      const img = new Image();
-      img.src = cfg.assets.hair;
+      preloadImage(cfg.assets.hair);
     } catch (e) {}
   }
 
@@ -204,6 +204,10 @@ export function preloadActiveMatchSounds(fighters) {
       }
     }
   } catch (e) {}
+
+  // Release unused overlay bitmaps on mobile and preload active combatants' visual assets
+  releaseInactiveMatchGraphicsMemory(activeFighters);
+  preloadActiveMatchFighterVisuals(activeFighters);
 
   // Trigger fighter assets preloading for each active combatant
   for (const f of activeFighters) {

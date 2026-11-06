@@ -137,8 +137,12 @@ export function _getEscanorSlashEffectImage(isTheOne = false) {
     return _escanorSlashEffectGoldenCanvas;
   }
   if (_escanorSlashEffectImage && _escanorSlashEffectImage.complete && _escanorSlashEffectImage.naturalWidth > 0) {
-    _escanorSlashEffectGoldenCanvas = _generateCleanSlashEffectCanvas(_escanorSlashEffectImage, false);
-    _escanorSlashEffectTheOneCanvas = _generateCleanSlashEffectCanvas(_escanorSlashEffectImage, true);
+    if (!_escanorSlashEffectGoldenCanvas) {
+      _escanorSlashEffectGoldenCanvas = _generateCleanSlashEffectCanvas(_escanorSlashEffectImage, false);
+    }
+    if (isTheOne && !_escanorSlashEffectTheOneCanvas) {
+      _escanorSlashEffectTheOneCanvas = _generateCleanSlashEffectCanvas(_escanorSlashEffectImage, true);
+    }
     return isTheOne ? _escanorSlashEffectTheOneCanvas : _escanorSlashEffectGoldenCanvas;
   }
   if (!_escanorSlashEffectImageLoading && typeof Image !== 'undefined') {
@@ -147,7 +151,6 @@ export function _getEscanorSlashEffectImage(isTheOne = false) {
     img.onload = () => {
       _escanorSlashEffectImage = img;
       _escanorSlashEffectGoldenCanvas = _generateCleanSlashEffectCanvas(img, false);
-      _escanorSlashEffectTheOneCanvas = _generateCleanSlashEffectCanvas(img, true);
       _escanorSlashEffectImageLoading = false;
     };
     img.onerror = (e) => {
@@ -160,7 +163,7 @@ export function _getEscanorSlashEffectImage(isTheOne = false) {
   return _escanorSlashEffectImage;
 }
 
-if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   _getEscanorSlashEffectImage();
 }
 
@@ -976,8 +979,12 @@ export function _getEscanorCruelSunSpriteImage(isTheOne = false) {
     return _escanorCruelSunStandardCanvas;
   }
   if (_escanorCruelSunSpriteImage && _escanorCruelSunSpriteImage.complete && _escanorCruelSunSpriteImage.naturalWidth > 0) {
-    _escanorCruelSunStandardCanvas = _escanorCruelSunSpriteImage;
-    _escanorCruelSunTheOneCanvas = _generateTheOneCruelSunCanvas(_escanorCruelSunSpriteImage);
+    if (!_escanorCruelSunStandardCanvas) {
+      _escanorCruelSunStandardCanvas = _escanorCruelSunSpriteImage;
+    }
+    if (isTheOne && !_escanorCruelSunTheOneCanvas) {
+      _escanorCruelSunTheOneCanvas = _generateTheOneCruelSunCanvas(_escanorCruelSunSpriteImage);
+    }
     return isTheOne ? _escanorCruelSunTheOneCanvas : _escanorCruelSunStandardCanvas;
   }
   if (!_escanorCruelSunSpriteLoading && typeof Image !== 'undefined') {
@@ -986,7 +993,6 @@ export function _getEscanorCruelSunSpriteImage(isTheOne = false) {
     img.onload = () => {
       _escanorCruelSunSpriteImage = img;
       _escanorCruelSunStandardCanvas = img;
-      _escanorCruelSunTheOneCanvas = _generateTheOneCruelSunCanvas(img);
       _escanorCruelSunSpriteLoading = false;
     };
     img.onerror = (e) => {
@@ -999,7 +1005,7 @@ export function _getEscanorCruelSunSpriteImage(isTheOne = false) {
   return _escanorCruelSunSpriteImage;
 }
 
-if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   _getEscanorCruelSunSpriteImage();
 }
 
@@ -1106,8 +1112,12 @@ export function _getEscanorSunExplosionSpriteImage(isTheOne = false) {
     return _escanorSunExplosionStandardCanvas;
   }
   if (_escanorSunExplosionSpriteImage && _escanorSunExplosionSpriteImage.complete && _escanorSunExplosionSpriteImage.naturalWidth > 0) {
-    _escanorSunExplosionStandardCanvas = _escanorSunExplosionSpriteImage;
-    _escanorSunExplosionTheOneCanvas = _generateTheOneExplosionCanvas(_escanorSunExplosionSpriteImage);
+    if (!_escanorSunExplosionStandardCanvas) {
+      _escanorSunExplosionStandardCanvas = _escanorSunExplosionSpriteImage;
+    }
+    if (isTheOne && !_escanorSunExplosionTheOneCanvas) {
+      _escanorSunExplosionTheOneCanvas = _generateTheOneExplosionCanvas(_escanorSunExplosionSpriteImage);
+    }
     return isTheOne ? _escanorSunExplosionTheOneCanvas : _escanorSunExplosionStandardCanvas;
   }
   if (!_escanorSunExplosionSpriteLoading && typeof Image !== 'undefined') {
@@ -1116,7 +1126,6 @@ export function _getEscanorSunExplosionSpriteImage(isTheOne = false) {
     img.onload = () => {
       _escanorSunExplosionSpriteImage = img;
       _escanorSunExplosionStandardCanvas = img;
-      _escanorSunExplosionTheOneCanvas = _generateTheOneExplosionCanvas(img);
       _escanorSunExplosionSpriteLoading = false;
     };
     img.onerror = (e) => {
@@ -1129,7 +1138,7 @@ export function _getEscanorSunExplosionSpriteImage(isTheOne = false) {
   return _escanorSunExplosionSpriteImage;
 }
 
-if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   _getEscanorSunExplosionSpriteImage();
 }
 

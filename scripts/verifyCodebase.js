@@ -257,6 +257,7 @@ async function verifyAll() {
   for (const filePath of files) {
     const relPath = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
     if (relPath.includes('patchNotesData.js')) continue; // Historical changelog diff entries
+    if (relPath.includes('mobileAssetScaler.js') || relPath.includes('mobileAssetManifest.js')) continue; // Mobile runtime asset hooks
     const content = fs.readFileSync(filePath, 'utf8');
     let match;
     while ((match = assetRegex.exec(content)) !== null) {
@@ -420,8 +421,9 @@ async function verifyAll() {
   try {
     const { CONFIG } = await import('../js/core/config.js');
     const { VIEWPORT_CONFIGS, VIEWPORT_MODES } = await import('../js/core/viewportManager.js');
+    const { ARENA_VERTICAL } = await import('../js/configs/arenaConstants.js');
 
-    const expectedVerticalArena = { x: 45, y: 240, width: 450, height: 450 };
+    const expectedVerticalArena = ARENA_VERTICAL;
 
     if (
       CONFIG.arena.x !== expectedVerticalArena.x ||

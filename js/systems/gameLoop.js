@@ -1,4 +1,4 @@
-import { state, getProjectiles } from '../core/state.js';
+import { state, getProjectiles, isMobileDevice } from '../core/state.js';
 import { FIGHTER_DEFS } from '../core/config.js';
 import { spatialGrid } from './physics.js';
 import { burnEffectSystem } from '../graphics/particles/burnEffectVisuals.js';
@@ -9,13 +9,26 @@ import { updateGame } from './updateSystem.js';
 import { renderGame } from './renderSystem.js';
 import { getAudioCurrentTime } from './soundSystem.js';
 
-export const isMobile = (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) || (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024);
+export const isMobile = isMobileDevice;
 export const TARGET_FPS = 60; // Standard 60 FPS across all devices for consistent combat physics
 export const FRAME_TIME = 1000 / TARGET_FPS;
 let lastFrameTime = 0;
 let isPageVisible = true;
 let _uiScreensCache = null;
 let _uiLayerCache = null;
+const _MENU_STATES = new Set([
+  'title',
+  'select',
+  'horizontal_select',
+  'index',
+  'indexDetail',
+  'leaderboard',
+  'weapons',
+  'weaponDetail',
+  'weaponStudio',
+  'skinStudio',
+  'survivorStudio'
+]);
 
 // Pause game loop when tab is hidden (mobile optimization)
 document.addEventListener('visibilitychange', () => {
@@ -34,19 +47,7 @@ export function animate(timestamp) {
 
   // Dynamic frame pacing: 30 FPS for all non-combat menus (title, battle mode select, index, studios) saves 50%+ CPU;
   // strict 60 FPS for active combat simulation and gameplay (playing, countdown, paused, roundEnd, matchEnd).
-  const isMenuState = [
-    'title',
-    'select',
-    'horizontal_select',
-    'index',
-    'indexDetail',
-    'leaderboard',
-    'weapons',
-    'weaponDetail',
-    'weaponStudio',
-    'skinStudio',
-    'survivorStudio'
-  ].includes(state.gameState);
+  const isMenuState = _MENU_STATES.has(state.gameState);
   const targetFrameTime = isMenuState ? (1000 / 30) : FRAME_TIME;
 
   if (!lastFrameTime) lastFrameTime = timestamp;
@@ -71,8 +72,28 @@ export function animate(timestamp) {
         state._frameDurationCount = 0;
       }
 
-      // Adaptive particle and LOD quality: 100% on desktop, 45% on mobile (eliminates mobile CPU/GPU thermal choke)
-      state.qualityLevel = state.performanceMode ? 0.2 : (isMobile ? 0.45 : 1.0);
+      // Adaptive particle and LOD quality: dynamically scales based on live frame time and FPS
+      const cpuMs = parseFloat(state.cpuFrameMs) || 0;
+      const curFps = state.fps || 60;
+      if (state.performanceMode) {
+        state.qualityLevel = 0.2;
+      } else if (isMobile) {
+        const prevQ = typeof state.qualityLevel === 'number' ? state.qualityLevel : 0.50;
+        if (!isMenuState && (cpuMs > 14.0 || curFps < 50)) {
+          state.qualityLevel = Math.max(0.25, +(prevQ - 0.10).toFixed(2));
+        } else if (cpuMs > 0 && cpuMs < 8.5 && curFps >= 58) {
+          state.qualityLevel = Math.min(0.75, +(prevQ + 0.05).toFixed(2));
+        } else {
+          state.qualityLevel = Math.max(0.25, Math.min(0.75, prevQ));
+        }
+      } else {
+        const prevQ = typeof state.qualityLevel === 'number' ? state.qualityLevel : 1.0;
+        if (!isMenuState && cpuMs > 15.5 && curFps < 48) {
+          state.qualityLevel = Math.max(0.55, +(prevQ - 0.15).toFixed(2));
+        } else if (cpuMs < 11.0 || isMenuState) {
+          state.qualityLevel = Math.min(1.0, +(prevQ + 0.10).toFixed(2));
+        }
+      }
 
       // Track active particles
       let burnActive = 0;
@@ -206,6 +227,15 @@ export function animate(timestamp) {
     // Sync HTML UI Screens
     if (state.lastGameState !== state.gameState) {
       state.lastGameState = state.gameState;
+      const inCombatTouchLock = !isMenuState;
+      if (typeof document !== 'undefined') {
+        if (document.body && document.body.classList) {
+          document.body.classList.toggle('in-combat-touch-lock', inCombatTouchLock);
+        }
+        if (document.documentElement && document.documentElement.classList) {
+          document.documentElement.classList.toggle('in-combat-touch-lock', inCombatTouchLock);
+        }
+      }
       if (!_uiScreensCache) _uiScreensCache = document.querySelectorAll('.ui-screen');
       const screens = _uiScreensCache;
       if (screens && screens.length > 0) {

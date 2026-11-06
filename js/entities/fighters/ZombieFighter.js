@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────
 
 import { Fighter } from '../fighter.js';
+import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { zombieConfig } from '../../configs/characters/zombieConfig.js';
 import { drawZombieSkin } from '../../graphics/fighters/zombieSkin.js';
 import {
@@ -639,7 +640,7 @@ export class ZombieFighter extends Fighter {
       this.maxArmorShieldHp = this.armorShieldHp;
 
       // Spawn dramatic tombstone eruption at current location
-      const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : { x: 45, y: 240, width: 450, height: 450 };
+      const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : ARENA_VERTICAL;
       this._spawnGravestone(arena, 'conehead');
 
       _playZombieSound('crazydave_planting', 0.85);
@@ -701,7 +702,7 @@ export class ZombieFighter extends Fighter {
   draw(ctx, opponent) {
     if (!ctx) return;
 
-    const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : { x: 45, y: 240, width: 450, height: 450 };
+    const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : ARENA_VERTICAL;
 
     // 1. Draw Gravestones
     for (const g of this.gravestones) {

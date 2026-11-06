@@ -23,7 +23,6 @@ function _getGojoDomainImage() {
     img.onload = () => {
       _gojoDomainImg = img;
       _gojoDomainImgLoading = false;
-      _buildRubbickDomainCanvas(img);
     };
     img.onerror = (e) => {
       console.warn('Failed to load Gojo domain overlay image at Assets/Overlays/gojo-domainexpansion.png', e);
@@ -147,8 +146,8 @@ function _getRubbickDomainImage() {
   return null;
 }
 
-// Preload immediately if running in browser
-if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+// Preload immediately if running in desktop browser (deferred on mobile until Gojo/Rubbick enters match)
+if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   _getGojoDomainImage();
 }
 

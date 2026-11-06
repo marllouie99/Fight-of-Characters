@@ -7,8 +7,9 @@
   "scripts": {
     "start": "electron .",
     "start:electron": "electron .",
-    "start:web": "serve -l 8000 .",
+    "start:web": "node scripts/buildMobileAssets.mjs && serve -l 8000 .",
     "preview": "serve -l 8000 .",
+    "postinstall": "node scripts/buildMobileAssets.mjs",
     "verify": "node scripts/verifyCodebase.js",
     "test": "node scripts/testAllFighters.mjs",
     "test:tag": "node scripts/testTagMatch.mjs",
@@ -18,6 +19,7 @@
     "patch-notes": "node scripts/generatePatchNotes.mjs",
     "catalog": "node scripts/buildAssetCatalog.mjs",
     "build:web": "node scripts/buildWeb.mjs",
+    "build:mobile-assets": "node scripts/buildMobileAssets.mjs",
     "preview:web": "serve -l 8000 dist",
     "server:py": "python scripts/server.py",
     "build": "electron-builder --win"

@@ -11,6 +11,7 @@
 
 import { Fighter, applyDamageToTarget } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
+import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { getTileGridInfo, getNearestTileCenter } from '../../systems/arenaTileSystem.js';
@@ -337,7 +338,7 @@ export class BombermanFighter extends Fighter {
    * 3. An arena center obstacle (+ wall).
    */
   isTileOccupied(col, row, arena = state.arena, excludeBomb = null) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     const grid = getTileGridInfo(activeArena);
     const arenaX = activeArena.x ?? 45;
     const arenaY = activeArena.y ?? 240;
@@ -388,7 +389,7 @@ export class BombermanFighter extends Fighter {
    * Checks if the tile block containing (targetX, targetY) is currently occupied.
    */
   isTileOccupiedAtPoint(targetX, targetY, arena = state.arena) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     const grid = getTileGridInfo(activeArena);
     const arenaX = activeArena.x ?? 45;
     const arenaY = activeArena.y ?? 240;
@@ -403,7 +404,7 @@ export class BombermanFighter extends Fighter {
    * and `arenaY + (row + 0.5) * cellH`.
    */
   getExactTileBlockCenter(targetX, targetY, arena = state.arena, allowAdjacentIfOccupied = false) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     const grid = getTileGridInfo(activeArena);
     const arenaX = activeArena.x ?? 45;
     const arenaY = activeArena.y ?? 240;
@@ -1389,7 +1390,7 @@ export class BombermanFighter extends Fighter {
    *   stop on arena walls/obstacles without rebouncing, and explode when `bomb.fuseTimer <= 0`.
    */
   _updateBombs(arena = state.arena) {
-    const activeArena = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
+    const activeArena = arena || state.arena || ARENA_VERTICAL;
     const grid = getTileGridInfo(activeArena);
     const arenaX = activeArena.x ?? 45;
     const arenaY = activeArena.y ?? 240;

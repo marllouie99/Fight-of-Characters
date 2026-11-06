@@ -3,7 +3,8 @@
 // ─────────────────────────────────────────────
 import { CONFIG } from './config.js';
 import { GAME_MODES, MODE_SETTINGS } from './modeConfig.js';
-import { audioSystem } from '../systems/audioSystem.js';
+
+import { initMobileAssetScaler } from '../graphics/mobileAssetScaler.js';
 
 // Late-bound reference – registered by projectileSystem after all modules load
 // to break the state ↔ projectileSystem circular dependency.
@@ -69,7 +70,14 @@ let topLevelUiSprite = null;
 let baseCircleTexture = null;
 let bloodSquareTexture = null;
 
-const isMobileDevice = typeof navigator !== 'undefined' && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024));
+export const isMobileDevice = typeof navigator !== 'undefined' && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse) and (hover: none)').matches) || (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024));
+if (isMobileDevice && typeof document !== 'undefined') {
+  if (document.documentElement && document.documentElement.classList) document.documentElement.classList.add('mobile-device');
+  if (document.body && document.body.classList) document.body.classList.add('mobile-device');
+}
+
+// Initialize mobile @0.5x asset downscale routing and Canvas 2D drawImage coordinate scaler
+initMobileAssetScaler(isMobileDevice);
 const targetResolution = isMobileDevice ? 1.0 : Math.min(window.devicePixelRatio || 1, 2.0);
 
 // Performance standard: On mobile devices, pure native hardware-accelerated Canvas 2D mode provides
@@ -218,6 +226,7 @@ export {
 export const state = {
   canvas,
   ctx,
+  isMobileDevice,
   rendererMode: shouldUsePixi ? 'webgl' : 'canvas2d',
   pixiApp,
   pixiLayers,
@@ -1462,7 +1471,7 @@ export function triggerMissionPassedOverlay(opts = {}) {
       if (state._isRespectMusicPlaying) return; // Audio is already playing smoothly to its natural conclusion
       const winMusic = (typeof CONFIG !== 'undefined' && CONFIG.cj?.sounds?.respectOverlayBgMusic) || 'Assets/Sound Effects/Skills/cj-respectoverlay-bgmusic.mp3';
       const winVol = (typeof CONFIG !== 'undefined' && CONFIG.cj?.soundVolumes?.respectOverlayBgMusic) ?? 0.8;
-      const sys = (typeof audioSystem !== 'undefined' && audioSystem) || (typeof window !== 'undefined' && window.audioSystem);
+      const sys = (typeof window !== 'undefined' && window.audioSystem) || (typeof globalThis !== 'undefined' && globalThis.audioSystem);
       if (sys && typeof sys.playSFX === 'function') {
         state._isRespectMusicPlaying = true;
         const handle = sys.playSFX(winMusic, winVol, 1.0, 0, 0, () => {
@@ -1503,7 +1512,7 @@ export function triggerWastedOverlay(opts = {}) {
     try {
       const deathSound = (typeof CONFIG !== 'undefined' && CONFIG.cj?.sounds?.deathMusic) || 'Assets/Sound Effects/Skills/cj-deathmusic.mp3';
       const deathVol = (typeof CONFIG !== 'undefined' && CONFIG.cj?.soundVolumes?.deathMusic) ?? 0.85;
-      const sys = (typeof audioSystem !== 'undefined' && audioSystem) || (typeof window !== 'undefined' && window.audioSystem);
+      const sys = (typeof window !== 'undefined' && window.audioSystem) || (typeof globalThis !== 'undefined' && globalThis.audioSystem);
       if (sys && typeof sys.playSFX === 'function') {
         sys.playSFX(deathSound, deathVol);
       }

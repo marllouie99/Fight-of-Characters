@@ -16,6 +16,7 @@
 
 import { Fighter, applyDamageToTarget, isSkillEnabled } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
+import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { ashConfig } from '../../configs/characters/ashConfig.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -2810,7 +2811,7 @@ export class AshFighter extends Fighter {
       }
 
       // Stable Sideline Spectator Aim (Stably face inward toward arena, tracking active Pokémon without flipping)
-      const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || { x: 45, y: 240, width: 450, height: 450 };
+      const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || ARENA_VERTICAL;
       const isLeftWall = this.trainerVantagePoint?.wall === 'left' || this.x < (curArena.x + curArena.width * 0.5);
       const lookTarget = (this.activePokemon && (this.activePokemon.hp > 0 || this.activePokemon.isFainting)) ? this.activePokemon : bestTarget;
 

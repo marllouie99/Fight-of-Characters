@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import * as esbuild from 'esbuild';
 import zlib from 'zlib';
+import { buildMobileAssets } from './buildMobileAssets.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,10 @@ if (fs.existsSync(distDir)) {
 }
 fs.mkdirSync(distDir, { recursive: true });
 fs.mkdirSync(path.join(distDir, 'js'), { recursive: true });
+
+// 1.1. Run automated mobile @0.5x sprite sheet downscaling & manifest generation
+console.log('📱 [Mobile Optimization] Checking downscaled @0.5x sprite sheet variants...');
+await buildMobileAssets();
 
 // Excluded junk file patterns for clean asset distribution
 const JUNK_FILE_PATTERNS = [
@@ -117,7 +122,7 @@ for (const folder of assetFolders) {
   }
 }
 
-const singleFiles = ['manifest.json', 'favicon.ico'];
+const singleFiles = ['manifest.json', 'favicon.ico', 'sw.js'];
 for (const file of singleFiles) {
   const src = path.join(rootDir, file);
   const dest = path.join(distDir, file);
@@ -133,14 +138,38 @@ console.log('📄 [4/5] Generating production index.html...');
 const originalHtmlPath = path.join(rootDir, 'index.html');
 let html = fs.readFileSync(originalHtmlPath, 'utf-8');
 
+// Dynamic build timestamp to bust shell cache while preserving asset cache across code deploys
+const pkgJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8'));
+const pkgVersion = pkgJson.version || '1.0.0';
+const buildVersion = `${pkgVersion}.${Date.now()}`;
+
 // Replace the original development module script tag with the production bundle
 html = html.replace(
   /<script\s+type=["']module["']\s+src=["']js\/core\/main\.js(\?v=\d+)?["']\s*><\/script>/i,
   '<script type="module" src="js/game.bundle.js"></script>'
 );
 
+// Align Service Worker registration query param with build version
+html = html.replace(/sw\.js(\?v=[^'"]*)?/g, `sw.js?v=${buildVersion}`);
+
 fs.writeFileSync(path.join(distDir, 'index.html'), html, 'utf-8');
 console.log('   ✅ Production index.html written.');
+
+// Update SHELL_CACHE and ASSETS_CACHE in dist/sw.js
+const distSwPath = path.join(distDir, 'sw.js');
+if (fs.existsSync(distSwPath)) {
+  let swContent = fs.readFileSync(distSwPath, 'utf-8');
+  swContent = swContent.replace(
+    /const SHELL_CACHE = ['"][^'"]+['"];/,
+    `const SHELL_CACHE = 'ramball-shell-v${buildVersion}';`
+  );
+  swContent = swContent.replace(
+    /const ASSETS_CACHE = ['"][^'"]+['"];/,
+    `const ASSETS_CACHE = 'ramball-assets-v${pkgVersion}';`
+  );
+  fs.writeFileSync(distSwPath, swContent, 'utf-8');
+  console.log(`   ✅ Production sw.js stamped with shell cache (ramball-shell-v${buildVersion}) and persistent assets cache (ramball-assets-v${pkgVersion})`);
+}
 
 // 5. Generate ready-to-upload Web Release ZIP file
 console.log('📦 [5/5] Generating distribution ZIP archive (dist/ramball-fight-simulator-web.zip)...');

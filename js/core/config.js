@@ -80,6 +80,7 @@ import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
 import { interactionConfigs } from '../configs/interactions/index.js';
+import { ARENA_VERTICAL } from '../configs/arenaConstants.js';
 
 export const CONFIG = {
   interactions: interactionConfigs,
@@ -194,7 +195,7 @@ export const CONFIG = {
   Guts: gutsConfig,
   choso: chosoConfig,
   Choso: chosoConfig,
-  arena: { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' },
+  arena: { ...ARENA_VERTICAL },
   projectile: { speed: 5.5, radius: 5, life: 120, damage: 10 },
   gun: { baseOffset: 10, barrelLength: 12 }, // distance from fighter edge
   spin: { rate: 0.06 },                        // angle increment per frame (├ù fighter.speed)
@@ -2217,4 +2218,6 @@ if (scale !== 1.0) {
   CONFIG.hudInfoFontSize = Math.round(CONFIG.hudInfoFontSize * scale);
   CONFIG.hudSkillFontSize = Math.round(CONFIG.hudSkillFontSize * scale);
 }
+
+
 

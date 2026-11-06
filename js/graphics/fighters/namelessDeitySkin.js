@@ -379,7 +379,7 @@ function _getHand2Image() {
   return _hand2Image;
 }
 
-if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   _getWingsImage();
   _getWings2Image();
   _getCosmicLightCenterImage();

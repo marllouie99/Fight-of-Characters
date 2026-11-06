@@ -20,13 +20,13 @@ let _audioUnlocked = false;
 const _audioPool = [];
 const MAX_POOL_SIZE = 30;
 
-// Sound cache management to prevent unbounded memory growth
-const MAX_CACHE_SIZE = 1000; // Increased to ensure all preloaded game sounds remain resident
-
 const _isMobileSound = typeof navigator !== 'undefined' && (
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '') ||
   (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024)
 );
+
+// Sound cache management to prevent unbounded memory growth (capped to 120 on mobile to stop uncompressed PCM memory ballooning)
+const MAX_CACHE_SIZE = _isMobileSound ? 120 : 1000;
 
 // ── CONCURRENT SOUND LIMITING (prevents audio bus overload → crackling & mobile thermal heating) ──
 const MAX_CONCURRENT_SOUNDS = _isMobileSound ? 12 : 40; // Hard cap on simultaneous Web Audio sources (12 on mobile to protect audio DSP)
@@ -169,6 +169,21 @@ export function isUltimateVoiceline(src) {
 }
 
 
+
+/**
+ * Refreshes key position in _cache Map to enforce Least-Recently-Used (LRU) ordering.
+ * @param {string} key
+ * @returns {AudioBuffer|HTMLAudioElement|null}
+ */
+function _touchCacheKey(key) {
+  if (_cache.has(key)) {
+    const val = _cache.get(key);
+    _cache.delete(key);
+    _cache.set(key, val);
+    return val;
+  }
+  return null;
+}
 
 function _pruneSoundCache() {
   if (_cache.size > MAX_CACHE_SIZE) {
@@ -343,9 +358,9 @@ export async function preloadAudioBuffer(src, options = {}) {
     }
   }
 
-  // 2. Return immediately if already resident in memory cache
+  // 2. Return immediately if already resident in memory cache (LRU touch)
   if (_cache.has(src)) {
-    return _cache.get(src);
+    return _touchCacheKey(src);
   }
 
   // 3. Return existing in-flight promise if currently fetching/decoding
@@ -569,8 +584,8 @@ export function playLoopingSound(key, src, volume = 1.0, speed = 1.0, fadeMs = 0
   if (_loopingSounds.has(key)) {
     stopLoopingSound(key);
   }
-  // If cache holds an AudioBuffer, use Web Audio API for zero-latency playback
-  const cached = _cache.get(src);
+  // If cache holds an AudioBuffer, use Web Audio API for zero-latency playback (LRU touch)
+  const cached = _touchCacheKey(src);
   if (isAudioBufferLike(cached)) {
     try {
       const audioCtx = getAudioContext();
@@ -1038,7 +1053,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   }
 
   const spriteAudio = soundSpriteManager.getSpriteAudio(src);
-  const cached = spriteAudio ? spriteAudio.buffer : _cache.get(src);
+  const cached = spriteAudio ? spriteAudio.buffer : _touchCacheKey(src);
   const isSprite = Boolean(spriteAudio);
   const spriteBaseOffset = isSprite ? spriteAudio.offset : 0;
   const spriteMaxDuration = isSprite ? spriteAudio.duration : 0;

@@ -1,6 +1,16 @@
 import { state } from './state.js';
 import { CONFIG } from './config.js';
 import { resetCamera } from '../systems/cameraSystem.js';
+import {
+  ARENA_VERTICAL,
+  CANVAS_VERTICAL,
+  ARENA_DUEL_HORIZONTAL,
+  ARENA_FFA_HORIZONTAL,
+  ARENA_GRAND,
+  ARENA_SURVIVOR,
+  CANVAS_HORIZONTAL,
+  getDefaultArena,
+} from '../configs/arenaConstants.js';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -18,31 +28,18 @@ export const VIEWPORT_MODES = {
 
 export const VIEWPORT_CONFIGS = {
   [VIEWPORT_MODES.VERTICAL]: {
-    width: 540,
-    height: 960,
-    arena: { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' },
+    width: CANVAS_VERTICAL.width,
+    height: CANVAS_VERTICAL.height,
+    arena: { ...ARENA_VERTICAL },
     label: '📱 Vertical (9:16 Shorts)',
   },
   [VIEWPORT_MODES.HORIZONTAL]: {
-    width: 960,
-    height: 540,
-    arena: { x: 10, y: 84, width: 940, height: 444, wallWidth: 4, shape: 'rect' },
-    ffaArena: { x: 80, y: -130, width: 800, height: 800, wallWidth: 4, shape: 'rect', centerObstacle: { type: 'plus', size: 280, thickness: 90 } },
-    grandArena: { x: -220, y: -430, width: 1400, height: 1400, wallWidth: 4, shape: 'rect' },
-    survivorArena: {
-      x: -300,
-      y: -430,
-      width: 1560,
-      height: 1400,
-      wallWidth: 6,
-      shape: 'rect',
-      obstacles: [
-        { type: 'rect', x: 20, y: -160, width: 80, height: 260 },
-        { type: 'rect', x: 860, y: -160, width: 80, height: 260 },
-        { type: 'rect', x: 20, y: 440, width: 80, height: 260 },
-        { type: 'rect', x: 860, y: 440, width: 80, height: 260 },
-      ],
-    },
+    width: CANVAS_HORIZONTAL.width,
+    height: CANVAS_HORIZONTAL.height,
+    arena: { ...ARENA_DUEL_HORIZONTAL },
+    ffaArena: { ...ARENA_FFA_HORIZONTAL },
+    grandArena: { ...ARENA_GRAND },
+    survivorArena: { ...ARENA_SURVIVOR },
     label: '🖥️ Horizontal (16:9 Widescreen)',
   },
 };
@@ -96,20 +93,20 @@ export function isGrandBattleMode(mode) {
  */
 export function getArenaConfigForMode(mode, orientation) {
   if (isSurvivorMode(mode)) {
-    return { ...VIEWPORT_CONFIGS[VIEWPORT_MODES.HORIZONTAL].survivorArena };
+    return getDefaultArena('survivor');
   }
 
   const isH = (orientation === VIEWPORT_MODES.HORIZONTAL || (typeof state !== 'undefined' && state.viewOrientation === VIEWPORT_MODES.HORIZONTAL));
   if (isH) {
     if (isGrandBattleMode(mode)) {
-      return { ...VIEWPORT_CONFIGS[VIEWPORT_MODES.HORIZONTAL].grandArena };
+      return getDefaultArena('grand');
     }
     if (isFfaMode(mode)) {
-      return { ...VIEWPORT_CONFIGS[VIEWPORT_MODES.HORIZONTAL].ffaArena };
+      return getDefaultArena('ffa');
     }
-    return { ...VIEWPORT_CONFIGS[VIEWPORT_MODES.HORIZONTAL].arena };
+    return getDefaultArena('horizontal');
   }
-  return { ...VIEWPORT_CONFIGS[VIEWPORT_MODES.VERTICAL].arena };
+  return getDefaultArena('vertical');
 }
 
 /**
@@ -141,11 +138,7 @@ export function setViewportOrientation(mode) {
   }
 
   // Determine arena geometry based on mode & orientation
-  const isGrand = isGrandBattleMode(state.mode);
-  const isFfa = isFfaMode(state.mode);
-  const activeArena = (targetMode === VIEWPORT_MODES.HORIZONTAL)
-    ? (isGrand ? { ...cfg.grandArena } : (isFfa ? { ...cfg.ffaArena } : { ...cfg.arena }))
-    : { ...cfg.arena };
+  const activeArena = getArenaConfigForMode(state.mode, targetMode);
 
   // Update logical config dimensions
   CONFIG.canvasWidth = cfg.width;
