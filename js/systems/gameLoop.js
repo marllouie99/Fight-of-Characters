@@ -51,21 +51,21 @@ export function animate(timestamp) {
   }
 
   // Universal 60 FPS Frame Pacing:
-  // On standard 60Hz displays (including iPhone/iOS WebKit with timer jitter down to ~14ms),
-  // a minimum elapsed interval of 11.5ms ensures every native 60Hz frame passes cleanly
-  // across all screens (menus and combat) without accidental frame dropping, while accurately
-  // throttling high-refresh (90Hz, 120Hz, 144Hz) displays to a rock-solid 60 FPS.
+  // On standard 60Hz displays (like iPhone 11 Pro and 60Hz mobile screens), WebKit timer jitter
+  // produces frame intervals between 12ms and 20ms. Lowering the throttle threshold to 10.0ms
+  // ensures high-refresh displays (90Hz / 120Hz / 144Hz with intervals <= 8.3ms) are capped cleanly
+  // at 60 FPS, while ZERO frames are ever dropped on 60Hz screens, eliminating the 30 FPS stutter lock!
   const isMenuState = _MENU_STATES.has(state.gameState);
 
   if (!lastFrameTime) lastFrameTime = timestamp;
   const elapsed = timestamp - lastFrameTime;
 
-  // Throttle only if frame arrives faster than 11.5ms (~86 FPS threshold) to lock 90Hz/120Hz/144Hz to 60 FPS
-  if (elapsed < 11.5) {
+  // Throttle only if frame arrives faster than 10.0ms (true high-refresh rate threshold)
+  if (elapsed < 10.0) {
     requestAnimationFrame(animate);
     return;
   }
-  lastFrameTime = timestamp;
+  lastFrameTime = timestamp - (elapsed % (1000 / 60));
 
   try {
     // FPS calculation

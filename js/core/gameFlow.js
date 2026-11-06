@@ -7,7 +7,7 @@ import { stopAllSounds, stopAllLoopingSounds, preloadSound, preloadAudioBuffer, 
 // ─────────────────────────────────────────────
 import { CONFIG, FIGHTER_DEFS, getActiveFighterDefs } from './config.js';
 import { GAME_MODES, MODE_SETTINGS } from './modeConfig.js';
-import { state, createFighterInstance, clearProjectiles, spawnFloatingText, saveFighterSelections } from './state.js';
+import { state, createFighterInstance, clearProjectiles, spawnFloatingText, saveFighterSelections, isMobileDevice } from './state.js';
 import { updateFighters, updateProjectiles, spawnFuelPickup } from '../systems/physics.js';
 import { audioSystem } from '../systems/audioSystem.js';
 import { getBasicAttackSoundPaths, getFighterBasicAttackSoundPaths } from '../soundEffects/basicAttackSounds.js';
@@ -278,7 +278,7 @@ export function reinitFighters(isNewMatch = false) {
   state._winnerStartPositions = null;
  
   // Reset qualityLevel and screenShake on round init
-  state.qualityLevel = state.performanceMode ? 0.2 : 1.0;
+  state.qualityLevel = state.performanceMode ? 0.2 : (isMobileDevice ? 0.55 : 1.0);
   state.qualityCheckTimer = 0;
   state.screenShake = { timer: 0, maxTimer: 0, intensity: 0 };
   state.matchTimer = 0;
