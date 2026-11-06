@@ -225,7 +225,6 @@ function drawPauseScreen() {
 
 
 function drawCountdown() {
-  drawHUD();
   const uiCtx = state.topLevelUiCtx || state.ctx;
   if (uiCtx && state.canvas) {
     drawCountdownIntro(uiCtx, state.canvas.width, state.canvas.height);

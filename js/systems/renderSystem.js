@@ -34,7 +34,7 @@ import { drawFightBanner } from '../graphics/renderers/PokeBallSummonRenderer.js
 import { beginForegroundFxPass, flushForegroundFxPass, endForegroundFxPass } from '../graphics/renderers/foregroundFxPass.js';
 import { drawHorizontalTeamSelectScreen } from '../graphics/ui/HorizontalTeamSelectScreen.js';
 import { drawHorizontalPanoramicHud } from '../graphics/ui/horizontalHudManager.js';
-import { drawMobileCanvasHud, isMobileCanvasHudActive, syncMobileDomHudVisibility } from '../graphics/ui/canvasMobileHud.js';
+import { drawMobileCanvasHud, isMobileCanvasHudActive } from '../graphics/ui/canvasMobileHud.js';
 import { flamewardenFlameSystem } from '../graphics/weapons/flamewardenWeaponGraphics.js';
 import { burnEffectSystem } from '../graphics/particles/burnEffectVisuals.js';
 import { bomberExplosionSystem } from '../graphics/particles/bomberExplosionVisuals.js';
@@ -647,9 +647,10 @@ export function renderGame() {
       const originalCtx = state.ctx;
       const originalCanvas = state.canvas;
 
-      // Swap to top-level UI context/canvas for UI rendering
-      state.ctx = state.topLevelUiCtx;
-      state.canvas = state.topLevelUiCanvas;
+      try {
+        // Swap to top-level UI context/canvas for UI rendering
+        state.ctx = state.topLevelUiCtx;
+        state.canvas = state.topLevelUiCanvas;
 
       if (state.topLevelUiCtx) {
         state.topLevelUiCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -677,7 +678,6 @@ export function renderGame() {
           state._topLevelUiDirty = true;
           drawMobileCanvasHud(state.topLevelUiCtx || state.ctx);
         } else if (state.gameState === 'playing' || state.gameState === 'countdown') {
-          syncMobileDomHudVisibility(false);
           drawHUD();
         }
       }
@@ -764,9 +764,11 @@ export function renderGame() {
       // Render Camera Mode Toggle Notification Banner
       drawCameraToast(state.topLevelUiCtx || state.ctx);
 
-      // Restore original context and canvas
-      state.ctx = originalCtx;
-      state.canvas = originalCanvas;
+      } finally {
+        // Restore original context and canvas
+        state.ctx = originalCtx;
+        state.canvas = originalCanvas;
+      }
 
       // Guard against redundant CPU blit when topLevelUiCanvas is already composited by the DOM at z-index: 25
       if (!state.pixiApp && state.topLevelUiCanvas && !state.topLevelUiCanvas.parentNode && state._topLevelUiDirty) {

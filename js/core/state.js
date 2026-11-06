@@ -70,7 +70,23 @@ let topLevelUiSprite = null;
 let baseCircleTexture = null;
 let bloodSquareTexture = null;
 
-export const isMobileDevice = typeof navigator !== 'undefined' && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse) and (hover: none)').matches) || (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024));
+// Robust platform detection: strictly classify desktop environments (Windows, macOS desktop, Linux, Electron)
+// as non-mobile so desktop touchscreens/laptops (e.g. ASUS ZenBook, Surface) do NOT falsely engage mobile canvas HUDs.
+const _isDesktopPlatform = typeof navigator !== 'undefined' && (
+  /Win32|Win64|Windows/i.test(navigator.userAgent || '') ||
+  /Win32|Win64|Windows/i.test(navigator.platform || '') ||
+  (typeof window !== 'undefined' && Boolean(window.electronAPI)) ||
+  /Electron/i.test(navigator.userAgent || '') ||
+  (/Macintosh/i.test(navigator.userAgent || '') && !(navigator.maxTouchPoints > 1 && !/Macintosh/i.test(navigator.platform || '')))
+);
+
+const _isTouchTabletOrPhone = typeof navigator !== 'undefined' && (
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '') ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse) and (hover: none)').matches)
+);
+
+export const isMobileDevice = !_isDesktopPlatform && Boolean(_isTouchTabletOrPhone);
 if (isMobileDevice && typeof document !== 'undefined') {
   if (document.documentElement && document.documentElement.classList) document.documentElement.classList.add('mobile-device');
   if (document.body && document.body.classList) document.body.classList.add('mobile-device');

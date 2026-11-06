@@ -1,5 +1,21 @@
 # AI Coding Agent Instructions
 
+## Mandatory Mobile 60 FPS Rendering & Pre-Baked Sprite Architecture Standard (Rule 35 — *Weapon Ball Z* & *Ball Fight League* Standard)
+
+Whenever creating, scaffolding, optimizing, or modifying any fighter skin (`js/graphics/fighters/*Skin.js`), weapon renderer (`js/graphics/weapons/*WeaponGraphics.js`), particle/effect renderer, or HUD component, the agent **MUST ALWAYS** enforce the **Mobile 60 FPS Pre-Baked Sprite Architecture** documented in [`docs/MOBILE_OPTIMIZATION_BLUEPRINT.md`](docs/MOBILE_OPTIMIZATION_BLUEPRINT.md):
+- **100% Pre-Baked Offscreen Canvas Quads (STRICT PROHIBITION of Uncached `for (gy) for (gx)` Loops)**:
+  - Mobile tile-based GPUs (Adreno/Mali) choke when tessellating rotated `ctx.fillRect(px, py, 2, 2)` calls every frame.
+  - **NEVER** execute raw `for (let gy...) for (let gx...) ctx.fillRect(...)` pixel-grid loops directly onto the live game `ctx` during the 60 FPS render loop.
+  - Every fighter body skin, pixel hand (`drawPixelHand`), and pixel-grid weapon/orb **MUST** bake its pixel grid once into an offscreen `<canvas>` cache and blit it onto `ctx` via a single `ctx.drawImage(cachedCanvas, ...)` quad call.
+- **Pre-Baked Radial Glows Over Per-Frame Gradient Allocation**:
+  - Avoid calling `ctx.createRadialGradient()` or `ctx.createLinearGradient()` inside high-frequency per-frame projectile or particle loops; use cached offscreen radial glow canvases (`ctx.drawImage`) + `ctx.globalAlpha` to prevent mobile shader/LUT allocation stalls.
+- **Dirty-Flagged Full-Screen Secondary Canvases**:
+  - Full-screen `540×960` overlay canvases (`flameCanvas`, `topLevelUiCanvas`) MUST remain gated by dirty flags (`_flameCanvasDirty`, `state._topLevelUiDirty`) so idle frames perform zero full-screen clears or `drawImage` blits.
+- **Lazy On-Demand Asset Decoding & Mobile HUD Budget**:
+  - Preserve lazy on-demand image loading and 2-slot mip caching in `js/graphics/mobileAssetScaler.js`.
+  - Keep mobile HUD portrait canvases at `160×160` (`state.isMobileDevice`) and avoid multi-pass CSS `filter: drop-shadow(...)` or `backdrop-filter: blur(...)` rules on mobile HUD elements.
+- **Reference Blueprint & Skill**: Always consult [`docs/MOBILE_OPTIMIZATION_BLUEPRINT.md`](docs/MOBILE_OPTIMIZATION_BLUEPRINT.md) and `.agents/skills/mobile-60fps-optimizer/SKILL.md`.
+
 ## Mandatory HUD Skill Bar Theme Consistency & Clean Architecture Standard (Rule 18)
 
 Whenever creating, scaffolding, updating, or maintaining HUD skill progress bars for any fighter (in `js/graphics/ui/hudSkillProviders.js` or `js/graphics/hudManager.js`):

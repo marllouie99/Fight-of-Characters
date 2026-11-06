@@ -64,6 +64,18 @@ After completing ANY code modification, update, or fix in the project, the agent
 - Electron main-process code (`electron-main.js`) has no access to `state`; track orientation there explicitly (`currentWindowOrientation`) instead of inferring it from window dimensions.
 - Before finishing any viewport-related change, diff against `HEAD` and confirm the vertical code paths (`isHorizontal === false`) produce identical values/behavior; state this in the final report.
 
+### 0.9 Mandatory Mobile 60 FPS Rendering & Pre-Baked Sprite Architecture Standard (Rule 35 — *Weapon Ball Z* & *Ball Fight League* Standard)
+- **Full Architectural Reference**: Always follow [`docs/MOBILE_OPTIMIZATION_BLUEPRINT.md`](docs/MOBILE_OPTIMIZATION_BLUEPRINT.md) and `.agents/skills/mobile-60fps-optimizer/SKILL.md`.
+- **100% Pre-Baked Offscreen Canvas Quads (Zero Uncached `for (gy) for (gx)` Loops)**:
+  - Mobile tile-based GPUs (Adreno/Mali) stall when tessellating rotated `ctx.fillRect(px, py, 2, 2)` calls every frame.
+  - NEVER run raw `for (let gy...) for (let gx...) ctx.fillRect(...)` pixel-grid loops directly on the live game `ctx` at 60 FPS.
+  - Every fighter skin (`js/graphics/fighters/*Skin.js`), pixel hand (`drawPixelHand`), and pixel-grid weapon/orb (`js/graphics/weapons/*WeaponGraphics.js`) MUST bake its pixel grid once onto an offscreen `<canvas>` cache and blit it via `ctx.drawImage(cachedCanvas, ...)`.
+- **Pre-Baked Radial Glows Over Per-Frame Gradient Shaders**:
+  - Avoid calling `ctx.createRadialGradient()` or `ctx.createLinearGradient()` inside per-frame projectile/particle loops; bake radial glows into cached offscreen canvases and blit with `ctx.drawImage` + `ctx.globalAlpha`.
+- **Dirty-Flagged Full-Screen Canvases & Mobile HUD Discipline**:
+  - Keep `flameCanvas` and `topLevelUiCanvas` gated by `_flameCanvasDirty` and `state._topLevelUiDirty`.
+  - Preserve `mobileAssetScaler.js` lazy on-demand asset loading + 2-slot mip caching, `160×160` mobile HUD portrait canvases, and zero multi-pass CSS `drop-shadow` / `backdrop-filter` rules on mobile (`body.mobile-device`).
+
 ---
 
 

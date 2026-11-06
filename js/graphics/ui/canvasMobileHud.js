@@ -25,6 +25,7 @@ let _cachedHealthHud = null;
 let _cachedTopContainer = null;
 let _cachedHealthHudLeft = null;
 let _cachedHealthHudRight = null;
+let _lastSyncedHudMode = null;
 
 // Ghost health bar interpolation tracker: fighter -> { ghostHp, holdTimer, lastTargetHp }
 const _ghostHpTrackers = new WeakMap();
@@ -39,6 +40,9 @@ export function isMobileCanvasHudActive() {
 
 export function syncMobileDomHudVisibility(active) {
   if (typeof document === 'undefined') return;
+  if (_lastSyncedHudMode === active) return;
+  _lastSyncedHudMode = active;
+
   if (!_cachedHealthHud) _cachedHealthHud = document.getElementById('healthHud');
   if (!_cachedTopContainer) _cachedTopContainer = document.getElementById('hudTopContainer');
   if (!_cachedHealthHudLeft) _cachedHealthHudLeft = document.getElementById('healthHudLeft');
@@ -62,13 +66,17 @@ export function syncMobileDomHudVisibility(active) {
       _cachedHealthHudRight.style.visibility = 'hidden';
     }
   } else {
+    // Invalidate cached state key on DOM top container so hudManager cleanly restores DOM layout
+    if (_cachedTopContainer) {
+      _cachedTopContainer._hudStateKey = null;
+      if (_cachedTopContainer.style.display === 'none') {
+        _cachedTopContainer.style.display = '';
+        _cachedTopContainer.style.visibility = '';
+      }
+    }
     if (_cachedHealthHud && _cachedHealthHud.style.display === 'none') {
       _cachedHealthHud.style.display = '';
       _cachedHealthHud.style.visibility = '';
-    }
-    if (_cachedTopContainer && _cachedTopContainer.style.display === 'none') {
-      _cachedTopContainer.style.display = '';
-      _cachedTopContainer.style.visibility = '';
     }
     if (_cachedHealthHudLeft && _cachedHealthHudLeft.style.display === 'none') {
       _cachedHealthHudLeft.style.display = '';
