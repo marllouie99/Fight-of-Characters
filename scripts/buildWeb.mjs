@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
+const skipZip = process.argv.includes('--skip-zip') || process.argv.includes('--no-zip');
 
 console.log('🛡️  [Web Build & Release Pipeline] Starting automated bundling, WASM optimization & code protection...\n');
 
@@ -32,7 +33,11 @@ const JUNK_FILE_PATTERNS = [
   /\.psd$/i,
   /\.aseprite$/i,
   /\.bak$/i,
-  /~$/
+  /~$/,
+  /\.pdf$/i,
+  /\.lnk$/i,
+  /\.md$/i,
+  /\.txt$/i
 ];
 
 function isJunkFile(filename) {
@@ -287,12 +292,25 @@ function createZipArchive(sourceDir, outZipPath) {
   return { filesCount: entries.length, zipSize: finalZip.length };
 }
 
-const outZip = path.join(distDir, 'fight-of-characters-web.zip');
-const zipStats = createZipArchive(distDir, outZip);
-const legacyZip = path.join(distDir, 'ramball-fight-simulator-web.zip');
-fs.copyFileSync(outZip, legacyZip);
-const zipSizeMB = (zipStats.zipSize / (1024 * 1024)).toFixed(2);
-console.log(`   ✅ Release ZIP generated: dist/fight-of-characters-web.zip & dist/ramball-fight-simulator-web.zip (${zipSizeMB} MB, ${zipStats.filesCount} compressed files).`);
+if (!skipZip) {
+  const outZip = path.join(distDir, 'fight-of-characters-web.zip');
+  const zipStats = createZipArchive(distDir, outZip);
+  const legacyZip = path.join(distDir, 'ramball-fight-simulator-web.zip');
+  fs.copyFileSync(outZip, legacyZip);
+  const zipSizeMB = (zipStats.zipSize / (1024 * 1024)).toFixed(2);
+  console.log(`   ✅ Release ZIP generated: dist/fight-of-characters-web.zip & dist/ramball-fight-simulator-web.zip (${zipSizeMB} MB, ${zipStats.filesCount} compressed files).`);
+} else {
+  console.log('   ⏩ Skipping distribution ZIP archive generation (--skip-zip).');
+  // Ensure no stale zip files linger in distDir
+  if (fs.existsSync(distDir)) {
+    const list = fs.readdirSync(distDir);
+    for (const f of list) {
+      if (f.endsWith('.zip')) {
+        fs.unlinkSync(path.join(distDir, f));
+      }
+    }
+  }
+}
 
 console.log('\n🎉 [BUILD & RELEASE COMPLETE] Protected web distribution is ready in dist/ !');
 console.log('   1. Upload "dist/ramball-fight-simulator-web.zip" directly to itch.io or web hosting.');

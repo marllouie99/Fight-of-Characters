@@ -35,7 +35,8 @@ jobs:
 
       - name: Build Web Bundle & Sync Android
         run: |
-          npm run build:web
+          npm run build:web -- --skip-zip
+          rm -f dist/*.zip
           npx cap sync android
 
       - name: Build Android Debug APK
@@ -70,7 +71,8 @@ jobs:
 
       - name: Build Web Bundle & Sync iOS
         run: |
-          npm run build:web
+          npm run build:web -- --skip-zip
+          rm -f dist/*.zip
           npx cap sync ios
 
       - name: Build Xcode Project (Unsigned)
@@ -101,3 +103,40 @@ jobs:
           path: build/Fight-of-Characters.ipa
           if-no-files-found: error
           retention-days: 30
+
+  release-mobile:
+    name: Publish Mobile Release (Fast Direct CDN)
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: fight-of-characters-android-debug-apk
+          path: release-android
+
+      - name: Download iOS IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: fight-of-characters-ios-ipa
+          path: release-ios
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: mobile-latest
+          name: "Fight of Characters Mobile (iOS & Android)"
+          body: |
+            ## 📱 Fight of Characters Mobile Builds
+            
+            High-speed direct download links (served via GitHub Global CDN):
+            - **iOS IPA (Unsigned / AltStore / Sideloadly)**: [Fight-of-Characters.ipa](https://github.com/marllouie99/Fight-of-Characters/releases/download/mobile-latest/Fight-of-Characters.ipa)
+            - **Android APK (Debug)**: [app-debug.apk](https://github.com/marllouie99/Fight-of-Characters/releases/download/mobile-latest/app-debug.apk)
+            
+            *Direct files ready to sideload. No nested zip extraction required!*
+          files: |
+            release-android/*.apk
+            release-ios/*.ipa
+          prerelease: false

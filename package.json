@@ -21,7 +21,7 @@
     "build:web": "node scripts/buildWeb.mjs",
     "build:mobile-assets": "node scripts/buildMobileAssets.mjs",
     "preview:web": "serve -l 8000 dist",
-    "mobile:sync": "npm run build:web && npx cap sync",
+    "mobile:sync": "npm run build:web -- --skip-zip && npx cap sync",
     "mobile:open:ios": "npx cap open ios",
     "mobile:open:android": "npx cap open android",
     "release:tag": "node scripts/createReleaseTag.mjs",
