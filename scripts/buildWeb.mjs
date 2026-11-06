@@ -153,6 +153,8 @@ html = html.replace(
 html = html.replace(/sw\.js(\?v=[^'"]*)?/g, `sw.js?v=${buildVersion}`);
 
 fs.writeFileSync(path.join(distDir, 'index.html'), html, 'utf-8');
+// Ensure GitHub Pages serves underscore-prefixed folders (e.g. Assets/_mobile05x/)
+fs.writeFileSync(path.join(distDir, '.nojekyll'), '', 'utf-8');
 console.log('   ✅ Production index.html written.');
 
 // Update SHELL_CACHE and ASSETS_CACHE in dist/sw.js
