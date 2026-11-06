@@ -25,7 +25,7 @@ jobs:
           cache: 'npm'
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -57,7 +57,7 @@ jobs:
 
   build-ios:
     name: Build iOS IPA (Unsigned / AltStore Ready)
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -80,7 +80,7 @@ jobs:
         run: |
           cd ios/App
           xcodebuild build \
-            -workspace App.xcworkspace \
+            -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -94,7 +94,7 @@ jobs:
           mkdir -p build/Payload
           cp -r ios/App/build/Build/Products/Release-iphoneos/App.app build/Payload/
           cd build
-          zip -r Fight-of-Characters.ipa Payload
+          zip -qr Fight-of-Characters.ipa Payload
           echo "✅ Fight-of-Characters.ipa packaged successfully!"
 
       - name: Upload iOS IPA Artifact
