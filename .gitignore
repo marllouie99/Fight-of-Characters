@@ -12,3 +12,14 @@ screenshots/
 error_log.txt
 *.log
 Assets/_mobile05x/
+
+# Native Mobile Build Artifacts (populated by cap sync)
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/DerivedData/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/.gradle/
+android/app/build/
+android/build/
+

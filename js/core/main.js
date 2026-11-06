@@ -473,7 +473,9 @@ inputTarget?.addEventListener('wheel', (e) => {
 
 
 import { startGameLoop } from '../systems/gameLoop.js';
+import { initMobileAppBridge } from '../systems/mobileAppBridge.js';
 startGameLoop();
+initMobileAppBridge();
 
 // ─────────────────────────────────────────────
 // HTML UI DOM LISTENERS

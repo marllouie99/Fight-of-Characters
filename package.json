@@ -21,6 +21,9 @@
     "build:web": "node scripts/buildWeb.mjs",
     "build:mobile-assets": "node scripts/buildMobileAssets.mjs",
     "preview:web": "serve -l 8000 dist",
+    "mobile:sync": "npm run build:web && npx cap sync",
+    "mobile:open:ios": "npx cap open ios",
+    "mobile:open:android": "npx cap open android",
     "release:tag": "node scripts/createReleaseTag.mjs",
     "server:py": "python scripts/server.py",
     "build": "electron-builder --win"
@@ -41,12 +44,20 @@
     }
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "electron": "^43.1.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "javascript-obfuscator": "^5.9.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/screen-orientation": "^8.0.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "pixi.js": "^7.3.2",
     "serve": "^14.2.1"
   }

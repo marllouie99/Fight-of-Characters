@@ -1,0 +1,36 @@
+{
+  "appId": "com.fightofcharacters.app",
+  "appName": "Fight of Characters",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#000000",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#000000",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#000000",
+      "overlaysWebView": true
+    },
+    "ScreenOrientation": {
+      "orientation": "portrait"
+    }
+  },
+  "ios": {
+    "contentInset": "never",
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

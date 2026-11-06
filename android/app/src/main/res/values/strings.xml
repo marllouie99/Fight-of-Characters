@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Fight of Characters</string>
+    <string name="title_activity_main">Fight of Characters</string>
+    <string name="package_name">com.fightofcharacters.app</string>
+    <string name="custom_url_scheme">com.fightofcharacters.app</string>
+</resources>
