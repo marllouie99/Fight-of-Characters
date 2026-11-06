@@ -34,7 +34,12 @@ const _MENU_STATES = new Set([
 document.addEventListener('visibilitychange', () => {
   isPageVisible = !document.hidden;
   if (isPageVisible) {
-    lastFrameTime = performance.now(); // Reset to prevent huge delta
+    const now = performance.now();
+    lastFrameTime = now;
+    if (state) {
+      state.fpsLastTime = now;
+      state.fpsFrames = 0;
+    }
   }
 });
 
@@ -45,18 +50,22 @@ export function animate(timestamp) {
     return;
   }
 
-  // Dynamic frame pacing: 30 FPS for all non-combat menus (title, battle mode select, index, studios) saves 50%+ CPU;
-  // strict 60 FPS for active combat simulation and gameplay (playing, countdown, paused, roundEnd, matchEnd).
+  // Universal 60 FPS Frame Pacing:
+  // On standard 60Hz displays (including iPhone/iOS WebKit with timer jitter down to ~14ms),
+  // a minimum elapsed interval of 11.5ms ensures every native 60Hz frame passes cleanly
+  // across all screens (menus and combat) without accidental frame dropping, while accurately
+  // throttling high-refresh (90Hz, 120Hz, 144Hz) displays to a rock-solid 60 FPS.
   const isMenuState = _MENU_STATES.has(state.gameState);
-  const targetFrameTime = isMenuState ? (1000 / 30) : FRAME_TIME;
 
   if (!lastFrameTime) lastFrameTime = timestamp;
   const elapsed = timestamp - lastFrameTime;
-  if (elapsed < targetFrameTime - 1.0) {
+
+  // Throttle only if frame arrives faster than 11.5ms (~86 FPS threshold) to lock 90Hz/120Hz/144Hz to 60 FPS
+  if (elapsed < 11.5) {
     requestAnimationFrame(animate);
     return;
   }
-  lastFrameTime = timestamp - (elapsed % targetFrameTime);
+  lastFrameTime = timestamp;
 
   try {
     // FPS calculation
@@ -78,13 +87,13 @@ export function animate(timestamp) {
       if (state.performanceMode) {
         state.qualityLevel = 0.2;
       } else if (isMobile) {
-        const prevQ = typeof state.qualityLevel === 'number' ? state.qualityLevel : 0.50;
+        const prevQ = typeof state.qualityLevel === 'number' ? state.qualityLevel : 0.65;
         if (!isMenuState && (cpuMs > 14.0 || curFps < 50)) {
-          state.qualityLevel = Math.max(0.25, +(prevQ - 0.10).toFixed(2));
-        } else if (cpuMs > 0 && cpuMs < 8.5 && curFps >= 58) {
-          state.qualityLevel = Math.min(0.75, +(prevQ + 0.05).toFixed(2));
+          state.qualityLevel = Math.max(0.35, +(prevQ - 0.10).toFixed(2));
+        } else if (cpuMs > 0 && cpuMs < 8.5 && curFps >= 56) {
+          state.qualityLevel = Math.min(0.85, +(prevQ + 0.05).toFixed(2));
         } else {
-          state.qualityLevel = Math.max(0.25, Math.min(0.75, prevQ));
+          state.qualityLevel = Math.max(0.35, Math.min(0.85, prevQ));
         }
       } else {
         const prevQ = typeof state.qualityLevel === 'number' ? state.qualityLevel : 1.0;

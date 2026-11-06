@@ -24,7 +24,7 @@
       href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Bangers&family=Permanent+Marker&family=Outfit:wght@800;900&family=Press+Start+2P&family=Rajdhani:wght@700;900&family=Silkscreen:wght@400;700&display=swap"
       rel="stylesheet">
   </noscript>
-  <link rel="stylesheet" href="css/style.css?v=42" />
+  <link rel="stylesheet" href="css/style.css?v=43" />
   <style>
     /* Optimize HTML & Body for Responsive Canvas Preview & Web Scrolling */
     html {
@@ -124,6 +124,9 @@
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
       image-rendering: pixelated;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      will-change: transform;
     }
 
     /* Horizontal 16:9 Widescreen Viewport Mode */
@@ -170,7 +173,8 @@
       position: fixed !important;
       top: 50% !important;
       left: 50% !important;
-      transform: translate(-50%, -50%) scale(var(--app-scale, 1)) !important;
+      transform: translate3d(-50%, -50%, 0) scale(var(--app-scale, 1)) !important;
+      -webkit-transform: translate3d(-50%, -50%, 0) scale(var(--app-scale, 1)) !important;
       transform-origin: center center !important;
       margin: 0 !important;
       flex-shrink: 0;
