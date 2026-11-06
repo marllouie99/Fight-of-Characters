@@ -209,47 +209,63 @@ export function setViewportOrientation(mode) {
       }
       if (canvas) {
         if (canvas.classList) canvas.classList.add('horizontal-mode');
-        canvas.style.width = '960px';
-        canvas.style.height = '540px';
+        if (canvas.style) {
+          canvas.style.width = '960px';
+          canvas.style.height = '540px';
+        }
       }
       if (topCanvas) {
         if (topCanvas.classList) topCanvas.classList.add('horizontal-mode');
-        topCanvas.style.width = '960px';
-        topCanvas.style.height = '540px';
+        if (topCanvas.style) {
+          topCanvas.style.width = '960px';
+          topCanvas.style.height = '540px';
+        }
       }
       if (floatCanvas) {
         if (floatCanvas.classList) floatCanvas.classList.add('horizontal-mode');
-        floatCanvas.style.width = '960px';
-        floatCanvas.style.height = '540px';
+        if (floatCanvas.style) {
+          floatCanvas.style.width = '960px';
+          floatCanvas.style.height = '540px';
+        }
       }
     } else {
       if (document.documentElement?.classList) document.documentElement.classList.remove('horizontal-viewport-mode');
       if (document.body?.classList) document.body.classList.remove('horizontal-viewport-mode');
       if (container) {
         container.classList.remove('horizontal-mode');
-        container.style.width = '540px';
-        container.style.height = '960px';
+        if (container.style) {
+          container.style.width = '540px';
+          container.style.height = '960px';
+        }
       }
       if (box) {
         box.classList.remove('horizontal-mode');
-        box.style.width = '540px';
-        box.style.height = '960px';
-        box.style.aspectRatio = '540 / 960';
+        if (box.style) {
+          box.style.width = '540px';
+          box.style.height = '960px';
+          box.style.aspectRatio = '540 / 960';
+        }
       }
       if (canvas) {
         if (canvas.classList) canvas.classList.remove('horizontal-mode');
-        canvas.style.width = '540px';
-        canvas.style.height = '960px';
+        if (canvas.style) {
+          canvas.style.width = '540px';
+          canvas.style.height = '960px';
+        }
       }
       if (topCanvas) {
         if (topCanvas.classList) topCanvas.classList.remove('horizontal-mode');
-        topCanvas.style.width = '540px';
-        topCanvas.style.height = '960px';
+        if (topCanvas.style) {
+          topCanvas.style.width = '540px';
+          topCanvas.style.height = '960px';
+        }
       }
       if (floatCanvas) {
         if (floatCanvas.classList) floatCanvas.classList.remove('horizontal-mode');
-        floatCanvas.style.width = '540px';
-        floatCanvas.style.height = '960px';
+        if (floatCanvas.style) {
+          floatCanvas.style.width = '540px';
+          floatCanvas.style.height = '960px';
+        }
       }
     }
 

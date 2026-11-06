@@ -8,7 +8,7 @@ import { spawnBloodEffect, isBloodSuppressedEntity } from '../graphics/particles
 
 function shouldApplyPhysicalPush(target) {
   if (!target) return false;
-  if (target.characterId === 'escanor' || target.type === 'escanor' || target.characterId === 'cj' || target.type === 'cj' || target.characterId === 'eye_of_cthulhu' || target.type === 'eye_of_cthulhu' || target.isGhostTerrain || target.immuneToPush || target.immuneToKnockback) return false;
+  if (target.isEndCrystal || target.suppressHitEffects || target.characterId === 'escanor' || target.type === 'escanor' || target.characterId === 'cj' || target.type === 'cj' || target.characterId === 'eye_of_cthulhu' || target.type === 'eye_of_cthulhu' || target.isGhostTerrain || target.immuneToPush || target.immuneToKnockback) return false;
   return true;
 }
 
@@ -17,6 +17,8 @@ function isSoundSuppressedTarget(target) {
   return Boolean(
     target.noHitSound ||
     target.suppressHitSound ||
+    target.isEndCrystal ||
+    target.suppressHitEffects ||
     target.isChessTroop ||
     target.isChessMinion ||
     target.isChessPiece ||
@@ -59,6 +61,26 @@ export const HitImpactSystem = {
     const isSilentTarget = isSoundSuppressedTarget(target);
     const isSukunaSlash = projectile.visual === 'sukunaSlash' || projectile.visual === 'sukunaCleave' || projectile.visual === 'sukunaDismantleGrid' || projectile.visual === 'ghostBlade' || projectile.isSukunaSlash;
     const isMahoragaThrow = projectile.isMahoragaThrow || projectile.visual === 'mahoragaBasaltMonolith' || projectile.visual === 'mahoragaRuinConcrete' || projectile.visual === 'mahoragaLavaRubble';
+
+    // Suppress all global hit effects (impact flashes, sparks, blood, physical pushback, and flesh hit sounds) on End Crystals
+    if (target && (target.isEndCrystal || target.suppressHitEffects)) {
+      if (!projectile.hitFighters) projectile.hitFighters = new Set();
+      projectile.hitFighters.add(target);
+      const isPiercing = Boolean(
+        projectile.isPiercing ||
+        projectile.pierce ||
+        isSukunaSlash ||
+        projectile.visual === 'crimsonSniperBullet_enhanced' ||
+        projectile.visual === 'rubbickSniperBullet_enhanced' ||
+        projectile.visual === 'tricksterSniperBullet_enhanced' ||
+        (projectile.isHeiligPfeil && projectile.isPiercing && (projectile.pierceCount || 0) < (projectile.maxPierces || 4))
+      );
+      if (projectile.isHeiligPfeil && projectile.isPiercing) {
+        if (!projectile.pierceCount) projectile.pierceCount = 0;
+        projectile.pierceCount++;
+      }
+      return !isPiercing;
+    }
     
     if (isSukunaSlash || isMahoragaThrow) {
       if (!projectile.hitFighters) projectile.hitFighters = new Set();

@@ -14,7 +14,7 @@ export const unarmedConfig = {
   hp: 1100,
   maxHp: 1100,
   speed: 5.0,
-  moveSpeed: 2.0,
+  moveSpeed: 5.0,
   r: 25,
   radius: 25,
   hideHands: true,                  // Official Earclacks standard: Unarmed is a pure weaponless & handless physics ball

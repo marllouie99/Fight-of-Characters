@@ -1068,9 +1068,9 @@ export function drawArena() {
       return { color: 0x000000, alpha: 1 };
     };
 
-    const canvasBg = parseColor(isDark ? (CONFIG.darkCanvasBgColor || '#0A0C13') : (CONFIG.canvasBgColor || CONFIG.arenaOuterBgColor || '#141622'));
-    const outerBg = parseColor(isDark ? (CONFIG.darkArenaOuterBgColor || '#0A0C13') : (CONFIG.arenaOuterBgColor || '#141622'));
-    const innerBg = parseColor(isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || '#919298ff'));
+    const canvasBg = parseColor(isDark ? (CONFIG.darkCanvasBgColor || '#000000') : (CONFIG.canvasBgColor || CONFIG.arenaOuterBgColor || CONFIG.lightCanvasBgColor || '#ffffffff'));
+    const outerBg = parseColor(isDark ? (CONFIG.darkArenaOuterBgColor || '#000000') : (CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || '#ffffffff'));
+    const innerBg = parseColor(isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || CONFIG.lightArenaInnerBgColor || '#ffffffff'));
 
     const bleed = 4000;
     const bgW = pixiApp.screen.width + bleed * 2;
@@ -1122,8 +1122,8 @@ export function drawArena() {
     ctx.save();
     applyCameraToCtx(ctx);
     const bleed = 4000;
-    const canvasBg = isDark ? (CONFIG.darkCanvasBgColor || '#0A0C13') : (CONFIG.canvasBgColor || CONFIG.arenaOuterBgColor || '#141622');
-    const outerBg = isDark ? (CONFIG.darkArenaOuterBgColor || '#0A0C13') : (CONFIG.arenaOuterBgColor || '#141622');
+    const canvasBg = isDark ? (CONFIG.darkCanvasBgColor || '#000000') : (CONFIG.canvasBgColor || CONFIG.arenaOuterBgColor || CONFIG.lightCanvasBgColor || '#ffffffff');
+    const outerBg = isDark ? (CONFIG.darkArenaOuterBgColor || '#000000') : (CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || '#ffffffff');
     ctx.fillStyle = canvasBg;
     ctx.fillRect(-bleed, -bleed, canvas.width + bleed * 2, canvas.height + bleed * 2);
     if (!suppressArenaFloor) {

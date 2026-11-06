@@ -43,9 +43,8 @@ export class EnderDragonFighter extends Fighter {
     this.characterId = 'ender_dragon';
     this.type = 'ender_dragon';
 
-    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.ender_dragon)
-      ? CONFIG.ender_dragon
-      : enderDragonConfig;
+    if (def?.customConfig) this.customConfig = def.customConfig;
+    const cfg = this._getConfig();
 
     this.color = cfg.color || '#18181B';
     this.themeColor = cfg.themeColor || '#C026D3';
@@ -70,6 +69,12 @@ export class EnderDragonFighter extends Fighter {
     this.suppressFaahOnDeath = true;
     this._hurtSoundCooldownTimer = 0;
     this._wingFlapToggle = false;
+
+    // Wing Animation & SFX Synchronization Engine
+    this.wingAnimTick = 0;
+    this.wingFrameIndex = 0;
+    this.prevWingFrameIndex = -1;
+    this.groundedRestTick = 0;
 
     // ── General Movement Behavior State (Pillars 1-4) ──
     // Altitude & Simulated 3D Depth
@@ -134,17 +139,26 @@ export class EnderDragonFighter extends Fighter {
     this.cataclysmProgress = 0;
     this.hasRoaredThisCataclysm = false;
 
-    // Lingering Acid Pools
+    // Lingering Acid Pools & 360° Breath Streams
     this.acidPools = [];
+    this.breathStreams = [];
+
+    // Dragon Breath (Skill 1) 360 mechanics
+    this.isBreathingFire = false;
+    this.breathStartAngle = 0;
+    this.breathSpinDuration = 0;
+    this.breathRecoveryFrames = 0;
+    this.breathTotalFrames = 0;
+    this.breathFireInterval = 2;
 
     this._registerSkills();
   }
 
   /**
-   * Terraria/Minecraft Void Flight Physics:
-   * Ender Dragon glides freely through borders and terrain, hovering and soaring outside
-   * the arena and across the screen window just like the Eye of Cthulhu.
-   * Never abruptly bounces or clamps against the arena wall during combat.
+   * Natural Fighter Arena Wall Bouncing Physics (Rule 1.2):
+   * Ender Dragon moves and bounces naturally inside the arena walls with randomized deflection angles
+   * and speed normalization, just like a standard fighter.
+   * Unrestricted off-screen transit is permitted exclusively during cinematic divebomb strikes.
    */
   resolveWallBounce(arena, opponent) {
     if (!arena && typeof state !== 'undefined') arena = state.arena;
@@ -155,39 +169,8 @@ export class EnderDragonFighter extends Fighter {
       return super.resolveWallBounce(arena, opponent);
     }
 
-    const cfg = this._getConfig();
-    const cx = arena.x + arena.width / 2;
-    const cy = arena.y + arena.height / 2;
-    const ar = (arena.radius || (arena.width / 2));
-
-    const isMatchEnded = typeof state !== 'undefined' && (
-      state.gameState === 'roundEnd' || 
-      state.gameState === 'matchEnd' || 
-      state.gameState === 'gameOver' || 
-      state.gameState === 'champion' || 
-      Boolean(this._isWinnerReveal)
-    );
-    const isTargetAlive = Boolean(opponent && !opponent.isDead && opponent.hp > 0);
-
-    // If the Dragon has won the match or all targets are dead, enforce smooth return inside arena
-    if (isMatchEnded || !isTargetAlive) {
-      const safeRadius = Math.max(30, ar - (this.r || 36) - 25);
-      const distFromCenter = Math.hypot(this.x - cx, this.y - cy);
-      if (distFromCenter > safeRadius && distFromCenter > 0) {
-        const nx = (cx - this.x) / distFromCenter;
-        const ny = (cy - this.y) / distFromCenter;
-        const pullSpeed = Math.min(8.5, Math.max(4.0, (distFromCenter - safeRadius) * 0.10));
-        this.vx += nx * pullSpeed * 0.30;
-        this.vy += ny * pullSpeed * 0.30;
-        const currentSpeed = Math.hypot(this.vx, this.vy);
-        if (currentSpeed > pullSpeed) {
-          this.vx = (this.vx / currentSpeed) * pullSpeed;
-          this.vy = (this.vy / currentSpeed) * pullSpeed;
-        }
-      } else {
-        this.vx *= 0.90;
-        this.vy *= 0.90;
-      }
+    // Suppress wall bouncing and jitter while stationary during 360° dragon breath
+    if (this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT) {
       return false;
     }
 
@@ -196,29 +179,62 @@ export class EnderDragonFighter extends Fighter {
       return false;
     }
 
-    // During active combat: soft parabolic leash allows wide clipping beyond arena walls
-    const maxAllowedDist = ar + (cfg.softLeashRadius || 280);
-    const distFromCenter = Math.hypot(this.x - cx, this.y - cy);
-    if (distFromCenter > maxAllowedDist && distFromCenter > 0) {
-      // Gentle soft steering back towards arena center (smooth parabolic curve)
-      const pullForce = 0.38 * (this.phaseSpeedMult || 1.0);
-      const nx = (cx - this.x) / distFromCenter;
-      const ny = (cy - this.y) / distFromCenter;
-      this.vx += nx * pullForce;
-      this.vy += ny * pullForce;
+    const bounced = super.resolveWallBounce(arena, opponent);
+    if (bounced) {
+      const spd = Math.hypot(this.vx, this.vy);
+      if (spd > 0.5) {
+        const moveAngle = Math.atan2(this.vy, this.vx);
+        this.gunAngle = moveAngle;
+        this.angle = moveAngle;
+      }
     }
-    return false;
+    return bounced;
+  }
+
+  /**
+   * Standard Movement Physics (Rule 1.2):
+   * Ensures the dragon continuously faces forward along its flight trajectory
+   * rather than spinning like a top.
+   */
+  applyMovementPhysics(extraMultiplier = 1) {
+    if (this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT || this.isTelegraphingDivebomb || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH) {
+      this.vx = 0;
+      this.vy = 0;
+      this.knockbackVx = 0;
+      this.knockbackVy = 0;
+      return;
+    }
+    super.applyMovementPhysics(extraMultiplier);
+    const spd = Math.hypot(this.vx, this.vy);
+    if (spd > 0.5 && !this.isTelegraphingDivebomb && !this.isChannelingCataclysm && this.aiState !== DRAGON_STATE.PERCH_GROUNDED && this.aiState !== DRAGON_STATE.FIREBALL_SPIT && this.aiState !== DRAGON_STATE.DIVEBOMB_RECOVERY) {
+      const moveAngle = Math.atan2(this.vy, this.vx);
+      this.gunAngle = moveAngle;
+      this.angle = moveAngle;
+    }
   }
 
   reset() {
     super.reset();
-    this.aiState = DRAGON_STATE.HOVER;
+    this.aiState = DRAGON_STATE.PATROL;
     this.stateTimer = 0;
     this.altitude = 1.0;
     this.targetAltitude = 1.0;
     this.z = 20;
     this.currentPhase = 1;
     this.phaseSpeedMult = 1.0;
+    this.wingAnimTick = 0;
+    this.wingFrameIndex = 0;
+    this.prevWingFrameIndex = -1;
+    this.groundedRestTick = 0;
+
+    // Natural linear movement initialization (Rule 1.2)
+    const baseSpeed = this.speed || 4.4;
+    const startAngle = Math.random() * Math.PI * 2;
+    this.vx = Math.cos(startAngle) * baseSpeed;
+    this.vy = Math.sin(startAngle) * baseSpeed;
+    this.gunAngle = startAngle;
+    this.angle = startAngle;
+
     this.fireballCooldown = 120 + Math.floor(Math.random() * 80);
     this.swoopCooldown = 240 + Math.floor(Math.random() * 100);
     this.cataclysmCooldown = 600 + Math.floor(Math.random() * 200);
@@ -226,10 +242,20 @@ export class EnderDragonFighter extends Fighter {
     this.isSwooping = false;
     this.isIntercepting = false;
     this.isDivebombing = false;
+    this.isBreathingFire = false;
+    this.breathSpinDuration = 0;
+    this.breathRecoveryFrames = 0;
+    this.breathTotalFrames = 0;
     this.isTelegraphingDivebomb = false;
     this.isChannelingCataclysm = false;
     this.isGrounded = false;
     this.acidPools = [];
+    this.breathStreams = [];
+    this.breathAnchorX = undefined;
+    this.breathAnchorY = undefined;
+    this.breathAnchorAltitude = undefined;
+    this.breathElapsed = undefined;
+    this.breathSpinTotal = undefined;
     this.afterImages = [];
     if (this.draggedVictims) this.draggedVictims.clear();
     if (this.divebombHitFighters) this.divebombHitFighters.clear();
@@ -240,6 +266,9 @@ export class EnderDragonFighter extends Fighter {
     if (typeof state === 'undefined' || !Array.isArray(state.fighters)) return;
     if (state.activeFocMap && state.activeFocMap.id === 'foc_ender_dragon_map') return;
     if (this._hasSpawnedCornerCrystals) return;
+
+    const cfg = this._getConfig();
+    if (!this.isSkillEnabled(cfg.enableCornerCrystals, true)) return;
 
     const existingCount = state.fighters.filter(f => f && f.isEndCrystal && f.hp > 0).length;
     if (existingCount >= 4) {
@@ -259,31 +288,42 @@ export class EnderDragonFighter extends Fighter {
   }
 
   _getConfig() {
+    if (this.customConfig) return this.customConfig;
+    if (this._def?.customConfig) return this._def.customConfig;
     if (this.bossConfig) return this.bossConfig;
     if (typeof CONFIG !== 'undefined' && CONFIG.ender_dragon) return CONFIG.ender_dragon;
     return enderDragonConfig;
   }
 
-  _playAudio(key, fallbackSrc, defaultVol = 0.85) {
+  /**
+   * Overrides base Fighter.shoot() to suppress default generic bullet projectiles (Rule 23).
+   */
+  shoot(ownerIndex) {
+    // Intentionally empty: Ender Dragon uses dedicated flight, fireballs, wing buffet, and divebombs
+  }
+
+  _playAudio(key, fallbackSrc, customVol = null, speed = 1.0) {
     const cfg = this._getConfig();
     const src = (cfg.sounds && cfg.sounds[key]) || fallbackSrc;
-    const vol = (cfg.soundVolumes && cfg.soundVolumes[key] !== undefined)
-      ? cfg.soundVolumes[key]
-      : defaultVol;
+    if (!src) return;
+    const vol = (customVol !== null && customVol !== undefined)
+      ? customVol
+      : ((cfg.soundVolumes && cfg.soundVolumes[key] !== undefined) ? cfg.soundVolumes[key] : 0.85);
+    if (vol <= 0) return;
     try {
       if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
-        audioSystem.playSFX(src, vol);
+        audioSystem.playSFX(src, vol, speed);
       }
     } catch (_) {}
   }
 
-  _playWingFlapAudio(defaultVol = 0.70) {
+  _playWingFlapAudio(customVol = null, speed = 1.0) {
     this._wingFlapToggle = !this._wingFlapToggle;
     const key = this._wingFlapToggle ? 'wingFlap' : 'wingFlap2';
     const fallback = this._wingFlapToggle
       ? 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg'
       : 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg';
-    this._playAudio(key, fallback, defaultVol);
+    this._playAudio(key, fallback, customVol, speed);
   }
 
   _playRandomExplosionAudio(defaultVol = 0.90) {
@@ -302,32 +342,43 @@ export class EnderDragonFighter extends Fighter {
 
   _registerSkills() {
     const cfg = this._getConfig();
-    this.skills = [
-      {
+    this.skills = [];
+
+    if (this.isSkillEnabled(cfg.enableFireball, cfg.enableDragonsBreath, true)) {
+      this.skills.push({
         id: 'dragonsBreath',
         name: "Dragon's Breath",
         cooldown: cfg.fireballCooldown || 480,
         currentCooldown: this.fireballCooldown || 0,
         icon: '🟣',
-        desc: "Spits an explosive void fireball that detonates into a lingering acid pool.",
-      },
-      {
+        desc: "Halts movement and unleashes a continuous 360° stream of Dragon's Breath surrounding the dragon in void acid, then resumes flight.",
+      });
+    }
+
+    if (this.isSkillEnabled(cfg.enableSwoop, cfg.enableWingBuffet, true)) {
+      this.skills.push({
         id: 'wingBuffet',
         name: 'Wing Buffet',
         cooldown: cfg.swoopCooldown || 540,
         currentCooldown: this.swoopCooldown || 0,
         icon: '🦇',
         desc: "Performs a high-velocity aerial swoop launching enemies with massive kinetic force.",
-      },
-      {
+      });
+    }
+
+    if (this.isSkillEnabled(cfg.enableDivebomb, cfg.enableVoidDivebomb, true)) {
+      this.skills.push({
         id: 'divebombStrafe',
         name: 'Void Divebomb',
         cooldown: cfg.divebombCooldown || 600,
         currentCooldown: this.divebombCooldown || 0,
         icon: '⚡',
-        desc: "Hovers off-screen, projects a telegraphed danger carpet, and divebombs across the arena.",
-      },
-      {
+        desc: "Hovers off-screen, divebombs across the arena dragging victims into a wall slam, and chains into a 360° Dragon's Breath Void Acid Sweep.",
+      });
+    }
+
+    if (this.isSkillEnabled(cfg.enableCataclysm, cfg.enableVoidCataclysm, true)) {
+      this.skills.push({
         id: 'voidCataclysm',
         name: 'Void Cataclysm',
         cooldown: cfg.cataclysmCooldown || 1100,
@@ -335,8 +386,8 @@ export class EnderDragonFighter extends Fighter {
         icon: '🌌',
         isUltimate: true,
         desc: "Ascends to perch, emits an earth-shattering roar, and discharges a 360° void wave.",
-      },
-    ];
+      });
+    }
   }
 
   _getValidEnemyOpponent(passedOpponent) {
@@ -349,9 +400,17 @@ export class EnderDragonFighter extends Fighter {
     return enemies[0];
   }
 
+  // ── Stationary Skill & Channeling Guard ──
+  isStationarySkillActive() {
+    if (this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT || this.aiState === DRAGON_STATE.PERCH_GROUNDED) {
+      return true;
+    }
+    return super.isStationarySkillActive ? super.isStationarySkillActive() : false;
+  }
+
   // ── Rule 1.4: Committed 360° Skill Aim Lock ──
   canAim() {
-    if (this.isSwooping || this.isIntercepting || this.isChannelingCataclysm || this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.SWOOP_DASH || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.aiState === DRAGON_STATE.PERCH_TAKEOFF) {
+    if (this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT || this.isSwooping || this.isIntercepting || this.isChannelingCataclysm || this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.SWOOP_DASH || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.aiState === DRAGON_STATE.PERCH_TAKEOFF) {
       return false;
     }
     return super.canAim ? super.canAim() : true;
@@ -386,7 +445,7 @@ export class EnderDragonFighter extends Fighter {
 
   // ── Pushback, Pull & Knockback Immunity Guard ──
   applyKnockback(vx, vy, opts = 0) {
-    const isDivebombActive = this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.isChannelingCataclysm || this.aiState === DRAGON_STATE.CATACLYSM_CHANNEL;
+    const isDivebombActive = this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT || this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.isChannelingCataclysm || this.aiState === DRAGON_STATE.CATACLYSM_CHANNEL;
     if (isDivebombActive || this.immuneToKnockback || this.immuneToPush) {
       this.knockbackVx = 0;
       this.knockbackVy = 0;
@@ -396,7 +455,7 @@ export class EnderDragonFighter extends Fighter {
   }
 
   applyPull(targetX, targetY, strength) {
-    const isDivebombActive = this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.isChannelingCataclysm || this.aiState === DRAGON_STATE.CATACLYSM_CHANNEL;
+    const isDivebombActive = this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT || this.isTelegraphingDivebomb || this.isDivebombing || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE || this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY || this.isChannelingCataclysm || this.aiState === DRAGON_STATE.CATACLYSM_CHANNEL;
     if (isDivebombActive || this.immuneToPull || this.immuneToPush) {
       return;
     }
@@ -408,10 +467,12 @@ export class EnderDragonFighter extends Fighter {
   // ── Main Update Loop ──
   update(opponent, ownerIndex, arena) {
     const validOpponent = this._getValidEnemyOpponent(opponent);
+    const cfg = this._getConfig();
 
     // 0. Update visual effects & transient particle lifecycles before freeze guard (Rule 25)
-    // (Ensures active dragon breath acid pools & afterimages decay naturally when dragon is immobilized)
+    // (Ensures active dragon breath streams, acid pools & afterimages decay naturally when dragon is immobilized)
     this._updateAcidPools(validOpponent);
+    this._updateBreathStreams(validOpponent, cfg);
     this._updateAfterImages();
     if (this._hurtSoundCooldownTimer > 0) this._hurtSoundCooldownTimer--;
 
@@ -438,10 +499,11 @@ export class EnderDragonFighter extends Fighter {
       return;
     }
 
-    const cfg = this._getConfig();
-
     // 0b. Ensure 4 Corner End Crystals are active in arena for Fighter Ender Dragon
     this._ensureCornerEndCrystals(arena);
+
+    // ── Synchronized Draconic Wing Flapping & Flap Audio Engine ──
+    this._updateWingFlapCycle(cfg);
 
     // ── Pillar 4: Environmental Reactivity & HP Phase Check ──
     this._evaluateEnvironmentalReactivity(cfg);
@@ -457,11 +519,13 @@ export class EnderDragonFighter extends Fighter {
     if (this.perchCooldown > 0) this.perchCooldown--;
     if (this.divebombCooldown > 0) this.divebombCooldown--;
 
-    if (this.skills && this.skills.length >= 4) {
-      this.skills[0].currentCooldown = this.fireballCooldown;
-      this.skills[1].currentCooldown = this.swoopCooldown;
-      this.skills[2].currentCooldown = this.divebombCooldown;
-      this.skills[3].currentCooldown = this.cataclysmCooldown;
+    if (this.skills && this.skills.length > 0) {
+      for (const sk of this.skills) {
+        if (sk.id === 'dragonsBreath') sk.currentCooldown = this.fireballCooldown;
+        else if (sk.id === 'wingBuffet') sk.currentCooldown = this.swoopCooldown;
+        else if (sk.id === 'divebombStrafe') sk.currentCooldown = this.divebombCooldown;
+        else if (sk.id === 'voidCataclysm') sk.currentCooldown = this.cataclysmCooldown;
+      }
     }
 
     // AI State Machine Execution
@@ -520,24 +584,16 @@ export class EnderDragonFighter extends Fighter {
     }
 
     // Centralized Movement & Physics (Rule 1.2)
-    this.x += this.vx;
-    this.y += this.vy;
+    const isSpecialHighSpeedState = this.isSwooping || this.isIntercepting || this.isDivebombing ||
+      this.aiState === DRAGON_STATE.SWOOP_DASH || this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE ||
+      this.aiState === DRAGON_STATE.INTERCEPT || this.aiState === DRAGON_STATE.DIVEBOMB_SETUP ||
+      this.aiState === DRAGON_STATE.DIVEBOMB_RECOVERY;
 
-    // Apply flight friction when not in high-speed swoop/intercept/divebomb
-    if (!this.isSwooping && !this.isIntercepting && !this.isDivebombing && this.aiState !== DRAGON_STATE.SWOOP_DASH && this.aiState !== DRAGON_STATE.DIVEBOMB_STRIKE) {
-      const friction = this.isGrounded ? 0.90 : (cfg.hoverFriction || 0.96);
-      this.vx *= friction;
-      this.vy *= friction;
-
-      // Enforce continuous natural flight momentum floor during open flight
-      if (this.aiState === DRAGON_STATE.PATROL || this.aiState === DRAGON_STATE.HOVER) {
-        const curSpd = Math.hypot(this.vx, this.vy);
-        if (curSpd < 3.2 && curSpd > 0.05) {
-          const boost = 3.2 / curSpd;
-          this.vx *= boost;
-          this.vy *= boost;
-        }
-      }
+    if (isSpecialHighSpeedState) {
+      this.x += this.vx;
+      this.y += this.vy;
+    } else {
+      this.applyMovementPhysics(this.phaseSpeedMult || 1.0);
     }
 
     // Resolve Arena Wall Bouncing & Obstacle Collisions (Rule 1.2)
@@ -571,29 +627,78 @@ export class EnderDragonFighter extends Fighter {
       triggerGlobalScreenShake(10, 25);
       spawnImpactFlash(this.x, this.y, (this.r || 36) * 3.5, '#C026D3');
       spawnSparks(this.x, this.y, '#F5D0FE', 24, 7.5);
-      this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 1.0);
+      this._playWingFlapAudio(0.95);
 
-      // Shift patrol direction & tighten flight radius
-      this.patrolDirection *= -1;
-      this.targetAltitude = 1.7; // Sudden climb
+      // Enrage surge: sudden climb & speed boost
+      this.targetAltitude = 1.7;
+      const surgeSpeed = (this.speed || 4.4) * newSpeedMult;
+      const angle = (this.gunAngle !== undefined && !Number.isNaN(this.gunAngle)) ? this.gunAngle : (Math.random() * Math.PI * 2);
+      this.vx = Math.cos(angle) * surgeSpeed;
+      this.vy = Math.sin(angle) * surgeSpeed;
     }
 
     // Environmental Support Node / End Crystal Tracking
     if (typeof state !== 'undefined' && state.fighters) {
       const activeCrystals = state.fighters.filter(f => f && f.isEndCrystal && f.hp > 0).length;
       if (this._lastCrystalCount !== undefined && activeCrystals < this._lastCrystalCount) {
-        // A crystal was destroyed: immediate evasive reaction & direction shift
-        this.patrolDirection *= -1;
+        // A crystal was destroyed: immediate evasive reaction & reverse heading
         this.targetAltitude = 1.7;
         triggerGlobalScreenShake(8, 20);
-        this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 0.90);
+        this._playWingFlapAudio(0.90);
+        this.vx = -this.vx;
+        this.vy = -this.vy;
+        if (Math.hypot(this.vx, this.vy) > 0.5) {
+          const moveAngle = Math.atan2(this.vy, this.vx);
+          this.gunAngle = moveAngle;
+          this.angle = moveAngle;
+        }
       }
       this._lastCrystalCount = activeCrystals;
     }
   }
 
+  // ── Synchronized Draconic Wing Flapping & Flap Audio Engine ──
+  _updateWingFlapCycle(cfg) {
+    const isGrounded = Boolean(this.isGrounded || this.aiState === DRAGON_STATE.PERCH_GROUNDED);
+    if (isGrounded) {
+      this.groundedRestTick = (this.groundedRestTick || 0) + 1;
+      this.wingFrameIndex = 2 + Math.floor((this.groundedRestTick / 12) % 2);
+      this.prevWingFrameIndex = this.wingFrameIndex;
+      return;
+    }
+
+    const isSwooping = Boolean(
+      this.isSwooping ||
+      this.aiState === DRAGON_STATE.SWOOP_DASH ||
+      this.aiState === DRAGON_STATE.INTERCEPT ||
+      this.isDivebombing ||
+      this.aiState === DRAGON_STATE.DIVEBOMB_STRIKE
+    );
+
+    const ticksPerFrame = isSwooping
+      ? (cfg.swoopTicksPerFrame || 3)
+      : (cfg.spriteTicksPerFrame || 5);
+
+    this.wingAnimTick = (this.wingAnimTick || 0) + 1;
+    const prevFrame = (this.wingFrameIndex !== undefined) ? this.wingFrameIndex : -1;
+    const numFrames = 6;
+    this.wingFrameIndex = Math.floor(this.wingAnimTick / ticksPerFrame) % numFrames;
+
+    // Detect exact frame transition into downstroke
+    const downstrokeFrame = (cfg.wingFlapDownstrokeFrame !== undefined) ? cfg.wingFlapDownstrokeFrame : 1;
+    if (this.wingFrameIndex !== prevFrame && this.wingFrameIndex === downstrokeFrame) {
+      const flapVol = isSwooping ? 0.85 : 0.65;
+      const flapSpeed = isSwooping ? 1.20 : 1.0;
+      this._playWingFlapAudio(flapVol, flapSpeed);
+    }
+    this.prevWingFrameIndex = this.wingFrameIndex;
+  }
+
   // ── Altitude & Simulated 3D Depth Engine ──
   _updateAltitude(cfg) {
+    if (this.isBreathingFire || this.aiState === DRAGON_STATE.FIREBALL_SPIT || this.isTelegraphingDivebomb || this.aiState === DRAGON_STATE.DIVEBOMB_TELEGRAPH) {
+      return;
+    }
     if (this.isGrounded) {
       this.targetAltitude = 0.0;
     }
@@ -624,65 +729,45 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
-  // ── Pillar 1: Dynamic Flight Paths & Sweeping Perimeter Patrols ──
+  // ── Dynamic Linear Roaming & Decision Matrix (No Circling, Bounces Naturally) ──
   _updatePatrolState(opponent, arena, cfg) {
     const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
-    const cx = curArena.x + curArena.width / 2;
-    const cy = curArena.y + curArena.height / 2;
-    const baseAr = (curArena.radius || (curArena.width / 2));
-    const patrolRadius = baseAr * (cfg.patrolRadiusRatio || 1.10);
+    const targetSpeed = (this.speed || cfg.speed || 4.4) * (this.phaseSpeedMult || 1.0);
 
-    // Advance perimeter orbital angle
-    const angularSpeed = (cfg.patrolAngularSpeed || 0.016) * this.phaseSpeedMult;
-    this.patrolAngle += this.patrolDirection * angularSpeed;
+    // Natural linear flight: maintain continuous momentum floor
+    const curSpeed = Math.hypot(this.vx, this.vy);
+    if (curSpeed < 0.5) {
+      const angle = (this.gunAngle !== undefined && !Number.isNaN(this.gunAngle)) ? this.gunAngle : (Math.random() * Math.PI * 2);
+      this.vx = Math.cos(angle) * targetSpeed;
+      this.vy = Math.sin(angle) * targetSpeed;
+    }
 
-    this.patrolWobbleTime += (cfg.patrolWobbleFreq || 0.03);
-    const wobble = Math.sin(this.patrolWobbleTime) * (cfg.patrolWobbleAmp || 45);
-    const effRadius = Math.max(60, patrolRadius + wobble);
-
-    const targetX = cx + Math.cos(this.patrolAngle) * effRadius;
-    const targetY = cy + Math.sin(this.patrolAngle) * (effRadius * 0.90);
-
-    const baseSpeed = (cfg.patrolSpeed || 5.6) * this.phaseSpeedMult;
-
-    // Continuous dynamic forward tangential momentum
-    const tangentAngle = this.patrolAngle + (Math.PI / 2) * this.patrolDirection;
-    const desiredVx = Math.cos(tangentAngle) * baseSpeed;
-    const desiredVy = Math.sin(tangentAngle) * baseSpeed;
-
-    // Radial correction toward elliptical perimeter
-    const radDx = targetX - this.x;
-    const radDy = targetY - this.y;
-    const radDist = Math.hypot(radDx, radDy) || 1;
-
-    this.vx += (desiredVx - this.vx) * 0.12 + (radDx / radDist) * 0.35 * this.phaseSpeedMult;
-    this.vy += (desiredVy - this.vy) * 0.12 + (radDy / radDist) * 0.35 * this.phaseSpeedMult;
-
-    // Align facing with flight path vector
-    const speed = Math.hypot(this.vx, this.vy);
-    if (speed > 0.8) {
+    // Align facing with movement direction
+    if (curSpeed > 0.5) {
       const moveAngle = Math.atan2(this.vy, this.vx);
       this.gunAngle = moveAngle;
       this.angle = moveAngle;
     }
 
-    // Periodic wing flap sound
-    if (Math.random() < 0.018) {
-      this._playWingFlapAudio(0.55);
-    }
+    // Evaluate Decision Matrix (Gated by Config Toggles)
+    const canCataclysm = this.isSkillEnabled(cfg.enableCataclysm, cfg.enableVoidCataclysm, true);
+    const canDivebomb = this.isSkillEnabled(cfg.enableDivebomb, cfg.enableVoidDivebomb, true);
+    const canIntercept = this.isSkillEnabled(cfg.enableIntercept, true);
+    const canSwoop = this.isSkillEnabled(cfg.enableSwoop, cfg.enableWingBuffet, true);
+    const canFireball = this.isSkillEnabled(cfg.enableFireball, cfg.enableDragonsBreath, true);
+    const canPerch = this.isSkillEnabled(cfg.enablePerch, true);
 
-    // Evaluate Decision Matrix
-    if (this.cataclysmCooldown <= 0 && opponent && opponent.hp > 0) {
+    if (canCataclysm && this.cataclysmCooldown <= 0 && opponent && opponent.hp > 0) {
       this._initiateCataclysm(opponent, cfg);
-    } else if (this.divebombCooldown <= 0 && opponent && opponent.hp > 0) {
+    } else if (canDivebomb && this.divebombCooldown <= 0 && opponent && opponent.hp > 0) {
       this._initiateDivebombSetup(opponent, curArena, cfg);
-    } else if (this.interceptCooldown <= 0 && opponent && opponent.hp > 0) {
+    } else if (canIntercept && this.interceptCooldown <= 0 && opponent && opponent.hp > 0) {
       this._initiateIntercept(opponent, cfg);
-    } else if (this.swoopCooldown <= 0 && opponent && opponent.hp > 0) {
+    } else if (canSwoop && this.swoopCooldown <= 0 && opponent && opponent.hp > 0) {
       this._initiateSwoopWindup(opponent, cfg);
-    } else if (this.fireballCooldown <= 0 && opponent && opponent.hp > 0) {
+    } else if (canFireball && this.fireballCooldown <= 0 && opponent && opponent.hp > 0) {
       this._initiateFireball(opponent, cfg);
-    } else if (this.perchCooldown <= 0 && (!opponent || opponent.hp > 0)) {
+    } else if (canPerch && this.perchCooldown <= 0 && (!opponent || opponent.hp > 0)) {
       this._initiatePerchDescent(curArena, cfg);
     }
   }
@@ -706,7 +791,7 @@ export class EnderDragonFighter extends Fighter {
     this.vy = Math.sin(this.interceptTargetAngle) * speed;
 
     this.stateTimer = 26;
-    this._playAudio('swoop', 'Assets/Sound Effects/Skills/dash2.mp3', 0.95);
+    this._playAudio('swoop', 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg', 0.95);
   }
 
   _updateInterceptState(opponent, arena, cfg) {
@@ -767,7 +852,6 @@ export class EnderDragonFighter extends Fighter {
     this.aiState = DRAGON_STATE.PERCH_DESCENT;
     this.targetAltitude = 0.35; // Low skimming altitude
     this.stateTimer = 60;
-    this._playWingFlapAudio(0.80);
   }
 
   _updatePerchDescent(arena, cfg) {
@@ -807,34 +891,28 @@ export class EnderDragonFighter extends Fighter {
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
 
-    // Continuous dynamic low-altitude vortex orbit (never stops moving!)
-    this.perchVortexAngle = (this.perchVortexAngle || 0) + 0.065 * this.phaseSpeedMult;
-    const vortexRadius = 95;
-    const targetX = cx + Math.cos(this.perchVortexAngle) * vortexRadius;
-    const targetY = cy + Math.sin(this.perchVortexAngle) * (vortexRadius * 0.85);
-
-    const dx = targetX - this.x;
-    const dy = targetY - this.y;
+    // Anchor at center of arena with gentle low-altitude hovering (Minecraft perched state)
+    const dx = cx - this.x;
+    const dy = cy - this.y;
     const dist = Math.hypot(dx, dy) || 1;
-
-    this.vx += (dx / dist) * 0.55 * this.phaseSpeedMult;
-    this.vy += (dy / dist) * 0.55 * this.phaseSpeedMult;
-
-    // Minimum forward glide speed
-    const spd = Math.hypot(this.vx, this.vy);
-    if (spd > 7.0) {
-      this.vx = (this.vx / spd) * 7.0;
-      this.vy = (this.vy / spd) * 7.0;
+    if (dist > 15) {
+      this.vx += (dx / dist) * 0.40 * this.phaseSpeedMult;
+      this.vy += (dy / dist) * 0.40 * this.phaseSpeedMult;
     }
-    this.gunAngle = Math.atan2(this.vy, this.vx);
-    this.angle = this.gunAngle;
+    this.vx *= 0.88;
+    this.vy *= 0.88;
+
+    // Aim directly at the opponent while perched
+    if (opponent && opponent.hp > 0) {
+      this.aim(opponent);
+    }
 
     // Low skimming air sparks
     if (Math.random() < 0.35) {
       spawnSparks(this.x, this.y, '#E879F9', 2, 2.5);
     }
 
-    // Exhale sweeping breath sprays during active flight
+    // Exhale sweeping breath sprays during active perch
     this.perchBreathTimer--;
     if (this.perchBreathTimer <= 0) {
       this.perchBreathTimer = cfg.perchBreathCooldown || 35;
@@ -850,75 +928,11 @@ export class EnderDragonFighter extends Fighter {
     this._playAudio('fireball', 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg', 0.65);
     const baseAngle = this.gunAngle || 0;
     const count = 3;
-    const sourceFighter = this;
 
     for (let i = 0; i < count; i++) {
       const spread = (i - 1) * 0.22;
       const angle = baseAngle + spread;
-      const speed = 7.0;
-      const r = 14;
-
-      const proj = {
-        x: this.x + Math.cos(angle) * (this.r + 5),
-        y: this.y + Math.sin(angle) * (this.r + 5),
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        radius: r,
-        damage: 14,
-        owner: sourceFighter,
-        color: '#D946EF',
-        maxDistance: 220,
-        traveled: 0,
-        update() {
-          this.x += this.vx;
-          this.y += this.vy;
-          this.traveled += speed;
-
-          if (Math.random() < 0.45) {
-            spawnSparks(this.x, this.y, '#D946EF', 2, 2.0);
-          }
-
-          const targets = (typeof state !== 'undefined' && state.fighters) ? state.fighters : [];
-          for (let f of targets) {
-            if (f && f !== this.owner && f.hp > 0 && !f.isEndCrystal && !f.isBoss) {
-              const d = Math.hypot(f.x - this.x, f.y - this.y);
-              if (d < (f.r || 20) + this.radius) {
-                applyDamageToTarget(f, this.damage, this.owner);
-                spawnSparks(this.x, this.y, '#E879F9', 8, 3.5);
-                this.deployPool();
-                return true;
-              }
-            }
-          }
-          if (this.traveled >= this.maxDistance) {
-            this.deployPool();
-            return true;
-          }
-          return false;
-        },
-        deployPool() {
-          sourceFighter.acidPools.push({
-            x: this.x,
-            y: this.y,
-            radius: (cfg.acidPoolRadius || 70) * 0.70,
-            duration: Math.floor((cfg.acidPoolDurationFrames || 180) * 0.75),
-            maxDuration: Math.floor((cfg.acidPoolDurationFrames || 180) * 0.75),
-            tickTimer: 0,
-            tickInterval: cfg.acidTickInterval || 15,
-            damagePerTick: cfg.acidDamagePerTick || 6,
-            owner: sourceFighter,
-          });
-        },
-        draw(ctx) {
-          drawMinecraftBreathStream(ctx, this);
-        }
-      };
-
-      if (typeof projectileSystem !== 'undefined' && projectileSystem.addProjectile) {
-        projectileSystem.addProjectile(proj);
-      } else if (typeof state !== 'undefined' && state.projectiles) {
-        state.projectiles.push(proj);
-      }
+      this._fireDragonBreathStream(angle, cfg);
     }
   }
 
@@ -933,8 +947,7 @@ export class EnderDragonFighter extends Fighter {
     const knockback = (cfg.perchTakeoffKnockback || 18.0) * this.phaseSpeedMult;
 
     // Audio & Screen Feedback
-    this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 0.95);
-    this._playWingFlapAudio(0.90);
+    this._playWingFlapAudio(0.95);
     triggerGlobalScreenShake(8, 20);
     spawnImpactFlash(this.x, this.y, shockwaveR, '#F5D0FE');
     spawnSparks(this.x, this.y, '#C026D3', 24, 7.0);
@@ -969,6 +982,11 @@ export class EnderDragonFighter extends Fighter {
     if (this.stateTimer <= 0) {
       this.aiState = DRAGON_STATE.PATROL;
       this.perchCooldown = (cfg.perchInterval || 1200) / this.phaseSpeedMult;
+      const targetSpeed = (this.speed || 4.4) * this.phaseSpeedMult;
+      const angle = Math.random() * Math.PI * 2;
+      this.vx = Math.cos(angle) * targetSpeed;
+      this.vy = Math.sin(angle) * targetSpeed;
+      this.targetAltitude = 1.0;
     }
   }
 
@@ -976,44 +994,27 @@ export class EnderDragonFighter extends Fighter {
     this.aiState = DRAGON_STATE.PATROL;
   }
 
-  // ── Multi-Dimensional High Altitude Screen Hovering ──
+  // ── High Altitude Cruising & Decision Matrix (Natural Roaming, No Circling) ──
   _updateHoverState(opponent, arena, cfg) {
     if (!opponent || opponent.hp <= 0) {
       this.aiState = DRAGON_STATE.PATROL;
       return;
     }
 
-    this.hoverOrbitTime = (this.hoverOrbitTime || 0) + (cfg.hoverOscillationFreq || 0.035) * this.phaseSpeedMult;
     this.targetAltitude = cfg.highAltitude || 1.7;
+    const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const targetSpeed = (this.speed || cfg.speed || 4.4) * (this.phaseSpeedMult || 1.0);
 
-    // Fluid orbital path around opponent: continuously glides in an expanding/contracting elliptical halo
-    const orbitRadius = (cfg.hoverOrbitWobbleAmp || 160) + Math.sin(this.hoverOrbitTime * 0.5) * 45;
-    const targetX = opponent.x + Math.cos(this.hoverOrbitTime) * orbitRadius;
-    const targetY = opponent.y - (cfg.hoverTargetDistanceY || 130) + Math.sin(this.hoverOrbitTime * 1.3) * (cfg.hoverOscillationAmp || 35);
-
-    const dx = targetX - this.x;
-    const dy = targetY - this.y;
-    const dist = Math.hypot(dx, dy) || 1;
-
-    const baseHoverSpeed = (cfg.speed || 4.8) * this.phaseSpeedMult;
-    const steerForce = 0.38 * this.phaseSpeedMult;
-    this.vx += (dx / dist) * steerForce;
-    this.vy += (dy / dist) * steerForce;
-
-    // Enforce smooth continuous cruising speed (never decelerate to 0)
+    // Natural linear cruising across arena
     const curSpeed = Math.hypot(this.vx, this.vy);
-    if (curSpeed < 3.2) {
-      const angle = curSpeed > 0.1 ? Math.atan2(this.vy, this.vx) : this.hoverOrbitTime + Math.PI / 2;
-      this.vx = Math.cos(angle) * 3.6;
-      this.vy = Math.sin(angle) * 3.6;
-    } else if (curSpeed > baseHoverSpeed * 1.35) {
-      this.vx = (this.vx / curSpeed) * (baseHoverSpeed * 1.35);
-      this.vy = (this.vy / curSpeed) * (baseHoverSpeed * 1.35);
+    if (curSpeed < 0.5) {
+      const angle = (this.gunAngle !== undefined && !Number.isNaN(this.gunAngle)) ? this.gunAngle : (Math.random() * Math.PI * 2);
+      this.vx = Math.cos(angle) * targetSpeed;
+      this.vy = Math.sin(angle) * targetSpeed;
     }
 
-    // Align facing with movement direction or track aim
-    const speed = Math.hypot(this.vx, this.vy);
-    if (speed > 1.2) {
+    // Align facing with movement direction
+    if (curSpeed > 0.5) {
       const moveAngle = Math.atan2(this.vy, this.vx);
       this.gunAngle = moveAngle;
       this.angle = moveAngle;
@@ -1021,126 +1022,278 @@ export class EnderDragonFighter extends Fighter {
       this.aim(opponent);
     }
 
-    // Flap wings sound
-    if (Math.random() < 0.02) {
-      this._playWingFlapAudio(0.55);
-    }
+    // Dynamic state transitions (Gated by Config Toggles)
+    const canCataclysm = this.isSkillEnabled(cfg.enableCataclysm, cfg.enableVoidCataclysm, true);
+    const canDivebomb = this.isSkillEnabled(cfg.enableDivebomb, cfg.enableVoidDivebomb, true);
+    const canIntercept = this.isSkillEnabled(cfg.enableIntercept, true);
+    const canSwoop = this.isSkillEnabled(cfg.enableSwoop, cfg.enableWingBuffet, true);
+    const canFireball = this.isSkillEnabled(cfg.enableFireball, cfg.enableDragonsBreath, true);
+    const canPerch = this.isSkillEnabled(cfg.enablePerch, true);
 
-    // Dynamic state transitions
-    if (this.cataclysmCooldown <= 0) {
+    if (canCataclysm && this.cataclysmCooldown <= 0) {
       this._initiateCataclysm(opponent, cfg);
-    } else if (this.divebombCooldown <= 0) {
-      this._initiateDivebombSetup(opponent, arena, cfg);
-    } else if (this.swoopCooldown <= 0) {
+    } else if (canDivebomb && this.divebombCooldown <= 0) {
+      this._initiateDivebombSetup(opponent, curArena, cfg);
+    } else if (canSwoop && this.swoopCooldown <= 0) {
       this._initiateSwoopWindup(opponent, cfg);
-    } else if (this.interceptCooldown <= 0) {
+    } else if (canIntercept && this.interceptCooldown <= 0) {
       this._initiateIntercept(opponent, cfg);
-    } else if (this.fireballCooldown <= 0) {
+    } else if (canFireball && this.fireballCooldown <= 0) {
       this._initiateFireball(opponent, cfg);
-    } else if (this.perchCooldown <= 0) {
-      this._initiatePerchDescent(arena, cfg);
+    } else if (canPerch && this.perchCooldown <= 0) {
+      this._initiatePerchDescent(curArena, cfg);
     }
   }
 
-  // ── Skill 1: Dragon's Breath / Fireball ──
+  // ── Skill 1: Dragon's Breath / 360° Void Acid Sweep (dragonsBreath) ──
   _initiateFireball(opponent, cfg) {
     this.aiState = DRAGON_STATE.FIREBALL_SPIT;
-    this.stateTimer = 18;
-    this.committedAimAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
-    this.gunAngle = this.committedAimAngle;
-    this.angle = this.committedAimAngle;
+    this.isBreathingFire = true;
+
+    // 1. Mandatory requirement: Stop movement completely upon activation
+    this.vx = 0;
+    this.vy = 0;
+    this.knockbackVx = 0;
+    this.knockbackVy = 0;
+
+    // 2. Setup 360° sweep duration & post-breath recovery settle frames
+    const spinDuration = cfg.dragonsBreathSpinDuration || 72;
+    const recoveryDuration = (cfg.dragonsBreathRecoveryFrames !== undefined) ? cfg.dragonsBreathRecoveryFrames : 24;
+    this.breathSpinDuration = spinDuration;
+    this.breathRecoveryFrames = recoveryDuration;
+    this.breathTotalFrames = spinDuration + recoveryDuration;
+    this.stateTimer = this.breathTotalFrames;
+    this.breathFireInterval = cfg.dragonsBreathFireInterval || 2;
+
+    // Initial aim angle: lock onto opponent if alive, or keep current facing
+    if (opponent && opponent.hp > 0) {
+      this.breathStartAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
+    } else {
+      this.breathStartAngle = (this.gunAngle !== undefined) ? this.gunAngle : (this.angle || 0);
+    }
+    this.gunAngle = this.breathStartAngle;
+    this.angle = this.breathStartAngle;
+
+    // Anchor position & altitude for organic airborne hovering buoyancy
+    this.breathAnchorX = this.x;
+    this.breathAnchorY = this.y;
+    this.breathAnchorAltitude = (this.altitude !== undefined) ? this.altitude : 1.0;
+
+    // Roar & breath ignition sound
+    this._playAudio('fireball', 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg', 0.85);
+    spawnImpactFlash(this.x, this.y, (this.r || 36) * 1.5, '#E879F9');
+    spawnSparks(this.x + Math.cos(this.gunAngle) * (this.r + 10), this.y + Math.sin(this.gunAngle) * (this.r + 10), '#F5D0FE', 10, 4.0);
   }
 
   _updateFireballState(opponent, cfg) {
-    this.stateTimer--;
-    if (this.stateTimer === 8) {
-      this._fireDragonBreath(cfg);
+    const spinTotal = this.breathSpinDuration || 72;
+    const total = this.breathTotalFrames || (spinTotal + (this.breathRecoveryFrames || 24));
+    const elapsed = Math.max(0, total - this.stateTimer);
+    this.breathElapsed = elapsed;
+    this.breathSpinTotal = spinTotal;
+
+    // Organic airborne hovering buoyancy & natural floating drift (zero shaking)
+    if (this.breathAnchorX === undefined) {
+      this.breathAnchorX = this.x;
+      this.breathAnchorY = this.y;
+      this.breathAnchorAltitude = (this.altitude !== undefined) ? this.altitude : 1.0;
     }
+    const hoverWave = Math.sin(elapsed * 0.08);
+    const hoverLateralWave = Math.cos(elapsed * 0.06);
+    this.x = this.breathAnchorX + hoverLateralWave * 1.8;
+    this.y = this.breathAnchorY + hoverWave * 2.2;
+    this.altitude = this.breathAnchorAltitude + hoverWave * 0.07;
+    this.z = this.altitude * 20;
+
+    // 1. Keep gross velocity zero while hovering on anchor
+    this.vx = 0;
+    this.vy = 0;
+    this.knockbackVx = 0;
+    this.knockbackVy = 0;
+
+    if (elapsed < spinTotal) {
+      // ── PHASE 1: ACTIVE 360° BREATH DISCHARGE & ROTATION ──
+      this.isBreathingFire = true;
+      const progress = Math.min(1.0, elapsed / spinTotal);
+
+      // Continuous 360° rotation around the dragon
+      const currentAngle = this.breathStartAngle + progress * Math.PI * 2;
+      this.gunAngle = currentAngle;
+      this.angle = currentAngle;
+
+      // Fire & spread Dragon's Breath streams at rapid interval
+      const interval = this.breathFireInterval || 2;
+      if (elapsed % interval === 0) {
+        this._fireDragonBreathStream(currentAngle, cfg);
+      }
+
+      // Periodic breath roar / ghast spit sound
+      if (elapsed % 18 === 0 && (spinTotal - elapsed) > 4) {
+        this._playAudio('fireball', 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg', 0.70);
+      }
+
+      // Maw spark particles at snout
+      if (Math.random() < 0.65) {
+        const snoutDist = this.r + 8;
+        const snoutX = this.x + Math.cos(currentAngle) * snoutDist;
+        const snoutY = this.y + Math.sin(currentAngle) * snoutDist;
+        spawnSparks(snoutX, snoutY, '#F5D0FE', 2, 2.5);
+      }
+    } else {
+      // ── PHASE 2: POST-BREATH RECOVERY & SETTLE (Frames after breaths before movement) ──
+      this.isBreathingFire = false;
+
+      // Lock aim firmly at the final angle of the completed 360° sweep
+      const finalAngle = this.breathStartAngle + Math.PI * 2;
+      this.gunAngle = finalAngle;
+      this.angle = finalAngle;
+
+      // Lingering soft void vapor & cooling embers from snout as maw settles
+      const recoveryElapsed = elapsed - spinTotal;
+      if (recoveryElapsed % 5 === 0 && Math.random() < 0.60) {
+        const snoutDist = this.r + 6;
+        const snoutX = this.x + Math.cos(finalAngle) * snoutDist;
+        const snoutY = this.y + Math.sin(finalAngle) * snoutDist;
+        spawnSparks(snoutX, snoutY, '#E879F9', 1, 1.8);
+      }
+    }
+
+    this.stateTimer--;
+
+    // 4. Upon completing 360° rotation AND post-breath recovery frames, Ender Dragon resumes movement
     if (this.stateTimer <= 0) {
-      this.aiState = DRAGON_STATE.HOVER;
+      this.isBreathingFire = false;
       this.fireballCooldown = cfg.fireballCooldown || 480;
+
+      // Clean up breath anchor & elapsed trackers
+      this.breathAnchorX = undefined;
+      this.breathAnchorY = undefined;
+      this.breathAnchorAltitude = undefined;
+      this.breathElapsed = undefined;
+      this.breathSpinTotal = undefined;
+
+      // Resume natural movement (Patrol flight mode with forward impulse)
+      this.aiState = DRAGON_STATE.PATROL;
+      this.stateTimer = 160 + Math.floor(Math.random() * 80);
+
+      const baseSpeed = (this.speed || 4.4) * (this.phaseSpeedMult || 1.0);
+      const exitAngle = this.gunAngle || 0;
+      this.vx = Math.cos(exitAngle) * baseSpeed;
+      this.vy = Math.sin(exitAngle) * baseSpeed;
+
+      // Wing flap sound & thrust wind sparks
+      const ticksPerFrame = cfg.swoopTicksPerFrame || 3;
+      const downstrokeFrame = (cfg.wingFlapDownstrokeFrame !== undefined) ? cfg.wingFlapDownstrokeFrame : 1;
+      this.wingAnimTick = ticksPerFrame * downstrokeFrame;
+      this.wingFrameIndex = downstrokeFrame;
+      this._playWingFlapAudio(0.85, 1.20);
+      spawnSparks(this.x - Math.cos(exitAngle) * this.r, this.y - Math.sin(exitAngle) * this.r, '#E879F9', 10, 4.0);
     }
   }
 
-  _fireDragonBreath(cfg) {
-    const angle = this.committedAimAngle;
-    const speed = cfg.fireballSpeed || 9.0;
-    const damage = cfg.fireballDamage || 28;
-    const r = cfg.fireballRadius || 16;
-    const sourceFighter = this;
+  _fireDragonBreathStream(angle, cfg) {
+    const snoutDist = this.r + 8;
+    const startX = this.x + Math.cos(angle) * snoutDist;
+    const startY = this.y + Math.sin(angle) * snoutDist;
 
-    this._playAudio('fireball', 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg', 0.85);
+    // Slight organic spread cone for natural breath flamer look
+    const streamAngle = angle + (Math.random() - 0.5) * 0.12;
+    const speed = cfg.dragonsBreathStreamSpeed || 8.0;
+    const maxDist = cfg.dragonsBreathMaxDistance || 190;
+    const damage = cfg.dragonsBreathDamage || 12;
+    const radius = cfg.dragonsBreathStreamRadius || 14;
 
-    // Spawn fireball projectile
-    const proj = {
-      x: this.x + Math.cos(angle) * (this.r + 10),
-      y: this.y + Math.sin(angle) * (this.r + 10),
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      radius: r,
+    if (!Array.isArray(this.breathStreams)) this.breathStreams = [];
+
+    this.breathStreams.push({
+      x: startX,
+      y: startY,
+      vx: Math.cos(streamAngle) * speed,
+      vy: Math.sin(streamAngle) * speed,
+      radius: radius,
       damage: damage,
-      owner: sourceFighter,
-      color: '#C026D3',
+      color: '#D946EF',
       secondaryColor: '#E879F9',
-      isEnderFireball: true,
-      maxDistance: 600,
+      maxDistance: maxDist,
       traveled: 0,
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.traveled += speed;
+    });
+  }
 
-        if (Math.random() < 0.4) {
-          spawnSparks(this.x, this.y, '#D946EF', 2, 2.0);
-        }
+  _updateBreathStreams(opponent, cfg) {
+    if (!Array.isArray(this.breathStreams) || this.breathStreams.length === 0) return;
+    const targets = this._collectAllEnemyTargets(opponent);
 
-        // Check collision or max distance
-        const targets = (typeof state !== 'undefined' && state.fighters) ? state.fighters : [];
-        for (let f of targets) {
-          if (f && f !== sourceFighter && f.hp > 0 && !f.isEndCrystal && !f.isBoss) {
-            const d = Math.hypot(f.x - this.x, f.y - this.y);
-            if (d < (f.r || 20) + this.radius) {
-              this.detonate();
-              return true; // Destroy projectile
-            }
-          }
-        }
+    for (let i = this.breathStreams.length - 1; i >= 0; i--) {
+      const stream = this.breathStreams[i];
+      stream.x += stream.vx;
+      stream.y += stream.vy;
+      stream.traveled += Math.hypot(stream.vx, stream.vy);
 
-        if (this.traveled >= this.maxDistance) {
-          this.detonate();
-          return true;
-        }
-        return false;
-      },
-      detonate() {
-        sourceFighter._playRandomExplosionAudio(0.90);
-        triggerGlobalScreenShake(6, 15);
-        spawnImpactFlash(this.x, this.y, cfg.fireballDetonationRadius || 70, '#F5D0FE');
-        spawnSparks(this.x, this.y, '#C026D3', 20, 5.0);
-
-        // Deploy lingering Minecraft Dragon's Breath Area Effect Cloud
-        sourceFighter.acidPools.push({
-          x: this.x,
-          y: this.y,
-          radius: cfg.acidPoolRadius || 70,
-          duration: cfg.acidPoolDurationFrames || 180,
-          maxDuration: cfg.acidPoolDurationFrames || 180,
-          tickTimer: 0,
-          tickInterval: cfg.acidTickInterval || 15,
-          damagePerTick: cfg.acidDamagePerTick || 6,
-          owner: sourceFighter,
-        });
-      },
-      draw(ctx) {
-        drawMinecraftDragonFireball(ctx, this, false);
+      if (Math.random() < 0.40) {
+        spawnSparks(stream.x, stream.y, '#E879F9', 1, 1.8);
       }
-    };
 
-    if (typeof projectileSystem !== 'undefined' && projectileSystem.addProjectile) {
-      projectileSystem.addProjectile(proj);
-    } else if (typeof state !== 'undefined' && state.projectiles) {
-      state.projectiles.push(proj);
+      let hitTarget = false;
+      for (let target of targets) {
+        // STRICT PROHIBITION: Never damage the dragon itself, teammates, crystals, or bosses
+        if (!target || target === this || target.hp <= 0 || target.isEndCrystal || target.isBoss) continue;
+        if (typeof this.isTeammate === 'function' && this.isTeammate(target)) continue;
+
+        const d = Math.hypot(target.x - stream.x, target.y - stream.y);
+        if (d < (target.r || 20) + stream.radius) {
+          applyDamageToTarget(target, stream.damage, this);
+          spawnSparks(stream.x, stream.y, '#F5D0FE', 6, 3.0);
+          target.vx = (target.vx || 0) * 0.85;
+          target.vy = (target.vy || 0) * 0.85;
+          this._deployAcidPool(stream.x, stream.y, cfg);
+          hitTarget = true;
+          break;
+        }
+      }
+
+      if (hitTarget) {
+        this.breathStreams.splice(i, 1);
+        continue;
+      }
+
+      if (stream.traveled >= stream.maxDistance) {
+        this._deployAcidPool(stream.x, stream.y, cfg);
+        this.breathStreams.splice(i, 1);
+      }
     }
+  }
+
+  _deployAcidPool(x, y, cfg) {
+    const poolRadius = (cfg.acidPoolRadius || 65) * 0.75;
+    const duration = Math.floor((cfg.acidPoolDurationFrames || 180) * 0.8);
+    const damagePerTick = cfg.acidDamagePerTick || 6;
+    const tickInterval = cfg.acidTickInterval || 15;
+
+    // Deduping / clustering: if near an existing pool (< 24px), refresh duration
+    for (let pool of this.acidPools) {
+      const dist = Math.hypot(pool.x - x, pool.y - y);
+      if (dist < 24) {
+        pool.duration = Math.max(pool.duration, duration);
+        return;
+      }
+    }
+
+    this.acidPools.push({
+      x,
+      y,
+      radius: poolRadius,
+      duration: duration,
+      maxDuration: duration,
+      tickTimer: 0,
+      tickInterval: tickInterval,
+      damagePerTick: damagePerTick,
+      owner: this,
+    });
+  }
+
+  // Backward-compatibility alias
+  _fireDragonBreath(cfg) {
+    this._fireDragonBreathStream(this.gunAngle || 0, cfg);
   }
 
   // ── Skill 2: Wing Buffet / Kinetic Swoop ──
@@ -1153,7 +1306,7 @@ export class EnderDragonFighter extends Fighter {
     this.vx *= 0.3;
     this.vy *= 0.3;
 
-    this._playAudio('swoop', 'Assets/Sound Effects/Skills/dash2.mp3', 0.90);
+    this._playAudio('swoop', 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg', 0.90);
   }
 
   _updateSwoopWindup(opponent, cfg) {
@@ -1167,6 +1320,13 @@ export class EnderDragonFighter extends Fighter {
       const speed = cfg.swoopSpeed || 18.5;
       this.vx = Math.cos(this.committedAimAngle) * speed;
       this.vy = Math.sin(this.committedAimAngle) * speed;
+
+      // Align wings to immediate power downstroke burst
+      const ticksPerFrame = cfg.swoopTicksPerFrame || 3;
+      const downstrokeFrame = (cfg.wingFlapDownstrokeFrame !== undefined) ? cfg.wingFlapDownstrokeFrame : 1;
+      this.wingAnimTick = ticksPerFrame * downstrokeFrame;
+      this.wingFrameIndex = downstrokeFrame;
+      this._playWingFlapAudio(0.90, 1.20);
     }
   }
 
@@ -1224,7 +1384,7 @@ export class EnderDragonFighter extends Fighter {
     const knockback = cfg.swoopKnockback || 20.0;
     const angle = this.committedAimAngle;
 
-    this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 0.95);
+    this._playAudio('swoopHit', 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg', 0.95);
     triggerGlobalScreenShake(8, 20);
     spawnImpactFlash(target.x, target.y, 45, '#F5D0FE');
     spawnSparks(target.x, target.y, '#C026D3', 14, 6.0);
@@ -1264,7 +1424,8 @@ export class EnderDragonFighter extends Fighter {
     this.vx = Math.cos(currentAngle) * 3.5;
     this.vy = Math.sin(currentAngle) * 3.5;
 
-    this._playAudio('lightning', 'Assets/Sound Effects/Skills/thunderstrike.mp3', 0.85);
+    this._playWingFlapAudio(1.0);
+    this._playRandomHurtAudio(0.90);
   }
 
   _updateCataclysmChannel(opponent, arena, cfg) {
@@ -1272,12 +1433,12 @@ export class EnderDragonFighter extends Fighter {
     const totalFrames = cfg.cataclysmChannelFrames || 70;
     this.cataclysmProgress = 1.0 - (this.stateTimer / totalFrames);
 
-    // Majestic circling flight while gathering void energy
-    const circleAngle = (totalFrames - this.stateTimer) * 0.08;
-    this.vx = Math.cos(circleAngle) * 3.5;
-    this.vy = Math.sin(circleAngle) * 2.5 - 0.3;
-    this.gunAngle = Math.atan2(this.vy, this.vx);
-    this.angle = this.gunAngle;
+    // Majestic soaring ascent while gathering void energy (hovering in place)
+    this.vx *= 0.90;
+    this.vy = -0.3; // Gentle upward drift
+    if (opponent && opponent.hp > 0) {
+      this.aim(opponent);
+    }
 
     // Roar & shockwave at frame 40
     const roarFrame = cfg.cataclysmRoarFrame || 40;
@@ -1288,8 +1449,13 @@ export class EnderDragonFighter extends Fighter {
 
     if (this.stateTimer <= 0) {
       this.isChannelingCataclysm = false;
-      this.aiState = DRAGON_STATE.HOVER;
+      this.aiState = DRAGON_STATE.PATROL;
       this.cataclysmCooldown = cfg.cataclysmCooldown || 1100;
+      const targetSpeed = (this.speed || 4.4) * this.phaseSpeedMult;
+      const angle = (this.gunAngle !== undefined && !Number.isNaN(this.gunAngle)) ? this.gunAngle : (Math.random() * Math.PI * 2);
+      this.vx = Math.cos(angle) * targetSpeed;
+      this.vy = Math.sin(angle) * targetSpeed;
+      this.targetAltitude = 1.0;
     }
   }
 
@@ -1298,7 +1464,8 @@ export class EnderDragonFighter extends Fighter {
     const damage = cfg.cataclysmShockwaveDamage || 65;
     const knockback = cfg.cataclysmShockwaveKnockback || 22.0;
 
-    this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 1.0);
+    this._playRandomExplosionAudio(1.0);
+    this._playWingFlapAudio(1.0);
     triggerGlobalScreenShake(cfg.cataclysmScreenShake || 12, 35);
     spawnImpactFlash(this.x, this.y, shockwaveR, '#F5D0FE');
     spawnSparks(this.x, this.y, '#C026D3', 30, 9.0);
@@ -1389,7 +1556,8 @@ export class EnderDragonFighter extends Fighter {
         const targets = this._collectAllEnemyTargets();
 
         for (let target of targets) {
-          if (!target || target === this || target.hp <= 0) continue;
+          if (!target || target === this || (pool.owner && target === pool.owner) || target.hp <= 0 || target.isEndCrystal || target.isBoss) continue;
+          if (typeof this.isTeammate === 'function' && this.isTeammate(target)) continue;
           const d = Math.hypot(target.x - pool.x, target.y - pool.y);
           if (d <= pool.radius) {
             const isTargetInvincible = Boolean(
@@ -1488,14 +1656,15 @@ export class EnderDragonFighter extends Fighter {
     this.targetAltitude = cfg.highAltitude || 1.7;
     this.stateTimer = 50; // Timeout guard for reaching perimeter
 
-    // Smooth outward acceleration burst along natural flight vector
-    const burstSpeed = 8.5 * this.phaseSpeedMult;
-    this.vx = Math.cos(exitAngle) * burstSpeed;
-    this.vy = Math.sin(exitAngle) * burstSpeed;
+    // Maintain natural cruise flight speed (NO sudden rocket speed burst upon activation!)
+    const cruiseSpeed = (cfg.divebombSetupSpeed || (this.speed || cfg.speed || 4.4)) * this.phaseSpeedMult;
+    this.vx = Math.cos(exitAngle) * cruiseSpeed;
+    this.vy = Math.sin(exitAngle) * cruiseSpeed;
     this.gunAngle = exitAngle;
     this.angle = exitAngle;
 
-    this._playWingFlapAudio(0.85);
+    // Wing flap audio at calm cruising flight pitch
+    this._playWingFlapAudio(0.75, 1.0);
   }
 
   _updateDivebombSetup(opponent, arena, cfg) {
@@ -1508,21 +1677,15 @@ export class EnderDragonFighter extends Fighter {
 
     // Continue smooth flight out past arena perimeter
     const distFromCenter = Math.hypot(this.x - cx, this.y - cy);
-    const targetOutsideDist = ar + 220;
+    const targetOutsideDist = ar + (cfg.divebombSetupDistance || 75);
 
     if (distFromCenter < targetOutsideDist) {
       const dirX = (this.x - cx) / (distFromCenter || 1);
       const dirY = (this.y - cy) / (distFromCenter || 1);
-      const accel = 0.55 * this.phaseSpeedMult;
-      this.vx += dirX * accel;
-      this.vy += dirY * accel;
+      const cruiseSpeed = (cfg.divebombSetupSpeed || (this.speed || cfg.speed || 4.4)) * this.phaseSpeedMult;
+      this.vx = dirX * cruiseSpeed;
+      this.vy = dirY * cruiseSpeed;
 
-      const spd = Math.hypot(this.vx, this.vy);
-      const maxSpd = 14.0 * this.phaseSpeedMult;
-      if (spd > maxSpd) {
-        this.vx = (this.vx / spd) * maxSpd;
-        this.vy = (this.vy / spd) * maxSpd;
-      }
       this.gunAngle = Math.atan2(this.vy, this.vx);
       this.angle = this.gunAngle;
     }
@@ -1531,8 +1694,10 @@ export class EnderDragonFighter extends Fighter {
     if (distFromCenter >= targetOutsideDist || this.stateTimer <= 0) {
       this.divebombStartX = this.x;
       this.divebombStartY = this.y;
-      this.vx *= 0.15; // Smooth deceleration to hover, NO position snapping
-      this.vy *= 0.15;
+      this.vx = 0; // Immediate zero velocity, NO forward leak into applyMovementPhysics
+      this.vy = 0;
+      this.knockbackVx = 0;
+      this.knockbackVy = 0;
 
       // Compute trajectory through opponent (or arena center) and out opposite side
       const targetX = (opponent && opponent.hp > 0) ? opponent.x : cx;
@@ -1552,17 +1717,26 @@ export class EnderDragonFighter extends Fighter {
       this.gunAngle = this.divebombAngle;
       this.angle = this.divebombAngle;
 
-      this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 0.90);
+      // Smoothly align tail vertebrae along dive vector to eliminate angular thrash
+      const numSegs = (this._tailSegWorldAngles && this._tailSegWorldAngles.length) || 8;
+      this._tailSegWorldAngles = new Array(numSegs).fill(this.divebombAngle + Math.PI);
     }
   }
 
   _updateDivebombTelegraph(opponent, arena, cfg) {
     this.stateTimer--;
-    this.divebombTelegraphProgress = 1.0 - Math.max(0, this.stateTimer / this.divebombTelegraphMax);
+    const maxFrames = this.divebombTelegraphMax || 55;
+    const elapsed = Math.max(0, maxFrames - this.stateTimer);
+    this.divebombTelegraphProgress = Math.min(1.0, elapsed / maxFrames);
 
-    // Keep position strictly locked in place off-screen during windup (no push/drift)
-    this.x = this.divebombStartX;
-    this.y = this.divebombStartY;
+    // Organic airborne hover buoyancy & natural floating drift (zero shaking)
+    const hoverWave = Math.sin(elapsed * 0.09);
+    const hoverLateralWave = Math.cos(elapsed * 0.07);
+    this.x = this.divebombStartX + hoverLateralWave * 1.4;
+    this.y = this.divebombStartY + hoverWave * 1.8;
+    this.altitude = (cfg.highAltitude || 1.7) + hoverWave * 0.05;
+    this.z = this.altitude * 20;
+
     this.vx = 0;
     this.vy = 0;
     this.knockbackVx = 0;
@@ -1581,6 +1755,10 @@ export class EnderDragonFighter extends Fighter {
     }
 
     if (this.stateTimer <= 0) {
+      // Re-anchor strictly to launch origin before striking
+      this.x = this.divebombStartX;
+      this.y = this.divebombStartY;
+
       // Launch divebomb strafe seamlessly from hover position
       this.aiState = DRAGON_STATE.DIVEBOMB_STRIKE;
       this.isTelegraphingDivebomb = false;
@@ -1596,8 +1774,13 @@ export class EnderDragonFighter extends Fighter {
       this.gunAngle = this.divebombAngle;
       this.angle = this.divebombAngle;
 
-      this._playAudio('swoop', 'Assets/Sound Effects/Skills/dash2.mp3', 1.0);
-      this._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 0.95);
+      // Align wings to immediate power downstroke burst
+      const ticksPerFrame = cfg.swoopTicksPerFrame || 3;
+      const downstrokeFrame = (cfg.wingFlapDownstrokeFrame !== undefined) ? cfg.wingFlapDownstrokeFrame : 1;
+      this.wingAnimTick = ticksPerFrame * downstrokeFrame;
+      this.wingFrameIndex = downstrokeFrame;
+
+      this._playAudio('swoop', 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg', 1.0);
       triggerGlobalScreenShake(12, 28);
     }
   }
@@ -1622,6 +1805,22 @@ export class EnderDragonFighter extends Fighter {
       entity.x = Math.max(minX, Math.min(maxX, entity.x));
       entity.y = Math.max(minY, Math.min(maxY, entity.y));
     }
+  }
+
+  _isInsideArena(x, y, radius, arena) {
+    if (!arena) return true;
+    const r = radius || 0;
+    if (arena.shape === 'circle') {
+      const cx = arena.x + arena.width / 2;
+      const cy = arena.y + arena.height / 2;
+      const ar = Math.max(30, (arena.radius || (arena.width / 2)) - r);
+      return Math.hypot(x - cx, y - cy) <= ar;
+    }
+    const minX = arena.x + r;
+    const maxX = arena.x + arena.width - r;
+    const minY = arena.y + r;
+    const maxY = arena.y + arena.height - r;
+    return x >= minX && x <= maxX && y >= minY && y <= maxY;
   }
 
   _isCollidingWithArenaWall(x, y, radius, arena) {
@@ -1682,11 +1881,13 @@ export class EnderDragonFighter extends Fighter {
     // Perpendicular lateral distance from flight centerline
     const lateralDist = Math.abs(-dx * sinA + dy * cosA);
 
-    // Lateral collision check: Must strictly fall within the physical dragon snout/body width
+    // Lateral collision check: Hitbox width is directly based off divebombCorridorWidth
     // (Prevents entities to the flank or outside the ground danger carpet from being caught or snapped)
-    const maxCorridorHalfWidth = (cfg && cfg.divebombCorridorWidth ? cfg.divebombCorridorWidth * 0.5 : 47.5);
-    const maxLateral = Math.min(maxCorridorHalfWidth, (dr * 0.85) + tr);
-    if (lateralDist > maxLateral) return false;
+    const corridorWidth = (cfg && cfg.divebombCorridorWidth !== undefined)
+      ? Number(cfg.divebombCorridorWidth)
+      : ((cfg && (cfg.divebombHitboxRadius !== undefined ? Number(cfg.divebombHitboxRadius) * 2 : (cfg.divebombRadius !== undefined ? Number(cfg.divebombRadius) * 2 : 70))) || 70);
+    const corridorHalfWidth = corridorWidth * 0.5;
+    if (lateralDist > corridorHalfWidth) return false;
 
     // Longitudinal collision check: Must be within physical front contact reach this frame
     // (Dragon travels at strikeSpeed px/frame, front snout is at dr, cannot hit behind the dragon)
@@ -1714,7 +1915,7 @@ export class EnderDragonFighter extends Fighter {
     }
 
     // Immediate tactile impact response at the contact point (NO coordinate snap!)
-    this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 0.90);
+    this._playAudio('swoopHit', 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg', 0.90);
     spawnImpactFlash(victim.x, victim.y, 50, '#F5D0FE');
     spawnSparks(victim.x, victim.y, '#E879F9', 10, 5.0);
     triggerGlobalScreenShake(6, 12);
@@ -1887,7 +2088,8 @@ export class EnderDragonFighter extends Fighter {
     if (this.stateTimer <= 0) {
       this.isDivebombing = false;
       this.aiState = DRAGON_STATE.DIVEBOMB_RECOVERY;
-      this.stateTimer = 45; // 45 frames of graceful banking, smooth aiming & arena return
+      this.recoveryFrames = 0;
+      this.stateTimer = 90; // Watchdog timer for graceful banking and smooth arena return
       this.targetAltitude = cfg.cruiseAltitude || 1.0;
       this.vx *= 0.40;
       this.vy *= 0.40;
@@ -1911,7 +2113,7 @@ export class EnderDragonFighter extends Fighter {
   }
 
   _applyDivebombWallSlam(victim, damage, knockback, curArena, cfg) {
-    this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 1.0);
+    this._playAudio('swoopHit', 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg', 1.0);
     this._playRandomExplosionAudio(0.95);
     triggerGlobalScreenShake(14, 26);
     spawnImpactFlash(victim.x, victim.y, 80, '#F5D0FE');
@@ -1955,7 +2157,7 @@ export class EnderDragonFighter extends Fighter {
   }
 
   _applyDivebombHit(target, damage, knockback, curArena, cfg) {
-    this._playAudio('swoopHit', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 1.0);
+    this._playAudio('swoopHit', 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg', 1.0);
     this._playRandomExplosionAudio(0.90);
     triggerGlobalScreenShake(10, 24);
     spawnImpactFlash(target.x, target.y, 65, '#F5D0FE');
@@ -2001,52 +2203,111 @@ export class EnderDragonFighter extends Fighter {
   }
 
   _updateDivebombRecovery(opponent, arena, cfg) {
-    this.stateTimer--;
+    this.recoveryFrames = (this.recoveryFrames || 0) + 1;
+    if (this.stateTimer !== undefined && this.stateTimer > 0) {
+      this.stateTimer--;
+    }
+
+    // Decelerate exit velocity floor on initial recovery frame
+    if (this.recoveryFrames === 1) {
+      const initSpd = Math.hypot(this.vx, this.vy);
+      if (initSpd > 10.0) {
+        this.vx = (this.vx / initSpd) * 9.8;
+        this.vy = (this.vy / initSpd) * 9.8;
+      }
+    }
 
     const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
 
-    // 1. Smoothly rotate body to aim directly at the enemy (smooth continuous slerp)
+    // 1. Locate safe target point inside playable arena interior
     const targetEnemy = this._getValidEnemyOpponent(opponent);
-    const targetX = (targetEnemy && targetEnemy.hp > 0) ? targetEnemy.x : cx;
-    const targetY = (targetEnemy && targetEnemy.hp > 0) ? targetEnemy.y : cy;
-    const targetAimAngle = Math.atan2(targetY - this.y, targetX - this.x);
+    let targetX = cx;
+    let targetY = cy;
 
+    const safeMargin = (this.r || 36) + 30;
+    if (curArena.shape === 'circle') {
+      const ar = Math.max(30, (curArena.radius || (curArena.width / 2)) - safeMargin);
+      if (targetEnemy && targetEnemy.hp > 0 && !targetEnemy.isDead) {
+        const edx = targetEnemy.x - cx;
+        const edy = targetEnemy.y - cy;
+        const edist = Math.hypot(edx, edy);
+        const escale = edist > ar ? (ar / (edist || 1)) : 1;
+        targetX = cx + edx * escale;
+        targetY = cy + edy * escale;
+      }
+    } else {
+      const minX = curArena.x + safeMargin;
+      const maxX = curArena.x + curArena.width - safeMargin;
+      const minY = curArena.y + safeMargin;
+      const maxY = curArena.y + curArena.height - safeMargin;
+      if (targetEnemy && targetEnemy.hp > 0 && !targetEnemy.isDead) {
+        targetX = Math.max(minX, Math.min(maxX, targetEnemy.x));
+        targetY = Math.max(minY, Math.min(maxY, targetEnemy.y));
+      }
+    }
+
+    // 2. Smoothly rotate body to aim toward safe interior (continuous angular slerp)
+    const targetAimAngle = Math.atan2(targetY - this.y, targetX - this.x);
     let angleDiff = targetAimAngle - (this.gunAngle || 0);
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-    const turnSpeed = 0.085 * this.phaseSpeedMult;
+    const turnSpeed = 0.095 * this.phaseSpeedMult;
     this.gunAngle = (this.gunAngle || 0) + angleDiff * turnSpeed;
     this.angle = this.gunAngle;
 
-    // 2. Smoothly bank and return toward the arena / opponent orbit
-    const returnForce = 0.52 * this.phaseSpeedMult;
-    const toTargetDist = Math.hypot(targetX - this.x, targetY - this.y) || 1;
-    this.vx += ((targetX - this.x) / toTargetDist) * returnForce;
-    this.vy += ((targetY - this.y) / toTargetDist) * returnForce;
+    // 3. Aerodynamic flight steering: smoothly blend velocity toward forward heading
+    const cruiseSpeed = (cfg.divebombRecoverySpeed || 5.6) * this.phaseSpeedMult;
+    const desiredVx = Math.cos(this.gunAngle) * cruiseSpeed;
+    const desiredVy = Math.sin(this.gunAngle) * cruiseSpeed;
 
-    // Smooth flight drag
-    this.vx *= 0.93;
-    this.vy *= 0.93;
+    const steerRate = 0.10;
+    this.vx += (desiredVx - this.vx) * steerRate;
+    this.vy += (desiredVy - this.vy) * steerRate;
 
-    // Periodic wing flap sound while banking
-    if (this.stateTimer % 18 === 0) {
-      this._playWingFlapAudio(0.65);
-    }
+    // 4. Safe re-entry condition: check if dragon is comfortably inside the playable arena
+    const isComfortablyInside = this._isInsideArena(this.x, this.y, (this.r || 36) + 15, curArena);
+    const minRecoveryFrames = 24; // Ensure minimum graceful banking arc duration (~0.4s)
+    const maxRecoveryFrames = 90; // Watchdog upper limit (~1.5s)
 
-    // 3. Seamless handoff to patrol or hover
-    if (this.stateTimer <= 0) {
-      // Synchronize patrol angle to current position so flight path has zero hitch
-      this.patrolAngle = Math.atan2(this.y - cy, this.x - cx);
-      this.aiState = DRAGON_STATE.PATROL;
+    const canTransition = (this.recoveryFrames >= minRecoveryFrames && isComfortablyInside) ||
+                          (this.recoveryFrames >= maxRecoveryFrames && this._isInsideArena(this.x, this.y, 0, curArena)) ||
+                          (this.recoveryFrames >= 115);
+
+    if (canTransition) {
       this.divebombCooldown = (cfg.divebombCooldown || 600) / this.phaseSpeedMult;
+
+      const canChainBreath = this.isSkillEnabled(cfg.enableDivebombBreathCombo, true) &&
+                             this.isSkillEnabled(cfg.enableFireball, cfg.enableDragonsBreath, true);
+
+      if (canChainBreath) {
+        // Zero out velocity smoothly as breath attack begins right from current inside position (NO TELEPORT SNAP)
+        this.vx = 0;
+        this.vy = 0;
+        this.knockbackVx = 0;
+        this.knockbackVy = 0;
+        this._initiateFireball(targetEnemy || opponent, cfg);
+      } else {
+        const baseSpd = (this.speed || cfg.speed || 4.4) * this.phaseSpeedMult;
+        const angle = (this.gunAngle !== undefined && !Number.isNaN(this.gunAngle)) ? this.gunAngle : Math.atan2(this.vy, this.vx);
+        this.vx = Math.cos(angle) * baseSpd;
+        this.vy = Math.sin(angle) * baseSpd;
+        this.aiState = DRAGON_STATE.PATROL;
+      }
     }
   }
 
   interruptAttacks(forceCancelAll = false) {
     this.isSwooping = false;
+    this.isBreathingFire = false;
+    this.breathStreams = [];
+    this.breathAnchorX = undefined;
+    this.breathAnchorY = undefined;
+    this.breathAnchorAltitude = undefined;
+    this.breathElapsed = undefined;
+    this.breathSpinTotal = undefined;
     this.isChannelingCataclysm = false;
     this.isTelegraphingDivebomb = false;
     this.isDivebombing = false;
@@ -2098,7 +2359,7 @@ export class EnderDragonFighter extends Fighter {
       const angle = this.divebombAngle;
       const length = Math.hypot(endX - startX, endY - startY);
       const cfg = this._getConfig();
-      const width = cfg.divebombCorridorWidth || 95;
+      const width = cfg.divebombCorridorWidth || (cfg.divebombHitboxRadius ? cfg.divebombHitboxRadius * 2 : 60);
 
       ctx.save();
       ctx.translate(startX, startY);
@@ -2176,7 +2437,7 @@ export class EnderDragonFighter extends Fighter {
       const angle = this.divebombAngle;
       const length = Math.hypot(endX - startX, endY - startY);
       const cfg = this._getConfig();
-      const width = cfg.divebombCorridorWidth || 95;
+      const width = cfg.divebombCorridorWidth || (cfg.divebombHitboxRadius ? cfg.divebombHitboxRadius * 2 : 60);
 
       ctx.save();
       ctx.translate(startX, startY);
@@ -2207,6 +2468,13 @@ export class EnderDragonFighter extends Fighter {
     // 2. Draw acid pools beneath dragon
     for (let pool of this.acidPools) {
       drawDragonAcidPool(ctx, pool);
+    }
+
+    // 2b. Draw active 360° dragon breath streams
+    if (Array.isArray(this.breathStreams)) {
+      for (let stream of this.breathStreams) {
+        drawMinecraftBreathStream(ctx, stream);
+      }
     }
 
     // 3. Draw authentic animated dragon model

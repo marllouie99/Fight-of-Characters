@@ -31,6 +31,7 @@ export const enderDragonConfig = {
   projectileSpeedMultiplier: 1.0,
   color: '#18181B', // Obsidian Charcoal
   themeColor: '#C026D3', // Void Magenta
+  hudSkillBarColor: '#C026D3', // Void Magenta HUD Skill Bar Theme
   secondaryColor: '#E879F9', // Light Amethyst Glow
   eyeColor: '#D946EF', // Glowing Ender Amethyst
   acidColor: '#A21CAF', // Dragon's Breath Acid Purple
@@ -60,11 +61,13 @@ export const enderDragonConfig = {
   spriteFrameCount: 6,
   spriteTicksPerFrame: 5,
   swoopTicksPerFrame: 3,
+  wingFlapDownstrokeFrame: 1, // Frame index in WING_FRAMES (0-5) that triggers the downstroke flap SFX (1 = Mid Downstroke)
   tailScale: 2.25,
   wingScale: 5.2,
 
-  // ── Passive: Flight & Arena Physics (Window Screen Hovering & Free Arena Clipping) ──
-  isGhostTerrain: true,
+  // ── Passive: Flight & Arena Physics (Natural Roaming & Wall Ricochet Standard) ──
+  spinRate: 0,
+  isGhostTerrain: false,
   immuneToKnockback: false,
   immuneToPush: false,
   hoverOscillationAmp: 25.0,
@@ -88,6 +91,7 @@ export const enderDragonConfig = {
   lowAltitude: 0.4,
 
   // 2. Target Interception (Momentum & Kinetic Space Control)
+  enableIntercept: 0, // Master toggle for Target Interception & Gale Buffet
   interceptCooldown: 360,
   interceptSpeed: 16.5,
   interceptLeadFrames: 14,
@@ -96,6 +100,7 @@ export const enderDragonConfig = {
   interceptGaleKnockback: 16.0,
 
   // 3. Grounded Intermissions (Perching at Central Anchor)
+  enablePerch: 0, // Master toggle for Central Anchor Perching & Acid Breath
   perchInterval: 1200,
   perchGroundedDuration: 150,
   perchDescentSpeed: 3.5,
@@ -112,19 +117,30 @@ export const enderDragonConfig = {
   phase3SpeedMult: 1.25,
   phase4SpeedMult: 1.45,
 
-  // ── Skill 1: Dragon's Breath / Fireball (dragonsBreath) ──
+  // ── Skill 1: Dragon's Breath / 360° Void Acid Sweep (dragonsBreath) ──
+  enableFireball: true, // Master toggle for Dragon's Breath / Fireball
+  enableDragonsBreath: true, // Alias for Skill 1
   fireballCooldown: 480, // 8.0s
-  fireballSpeed: 9.0,
-  fireballRadius: 16,
-  fireballDamage: 28,
-  fireballDetonationRadius: 70,
+  dragonsBreathSpinDuration: 70, // Total frames for full 360° rotation sweep (~1.2s at 60 FPS)
+  dragonsBreathRecoveryFrames: 50, // Post-breath recovery/settle pause frames before resuming movement (~0.4s at 60 FPS)
+  dragonsBreathFireInterval: 2, // Emits breath stream every 2 frames during rotation
+  dragonsBreathStreamSpeed: 6.0, // Outward travel speed of breath puffs
+  dragonsBreathStreamRadius: 14, // Hitbox radius of breath puffs
+  dragonsBreathDamage: 12, // Direct hit damage per breath puff
+  dragonsBreathMaxDistance: 120, // Outward reach before deploying acid pools
+  fireballSpeed: 8.0,
+  fireballRadius: 14,
+  fireballDamage: 12,
+  fireballDetonationRadius: 65,
   acidPoolDurationFrames: 180, // 3.0s lingering hazard
-  acidPoolRadius: 70,
+  acidPoolRadius: 65, // Radius of lingering Dragon's Breath acid pools
   acidTickInterval: 15, // damage tick every 0.25s
   acidDamagePerTick: 6,
   acidSlowMultiplier: 0.75, // 25% movement slow inside cloud
 
   // ── Skill 2: Wing Buffet / Kinetic Swoop (wingBuffet) ──
+  enableSwoop: 0, // Master toggle for Wing Buffet / Kinetic Swoop
+  enableWingBuffet: 0, // Alias for Skill 2
   swoopCooldown: 540, // 9.0s
   swoopWindupFrames: 14,
   swoopDurationFrames: 18,
@@ -136,6 +152,8 @@ export const enderDragonConfig = {
   swoopTurnaroundFrames: 8,
 
   // ── Skill 3 / Ultimate: Void Cataclysm & Perch (voidCataclysm) ──
+  enableCataclysm: 0, // Master toggle for Ultimate: Void Cataclysm
+  enableVoidCataclysm: 0, // Alias for Ultimate
   cataclysmCooldown: 1100, // ~18.3s
   cataclysmChannelFrames: 70,
   cataclysmRoarFrame: 40,
@@ -148,17 +166,25 @@ export const enderDragonConfig = {
   cataclysmSecondaryDamage: 18,
 
   // ── Skill 4: Off-Screen Telegraphed Divebomb Strafe (divebombStrafe) ──
+  enableDivebomb: true, // Master toggle for Off-Screen Telegraphed Divebomb Strafe
+  enableVoidDivebomb: true, // Alias for Skill 4
   divebombCooldown: 600, // 10.0s
+  divebombSetupSpeed: 4.8, // Natural cruise flight speed when gliding to setup position (prevents sudden velocity burst)
+  divebombSetupDistance: 75, // Distance past arena perimeter for off-screen telegraph positioning
   divebombTelegraphFrames: 55, // ~0.91s ground danger corridor warning
   divebombDurationFrames: 22,
   divebombSpeed: 24.5,
-  divebombCorridorWidth: 95,
+  divebombRecoverySpeed: 5.6, // Graceful aerodynamic cruise speed when banking and gliding back into arena (Rule 1.2)
+  divebombCorridorWidth: 70, // Width of telegraph danger carpet & physical strike hitbox (hitbox is based directly off this corridor width)
+  divebombHitboxRadius: 35, // Physical collision half-width derived from divebombCorridorWidth * 0.5
+  divebombRadius: 35, // Alias for divebomb hitbox radius
   divebombDamage: 45,
   divebombKnockback: 22.0,
   divebombReach: 95,
   divebombAcidDeployInterval: 4,
   divebombSlowDuration: 90, // 1.5s slow debuff applied to enemies hit by divebomb (~90 frames at 60 FPS)
   divebombSlowMultiplier: 0.40, // 40% movement speed (60% slow)
+  enableDivebombBreathCombo: true, // Master toggle: Chains Divebomb directly into the 360° Dragon's Breath Void Acid Sweep
 
   // ── End Crystal Healing Mechanics (4 Corners) ──
   enableCornerCrystals: true, // Spawns 4 End Crystals in the 4 corners of the arena
@@ -171,13 +197,12 @@ export const enderDragonConfig = {
   crystalDrawSize: 140, // Rendered scale size of the End Crystal sprite on screen (140px, imposing beacon scale)
 
   // ── Death Sequence ──
-  deathAscentFrames: 90,
+  deathAscentFrames: 120,
   deathBeamCount: 8,
   deathExplosionRadius: 180,
 
   // ── Audio SFX Configuration (Minecraft Ender Dragon SFX) ──
   sounds: {
-    roar: 'Assets/Sound Effects/Skills/ragescream.mp3',
     fireball: 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg',
     fireballImpact: 'Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg',
     wingFlap: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg',
@@ -185,7 +210,8 @@ export const enderDragonConfig = {
     swoop: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg',
     swoopHit: 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg',
     acidTick: 'Assets/Sound Effects/Attacks/fleshhit.mp3',
-    lightning: 'Assets/Sound Effects/Skills/thunderstrike.mp3',
+    lightning: 'Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg',
+    cataclysmCharge: 'Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg',
     disintegration: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg',
     death: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg',
     hurt1: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1.ogg',
@@ -199,7 +225,6 @@ export const enderDragonConfig = {
     xpPickup: 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg',
   },
   soundVolumes: {
-    roar: 1.0,
     fireball: 0.85,
     fireballImpact: 0.90,
     wingFlap: 0.70,

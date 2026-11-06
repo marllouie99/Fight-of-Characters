@@ -377,7 +377,7 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
       }
 
       // Trigger global white hit flash visual effect for non-DoT hits
-      if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.isBleed && opts.source !== 'bleed' && !opts.isElectrified && !target.isLawnmower && target.characterId !== 'crazydave_lawnmower') {
+      if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.isBleed && opts.source !== 'bleed' && !opts.isElectrified && !target.isLawnmower && target.characterId !== 'crazydave_lawnmower' && !target.isEndCrystal && !target.suppressHitEffects && !target.suppressHitFlash) {
         target.hitFlashTimer = 8;
       }
 
@@ -385,6 +385,8 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
       const isTargetSilent = Boolean(
         target.noHitSound ||
         target.suppressHitSound ||
+        target.isEndCrystal ||
+        target.suppressHitEffects ||
         target.isChessTroop ||
         target.isChessMinion ||
         target.isChessPiece ||
@@ -421,10 +423,10 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
         damageAngle = opts.damageAngle;
       }
       const isTargetBloodImmune = isBloodSuppressedEntity(target);
-      if (typeof spawnBloodEffect === 'function' && !opts.noBlood && !opts.suppressBlood && !isTargetBloodImmune && !isRatioPauseActive && !isSecondTurretHit) {
+      if (typeof spawnBloodEffect === 'function' && !opts.noBlood && !opts.suppressBlood && !isTargetBloodImmune && !isRatioPauseActive && !isSecondTurretHit && !target.isEndCrystal && !target.suppressHitEffects) {
         const bloodAmount = opts.isRikaAttack ? Math.max(1, Math.round(effectiveAmount * 0.16)) : effectiveAmount;
         spawnBloodEffect(target, bloodAmount, damageAngle);
-      } else if (typeof spawnSparks === 'function' && !opts.noBlood && !opts.suppressBlood && !isTargetBloodImmune && !isRatioPauseActive && !isSecondTurretHit) {
+      } else if (typeof spawnSparks === 'function' && !opts.noBlood && !opts.suppressBlood && !isTargetBloodImmune && !isRatioPauseActive && !isSecondTurretHit && !target.isEndCrystal && !target.suppressHitEffects) {
         spawnSparks(target.x, target.y, 6, 'crimsonSniper');
       }
 
@@ -433,7 +435,7 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
                             !opts.isPurpleDPS && !opts.isElectrified && !opts.isDomainDPS && 
                             !opts.isSkill && !opts.isUltimate && !opts.isRikaAttack && 
                             !opts.isExplosion && !opts.isAOE;
-      if (isBasicAttack && CONFIG.basicAttackHitPauseDuration > 0 && !isSecondTurretHit) {
+      if (isBasicAttack && CONFIG.basicAttackHitPauseDuration > 0 && !isSecondTurretHit && !target.isEndCrystal && !target.suppressHitEffects) {
         if (typeof target.isPerformingSkill !== 'function' || !target.isPerformingSkill()) {
           if (typeof target.applyTimeStop === 'function') {
             target.applyTimeStop(CONFIG.basicAttackHitPauseDuration);
@@ -3048,6 +3050,8 @@ export class Fighter {
     const isTargetSilent = Boolean(
       this.noHitSound ||
       this.suppressHitSound ||
+      this.isEndCrystal ||
+      this.suppressHitEffects ||
       this.isChessTroop ||
       this.isChessMinion ||
       this.isChessPiece ||
@@ -3066,14 +3070,14 @@ export class Fighter {
       (typeof this.type === 'string' && ['pawn', 'knight', 'bishop', 'rook', 'queen'].includes(this.type.toLowerCase()) && (this.isMinion || this.isChessTroop || this.isChessPiece))
     );
     if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.fromBlackHole && !opts.isPurpleDPS && !opts.isElectrified && !opts.isDomainDPS && !opts.isPureLoveBeam && !opts.isBleed && opts.source !== 'bleed' && !opts.isCurse && opts.source !== 'curse' && !opts.noHitSound && !opts.suppressHitSound && !isTargetSilent && !opts.isNamelessBeam && !opts.isSilent && !isDomainHit) {
-      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower') {
+      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower' && !this.isEndCrystal && !this.suppressHitEffects && !this.suppressHitFlash) {
         if (!isSecondTurretHit) {
           audioSystem.playSFX('attack_fleshhit', 0.6);
         }
         this.hitFlashTimer = 8;
       }
     } else if (opts.isPurpleDPS) {
-      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower') {
+      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower' && !this.isEndCrystal && !this.suppressHitEffects && !this.suppressHitFlash) {
         this.hitFlashTimer = 6;
         if (!isTargetSilent) {
           const now = Date.now();
@@ -3084,7 +3088,7 @@ export class Fighter {
         }
       }
     } else if (isDomainHit) {
-      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower') {
+      if (!this.isTurret && !this.isDispenser && !this.isLawnmower && this.characterId !== 'crazydave_lawnmower' && !this.isEndCrystal && !this.suppressHitEffects && !this.suppressHitFlash) {
         this.hitFlashTimer = 6;
       }
     }

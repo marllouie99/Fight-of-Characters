@@ -284,6 +284,96 @@ export function toggleArenaThemeModal() {
 // THEME RESOLUTION
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// ARENA THEME (LIGHT / DARK MODE) ENGINE
+// ─────────────────────────────────────────────
+
+const _initialLightArenaOuterBg = CONFIG.lightArenaOuterBgColor || CONFIG.arenaOuterBgColor || '#fcfcfcff';
+const _initialLightArenaInnerBg = CONFIG.lightArenaInnerBgColor || CONFIG.arenaInnerBgColor || '#fbfcfdff';
+const _initialLightCanvasBg = CONFIG.lightCanvasBgColor || CONFIG.canvasBgColor || _initialLightArenaOuterBg;
+const _initialLightHudTextColor = CONFIG.lightHudTextColor || CONFIG.hudTextColor || '#131313ff';
+
+export function applyArenaTheme(theme) {
+  const effectiveTheme = (theme === 'dark') ? 'dark' : 'light';
+  if (typeof state !== 'undefined' && state) {
+    state.arenaTheme = effectiveTheme;
+    state.darkMode = (effectiveTheme === 'dark');
+    state._arenaBorderCanvas = null;
+    state._arenaOuterDetailsCanvas = null;
+    state._arenaFloorCanvasCache = null;
+    state._titleHeaderCanvas = null;
+    state._titleHeaderCanvasTheme = null;
+    state._crazyDaveGrassCanvas = null;
+    state._footballFieldFloorCanvas = null;
+    state._dungeonFloorCanvas = null;
+    state._endStoneFloorCanvas = null;
+    state._endStoneBricksFloorCanvas = null;
+    state._mossyStoneFloorCanvas = null;
+    state._sandBeachFloorCanvas = null;
+  }
+  if (typeof CONFIG !== 'undefined' && CONFIG) {
+    CONFIG.arenaTheme = effectiveTheme;
+    CONFIG.darkMode = (effectiveTheme === 'dark');
+
+    const isDark = (effectiveTheme === 'dark');
+    CONFIG.canvasBgColor = isDark
+      ? (CONFIG.darkCanvasBgColor || '#000000')
+      : (CONFIG.lightCanvasBgColor || _initialLightCanvasBg);
+    CONFIG.arenaOuterBgColor = isDark
+      ? (CONFIG.darkArenaOuterBgColor || '#000000')
+      : (CONFIG.lightArenaOuterBgColor || _initialLightArenaOuterBg);
+    CONFIG.arenaInnerBgColor = isDark
+      ? (CONFIG.darkArenaInnerBgColor || '#000000')
+      : (CONFIG.lightArenaInnerBgColor || _initialLightArenaInnerBg);
+    CONFIG.hudTextColor = isDark
+      ? (CONFIG.darkHudTextColor || '#f0f2f5')
+      : (CONFIG.lightHudTextColor || _initialLightHudTextColor);
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('arenaTheme', effectiveTheme);
+  }
+  if (typeof document !== 'undefined') {
+    const isDark = (effectiveTheme === 'dark');
+    const rawOuter = (typeof CONFIG !== 'undefined') ? CONFIG.arenaOuterBgColor : null;
+    const cleanOuter = (typeof rawOuter === 'string' && rawOuter.startsWith('#') && rawOuter.length === 9 && rawOuter.endsWith('ff'))
+      ? rawOuter.substring(0, 7)
+      : rawOuter;
+    const gameBox = document.querySelector('.game-box');
+    if (gameBox && cleanOuter) gameBox.style.backgroundColor = cleanOuter;
+
+    const _themeEls = [
+      document.documentElement,
+      document.body,
+      document.querySelector('.game-container'),
+      document.querySelector('.game-box'),
+      document.getElementById('hudBottomContainer'),
+      document.getElementById('hudTopContainer'),
+      document.getElementById('hudTopLeft'),
+      document.getElementById('hudTopRight'),
+      document.getElementById('hudBottomLeft'),
+      document.getElementById('hudBottomRight'),
+      document.getElementById('healthHud'),
+      document.getElementById('healthHudLeft'),
+      document.getElementById('healthHudRight'),
+    ];
+    _themeEls.forEach(el => {
+      if (el) {
+        if (isDark) el.classList.add('arena-dark-mode');
+        else el.classList.remove('arena-dark-mode');
+      }
+    });
+
+    const btn = document.getElementById('btn-theme');
+    if (btn) {
+      btn.innerText = isDark ? 'DARK MODE' : 'LIGHT MODE';
+    }
+  }
+
+  if (typeof state !== 'undefined' && typeof state.clearHealthHud === 'function') {
+    state.clearHealthHud(true);
+  }
+}
+
 export function resolveActiveThemeId() {
   return getSelectedArenaTheme();
 }
@@ -475,7 +565,7 @@ function _pixelLBracket(ctx, x, y, len, thick, dirX, dirY, color) {
 // ─────────────────────────────────────────────
 
 function _renderNoTilesFloor(oc, width, height, isDark) {
-  const bgColor = isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || '#919298ff');
+  const bgColor = isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || CONFIG.lightArenaInnerBgColor || '#ffffffff');
   _pixelRect(oc, 0, 0, width, height, bgColor);
 }
 
@@ -1422,7 +1512,7 @@ export function renderActiveArenaTheme(ctx, arena, isDark = false, fBleed = 0) {
   if (floorCanvas) {
     ctx.drawImage(floorCanvas, arena.x - fBleed, arena.y - fBleed, arena.width + fBleed * 2, arena.height + fBleed * 2);
   } else {
-    ctx.fillStyle = isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || '#919298ff');
+    ctx.fillStyle = isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || CONFIG.lightArenaInnerBgColor || '#ffffffff');
     if (arena.shape === 'circle') {
       const cx = arena.x + arena.width / 2;
       const cy = arena.y + arena.height / 2;

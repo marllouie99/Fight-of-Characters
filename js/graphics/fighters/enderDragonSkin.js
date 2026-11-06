@@ -637,9 +637,11 @@ export function drawEnderDragonSkin(ctx, fighter) {
     : Math.floor(Date.now() / 16);
 
   // When grounded, cycle slowly between bottom resting/folded wing frames
-  const frameIdx = isGrounded
-    ? (2 + Math.floor((frameCounter / 12) % 2))
-    : (Math.floor(frameCounter / ticksPerFrame) % WING_FRAMES.length);
+  const frameIdx = (fighter.wingFrameIndex !== undefined)
+    ? fighter.wingFrameIndex
+    : (isGrounded
+        ? (2 + Math.floor((frameCounter / 12) % 2))
+        : (Math.floor(frameCounter / ticksPerFrame) % WING_FRAMES.length));
   const fBox = WING_FRAMES[frameIdx] || WING_FRAMES[0];
 
   // ── Multi-Dimensional Altitude Ground Shadow Engine ──
@@ -710,20 +712,85 @@ export function drawEnderDragonSkin(ctx, fighter) {
   }
 
   // 3. Retro Arcade 4.5° Angular Notch Snapping & Relative Joint Calculations
+  const isSpinning360 = Boolean(fighter.isBreathingFire || fighter.aiState === 'FIREBALL_SPIT');
+  const isTelegraphingDivebomb = Boolean(
+    fighter.isTelegraphingDivebomb ||
+    fighter.aiState === 'DIVEBOMB_TELEGRAPH' ||
+    fighter.aiState === 'DIVEBOMB_SETUP'
+  );
+  const isDivebomb = Boolean(
+    isTelegraphingDivebomb ||
+    fighter.isDivebombing ||
+    fighter.aiState === 'DIVEBOMB_STRIKE' ||
+    fighter.aiState === 'DIVEBOMB_RECOVERY'
+  );
   const RETRO_ARCADE_NOTCH = Math.PI / 40; // 4.5° discrete arcade step
   const facingLeft = Math.abs(angle) > Math.PI / 2;
   const segmentRelAngles = new Array(numSegs);
 
-  // Segment 0 relative to dragon spine
-  const rawRel0 = angleDiff(fighter._tailSegWorldAngles[0], spineWorldAngle);
-  const qRel0 = Math.round(rawRel0 / RETRO_ARCADE_NOTCH) * RETRO_ARCADE_NOTCH;
-  segmentRelAngles[0] = facingLeft ? -qRel0 : qRel0;
+  if (isSpinning360) {
+    const elapsed = (fighter.breathElapsed !== undefined) ? fighter.breathElapsed : 0;
+    const spinTotal = fighter.breathSpinTotal || 70;
+    const isPhase1 = elapsed < spinTotal && fighter.isBreathingFire !== false;
+    const num = TAIL_SEGMENTS.length;
 
-  // Segments 1..7 relative to previous vertebra
-  for (let i = 1; i < numSegs; i++) {
-    const rawRel_i = angleDiff(fighter._tailSegWorldAngles[i], fighter._tailSegWorldAngles[i - 1]);
-    const qRel_i = Math.round(rawRel_i / RETRO_ARCADE_NOTCH) * RETRO_ARCADE_NOTCH;
-    segmentRelAngles[i] = facingLeft ? -qRel_i : qRel_i;
+    if (isPhase1) {
+      // ── Phase 1: Active 360° Sweep Trailing Kinematics ──
+      // Aerodynamic rotational drag smoothly curves the tail opposite the spin direction
+      // plus an organic traveling sinusoidal wisp wave down the vertebrae chain (Zero stepped notches / Zero jitter)
+      for (let i = 0; i < num; i++) {
+        const segFraction = (i + 1) / num;
+        const dragCurve = -0.042 * (1.0 + segFraction * 0.4);
+        const tailWave = Math.sin(frameCounter * 0.16 - i * 0.45) * 0.018 * (1.0 + segFraction * 0.6);
+        segmentRelAngles[i] = dragCurve + tailWave;
+      }
+    } else {
+      // ── Phase 2: Post-Breath Recovery & Settle ──
+      // Gracefully straightens back out to resting alignment with damped decay
+      const recoveryElapsed = Math.max(0, elapsed - spinTotal);
+      const settleProgress = Math.min(1.0, Math.max(0, recoveryElapsed / (fighter.breathRecoveryFrames || 24)));
+      const decay = Math.cos(settleProgress * Math.PI * 0.5); // 1.0 -> 0.0 smooth ease
+      for (let i = 0; i < num; i++) {
+        const segFraction = (i + 1) / num;
+        const dragCurve = -0.042 * (1.0 + segFraction * 0.4) * decay;
+        const tailWave = Math.sin(frameCounter * 0.12 - i * 0.35) * (0.015 * decay);
+        segmentRelAngles[i] = dragCurve + tailWave;
+      }
+    }
+
+    // Accumulate smooth world angles for internal tracking
+    let accumAngle = spineWorldAngle;
+    for (let i = 0; i < num; i++) {
+      accumAngle += segmentRelAngles[i];
+      fighter._tailSegWorldAngles[i] = accumAngle;
+    }
+  } else if (isTelegraphingDivebomb) {
+    // ── Divebomb Windup & Telegraph Trailing Kinematics ──
+    // Aerodynamic trailing alignment behind dive angle with graceful traveling wisp wave
+    // (Zero discrete 4.5° notch snapping / Zero facingLeft sign flips / Zero jitter)
+    const num = TAIL_SEGMENTS.length;
+    for (let i = 0; i < num; i++) {
+      const segFraction = (i + 1) / num;
+      const tailWave = Math.sin(frameCounter * 0.14 - i * 0.40) * 0.015 * (1.0 + segFraction * 0.5);
+      segmentRelAngles[i] = tailWave;
+    }
+    let accumAngle = spineWorldAngle;
+    for (let i = 0; i < num; i++) {
+      accumAngle += segmentRelAngles[i];
+      fighter._tailSegWorldAngles[i] = accumAngle;
+    }
+  } else {
+    // Segment 0 relative to dragon spine
+    const rawRel0 = angleDiff(fighter._tailSegWorldAngles[0], spineWorldAngle);
+    const qRel0 = Math.round(rawRel0 / RETRO_ARCADE_NOTCH) * RETRO_ARCADE_NOTCH;
+    segmentRelAngles[0] = facingLeft ? -qRel0 : qRel0;
+
+    // Segments 1..7 relative to previous vertebra
+    for (let i = 1; i < numSegs; i++) {
+      const rawRel_i = angleDiff(fighter._tailSegWorldAngles[i], fighter._tailSegWorldAngles[i - 1]);
+      const qRel_i = Math.round(rawRel_i / RETRO_ARCADE_NOTCH) * RETRO_ARCADE_NOTCH;
+      segmentRelAngles[i] = facingLeft ? -qRel_i : qRel_i;
+    }
   }
 
   // Render afterimages in world space behind fighter
@@ -736,8 +803,8 @@ export function drawEnderDragonSkin(ctx, fighter) {
 
   // ── Upright Aim Angle Transform Standard (Rule 19) ──
   ctx.rotate(angle);
-  if (facingLeft) {
-    ctx.scale(1, -1); // Upright orientation: top horn/wing stays on -Y and bottom on +Y!
+  if (facingLeft && !isSpinning360 && !isDivebomb) {
+    ctx.scale(1, -1); // Upright orientation: top horn/wing stays on -Y and bottom on +Y! (Suppressed during 360° spin and divebomb trajectory)
   }
 
   // Multi-dimensional altitude depth scale
@@ -754,20 +821,32 @@ export function drawEnderDragonSkin(ctx, fighter) {
   // ── Retro Arcade Character Breathing Animation (Stepped Body Expansion & Chest Rhythm like Zenitsu) ──
   // Discrete 3-tier stepped breath cycle: Inhale (+1), Rest/Neutral (0), Exhale (-1)
   const isChanneling = Boolean(fighter.isChannelingCataclysm);
+  const isSmoothKinematics = isSpinning360 || isTelegraphingDivebomb || isPreview;
   const breathFreq = isPreview ? 0.08 : (isSwooping ? 0.24 : 0.12);
   const cycleAngle = (frameCounter * breathFreq) % (Math.PI * 2);
-  const rawBreath = isChanneling ? 1.0 : Math.sin(cycleAngle);
-  const breathQuantized = (rawBreath > 0.35 ? 1.0 : (rawBreath < -0.35 ? -1.0 : 0.0));
-  const easeBreathing = (isSwooping ? 0.4 : 1.0);
+  const rawBreath = isChanneling ? 0.0 : Math.sin(cycleAngle);
+  const breathQuantized = rawBreath > 0.35 ? 1.0 : (rawBreath < -0.35 ? -1.0 : 0.0);
+  const easeBreathing = isSwooping ? 0.0 : 1.0;
 
-  // Anisotropic chest expansion along facing axis (+X) & discrete heave lift
-  const chestExpansionX = Math.max(0, breathQuantized) * 1.5 * easeBreathing;
-  const heaveX = Math.round(breathQuantized * 1.5 * easeBreathing);
-  const heaveY = Math.round(Math.cos(cycleAngle) * 0.8 * (breathQuantized !== 0 ? 1 : 0) * easeBreathing);
+  // During 360° breath sweep or divebomb windup: organic continuous sub-pixel float breathing & maw heave (Zero 1px stepped jitter)
+  const breathCycle = Math.sin(frameCounter * (isSmoothKinematics ? 0.14 : breathFreq));
+  const chestExpansionX = isSmoothKinematics
+    ? Math.max(0, breathCycle) * 1.2
+    : Math.max(0, breathQuantized) * 1.5 * easeBreathing;
+  const heaveX = isSmoothKinematics
+    ? (breathCycle * 0.8)
+    : Math.round(breathQuantized * 1.5 * easeBreathing);
+  const heaveY = isSmoothKinematics
+    ? (Math.cos(frameCounter * 0.14) * 0.5)
+    : Math.round(Math.cos(cycleAngle) * 0.8 * (breathQuantized !== 0 ? 1 : 0) * easeBreathing);
 
   // Volume-conserving squash & stretch (chest expands forward on inhale, contracts on exhale)
-  const breathScaleX = 1.0 + (breathQuantized * 0.035 * easeBreathing);
-  const breathScaleY = 1.0 - (breathQuantized * 0.018 * easeBreathing);
+  const breathScaleX = isSmoothKinematics
+    ? (1.0 + breathCycle * 0.030)
+    : (1.0 + (breathQuantized * 0.035 * easeBreathing));
+  const breathScaleY = isSmoothKinematics
+    ? (1.0 - breathCycle * 0.015)
+    : (1.0 - (breathQuantized * 0.018 * easeBreathing));
 
   // ── LAYER 1: Fluid Articulated Multi-Segment Dragon Tail (8 Vertebrae Chain) ──
   _drawEnderDragonTail(ctx, r, tailsImg, TAIL_SEGMENTS, segmentRelAngles, -heaveX * 0.4);
@@ -775,11 +854,11 @@ export function drawEnderDragonSkin(ctx, fighter) {
   // ── LAYER 2: Animated Dragon Wings Attached to Back (Dragon-wings-sprite-sheet.png) ──
   const customSkin = (typeof state !== 'undefined' && state.skinCustomizations?.enderDragon) || {};
   const wingScaleMult = customSkin.wingScale ?? (enderDragonConfig.wingScale || 5.2);
-  const wingDrawSize = r * wingScaleMult * (1.0 + breathQuantized * 0.02 * easeBreathing); // Prominent wide dragon wingspan
+  const wingDrawSize = r * wingScaleMult * (1.0 + (isSmoothKinematics ? breathCycle * 0.02 : breathQuantized * 0.02 * easeBreathing)); // Prominent wide dragon wingspan
   if (wingsImg && wingsImg.complete && wingsImg.naturalWidth > 0) {
     ctx.save();
     ctx.translate(-r * 0.15 - heaveX * 0.8, -heaveY * 0.4); // Attach wings to back spine with discrete breath heave
-    ctx.rotate(-Math.PI / 2 + breathQuantized * 0.04 * easeBreathing); // Align lateral wing spread with subtle pitch flare
+    ctx.rotate(-Math.PI / 2 + (isSmoothKinematics ? breathCycle * 0.04 : breathQuantized * 0.04 * easeBreathing)); // Align lateral wing spread with subtle pitch flare
     ctx.imageSmoothingEnabled = false; // Authentic pixel art
     ctx.drawImage(
       wingsImg,
@@ -801,11 +880,11 @@ export function drawEnderDragonSkin(ctx, fighter) {
     _drawRetroBreathVapor(ctx, r, exhaleStep, heaveX + chestExpansionX, heaveY);
   }
 
-  // ── LAYER 5: Minecraft Dragon's Breath Maw Charging Particles (Skill 1 Telegraph) ──
+  // ── LAYER 5: Minecraft Dragon's Breath Maw Charging & Discharge Particles (Skill 1) ──
   if (fighter.aiState === 'FIREBALL_SPIT' && fighter.stateTimer !== undefined) {
-    _drawMinecraftMawChargingBreath(ctx, r, fighter.stateTimer);
+    _drawMinecraftMawChargingBreath(ctx, r, fighter.stateTimer, fighter.isBreathingFire !== false);
   } else if (fighter.aiState === 'PERCH_GROUNDED' && fighter.perchBreathTimer !== undefined && fighter.perchBreathTimer <= 14) {
-    _drawMinecraftMawChargingBreath(ctx, r, fighter.perchBreathTimer + 8);
+    _drawMinecraftMawChargingBreath(ctx, r, fighter.perchBreathTimer + 8, false);
   }
 
   // Status overlays & hit flash
@@ -815,24 +894,26 @@ export function drawEnderDragonSkin(ctx, fighter) {
 }
 
 /**
- * Minecraft Dragon's Breath Swirling Maw Charging Animation
- * Renders swirling square purple/magenta/white particles spiraling into the dragon's snout
+ * Minecraft Dragon's Breath Swirling Maw Charging & Active Discharge Animation
+ * Renders swirling square purple/magenta/white particles spiraling and flaring from the dragon's snout
  */
-function _drawMinecraftMawChargingBreath(ctx, r, stateTimer) {
+function _drawMinecraftMawChargingBreath(ctx, r, stateTimer, isContinuous = false) {
   const baseNx = r * 0.84;
   const baseNy = r * 0.20;
-  const progress = Math.min(1.0, Math.max(0, (18 - stateTimer) / 10));
+  const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : Math.floor(Date.now() / 16);
+  const progress = isContinuous ? 1.0 : Math.min(1.0, Math.max(0, (18 - stateTimer) / 10));
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
 
   const P = 2.0;
-  const particleCount = 12;
-  const spiralRadius = r * (0.65 * (1.0 - progress * 0.75));
+  const particleCount = 14;
+  const spiralRadius = r * (isContinuous ? 0.38 : (0.65 * (1.0 - progress * 0.75)));
+  const animTime = isContinuous ? (time * 0.25) : (progress * Math.PI * 3.5);
 
   for (let i = 0; i < particleCount; i++) {
     const dist = spiralRadius * (0.35 + (i % 4) * 0.20);
-    const angle = (i / particleCount) * Math.PI * 2 + progress * Math.PI * 3.5;
+    const angle = (i / particleCount) * Math.PI * 2 + animTime;
 
     const px = Math.round((baseNx + Math.cos(angle) * dist) / P) * P;
     const py = Math.round((baseNy + Math.sin(angle) * dist) / P) * P;
@@ -840,17 +921,17 @@ function _drawMinecraftMawChargingBreath(ctx, r, stateTimer) {
 
     const palette = ['#FFFFFF', '#F5D0FE', '#E879F9', '#D946EF', '#C026D3'];
     ctx.fillStyle = palette[i % palette.length];
-    ctx.globalAlpha = Math.min(1.0, 0.45 + progress * 0.55);
+    ctx.globalAlpha = isContinuous ? (0.60 + (i % 3) * 0.15) : Math.min(1.0, 0.45 + progress * 0.55);
     ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
   }
 
   // Glowing aperture core spark at mouth opening
-  if (progress > 0.35) {
-    const coreAlpha = Math.min(1.0, (progress - 0.35) * 1.6);
-    const coreSize = Math.round((P * (2.0 + progress * 1.5)) / P) * P;
+  if (isContinuous || progress > 0.35) {
+    const coreAlpha = isContinuous ? (0.85 + Math.sin(time * 0.3) * 0.15) : Math.min(1.0, (progress - 0.35) * 1.6);
+    const coreSize = Math.round((P * (2.5 + (isContinuous ? Math.sin(time * 0.4) * 0.5 : progress * 1.5))) / P) * P;
 
     ctx.fillStyle = '#D946EF';
-    ctx.globalAlpha = coreAlpha * 0.65;
+    ctx.globalAlpha = coreAlpha * 0.75;
     ctx.fillRect(Math.round(baseNx / P) * P - coreSize, Math.round(baseNy / P) * P - coreSize, coreSize * 2, coreSize * 2);
 
     ctx.fillStyle = '#FFFFFF';

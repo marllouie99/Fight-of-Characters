@@ -523,8 +523,17 @@ export function updateCamera() {
 
       for (const f of combatFighters) {
         if (!f || !Number.isFinite(f.x) || !Number.isFinite(f.y)) continue;
-        const fx = f.x;
-        const fy = f.y - (f.z ? f.z * 0.35 : 0);
+        let fx = f.x;
+        let fy = f.y - (f.z ? f.z * 0.35 : 0);
+
+        // Ender Dragon off-screen divebomb windup (setup/telegraph):
+        // Softly clamp off-screen coordinates to arena boundaries so camera stays stable and framed on the arena danger corridor
+        if (f.isTelegraphingDivebomb || f.aiState === 'DIVEBOMB_SETUP' || f.aiState === 'DIVEBOMB_TELEGRAPH' || f.aiState === 'DIVEBOMB_RECOVERY') {
+          const margin = 45;
+          fx = Math.max(arena.x - margin, Math.min(arena.x + arena.width + margin, fx));
+          fy = Math.max(arena.y - margin, Math.min(arena.y + arena.height + margin, fy));
+        }
+
         const r = Number.isFinite(f.r) ? f.r : 22;
         if (fx - r < minX) minX = fx - r;
         if (fx + r > maxX) maxX = fx + r;

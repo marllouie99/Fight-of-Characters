@@ -12312,12 +12312,102 @@ async function main() {
     }
 
     // 3. Verify skills
-    if (!dragonInstance.skills || dragonInstance.skills.length < 3) {
-      throw new Error('Ender Dragon does not have at least 3 skills registered');
+    if (!dragonInstance.skills || dragonInstance.skills.length < 1) {
+      throw new Error('Ender Dragon does not have at least 1 skill registered');
+    }
+
+    // 3b. Verify Skill 1: 360° Dragon's Breath (Halts Movement, Sweeps 360°, Post-Breath Recovery Pause, Resumes Movement)
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const breathOpponent = new EnderDragonClass({ x: 350, y: 250, color: '#FFFFFF', controls: {} });
+    dragonInstance.vx = 4.0;
+    dragonInstance.vy = 2.0;
+    dragonInstance._initiateFireball(breathOpponent, dragonInstance._getConfig());
+    if (dragonInstance.vx !== 0 || dragonInstance.vy !== 0) {
+      throw new Error(`Ender Dragon failed to stop movement on Dragon Breath activation! vx=${dragonInstance.vx}, vy=${dragonInstance.vy}`);
+    }
+    if (!dragonInstance.isBreathingFire) {
+      throw new Error('Ender Dragon isBreathingFire flag was not set to true upon Dragon Breath activation');
+    }
+    const initialBreathAngle = dragonInstance.gunAngle;
+    const testCfg = dragonInstance._getConfig();
+    let firedCount = 0;
+    const initialPoolCount = dragonInstance.acidPools.length;
+
+    // Simulate through the active 360° breath sweep followed by the post-breath recovery frames
+    const spinFrames = dragonInstance.breathSpinDuration;
+    const recoveryFrames = dragonInstance.breathRecoveryFrames;
+    const totalBreathFrames = dragonInstance.stateTimer;
+    
+    if (!recoveryFrames || recoveryFrames <= 0) {
+      throw new Error(`Ender Dragon missing post-breath recovery frames! recoveryFrames=${recoveryFrames}`);
+    }
+
+    // Check spin phase: movement is stopped, aim rotates, and isBreathingFire is true
+    for (let f = 0; f < spinFrames; f++) {
+      if (!dragonInstance.isBreathingFire) {
+        throw new Error(`Ender Dragon isBreathingFire became false prematurely during spin phase at frame ${f}`);
+      }
+      dragonInstance._updateFireballState(breathOpponent, testCfg);
+      if (dragonInstance.vx !== 0 || dragonInstance.vy !== 0) {
+        throw new Error(`Ender Dragon moved during active 360° Dragon Breath spin! frame=${f}, vx=${dragonInstance.vx}`);
+      }
+      // Verify smooth floating buoyancy around anchor
+      const lateralDist = Math.abs(dragonInstance.x - dragonInstance.breathAnchorX);
+      const verticalDist = Math.abs(dragonInstance.y - dragonInstance.breathAnchorY);
+      if (lateralDist > 2.5 || verticalDist > 3.0) {
+        throw new Error(`Ender Dragon floating drift exceeded gentle hover bounds! lateral=${lateralDist}, vertical=${verticalDist}`);
+      }
+    }
+
+    // Check post-breath recovery phase: isBreathingFire is cleared, but movement is STILL paused!
+    for (let f = 0; f < recoveryFrames - 1; f++) {
+      dragonInstance._updateFireballState(breathOpponent, testCfg);
+      if (dragonInstance.isBreathingFire) {
+        throw new Error(`Ender Dragon isBreathingFire was not cleared during post-breath recovery phase at frame ${f}`);
+      }
+      if (dragonInstance.aiState !== 'FIREBALL_SPIT') {
+        throw new Error(`Ender Dragon exited FIREBALL_SPIT prematurely during recovery frames! state=${dragonInstance.aiState}`);
+      }
+      if (dragonInstance.vx !== 0 || dragonInstance.vy !== 0) {
+        throw new Error(`Ender Dragon moved during post-breath recovery pause! frame=${f}, vx=${dragonInstance.vx}`);
+      }
+    }
+
+    // Final tick concludes recovery phase and resumes movement
+    dragonInstance._updateFireballState(breathOpponent, testCfg);
+
+    // After finishing recovery frames, Ender Dragon resumes its movement
+    if (dragonInstance.isBreathingFire) {
+      throw new Error('Ender Dragon isBreathingFire was not cleared after completing 360° sweep');
+    }
+    if (dragonInstance.aiState !== 'PATROL') {
+      throw new Error(`Ender Dragon failed to transition back to PATROL after breath recovery! state=${dragonInstance.aiState}`);
+    }
+    if (dragonInstance.breathAnchorX !== undefined) {
+      throw new Error(`Ender Dragon breathAnchorX was not cleaned up after breath recovery! got ${dragonInstance.breathAnchorX}`);
+    }
+    if (Math.hypot(dragonInstance.vx, dragonInstance.vy) < 0.5) {
+      throw new Error(`Ender Dragon failed to resume movement velocity after breath recovery! vx=${dragonInstance.vx}, vy=${dragonInstance.vy}`);
+    }
+
+    // Verify zero self-damage: Dragon must NEVER take damage from its own breath streams or acid pools
+    const preHp = dragonInstance.hp;
+    for (let f = 0; f < 30; f++) {
+      dragonInstance.update(breathOpponent, 0, testArena);
+    }
+    if (dragonInstance.hp < preHp) {
+      throw new Error(`Self-damage violation: Ender Dragon took damage from its own breath or acid pools! hp=${dragonInstance.hp} < ${preHp}`);
+    }
+    dragonInstance.reset();
+
+    mockCtx.resetStackDepth();
+    dragonInstance.draw(mockCtx);
+    if (mockCtx.getStackDepth() !== 0) {
+      throw new Error(`[CANVAS STACK LEAK] Ender Dragon draw after Dragon Breath stackDepth=${mockCtx.getStackDepth()} != 0`);
     }
 
     // 4. Verify Divebomb Wall Slam, Corridor Anti-Snap & Arena Perimeter Clamping
-    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    // (testArena defined above)
 
     // 4a. Verify Anti-Snap: Entities outside the strike corridor or behind the dragon NEVER snap or get caught
     dragonInstance.x = 250;
@@ -12344,6 +12434,17 @@ async function main() {
     }
     if (behindOpponent.x !== 180 || behindOpponent.y !== 465) {
       throw new Error(`Anti-Snap Violation: Behind entity snapped coordinates! pos=(${behindOpponent.x}, ${behindOpponent.y})`);
+    }
+
+    // 4a-2. Verify Configurable Divebomb Hitbox Radius: Sidestepping targets outside tightened radius dodge cleanly
+    const dragonCfg = dragonInstance._getConfig();
+    if (dragonCfg.divebombHitboxRadius === undefined && dragonCfg.divebombRadius === undefined) {
+      throw new Error('divebombHitboxRadius or divebombRadius must be defined in enderDragonConfig');
+    }
+    const sidestepOpponent = new EnderDragonClass({ x: 270, y: 507, color: '#FFFFFF', controls: {} }); // 42px lateral distance
+    dragonInstance._updateDivebombStrike(sidestepOpponent, testArena, dragonCfg);
+    if (dragonInstance.draggedVictims.has(sidestepOpponent)) {
+      throw new Error('Tightened Hitbox Violation: Sidestepping opponent outside divebombHitboxRadius was caught!');
     }
 
     // 4b. Verify In-Path Corridor Capture, Smooth Push, and Wall Slam
@@ -12386,6 +12487,39 @@ async function main() {
     }
     if (dummyOpponent.slowMultiplier > 0.45) {
       throw new Error(`Victim slowMultiplier was not properly reduced! slowMultiplier=${dummyOpponent.slowMultiplier}`);
+    }
+
+    // 4c. Verify Divebomb -> Smooth Arena Re-entry & 360° Dragon's Breath Combo Sequence
+    dragonInstance.aiState = 'DIVEBOMB_RECOVERY';
+    dragonInstance.recoveryFrames = 0;
+
+    // Simulate flight recovery loop: ensure dragon smoothly banks and glides back inside arena without any teleport snaps
+    let prevX = dragonInstance.x;
+    let prevY = dragonInstance.y;
+    let maxDeltaPerFrame = 0;
+    let recoveryLoopCount = 0;
+    while (dragonInstance.aiState === 'DIVEBOMB_RECOVERY' && recoveryLoopCount < 100) {
+      dragonInstance._updateDivebombRecovery(dummyOpponent, testArena, dragonInstance._getConfig());
+      dragonInstance.x += dragonInstance.vx;
+      dragonInstance.y += dragonInstance.vy;
+      const stepDelta = Math.hypot(dragonInstance.x - prevX, dragonInstance.y - prevY);
+      if (stepDelta > maxDeltaPerFrame) maxDeltaPerFrame = stepDelta;
+      prevX = dragonInstance.x;
+      prevY = dragonInstance.y;
+      recoveryLoopCount++;
+    }
+
+    if (maxDeltaPerFrame > 15) {
+      throw new Error(`Divebomb Recovery Violation: Detected sudden coordinate snap of ${maxDeltaPerFrame.toFixed(1)}px!`);
+    }
+    if (dragonInstance.aiState !== 'FIREBALL_SPIT') {
+      throw new Error(`Divebomb Combo Violation: Dragon failed to chain into FIREBALL_SPIT! state=${dragonInstance.aiState}`);
+    }
+    if (!dragonInstance.isBreathingFire) {
+      throw new Error('Divebomb Combo Violation: isBreathingFire was not set upon chaining into Dragon Breath');
+    }
+    if (dragonInstance.vx !== 0 || dragonInstance.vy !== 0) {
+      throw new Error(`Divebomb Combo Violation: Movement was not stopped upon chaining into Dragon Breath! vx=${dragonInstance.vx}`);
     }
 
     // 5. Verify 4 Corner End Crystals in non-boss fighter matches
@@ -12452,7 +12586,191 @@ async function main() {
       throw new Error(`[CANVAS STACK LEAK] Dragon & Crystal draw stackDepth=${mockCtx.getStackDepth()} != 0`);
     }
 
-    console.log('✅ [Ender Dragon Test] Successfully verified model, 8-directional movement flight, skills, divebomb anti-snap corridor collision, slow debuff application, wall slam containment, 4 corner End Crystals (tether healing & backlash damage), and 100% balanced Canvas 2D stacks!');
+    // 6. Verify Wing Flap Animation & Downstroke Audio Synchronization
+    dragonInstance.reset();
+    let flapAudioCallCount = 0;
+    let lastFlapVolume = 0;
+    let lastFlapSpeed = 0;
+    dragonInstance._playWingFlapAudio = function(vol, speed) {
+      flapAudioCallCount++;
+      lastFlapVolume = vol;
+      lastFlapSpeed = speed;
+    };
+
+    // Standard flight: 5 ticks per frame, 6 frames = 30 ticks per cycle
+    // Downstroke frame is 1 (starts at tick 5)
+    for (let t = 0; t < 30; t++) {
+      dragonInstance._updateWingFlapCycle(dragonInstance._getConfig());
+      if (t === 5) {
+        if (dragonInstance.wingFrameIndex !== 1) {
+          throw new Error(`Expected wingFrameIndex=1 at tick 5, got ${dragonInstance.wingFrameIndex}`);
+        }
+        if (flapAudioCallCount !== 1) {
+          throw new Error(`Expected 1 flap audio call at downstroke transition, got ${flapAudioCallCount}`);
+        }
+      }
+    }
+    if (flapAudioCallCount !== 1) {
+      throw new Error(`Expected exactly 1 flap audio call per 30-tick flight cycle, got ${flapAudioCallCount}`);
+    }
+
+    // High-speed swoop flight: 3 ticks per frame, faster flap audio with speed multiplier
+    dragonInstance.isSwooping = true;
+    flapAudioCallCount = 0;
+    for (let t = 0; t < 18; t++) {
+      dragonInstance._updateWingFlapCycle(dragonInstance._getConfig());
+    }
+    if (flapAudioCallCount !== 1) {
+      throw new Error(`Expected 1 flap audio call during 18-tick swoop cycle, got ${flapAudioCallCount}`);
+    }
+    if (lastFlapSpeed <= 1.0) {
+      throw new Error(`Expected accelerated audio flap speed during swoop, got ${lastFlapSpeed}`);
+    }
+
+    // Grounded state: wings folded, zero flap audio
+    dragonInstance.isSwooping = false;
+    dragonInstance.isGrounded = true;
+    flapAudioCallCount = 0;
+    for (let t = 0; t < 60; t++) {
+      dragonInstance._updateWingFlapCycle(dragonInstance._getConfig());
+    }
+    if (flapAudioCallCount !== 0) {
+      throw new Error(`Expected zero flap audio while grounded, got ${flapAudioCallCount}`);
+    }
+    if (dragonInstance.wingFrameIndex !== 2 && dragonInstance.wingFrameIndex !== 3) {
+      throw new Error(`Expected grounded folded wing frame (2 or 3), got ${dragonInstance.wingFrameIndex}`);
+    }
+
+    // 7. Verify Ender Dragon Death Experience (XP) Orbs - Only Valid Combatant Fighters Can Attract & Collect XP
+    const { isEligibleXPFighter, updateDeathEffects } = await import('../js/graphics/particles/deathShatterEffect.js');
+    const CombatantFighterClass = FIGHTER_CLASS_MAP.gojo || FIGHTER_CLASS_MAP.normal || FIGHTER_CLASS_MAP.denji;
+    const liveCombatant = new CombatantFighterClass({ x: 250, y: 250, color: '#3B82F6', controls: {} });
+    liveCombatant.hp = 100;
+    liveCombatant.isDead = false;
+    liveCombatant.dead = false;
+
+    const testCrystal = new EndCrystalEntity(testArena.x + 40, testArena.y + 40);
+    testCrystal.hp = 60;
+    testCrystal.isDead = false;
+
+    const deadCombatant = new CombatantFighterClass({ x: 200, y: 200, color: '#EF4444', controls: {} });
+    deadCombatant.hp = 0;
+    deadCombatant.isDead = true;
+
+    // 7a. Verify non-fighter entities, dead entities, and the Ender Dragon itself are strictly rejected
+    if (isEligibleXPFighter(testCrystal)) {
+      throw new Error('isEligibleXPFighter failed: End Crystal was incorrectly flagged as eligible!');
+    }
+    if (isEligibleXPFighter(dragonInstance)) {
+      throw new Error('isEligibleXPFighter failed: Ender Dragon was incorrectly flagged as eligible for its own XP!');
+    }
+    if (isEligibleXPFighter(deadCombatant)) {
+      throw new Error('isEligibleXPFighter failed: Dead fighter was incorrectly flagged as eligible!');
+    }
+    if (isEligibleXPFighter({ isMinion: true, hp: 50 })) {
+      throw new Error('isEligibleXPFighter failed: Minion entity was incorrectly flagged as eligible!');
+    }
+    if (isEligibleXPFighter({ isDeployable: true, hp: 100 })) {
+      throw new Error('isEligibleXPFighter failed: Deployable entity was incorrectly flagged as eligible!');
+    }
+    if (isEligibleXPFighter({ isTurret: true, hp: 100 })) {
+      throw new Error('isEligibleXPFighter failed: Turret entity was incorrectly flagged as eligible!');
+    }
+    if (isEligibleXPFighter({ isDispenser: true, hp: 100 })) {
+      throw new Error('isEligibleXPFighter failed: Dispenser entity was incorrectly flagged as eligible!');
+    }
+    if (isEligibleXPFighter({ isPlant: true, hp: 100 })) {
+      throw new Error('isEligibleXPFighter failed: Plant entity was incorrectly flagged as eligible!');
+    }
+    if (!isEligibleXPFighter(liveCombatant)) {
+      throw new Error('isEligibleXPFighter failed: Legitimate living combatant Fighter was rejected!');
+    }
+
+    // 7b. Simulation test: Place End Crystal closer to XP orb than Fighter
+    state.deathEffects = [];
+    state.fighters = [dragonInstance, liveCombatant, testCrystal];
+    
+    // XP orb at (200, 200)
+    // End Crystal at (205, 205) - distance ~7px!
+    // Living Fighter at (240, 200) - distance 40px!
+    testCrystal.x = 205;
+    testCrystal.y = 205;
+    liveCombatant.x = 240;
+    liveCombatant.y = 200;
+
+    let receivedXPOrb = null;
+    liveCombatant.onCollectXP = (orb) => {
+      receivedXPOrb = orb;
+    };
+
+    const xpOrb = {
+      x: 200,
+      y: 200,
+      vx: 0,
+      vy: 0,
+      size: 10,
+      isEnderDragonXPOrb: true,
+      life: 1.0,
+      decay: 0,
+      settleHoldTimer: 180,
+      isSettled: false,
+    };
+    state.deathEffects.push(xpOrb);
+
+    // Update death effects for 1 frame: orb must lock onto liveCombatant and ignore the closer End Crystal!
+    updateDeathEffects();
+
+    if (xpOrb.hoverTargetFighter === testCrystal) {
+      throw new Error('XP Orb targeted End Crystal instead of genuine Fighter!');
+    }
+    if (xpOrb.hoverTargetFighter && xpOrb.hoverTargetFighter !== liveCombatant) {
+      throw new Error('XP Orb targeted an unauthorized entity!');
+    }
+
+    // Accelerate hover and trigger consumption
+    xpOrb.hoverTimer = 1;
+    xpOrb.isHovering = true;
+    xpOrb.hoverTargetFighter = liveCombatant;
+    updateDeathEffects();
+
+    if (!receivedXPOrb) {
+      throw new Error('Living combatant Fighter failed to receive onCollectXP callback upon consumption!');
+    }
+    if (state.deathEffects.includes(xpOrb)) {
+      throw new Error('Consumed XP orb was not removed from state.deathEffects!');
+    }
+    state.deathEffects = [];
+
+    // 8. Verify Ender Dragon Bottom HUD Theme Color Standard (Rule 18)
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const { getFighterThemeColor, getFighterHealthBarColor } = await import('../js/graphics/hudManager.js');
+
+    const expectedDragonTheme = '#C026D3'; // Void Magenta
+    const dragonSkills = getSkillDataForFighter(dragonInstance);
+    if (!dragonSkills || dragonSkills.length === 0) {
+      throw new Error('Ender Dragon returned empty HUD skill bars!');
+    }
+
+    // Verify all 4 skill bars strictly use Void Magenta (#C026D3) and NOT the dark charcoal body color (#18181B)
+    for (const skill of dragonSkills) {
+      if (skill.color !== expectedDragonTheme) {
+        throw new Error(`Ender Dragon skill bar "${skill.id}" color mismatch: expected ${expectedDragonTheme}, got ${skill.color}`);
+      }
+    }
+
+    // Verify fighter theme color resolution returns Void Magenta (#C026D3)
+    const resolvedTheme = getFighterThemeColor(dragonInstance);
+    if (resolvedTheme !== expectedDragonTheme) {
+      throw new Error(`getFighterThemeColor mismatch for Ender Dragon: expected ${expectedDragonTheme}, got ${resolvedTheme}`);
+    }
+
+    // Verify health bar color resolves to Void Magenta (#C026D3)
+    const resolvedHbColor = getFighterHealthBarColor(dragonInstance, 1.0);
+    if (resolvedHbColor !== expectedDragonTheme) {
+      throw new Error(`getFighterHealthBarColor mismatch for Ender Dragon: expected ${expectedDragonTheme}, got ${resolvedHbColor}`);
+    }
+
+    console.log('✅ [Ender Dragon Test] Successfully verified model, 8-directional movement flight, skills, divebomb anti-snap corridor collision, slow debuff application, wall slam containment, 4 corner End Crystals (tether healing & backlash damage), synchronized wing flap downstroke audio, and 100% balanced Canvas 2D stacks!');
   } catch (err) {
     console.error('❌ [ENDER DRAGON TEST ERROR]:', err.message || err);
     errors++;

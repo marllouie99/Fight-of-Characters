@@ -84,6 +84,7 @@ export class EndCrystalEntity extends Fighter {
     this.isMinion = true;
     this.isEndCrystal = true;
     this.isDeployable = true;
+    this.isFighter = false;
     this.isImmovable = true;
     this.cannotBeKnockbacked = true;
     this.immuneToKnockback = true;
@@ -111,6 +112,16 @@ export class EndCrystalEntity extends Fighter {
     this.hideFrontHand = true;
     this.hideBackHand = true;
 
+    // Comprehensive Hit Effect Suppression
+    this.suppressHitFlash = true;
+    this.suppressHitEffects = true;
+    this.suppressHitSound = true;
+    this.noHitFlash = true;
+    this.noHitSound = true;
+    this.noBlood = true;
+    this.suppressBlood = true;
+    this.immuneToHitFlash = true;
+
     this.maxHp = maxHp;
     this.hp = maxHp;
     this.r = radius;
@@ -133,6 +144,7 @@ export class EndCrystalEntity extends Fighter {
     this.isMinion = true;
     this.isEndCrystal = true;
     this.isDeployable = true;
+    this.isFighter = false;
     this.isImmovable = true;
     this.cannotBeKnockbacked = true;
     this.immuneToKnockback = true;
@@ -156,6 +168,14 @@ export class EndCrystalEntity extends Fighter {
       this.y = this._fixedY;
     }
     this.hitFlashTimer = 0;
+    this.suppressHitFlash = true;
+    this.suppressHitEffects = true;
+    this.suppressHitSound = true;
+    this.noHitFlash = true;
+    this.noHitSound = true;
+    this.noBlood = true;
+    this.suppressBlood = true;
+    this.immuneToHitFlash = true;
     this.isTetheredToDragon = false;
     this._visualBobY = 0;
   }
@@ -293,7 +313,7 @@ export class EndCrystalEntity extends Fighter {
     }
     const finalDmg = Math.max(1, Math.round(amount));
     this.hp -= finalDmg;
-    this.hitFlashTimer = 6;
+    this.hitFlashTimer = 0;
 
     // Maintain strict anchor lock on hit
     if (this._fixedX !== undefined) {
@@ -333,7 +353,6 @@ export class EndCrystalEntity extends Fighter {
     if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
       const expIdx = Math.floor(Math.random() * 4) + 1;
       audioSystem.playSFX(`Assets/Sound Effects/EnderdragonSFX/Explosion${expIdx}.ogg`, 0.95);
-      audioSystem.playSFX('Assets/Sound Effects/Skills/purpledeploy.mp3', 0.80);
     }
 
     // Radial Blast Damage to nearby opponents/entities (excluding the dragon which takes dedicated backlash)
@@ -378,7 +397,9 @@ export class EndCrystalEntity extends Fighter {
         dragon.patrolDirection = (dragon.patrolDirection || 1) * -1;
         dragon.targetAltitude = 1.7;
         triggerGlobalScreenShake(10, 28);
-        dragon._playAudio('roar', 'Assets/Sound Effects/Skills/ragescream.mp3', 1.0);
+        if (typeof dragon._playWingFlapAudio === 'function') {
+          dragon._playWingFlapAudio(1.0);
+        }
       }
     }
 
@@ -479,45 +500,51 @@ export class EndCrystalEntity extends Fighter {
         ctx.fillStyle = mColor;
         ctx.fillRect(mx - mSize / 2, my - mSize / 2, mSize, mSize);
       }
-
-      // 3. Retro Hit Flash Overlay (Stepped 1-bit strobe)
-      if (this.hitFlashTimer > 0 && Math.floor(this.hitFlashTimer) % 2 === 0) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-        const pad = Math.round(drawSize * 0.16);
-        ctx.fillRect(dx + pad, dy + pad, drawSize - pad * 2, drawSize - pad * 2);
-      }
     }
 
     ctx.restore();
   }
+
+  /**
+   * Overrides Fighter._applyDamageHitEffects to completely suppress all global hit effects
+   * (hit-flash, hit sounds, blood, sparks) on End Crystals.
+   */
+  _applyDamageHitEffects() {
+    this.hitFlashTimer = 0;
+  }
 }
 
 /**
- * Computes the 4 Corner Coordinates for End Crystals in Fighter Ender Dragon matches
+ * Computes the 4 Corner Coordinates for End Crystals in Fighter Ender Dragon matches.
+ * Strictly aligns each crystal to the exact center of the arena's 4 outermost corner tiles (8x8 grid).
  */
 export function getCornerEndCrystals(arena) {
   const curArena = arena || (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
-  const marginX = 66;
-  const marginTop = 102;
-  const marginBottom = 54;
+  const cols = 8;
+  const rows = 8;
+  const cellW = curArena.width / cols;
+  const cellH = curArena.height / rows;
+  const cornerCenterX = cellW * 0.5;
+  const cornerCenterY = cellH * 0.5;
+
   if (curArena.shape === 'circle') {
     const cx = curArena.x + curArena.width / 2;
     const cy = curArena.y + curArena.height / 2;
-    const rad = Math.max(50, (curArena.radius || (curArena.width / 2)) - 72);
-    const diagX = rad * Math.SQRT1_2;
-    const diagY = rad * Math.SQRT1_2;
+    const rad = Math.max(40, (curArena.radius || (curArena.width / 2)) - cornerCenterX * 1.15);
+    const diag = Math.round(rad * Math.SQRT1_2);
     return [
-      { id: 'crystal_corner_tl', name: 'Top-Left End Crystal', x: Math.round(cx - diagX), y: Math.round(cy - diagY + 20) },
-      { id: 'crystal_corner_tr', name: 'Top-Right End Crystal', x: Math.round(cx + diagX), y: Math.round(cy - diagY + 20) },
-      { id: 'crystal_corner_bl', name: 'Bottom-Left End Crystal', x: Math.round(cx - diagX), y: Math.round(cy + diagY - 8) },
-      { id: 'crystal_corner_br', name: 'Bottom-Right End Crystal', x: Math.round(cx + diagX), y: Math.round(cy + diagY - 8) },
+      { id: 'crystal_corner_tl', name: 'Top-Left End Crystal', x: cx - diag, y: cy - diag },
+      { id: 'crystal_corner_tr', name: 'Top-Right End Crystal', x: cx + diag, y: cy - diag },
+      { id: 'crystal_corner_bl', name: 'Bottom-Left End Crystal', x: cx - diag, y: cy + diag },
+      { id: 'crystal_corner_br', name: 'Bottom-Right End Crystal', x: cx + diag, y: cy + diag },
     ];
   }
+
   return [
-    { id: 'crystal_corner_tl', name: 'Top-Left End Crystal', x: Math.round(curArena.x + marginX), y: Math.round(curArena.y + marginTop) },
-    { id: 'crystal_corner_tr', name: 'Top-Right End Crystal', x: Math.round(curArena.x + curArena.width - marginX), y: Math.round(curArena.y + marginTop) },
-    { id: 'crystal_corner_bl', name: 'Bottom-Left End Crystal', x: Math.round(curArena.x + marginX), y: Math.round(curArena.y + curArena.height - marginBottom) },
-    { id: 'crystal_corner_br', name: 'Bottom-Right End Crystal', x: Math.round(curArena.x + curArena.width - marginX), y: Math.round(curArena.y + curArena.height - marginBottom) },
+    { id: 'crystal_corner_tl', name: 'Top-Left End Crystal', x: Math.round(curArena.x + cornerCenterX), y: Math.round(curArena.y + cornerCenterY) },
+    { id: 'crystal_corner_tr', name: 'Top-Right End Crystal', x: Math.round(curArena.x + curArena.width - cornerCenterX), y: Math.round(curArena.y + cornerCenterY) },
+    { id: 'crystal_corner_bl', name: 'Bottom-Left End Crystal', x: Math.round(curArena.x + cornerCenterX), y: Math.round(curArena.y + curArena.height - cornerCenterY) },
+    { id: 'crystal_corner_br', name: 'Bottom-Right End Crystal', x: Math.round(curArena.x + curArena.width - cornerCenterX), y: Math.round(curArena.y + curArena.height - cornerCenterY) },
   ];
 }
 

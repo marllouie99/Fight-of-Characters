@@ -208,7 +208,7 @@ let _isDraggingAppWindow = false;
 let _lastMouseScreenX = 0;
 let _lastMouseScreenY = 0;
 
-inputTarget.addEventListener('mousedown', (e) => {
+inputTarget?.addEventListener('mousedown', (e) => {
   const rect = inputTarget.getBoundingClientRect();
   const scaleX = state.canvas.width / rect.width;
   const scaleY = state.canvas.height / rect.height;
@@ -242,7 +242,7 @@ inputTarget.addEventListener('mousedown', (e) => {
   }
 });
 
-inputTarget.addEventListener('mousemove', (e) => {
+inputTarget?.addEventListener('mousemove', (e) => {
   if (_isDraggingAppWindow && typeof window !== 'undefined' && window.electronAPI?.dragWindow) {
     const dx = e.screenX - _lastMouseScreenX;
     const dy = e.screenY - _lastMouseScreenY;
@@ -300,7 +300,7 @@ let _touchStartX = 0;
 let _touchStartY = 0;
 let _touchStartTime = 0;
 
-inputTarget.addEventListener('touchstart', (e) => {
+inputTarget?.addEventListener('touchstart', (e) => {
   unlockAudio();
   if (e.touches && e.touches.length === 1) {
     _touchStartX = e.touches[0].clientX;
@@ -328,7 +328,7 @@ inputTarget.addEventListener('touchstart', (e) => {
   }
 }, { passive: true });
 
-inputTarget.addEventListener('touchmove', (e) => {
+inputTarget?.addEventListener('touchmove', (e) => {
   if (e.touches && e.touches.length === 1) {
     const rect = inputTarget.getBoundingClientRect();
     const scaleX = state.canvas.width / rect.width;
@@ -347,7 +347,7 @@ inputTarget.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
-inputTarget.addEventListener('touchend', (e) => {
+inputTarget?.addEventListener('touchend', (e) => {
   if (state.isDraggingPauseMenu) {
     state.isDraggingPauseMenu = false;
     return;
@@ -395,7 +395,7 @@ inputTarget.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-inputTarget.addEventListener('click', (e) => {
+inputTarget?.addEventListener('click', (e) => {
   unlockAudio();
 
   // Filter synthetic ghost clicks fired by browsers ~300ms after a touchend tap
@@ -435,7 +435,7 @@ inputTarget.addEventListener('click', (e) => {
   }
 });
 
-inputTarget.addEventListener('wheel', (e) => {
+inputTarget?.addEventListener('wheel', (e) => {
   if (state.gameState === 'weapons') {
     e.preventDefault();
     const totalPages = Math.ceil(FIGHTER_DEFS.length / 5);
@@ -482,29 +482,33 @@ startGameLoop();
 // ─────────────────────────────────────────────
 
 // Capture initial configuration from CONFIG so custom user configuration is preserved
-const _initialArenaOuterBg = CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || '#141622';
-const _initialArenaInnerBg = CONFIG.arenaInnerBgColor || CONFIG.lightArenaInnerBgColor || '#919298ff';
-const _initialCanvasBg = CONFIG.canvasBgColor || CONFIG.lightCanvasBgColor || _initialArenaOuterBg;
-const _initialLightHudTextColor = CONFIG.hudTextColor || '#131313ff';
+const _initialLightArenaOuterBg = CONFIG.lightArenaOuterBgColor || CONFIG.arenaOuterBgColor || '#fcfcfcff';
+const _initialLightArenaInnerBg = CONFIG.lightArenaInnerBgColor || CONFIG.arenaInnerBgColor || '#fbfcfdff';
+const _initialLightCanvasBg = CONFIG.lightCanvasBgColor || CONFIG.canvasBgColor || _initialLightArenaOuterBg;
+const _initialLightHudTextColor = CONFIG.lightHudTextColor || CONFIG.hudTextColor || '#131313ff';
 
 // Function to apply Arena Theme (Dark / Light)
 export function applyArenaTheme(theme) {
-  const effectiveTheme = theme;
+  const effectiveTheme = (theme === 'dark') ? 'dark' : 'light';
   state.arenaTheme = effectiveTheme;
   CONFIG.arenaTheme = effectiveTheme;
+  state.darkMode = (effectiveTheme === 'dark');
+  CONFIG.darkMode = (effectiveTheme === 'dark');
   localStorage.setItem('arenaTheme', effectiveTheme);
 
   const isDark = (effectiveTheme === 'dark');
   CONFIG.canvasBgColor = isDark
     ? (CONFIG.darkCanvasBgColor || '#000000')
-    : (CONFIG.arenaOuterBgColor || CONFIG.lightCanvasBgColor || _initialCanvasBg);
+    : (CONFIG.lightCanvasBgColor || _initialLightCanvasBg);
   CONFIG.arenaOuterBgColor = isDark
     ? (CONFIG.darkArenaOuterBgColor || '#000000')
-    : (CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || _initialArenaOuterBg);
+    : (CONFIG.lightArenaOuterBgColor || _initialLightArenaOuterBg);
   CONFIG.arenaInnerBgColor = isDark
     ? (CONFIG.darkArenaInnerBgColor || '#000000')
-    : (CONFIG.arenaInnerBgColor || CONFIG.lightArenaInnerBgColor || _initialArenaInnerBg);
-  CONFIG.hudTextColor = isDark ? '#f0f2f5' : (CONFIG.lightHudTextColor || _initialLightHudTextColor);
+    : (CONFIG.lightArenaInnerBgColor || _initialLightArenaInnerBg);
+  CONFIG.hudTextColor = isDark
+    ? (CONFIG.darkHudTextColor || '#f0f2f5')
+    : (CONFIG.lightHudTextColor || _initialLightHudTextColor);
 
   // Invalidate cached canvases
   state._arenaBorderCanvas = null;
@@ -512,6 +516,13 @@ export function applyArenaTheme(theme) {
   state._arenaFloorCanvasCache = null;
   state._titleHeaderCanvas = null;
   state._titleHeaderCanvasTheme = null;
+  state._crazyDaveGrassCanvas = null;
+  state._footballFieldFloorCanvas = null;
+  state._dungeonFloorCanvas = null;
+  state._endStoneFloorCanvas = null;
+  state._endStoneBricksFloorCanvas = null;
+  state._mossyStoneFloorCanvas = null;
+  state._sandBeachFloorCanvas = null;
 
   const rawOuter = CONFIG.arenaOuterBgColor;
   const cleanOuter = (typeof rawOuter === 'string' && rawOuter.startsWith('#') && rawOuter.length === 9 && rawOuter.endsWith('ff'))
@@ -528,6 +539,10 @@ export function applyArenaTheme(theme) {
     document.querySelector('.game-box'),
     document.getElementById('hudBottomContainer'),
     document.getElementById('hudTopContainer'),
+    document.getElementById('hudTopLeft'),
+    document.getElementById('hudTopRight'),
+    document.getElementById('hudBottomLeft'),
+    document.getElementById('hudBottomRight'),
     document.getElementById('healthHud'),
     document.getElementById('healthHudLeft'),
     document.getElementById('healthHudRight'),
@@ -544,7 +559,7 @@ export function applyArenaTheme(theme) {
     btn.innerText = isDark ? 'DARK MODE' : 'LIGHT MODE';
   }
 
-  clearHealthHud();
+  clearHealthHud(true);
   syncHudPosition();
 }
 
@@ -984,6 +999,10 @@ export function showMenuView(paneId, playAudio = true) {
       badge.innerText = 'Settings';
     } else if (paneId === 'menu-view-graphics-settings') {
       badge.innerText = 'Graphics & Visuals';
+      const btn = document.getElementById('btn-theme');
+      if (btn) {
+        btn.innerText = (state.arenaTheme === 'dark') ? 'DARK MODE' : 'LIGHT MODE';
+      }
     } else if (paneId === 'menu-view-hud-settings') {
       badge.innerText = 'HUD & Interface';
     } else if (paneId === 'menu-view-audio-settings') {

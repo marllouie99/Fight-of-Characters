@@ -101,16 +101,14 @@ The Ender Dragon employs the authentic Circle Mini-Battle upright minimalist cir
 
 ---
 
-### Skill 1: Dragon's Breath / Void Fireball (`dragonsBreath`)
+### Skill 1: Dragon's Breath (360° Void Acid Sweep) (`dragonsBreath`)
 - **Cooldown**: 480 frames (~8.0s)
 - **Mechanics**:
-  - The Ender Dragon rears back while spiraling square Minecraft purple/magenta particles gather into her snout, then launches an authentic faceted Minecraft Dragon Fireball traveling at `9.0 px/frame` along committed 360° aim angle, trailing distinct square `dragon_breath` pixel smoke puffs in flight.
-  - On collision with an opponent or upon reaching max range, the fireball detonates with an area-of-effect impact (70px radius) dealing 28 impact damage.
-  - **Lingering Minecraft Area Effect Cloud**: Spawns an authentic Minecraft Dragon's Breath Area Effect Cloud on the ground lingering for 180 frames (3.0s):
-    - **Dithered Residue Carpet**: Stepped 3-tier pixel-snapped ground footprint with undulating void magenta/acid purple bubbling tiles.
-    - **Volumetric Rising Puffs**: 48 discrete 3-tier shaded Minecraft `dragon_breath` square particles drifting upward from the floor with authentic lateral chimney wafting.
-    - **Potion Sparkles**: 16 twinkling white-pink square magic spell sparkles flashing across the vapor volume.
-    - Any enemy standing within the cloud suffers continuous acid damage (6 damage every 15 frames) and 25% movement slow.
+  - **Movement Halt & Anchoring**: When activating the skill, the Ender Dragon immediately stops all movement (`vx = 0, vy = 0`) and locks firmly in place, immune to flinch, pull, and knockback throughout the channel.
+  - **360° Sweeping Breath Rotation**: Over a 72-frame (~1.2s) duration, the Ender Dragon smoothly sweeps its aim in a full 360-degree rotation ($2\pi$ radians) surrounding itself completely.
+  - **Continuous Breath Stream & Lingering Acid Ring**: Every 2 frames as it rotates, the dragon's snout discharges expanding Minecraft Dragon's Breath stream puffs traveling outward (`8.0 px/frame`, 190px reach) dealing 12 contact damage. Upon impact or max distance, each stream deploys lingering Minecraft Area Effect Clouds (65px radius, 180 frames duration, 6 damage per 15-frame tick with 25% slow), forming an imposing 360° protective ring of void acid around the dragon.
+  - **Post-Breath Settle & Recovery Frames**: Once the 360° rotation completes, active breath stream discharge ends (`isBreathingFire = false`) and the Ender Dragon pauses for 24 recovery frames (~0.4s) settling its maw with cooling void embers while remaining completely stationary (`vx = 0, vy = 0`).
+  - **Resume Movement**: Once the recovery frames conclude, the Ender Dragon resumes active flight patrol, launching forward in its facing direction with thrust velocity, wing flap audio, and wind gust sparks.
 
 ---
 
@@ -138,11 +136,12 @@ The Ender Dragon employs the authentic Circle Mini-Battle upright minimalist cir
 - **Cooldown**: 600 frames (~10.0s)
 - **Mechanics**:
   - The Ender Dragon disengages and accelerates beyond the arena perimeter into the outer void airspace.
-  - **Telegraph Corridor Carpet**: Projects an ominous red danger corridor warning across the arena floor pointing along committed dive direction (55 frames / ~0.91s telegraph).
+  - **Telegraph Corridor Carpet**: Projects an ominous red danger corridor warning across the arena floor pointing along committed dive direction (55 frames / ~0.91s telegraph; width defined by `divebombCorridorWidth: 70`).
   - **Supersonic Divebomb**: At frame 0, launches forward at hyper-velocity (`24.5 px/frame`), trailing amethyst afterimages and lingering acid pools along the strike corridor.
-  - **Corridor Contact & Anti-Snap Push**: Entities in the flight corridor are impacted with 45 kinetic damage, screen shake, and purple sparks. Struck victims are smoothly pushed forward without positional snapping.
+  - **Hitbox Based on Corridor Width**: Physical collision width is governed directly by `divebombCorridorWidth: 70` (with half-width `divebombHitboxRadius: 35`). Sidestepping opponents outside this corridor cleanly evade the strike. Entities directly within the flight corridor are impacted with 45 kinetic damage, screen shake, and purple sparks, smoothly pushed forward without positional snapping.
   - **Slow Debuff**: Enemies struck by the divebomb suffer a heavy **1.5s slow debuff** (`divebombSlowDuration: 90`, `divebombSlowMultiplier: 0.40`), reducing their movement speed by 60% with visual `SLOWED!` amethyst feedback.
   - **Wall Slam Detonation**: If a victim is driven into the arena perimeter wall, the dragon detonates a massive Wall Slam shockwave dealing full impact damage, rebounding the enemy safely inward into the arena without clipping out of bounds.
+  - **Chained 360° Dragon's Breath Finisher (`enableDivebombBreathCombo`)**: Upon completing the strafe and banking back toward the impact zone, the Ender Dragon immediately anchors itself at the wall-slammed enemy and executes the **360° Dragon's Breath Void Acid Sweep**, trapping the slowed victims in a circular ring of lingering acid clouds before catching its breath and resuming patrol flight.
 
 ---
 
@@ -164,7 +163,6 @@ All sound effects, audio paths, and playback volumes are strictly configured in 
 
 | Key | File Path | Default Vol | Usage / Event |
 |---|---|---|---|
-| `roar` | `Assets/Sound Effects/Skills/ragescream.mp3` | `1.00` | Void Cataclysm ultimate roar & boss entrance |
 | `fireball` | `Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg` | `0.85` | Authentic Dragon Fireball launch |
 | `fireballImpact` | `Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg` | `0.90` | Fireball detonation & acid pool deployment |
 | `wingFlap` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg` | `0.70` | Wing flap acoustic sweep (primary) |
@@ -172,7 +170,7 @@ All sound effects, audio paths, and playback volumes are strictly configured in 
 | `swoop` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg` | `0.90` | Wing Buffet high-speed rushdown |
 | `swoopHit` | `Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg` | `0.95` | Heavy kinetic collision on opponent |
 | `acidTick` | `Assets/Sound Effects/Attacks/fleshhit.mp3` | `0.50` | Lingering Dragon Breath acid tick |
-| `lightning` | `Assets/Sound Effects/Skills/thunderstrike.mp3` | `0.85` | Void Cataclysm charging arc |
+| `cataclysmCharge` | `Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg` | `0.85` | Void Cataclysm charging arc |
 | `disintegration` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg` | `1.00` | Defeat sequence void beam explosion |
 | `death` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg` | `1.00` | Authentic Minecraft Ender Dragon death screech |
 | `hurt1..4` | `Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1..4.ogg` | `0.85` | Authentic Minecraft dragon hurt grunts |

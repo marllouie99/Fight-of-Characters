@@ -306,7 +306,10 @@ export const CONFIG = {
   lightArenaOuterBgColor: '#fcfcfcff',
   lightArenaInnerBgColor: '#fbfcfdff',
   darkArenaOuterBgColor: '#000000ff',  // Dark mode arena outer background color (defaults to #000000)
-  darkArenaInnerBgColor: '#000000',  // Dark mode arena inner background color (defaults to #000000)
+  darkArenaInnerBgColor: '#000000ff',  // Dark mode arena inner background color (defaults to #000000)
+  darkCanvasBgColor: '#000000ff',      // Dark mode canvas background color (defaults to #000000)
+  lightHudTextColor: '#131313ff',      // Light mode HUD font color
+  darkHudTextColor: '#f0f2f5',         // Dark mode HUD font color
   hudTextColor: '#131313ff',         // Font color for all HUD text (title, stats, description)
   hudTitleFontSize: 22,              // Font size for fighter name in HUD (px)
   hudDescFontSize: 20,               // Font size for fighter description in HUD (px)

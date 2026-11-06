@@ -33,8 +33,9 @@ export function shouldSkipProjectileTarget(projectile, fighter, fighterIndex, is
   if (!isFuga && ((fighter.vanishTimer && fighter.vanishTimer > 0) || (fighter.invincibilityTimer && fighter.invincibilityTimer > 0))) return true;
 
   if (projectile.ownerFighter && projectile.ownerFighter === fighter) return true;
+  if (projectile.owner && projectile.owner === fighter) return true;
   if (typeof projectile.owner === 'number' && fighterIndex !== -1 && projectile.owner === fighterIndex) return true;
-  if (isIllusion && fighter.owner && projectile.ownerFighter && fighter.owner === projectile.ownerFighter) return true;
+  if (isIllusion && fighter.owner && (projectile.ownerFighter === fighter.owner || projectile.owner === fighter.owner)) return true;
   // Summoned minions never collide with their own summoner's projectiles
   if (fighter.isMahoragaSummon && fighter.owner) {
     const summonOwnerIndex = (typeof fighter.ownerIndex === 'number')

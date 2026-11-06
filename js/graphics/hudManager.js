@@ -4288,7 +4288,7 @@ function updateHealthHud() {
     const headerRowHTML = customHeaderHTML || '';
 
     const cardBgStyle = isTactical ? 'background: transparent; border: none; border-radius: 0; padding: 0; box-shadow: none;' : '';
-    const themeColor = borderColor || fighterColor || (targetFighter ? getFighterThemeColor(targetFighter) : '#38BDF8');
+    const themeColor = (targetFighter ? getFighterThemeColor(targetFighter) : null) || borderColor || fighterColor || '#38BDF8';
     const themeVarStyle = `--fighter-theme: ${themeColor};`;
     return `
       <div class="health-card ${extraClass}" style="${winnerStyle} ${cardBgStyle} ${themeVarStyle}">
@@ -4439,7 +4439,7 @@ function updateHealthHud() {
         const maxHp = chFighter._originalMaxHp || chFighter.maxHp || 440;
         const ratio = maxHp > 0 ? Math.min(1.0, Math.max(0, Number(curHp) / Number(maxHp))) : 0;
         const fighterThemeColor = getFighterThemeColor(chFighter, chIdx === 0 ? '#38bdf8' : '#f43f5e');
-        const chColor = chFighter.color || fighterThemeColor;
+        const chColor = fighterThemeColor || chFighter.color;
         let nameColor = isDark ? (fighterThemeColor || '#ffffff') : '#000000';
         const isChSans = Boolean(chFighter.characterId === 'sans' || chFighter.type === 'sans');
         const fighterName = getFighterDisplayName(chFighter, true);
@@ -4796,12 +4796,12 @@ function updateHealthHud() {
         const cardHTML = buildCard({
           title: fighterName,
           scoreText: totalGames > 0 ? `${winRate}% WR` : '',
-          fillColor: color,
+          fillColor: fighterThemeColor || color,
           fillRatio: ratio,
           metaLabel: `DMG: ${parseFloat(Math.max(0, Number(fighter.damage) || 0).toFixed(1))}`,
           metaValue: `${Math.floor(Math.max(0, Number(fighter.hp) || 0))}`,
           extraClass: extraClassStr,
-          borderColor: color,
+          borderColor: fighterThemeColor || color,
           wins: matchWins,
           fighterColor: nameColor,
           shakeTimer,
@@ -5683,7 +5683,7 @@ function updateHealthHud() {
           if (isTactical) {
             bullet.style.background = '#fbbf24';
           } else {
-            bullet.style.background = fighter.color || '#ffd700';
+            bullet.style.background = getFighterThemeColor(fighter, fighter.color || '#ffd700');
           }
         } else {
           bullet.classList.remove('filled');

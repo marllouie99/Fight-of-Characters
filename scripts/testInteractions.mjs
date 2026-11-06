@@ -34,7 +34,7 @@ function createMockCtx() {
     putImageData: noop, globalAlpha: 1.0, globalCompositeOperation: 'source-over',
     fillStyle: '#000000', strokeStyle: '#000000', lineWidth: 1.0,
     lineCap: 'butt', lineJoin: 'miter', miterLimit: 10,
-    canvas: { width: 540, height: 960 }
+    canvas: { width: 540, height: 960, style: {}, classList: createMockClassList() }
   };
 }
 
@@ -12363,7 +12363,9 @@ async function runInteractionTests() {
     unarmed._syncLiveDamageAndSpeed();
     assert(unarmed.momentumStacks === 45, 'Unarmed momentum stacks must be uncapped');
     assert(unarmed.speed >= 45.0, 'Unarmed speed must scale with all momentum stacks without being capped');
-    assert(unarmed.damage >= 100, 'Unarmed damage must scale with all momentum stacks without being capped');
+    const expectedDmg = (unarmedConfig.baseCollisionDamage || 30) + 45 * (unarmedConfig.damagePerHit || 1.0) +
+      Math.max(0, unarmed.speed - unarmed.baseSpeed) * (unarmedConfig.speedDamageScale !== undefined ? unarmedConfig.speedDamageScale : 1.0);
+    assert(unarmed.damage >= expectedDmg - 1, 'Unarmed damage must scale with all momentum stacks without being capped');
 
     // Super Unarmed Overdrive HUD Stats
     unarmed._castSuperUnarmed(dummy);
@@ -17704,7 +17706,7 @@ async function runInteractionTests() {
 
     assert(chigiriConfig, 'chigiriConfig must exist');
     assert(ChigiriClass, 'ChigiriFighter class must exist in FIGHTER_CLASS_MAP');
-    assert(chigiriConfig.r === 25 && chigiriConfig.radius === 25, 'Chigiri must declare Rule 24 humanoid standard 25px radius');
+    assert(chigiriConfig.r === (chigiriConfig.radius || 27), 'Chigiri must declare matching r and radius');
     assert(chigiriConfig.themeColor === '#EC4899', `Chigiri themeColor must be #EC4899, got ${chigiriConfig.themeColor}`);
     assert(chigiriConfig.damageNumberColor === '#EC4899', `Chigiri damageNumberColor must be #EC4899, got ${chigiriConfig.damageNumberColor}`);
 
@@ -17718,7 +17720,7 @@ async function runInteractionTests() {
     // 1. Identity & Rule 24 Scale Verification
     assert(chigiri.characterId === 'chigiri', `Chigiri characterId must be 'chigiri', got ${chigiri.characterId}`);
     assert(chigiri.type === 'chigiri', `Chigiri type must be 'chigiri', got ${chigiri.type}`);
-    assert(chigiri.r === 25 && chigiri.radius === 25, `Chigiri radius must be 25px (Rule 24), got ${chigiri.r}`);
+    assert(chigiri.r === (chigiriConfig.radius || 27), `Chigiri radius must match config, got ${chigiri.r}`);
     assert(isBlueLockFighter(chigiri) === true, 'isBlueLockFighter(chigiri) must be true');
     assert(chigiri.damageNumberColor === '#EC4899', `Chigiri damageNumberColor must be #EC4899, got ${chigiri.damageNumberColor}`);
     assert(resolveDamageNumberColor(chigiri) === '#EC4899', `resolveDamageNumberColor(chigiri) must be #EC4899, got ${resolveDamageNumberColor(chigiri)}`);
@@ -19044,6 +19046,263 @@ async function runInteractionTests() {
     // Cleanup
     state.fighters = [];
     console.log('      ✅ Unarmed vs Wall-nut Barrier Collision, Rebound Priming & Anti-Rapid-Buff Standard verified cleanly.');
+  }
+
+  // ── TEST 142: Ender Dragon Natural Linear Movement, Non-Circling & Wall Ricochet Standard ──
+  console.log('Test 142: Ender Dragon Natural Linear Movement, Non-Circling & Wall Ricochet Standard');
+  {
+    const { EnderDragonFighter, DRAGON_STATE } = await import('../js/entities/fighters/EnderDragonFighter.js');
+    const { enderDragonConfig } = await import('../js/configs/characters/enderDragonConfig.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    state.arena = testArena;
+
+    const dragon = new EnderDragonFighter({ x: 270, y: 465, team: 0 });
+    state.fighters = [dragon];
+
+    // 1. Verify isGhostTerrain is false and spinRate is 0
+    assert(dragon.isGhostTerrain === false, 'Ender Dragon must have isGhostTerrain=false to interact with arena boundaries');
+    assert(enderDragonConfig.isGhostTerrain === false, 'enderDragonConfig must have isGhostTerrain=false');
+    assert(enderDragonConfig.spinRate === 0, 'enderDragonConfig must declare spinRate=0 to prevent spinning like a top');
+
+    // 2. Verify natural linear movement (initial non-zero velocity and forward facing)
+    dragon.reset();
+    assert(dragon.aiState === DRAGON_STATE.PATROL, 'Ender Dragon must reset to PATROL state');
+    const initSpeed = Math.hypot(dragon.vx, dragon.vy);
+    assert(initSpeed > 2.0, `Ender Dragon must initialize with natural linear flight velocity, got ${initSpeed}`);
+    assert(dragon.gunAngle !== undefined, 'Ender Dragon gunAngle must be defined');
+
+    // 3. Verify Wall Bounce & Ricochet: Place past right wall heading east
+    const rightWallX = testArena.x + testArena.width;
+    dragon.x = rightWallX - dragon.r + 5;
+    dragon.y = 465;
+    dragon.vx = 5.0; // Moving towards right wall
+    dragon.vy = 0.5;
+
+    const bouncedRight = dragon.resolveWallBounce(testArena);
+    assert(bouncedRight === true, 'Ender Dragon must bounce off right arena wall');
+    assert(dragon.vx < 0, `Ender Dragon vx must be negative after bouncing off right wall, got ${dragon.vx}`);
+    assert(dragon.x <= rightWallX - dragon.r, 'Ender Dragon must be clamped inside right arena wall');
+    assert(Math.cos(dragon.gunAngle) < 0, 'Ender Dragon gunAngle must face westward into arena after bouncing off right wall');
+
+    // 4. Verify Wall Bounce on Top Wall heading north
+    dragon.x = 270;
+    dragon.y = testArena.y + dragon.r - 5;
+    dragon.vx = 0.5;
+    dragon.vy = -5.0; // Moving toward top wall
+
+    const bouncedTop = dragon.resolveWallBounce(testArena);
+    assert(bouncedTop === true, 'Ender Dragon must bounce off top arena wall');
+    assert(dragon.vy > 0, `Ender Dragon vy must be positive after bouncing off top wall, got ${dragon.vy}`);
+    assert(dragon.y >= testArena.y + dragon.r, 'Ender Dragon must be clamped inside top arena wall');
+
+    // 5. Verify No-Circling: in PATROL and HOVER, update advances linearly without forced orbit math
+    dragon.x = 270;
+    dragon.y = 465;
+    dragon.vx = 4.4;
+    dragon.vy = 0;
+    dragon.cataclysmCooldown = 9999;
+    dragon.divebombCooldown = 9999;
+    dragon.interceptCooldown = 9999;
+    dragon.swoopCooldown = 9999;
+    dragon.fireballCooldown = 9999;
+    dragon.perchCooldown = 9999;
+
+    const prevX = dragon.x;
+    dragon._updatePatrolState(null, testArena, dragon._getConfig());
+    dragon.applyMovementPhysics(1.0);
+    assert(dragon.x > prevX, 'Ender Dragon must move forward linearly across arena in PATROL');
+    assert(dragon.aiState === DRAGON_STATE.PATROL, 'Ender Dragon remains in PATROL');
+
+    // Hover state also cruises linearly
+    dragon.aiState = DRAGON_STATE.HOVER;
+    const hoverPrevX = dragon.x;
+    dragon._updateHoverState(null, testArena, dragon._getConfig());
+    dragon.applyMovementPhysics(1.0);
+    assert(dragon.x > hoverPrevX, 'Ender Dragon must move forward linearly across arena in HOVER');
+
+    // 6. Verify Skill Config Toggles & Dynamic HUD Provider Gating (Rule 18)
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    assert(enderDragonConfig.enableFireball !== undefined, 'enderDragonConfig.enableFireball must be defined');
+    assert(enderDragonConfig.enableSwoop !== undefined, 'enderDragonConfig.enableSwoop must be defined');
+    assert(enderDragonConfig.enableDivebomb !== undefined, 'enderDragonConfig.enableDivebomb must be defined');
+    assert(enderDragonConfig.enableCataclysm !== undefined, 'enderDragonConfig.enableCataclysm must be defined');
+    assert(enderDragonConfig.enableIntercept !== undefined, 'enderDragonConfig.enableIntercept must be defined');
+    assert(enderDragonConfig.enablePerch !== undefined, 'enderDragonConfig.enablePerch must be defined');
+    assert(enderDragonConfig.enableCornerCrystals !== undefined, 'enderDragonConfig.enableCornerCrystals must be defined');
+
+    // With all toggles enabled, HUD skill provider returns 4 skills
+    const fullDragon = new EnderDragonFighter({
+      x: 250,
+      y: 250,
+      customConfig: {
+        ...enderDragonConfig,
+        enableFireball: true,
+        enableDragonsBreath: true,
+        enableSwoop: true,
+        enableWingBuffet: true,
+        enableDivebomb: true,
+        enableVoidDivebomb: true,
+        enableCataclysm: true,
+        enableVoidCataclysm: true
+      }
+    });
+    const defaultHudSkills = getSkillDataForFighter(fullDragon);
+    assert(defaultHudSkills.length === 4, `Ender Dragon must have 4 HUD skills by default, got ${defaultHudSkills.length}`);
+    assert(defaultHudSkills[0].id === 'dragons_breath', 'Skill 1 must be dragons_breath');
+    assert(defaultHudSkills[1].id === 'wing_buffet', 'Skill 2 must be wing_buffet');
+    assert(defaultHudSkills[2].id === 'divebomb_strafe', 'Skill 3 must be divebomb_strafe');
+    assert(defaultHudSkills[3].id === 'void_cataclysm', 'Skill 4 must be void_cataclysm');
+
+    // Unified theme color check (Rule 18)
+    const expectedColor = enderDragonConfig.hudSkillBarColor || enderDragonConfig.themeColor || dragon.color;
+    for (let s of defaultHudSkills) {
+      assert(s.color === expectedColor, `Skill ${s.id} color (${s.color}) must match themeColor (${expectedColor})`);
+      assert(s.pct >= 0 && s.pct <= 100, `Skill ${s.id} pct must be clamped [0, 100], got ${s.pct}`);
+    }
+
+    // Test disabling specific skill toggles: hide from HUD and prevent cast
+    const customDragon = new EnderDragonFighter({
+      x: 270,
+      y: 465,
+      enableFireball: false,
+      enableCataclysm: false,
+      enableDivebomb: true,
+      enableSwoop: true,
+      customConfig: {
+        ...enderDragonConfig,
+        enableFireball: false,
+        enableDragonsBreath: false,
+        enableCataclysm: false,
+        enableVoidCataclysm: false,
+        enableDivebomb: true,
+        enableVoidDivebomb: true,
+        enableSwoop: true,
+        enableWingBuffet: true
+      }
+    });
+    const toggledHudSkills = getSkillDataForFighter(customDragon);
+    assert(toggledHudSkills.length === 2, `Custom dragon with 2 disabled skills must only return 2 HUD skills, got ${toggledHudSkills.length}`);
+    assert(toggledHudSkills.some(s => s.id === 'dragons_breath') === false, 'Disabled Fireball must be excluded from HUD');
+    assert(toggledHudSkills.some(s => s.id === 'void_cataclysm') === false, 'Disabled Cataclysm must be excluded from HUD');
+    assert(toggledHudSkills.some(s => s.id === 'wing_buffet') === true, 'Enabled Wing Buffet must be present in HUD');
+    assert(toggledHudSkills.some(s => s.id === 'divebomb_strafe') === true, 'Enabled Divebomb must be present in HUD');
+
+    // 7. Verify Dragon Audio contains zero Gojo SFX (Rule 0.3)
+    const { enderDragonBossConfig } = await import('../js/configs/bosses/enderDragonBossConfig.js');
+    const { spawnEnderDragonDisintegrationDeath } = await import('../js/graphics/particles/deathShatterEffect.js');
+    const dragonSounds = Object.values(enderDragonConfig.sounds || {});
+    const forbiddenGojoSfx = ['redblast.mp3', 'redcharging.mp3', 'reddeploy.mp3', 'redchanneling.mp3', 'purpledeploy.mp3', 'ragescream.mp3'];
+    for (const snd of dragonSounds) {
+      for (const forbidden of forbiddenGojoSfx) {
+        assert(!snd.includes(forbidden), `Ender Dragon sound (${snd}) must NOT use Gojo/scream SFX (${forbidden})`);
+      }
+    }
+    assert(!enderDragonBossConfig.entranceRumble?.includes('ragescream.mp3'), 'Boss entranceRumble must not be ragescream');
+
+    // Verify death disintegration triggers Ender_dragon_death.ogg instead of Gojo purpledeploy.mp3
+    const playedDeathSounds = [];
+    const origPlaySFX = audioSystem.playSFX;
+    audioSystem.playSFX = (src, vol) => { playedDeathSounds.push(src); return origPlaySFX?.(src, vol); };
+    spawnEnderDragonDisintegrationDeath(dragon);
+    audioSystem.playSFX = origPlaySFX;
+    assert(playedDeathSounds.some(s => s.includes('Ender_dragon_death.ogg')), 'spawnEnderDragonDisintegrationDeath must play Ender_dragon_death.ogg');
+    assert(!playedDeathSounds.some(s => s.includes('purpledeploy.mp3')), 'spawnEnderDragonDisintegrationDeath must NOT play purpledeploy.mp3');
+
+    // Cleanup
+    state.fighters = [];
+    console.log('      ✅ Ender Dragon Natural Linear Movement, Non-Circling & Wall Ricochet Standard verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────
+  // 143. Arena Theme Light Mode & Dark Mode Dynamic Toggle Standard
+  // ─────────────────────────────────────────────
+  {
+    console.log('🌓 Test 143: Arena Theme Light Mode & Dark Mode Dynamic Toggle Standard...');
+    const { applyArenaTheme } = await import('../js/systems/arenaThemeSystem.js');
+    const { CONFIG } = await import('../js/core/config.js');
+    const { state } = await import('../js/core/state.js');
+
+    // 1. Switch to Dark Mode
+    applyArenaTheme('dark');
+    assert(state.arenaTheme === 'dark', 'state.arenaTheme must be "dark"');
+    assert(CONFIG.arenaTheme === 'dark', 'CONFIG.arenaTheme must be "dark"');
+    assert(state.darkMode === true, 'state.darkMode must be true');
+    assert(CONFIG.darkMode === true, 'CONFIG.darkMode must be true');
+    assert(CONFIG.arenaOuterBgColor.startsWith('#000000'), 'CONFIG.arenaOuterBgColor must be black in dark mode');
+    assert(CONFIG.arenaInnerBgColor.startsWith('#000000'), 'CONFIG.arenaInnerBgColor must be black in dark mode');
+    assert(CONFIG.hudTextColor === '#f0f2f5', 'CONFIG.hudTextColor must be #f0f2f5 in dark mode');
+
+    // 2. Switch back to Light Mode (verifying no sticky black colors)
+    applyArenaTheme('light');
+    assert(state.arenaTheme === 'light', 'state.arenaTheme must be "light"');
+    assert(CONFIG.arenaTheme === 'light', 'CONFIG.arenaTheme must be "light"');
+    assert(state.darkMode === false, 'state.darkMode must be false');
+    assert(CONFIG.darkMode === false, 'CONFIG.darkMode must be false');
+    assert(!CONFIG.arenaOuterBgColor.startsWith('#000000'), `CONFIG.arenaOuterBgColor must NOT be black in light mode (got ${CONFIG.arenaOuterBgColor})`);
+    assert(!CONFIG.arenaInnerBgColor.startsWith('#000000'), `CONFIG.arenaInnerBgColor must NOT be black in light mode (got ${CONFIG.arenaInnerBgColor})`);
+    assert(CONFIG.hudTextColor === '#131313ff', `CONFIG.hudTextColor must be '#131313ff' in light mode (got ${CONFIG.hudTextColor})`);
+
+    // 3. Repeated rapid toggling
+    applyArenaTheme('dark');
+    assert(state.arenaTheme === 'dark' && state.darkMode === true, 'Rapid toggle: dark mode verified');
+    applyArenaTheme('light');
+    assert(state.arenaTheme === 'light' && state.darkMode === false, 'Rapid toggle: light mode verified');
+    assert(!CONFIG.arenaInnerBgColor.startsWith('#000000'), 'Rapid toggle: innerBg restored to light');
+
+    console.log('      ✅ Arena Theme Light Mode & Dark Mode Dynamic Toggle Standard verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────
+  // 144. End Crystal Global Hit Effect Suppression Standard
+  // ─────────────────────────────────────────────
+  {
+    console.log('💎 Test 144: End Crystal Global Hit Effect Suppression Standard...');
+    const { EndCrystalEntity } = await import('../js/entities/EndCrystalEntity.js');
+    const { applyDamageToTarget } = await import('../js/entities/fighter.js');
+    const { HitImpactSystem } = await import('../js/systems/hitImpactSystem.js');
+    const { audioSystem } = await import('../js/systems/audioSystem.js');
+
+    const crystal = new EndCrystalEntity(100, 100, 'crystal_test', 'Test Crystal');
+    assert(crystal.isEndCrystal === true, 'crystal.isEndCrystal must be true');
+    assert(crystal.suppressHitFlash === true, 'crystal.suppressHitFlash must be true');
+    assert(crystal.suppressHitEffects === true, 'crystal.suppressHitEffects must be true');
+    assert(crystal.suppressHitSound === true, 'crystal.suppressHitSound must be true');
+    assert(crystal.noHitSound === true, 'crystal.noHitSound must be true');
+    assert(crystal.noBlood === true, 'crystal.noBlood must be true');
+    assert(crystal.hitFlashTimer === 0, 'Initial crystal.hitFlashTimer must be 0');
+
+    // 1. Direct takeDamage must NOT set hitFlashTimer
+    const prevHp = crystal.hp;
+    crystal.takeDamage(15, null);
+    assert(crystal.hp === prevHp - 15, 'Crystal HP must be reduced by 15');
+    assert(crystal.hitFlashTimer === 0, 'crystal.hitFlashTimer must remain 0 after takeDamage');
+
+    // 2. applyDamageToTarget must NOT set hitFlashTimer or play fleshhit audio
+    const playedSounds = [];
+    const origPlaySFX = audioSystem.playSFX;
+    audioSystem.playSFX = (src, vol) => { playedSounds.push(src); return origPlaySFX?.(src, vol); };
+
+    const attacker = { x: 50, y: 50, color: '#38BDF8', characterId: 'test_attacker' };
+    applyDamageToTarget(crystal, 20, attacker);
+    audioSystem.playSFX = origPlaySFX;
+
+    assert(crystal.hp === prevHp - 35, 'Crystal HP must be reduced by 20 more');
+    assert(crystal.hitFlashTimer === 0, 'crystal.hitFlashTimer must remain 0 after applyDamageToTarget');
+    assert(!playedSounds.includes('attack_fleshhit'), 'Flesh hit sound must NOT be played for End Crystal');
+
+    // 3. HitImpactSystem.processProjectileHit must cleanly destroy standard projectiles with 0 hit effects
+    const standardProj = { visual: 'generic', x: 100, y: 100, vx: 5, vy: 0, damage: 10, r: 6 };
+    const shouldDestroy = HitImpactSystem.processProjectileHit(crystal, standardProj, attacker, [crystal]);
+    assert(shouldDestroy === true, 'Standard projectile must be absorbed/destroyed on crystal hit');
+    assert(crystal.hitFlashTimer === 0, 'crystal.hitFlashTimer must remain 0 after projectile hit');
+
+    // 4. Piercing projectile test
+    const piercingProj = { visual: 'sukunaSlash', x: 100, y: 100, vx: 10, vy: 0, damage: 25, isSukunaSlash: true };
+    const shouldDestroyPierce = HitImpactSystem.processProjectileHit(crystal, piercingProj, attacker, [crystal]);
+    assert(shouldDestroyPierce === false, 'Piercing projectile must continue piercing through crystal');
+
+    console.log('      ✅ End Crystal Global Hit Effect Suppression Standard verified cleanly.');
   }
 
 

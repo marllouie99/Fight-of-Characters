@@ -13,9 +13,7 @@ export const enderDragonBossConfig = {
   bossSubtitle: 'THE END IS NEAR — BEAST OF THE VOID',
   entranceDurationFrames: 110,
   entranceCameraZoom: 1.25,
-  entranceRoar: 'Assets/Sound Effects/Skills/ragescream.mp3',
-  entranceRoarVolume: 1.0,
-  entranceRumble: 'Assets/Sound Effects/Skills/woosh.mp3',
+  entranceRumble: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg',
   entranceRumbleVolume: 0.90,
   entranceAuraColor: '#C026D3',
   themeColor: '#C026D3',
@@ -28,10 +26,29 @@ export const enderDragonBossConfig = {
   damageMultiplier: 0.00,
   speedMultiplier: 0.00,
 
-  // ── Boss Mode Skill Tuning ──
+  // ── Boss Mode Skill Toggles & Tuning ──
+  enableFireball: true,
+  enableDragonsBreath: true,
+  enableSwoop: true,
+  enableWingBuffet: true,
+  enableDivebomb: true,
+  enableVoidDivebomb: true,
+  enableDivebombBreathCombo: true,
+  enableCataclysm: true,
+  enableVoidCataclysm: true,
+  enableIntercept: true,
+  enablePerch: true,
+  enableCornerCrystals: true,
+
   fireballCooldown: 360, // 6.0s
-  fireballSpeed: 10.5,
-  fireballDamage: 36,
+  dragonsBreathSpinDuration: 72,
+  dragonsBreathRecoveryFrames: 24,
+  dragonsBreathFireInterval: 2,
+  dragonsBreathStreamSpeed: 9.0,
+  dragonsBreathDamage: 16,
+  dragonsBreathMaxDistance: 210,
+  fireballSpeed: 9.0,
+  fireballDamage: 16,
   acidPoolDurationFrames: 240, // 4.0s
   acidDamagePerTick: 8,
 

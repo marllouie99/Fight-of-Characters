@@ -52,6 +52,8 @@ export function isSkillEnabled(...args) {
  * Alias map normalizing variant character/type identifiers to their canonical HUD skill provider key.
  */
 const HUD_SKILL_PROVIDER_ALIASES = {
+  enderdragon: 'ender_dragon',
+  ender_dragon: 'ender_dragon',
   nameless_deity: 'namelessdeity',
   avatar_of_emptiness: 'avatarofemptiness',
   cronus: 'cronos',
@@ -92,6 +94,57 @@ const HUD_SKILL_PROVIDER_ALIASES = {
  * Each provider returns an Array of skill bar descriptors (or undefined to fall through to generic skills).
  */
 export const HUD_SKILL_PROVIDERS = {
+  // ─────────────────────────────────────────────
+  // ENDER DRAGON (Ruler of The End)
+  // ─────────────────────────────────────────────
+  ender_dragon(f) {
+    const cfg = f._getConfig?.() || (typeof CONFIG !== 'undefined' && (CONFIG.ender_dragon || CONFIG.enderDragon)) || {};
+    const themeColor = cfg.hudSkillBarColor || f.themeColor || cfg.themeColor || '#C026D3';
+    const skills = [];
+
+    // 1. Dragon's Breath / Fireball (Skill 1)
+    if (isSkillEnabled(f.enableFireball, f._def?.enableFireball, f.enableDragonsBreath, f._def?.enableDragonsBreath, cfg.enableFireball, cfg.enableDragonsBreath, true)) {
+      const cdMax = cfg.fireballCooldown || 480;
+      const cdTimer = f.fireballCooldown !== undefined ? f.fireballCooldown : 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = pct >= 99 && cdTimer <= 0;
+      const label = cdTimer > 0 ? `DRAGON'S BREATH (${(cdTimer / 60).toFixed(1)}S)` : "DRAGON'S BREATH";
+      skills.push({ id: 'dragons_breath', pct, ready, color: themeColor, label });
+    }
+
+    // 2. Wing Buffet / Kinetic Swoop (Skill 2)
+    if (isSkillEnabled(f.enableSwoop, f._def?.enableSwoop, f.enableWingBuffet, f._def?.enableWingBuffet, cfg.enableSwoop, cfg.enableWingBuffet, true)) {
+      const cdMax = cfg.swoopCooldown || 540;
+      const cdTimer = f.swoopCooldown !== undefined ? f.swoopCooldown : 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = pct >= 99 && cdTimer <= 0;
+      const label = cdTimer > 0 ? `WING BUFFET (${(cdTimer / 60).toFixed(1)}S)` : 'WING BUFFET';
+      skills.push({ id: 'wing_buffet', pct, ready, color: themeColor, label });
+    }
+
+    // 3. Void Divebomb (Skill 3 / Special)
+    if (isSkillEnabled(f.enableDivebomb, f._def?.enableDivebomb, f.enableVoidDivebomb, f._def?.enableVoidDivebomb, cfg.enableDivebomb, cfg.enableVoidDivebomb, true)) {
+      const cdMax = cfg.divebombCooldown || 600;
+      const cdTimer = f.divebombCooldown !== undefined ? f.divebombCooldown : 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = pct >= 99 && cdTimer <= 0;
+      const label = cdTimer > 0 ? `VOID DIVEBOMB (${(cdTimer / 60).toFixed(1)}S)` : 'VOID DIVEBOMB';
+      skills.push({ id: 'divebomb_strafe', pct, ready, color: themeColor, label, isSignature: true, signature: true });
+    }
+
+    // 4. Void Cataclysm (Ultimate)
+    if (isSkillEnabled(f.enableCataclysm, f._def?.enableCataclysm, f.enableVoidCataclysm, f._def?.enableVoidCataclysm, cfg.enableCataclysm, cfg.enableVoidCataclysm, true)) {
+      const cdMax = cfg.cataclysmCooldown || 1100;
+      const cdTimer = f.cataclysmCooldown !== undefined ? f.cataclysmCooldown : 0;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const ready = pct >= 99 && cdTimer <= 0;
+      const label = cdTimer > 0 ? `VOID CATACLYSM (${(cdTimer / 60).toFixed(1)}S)` : 'VOID CATACLYSM';
+      skills.push({ id: 'void_cataclysm', pct, ready, color: themeColor, label, isSignature: true, signature: true, isUltimate: true });
+    }
+
+    return skills;
+  },
+
   // ─────────────────────────────────────────────
   // SANS (The Judge of the Underground)
   // ─────────────────────────────────────────────
@@ -3958,6 +4011,8 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     zeus: ['storm', 'thunder_storm', 'THUNDER STORM', 'STORM'],
     uryu: ['letzt_stil', 'letzt stil', 'LETZT STIL', 'SANREI'],
     nobara: ['hairpin', 'resonance', 'RESONANCE', 'HAIRPIN'],
+    ender_dragon: ['void_cataclysm', 'cataclysm', 'divebomb_strafe', 'divebomb'],
+    enderdragon: ['void_cataclysm', 'cataclysm', 'divebomb_strafe', 'divebomb'],
     reze: ['bomb', 'explosion', 'BOMB', 'EXPLOSION'],
     power: ['blood_hammer', 'blood hammer', 'HAMMER', 'BLOOD'],
     megumi: ['chimera', 'shadow', 'SHADOW GARDEN', 'GARDEN'],

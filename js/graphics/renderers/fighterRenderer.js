@@ -183,6 +183,8 @@ export class FighterRenderer {
     const hasCustomHitFlash = Boolean(
       fighter.customHitFlash ||
       fighter.suppressHitFlash ||
+      fighter.isEndCrystal ||
+      fighter.suppressHitEffects ||
       fighter.isPokemon ||
       fighter.isPokemonCompanion ||
       fighter.isPokemonMinion ||

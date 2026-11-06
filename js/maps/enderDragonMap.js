@@ -84,12 +84,10 @@ export const ENDER_DRAGON_MAP = {
 
   // ── Audio SFX Configuration ──
   sounds: {
-    crystalHum: 'Assets/Sound Effects/Skills/purpledeploy.mp3',
-    crystalDetonate: 'Assets/Sound Effects/Attacks/explosion.mp3',
-    crystalHealBeam: 'Assets/Sound Effects/Skills/thunderstrike.mp3',
+    crystalDetonate: 'Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg',
+    crystalHealBeam: 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg',
   },
   soundVolumes: {
-    crystalHum: 0.40,
     crystalDetonate: 0.95,
     crystalHealBeam: 0.60,
   }

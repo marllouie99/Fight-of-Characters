@@ -618,7 +618,7 @@ export function spawnEnderDragonDisintegrationDeath(fighter) {
   if (typeof state !== 'undefined') state._hadDragonDeath = true;
   triggerGlobalScreenShake(14, 40);
   if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
-    audioSystem.playSFX('Assets/Sound Effects/Skills/purpledeploy.mp3', 0.9);
+    audioSystem.playSFX('Assets/Sound Effects/EnderdragonSFX/Ender_dragon_death.ogg', 1.0);
   }
   const baseR = fighter.r || 36;
   const aimAngle = (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
@@ -638,6 +638,72 @@ export function spawnEnderDragonDisintegrationDeath(fighter) {
     decay: 1.0 / 130,
     isEnderDragonDeath: true,
   });
+}
+
+/**
+ * Checks whether an entity is a genuine, living combatant Fighter eligible to attract and receive Ender Dragon XP.
+ * Strictly excludes End Crystals, minions, summons, companions, deployables, turrets, dispensers, plants, illusions, walls, and decoys.
+ * Also excludes the Ender Dragon itself.
+ * @param {any} f - The candidate entity
+ * @returns {boolean} True if the entity is an eligible combatant Fighter
+ */
+export function isEligibleXPFighter(f) {
+  if (!f) return false;
+
+  // Must be alive and not marked dead
+  if (f.hp <= 0 || f.isDead || f.dead) return false;
+
+  // The Ender Dragon itself cannot attract or collect its own death XP
+  if (f.characterId === 'ender_dragon' || f.type === 'ender_dragon' || f.isEnderDragon) {
+    return false;
+  }
+
+  // Must not have explicitly opted out of being treated as a fighter
+  if (f.isFighter === false) return false;
+
+  // Strictly exclude non-fighter entities: deployables, minions, summons, turrets, crystals, plants, etc.
+  if (
+    f.isMinion ||
+    f.isEndCrystal ||
+    f.isDeployable ||
+    f.isTurret ||
+    f.isDispenser ||
+    f.isPlant ||
+    f.isPlantMinion ||
+    f.isWallnut ||
+    f.isBuilding ||
+    f.isIceWall ||
+    f.isIllusion ||
+    f.isClone ||
+    f.isDecoy ||
+    f.isDummy ||
+    f.isTargetDummy ||
+    f.isTransfiguredHuman ||
+    f.isEvasionMinion ||
+    f.isServant ||
+    f.isServantOfCthulhu ||
+    f.isSubEntity ||
+    f.isCompanion ||
+    f.isPokemon ||
+    f.isPokemonCompanion ||
+    f.isPokemonMinion ||
+    f.isChessTroop ||
+    f.isChessPiece ||
+    f.isChessMinion ||
+    f.isMob ||
+    f.isSurvivorMob ||
+    f.isRika ||
+    f.owner != null
+  ) {
+    return false;
+  }
+
+  // If the entity has an effective alive check, respect it
+  if (typeof f.isEffectivelyAlive === 'function' && !f.isEffectivelyAlive()) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -817,8 +883,7 @@ export function updateDeathEffects() {
         spawnSparks(effect.x, effect.y, 42, '#C026D3', 10.0);
         spawnSparks(effect.x, effect.y, 28, '#F5D0FE', 8.5);
         if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
-          audioSystem.playSFX('Assets/Sound Effects/Attacks/explosion.mp3', 1.0);
-          audioSystem.playSFX('Assets/Sound Effects/Skills/thunderstrike.mp3', 0.85);
+          audioSystem.playSFX('Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg', 1.0);
         }
         spawnEnderDragonXPFountain(effect.x, effect.y, 40);
         state.deathEffects.splice(i, 1);
@@ -828,13 +893,21 @@ export function updateDeathEffects() {
 
     // 0.5 Ender Dragon Experience (XP) Orbs
     if (effect.isEnderDragonXPOrb) {
-      // Check for nearby alive player within magnetism radius
-      const aliveFighters = (state.fighters || []).filter(f => f && f.hp > 0 && !f.isDead && !f.dead && !f.isTurret && !f.isDispenser);
+      // Check for nearby alive genuine combatant Fighter within magnetism radius
+      const aliveFighters = (state.fighters || []).filter(isEligibleXPFighter);
       let targetFighter = effect.hoverTargetFighter || null;
 
-      if (!targetFighter || targetFighter.hp <= 0 || targetFighter.isDead || targetFighter.dead) {
-        let minDist = 190; // Magnetic attraction radius (190px)
+      // Invalidate if current target is dead or no longer an eligible Fighter
+      if (!isEligibleXPFighter(targetFighter)) {
         targetFighter = null;
+        effect.hoverTargetFighter = null;
+        effect.isHovering = false;
+      }
+
+      if (!targetFighter) {
+        // Expand magnetism radius once settled so surviving player can smoothly absorb XP
+        const magnetRadius = effect.isSettled ? 380 : 200;
+        let minDist = magnetRadius;
         for (let fIdx = 0; fIdx < aliveFighters.length; fIdx++) {
           const f = aliveFighters[fIdx];
           const dist = Math.hypot(f.x - effect.x, f.y - effect.y);
@@ -887,6 +960,9 @@ export function updateDeathEffects() {
           // When hover timer reaches 0, the XP orb is completely consumed!
           if (effect.hoverTimer <= 0) {
             playMinecraftXPChime();
+            if (targetFighter && typeof targetFighter.onCollectXP === 'function') {
+              try { targetFighter.onCollectXP(effect); } catch (e) {}
+            }
 
             // Minecraft XP pickup sparkle pop explosion
             const sparkleCount = 6 + Math.floor(Math.random() * 4);

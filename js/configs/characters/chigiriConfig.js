@@ -22,8 +22,8 @@ export const chigiriConfig = {
   maxHpRatio: 1.0,
   speed: 6.4, // Exceptional base speed — fastest sprinter in Blue Lock!
   moveSpeed: 6.5,
-  r: 25,
-  radius: 25,
+  r: 27,
+  radius: 27,
   color: '#EC4899', // Hot Rose Pink
   themeColor: '#EC4899',
   damageNumberColor: '#EC4899', // Unified Character Palette Standard (Rule 18)
