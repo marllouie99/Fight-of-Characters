@@ -14,7 +14,7 @@ export function registerProjectileSystem(ps) { _projectileSystem = ps; }
 const canvas = document.getElementById('arena');
 canvas.width = CONFIG.canvasWidth || 540;
 canvas.height = CONFIG.canvasHeight || 960;
-const ctx    = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d', { desynchronized: true });
 
 // --- PIXI.JS SETUP ---
 // We initialize a Pixi Application that will replace the 2D canvas in the DOM.
@@ -487,7 +487,7 @@ export const state = {
   frameAudioTime: 0,
 
   // Dynamic quality system for performance
-  qualityLevel: 1.0, // 1.0 = full quality, 0.5 = half quality, etc.
+  qualityLevel: isMobileDevice ? 0.55 : 1.0, // 1.0 = full quality, 0.5 = half quality, etc.
   qualityCheckTimer: 0,
   qualityCheckInterval: 10, // OPTIMIZED: Check every 10 frames for faster response to OBS frame drops
   targetFps: 55, // OPTIMIZED: Higher threshold to drop quality earlier and maintain solid 60 FPS for recording

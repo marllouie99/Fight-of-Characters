@@ -5,8 +5,8 @@
 // 2. ASSETS_CACHE: Persistent static textures & assets (survives code deploys; invalidated on version bumps)
 // ─────────────────────────────────────────────
 
-const SHELL_CACHE = 'foc-shell-v1.0.1';
-const ASSETS_CACHE = 'foc-assets-v1.0.1';
+const SHELL_CACHE = 'foc-shell-v1.0.4';
+const ASSETS_CACHE = 'foc-assets-v1.0.4';
 
 // Minimal core application shell assets pre-cached on install
 const PRECACHE_SHELL_ASSETS = [
@@ -39,11 +39,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          const isStaleShell = key.startsWith('ramball-shell-') && key !== SHELL_CACHE;
-          const isStaleAssets = key.startsWith('ramball-assets-') && key !== ASSETS_CACHE;
-          const isLegacy = key.startsWith('ramball-v') && !key.startsWith('ramball-shell-') && !key.startsWith('ramball-assets-');
-
-          if (isStaleShell || isStaleAssets || isLegacy) {
+          if (key !== SHELL_CACHE && key !== ASSETS_CACHE) {
             console.log('[SW] Purging stale cache:', key);
             return caches.delete(key);
           }
