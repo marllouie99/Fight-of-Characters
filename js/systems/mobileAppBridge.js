@@ -5,15 +5,33 @@
 // - Physical device haptics (Taptic Engine on iOS / Vibration on Android)
 // - Native splash screen dismissal
 // - Dynamic orientation locking
+// 
+// Universal Browser & Bundler-Free Standard:
+// In native Capacitor apps (iOS/Android), `window.Capacitor` is automatically
+// injected by the native runtime at document start. In standard web browsers
+// and desktop Electron, this module gracefully falls back with zero runtime
+// errors and zero bare-module resolution failures.
 // ─────────────────────────────────────────────
 
-import { Capacitor } from '@capacitor/core';
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { StatusBar, Style } from '@capacitor/status-bar';
-import { SplashScreen } from '@capacitor/splash-screen';
+function getCapacitor() {
+  if (typeof window !== 'undefined' && window.Capacitor) {
+    return window.Capacitor;
+  }
+  return null;
+}
 
-export const isNativeApp = Capacitor.isNativePlatform();
-export const nativePlatform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
+export function isNativePlatform() {
+  const cap = getCapacitor();
+  return !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+}
+
+export function getPlatform() {
+  const cap = getCapacitor();
+  return cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : 'web';
+}
+
+export const isNativeApp = isNativePlatform();
+export const nativePlatform = getPlatform();
 
 let _isBridgeInitialized = false;
 
@@ -22,17 +40,32 @@ let _isBridgeInitialized = false;
  * Strict safe no-op when running in desktop Electron or web browser.
  */
 export async function initMobileAppBridge() {
-  if (!isNativeApp || _isBridgeInitialized) return;
+  if (_isBridgeInitialized) return;
   _isBridgeInitialized = true;
+
+  const cap = getCapacitor();
+  if (!cap || !cap.isNativePlatform?.()) return;
+
+  const plugins = cap.Plugins || {};
 
   try {
     // 1. Hide native splash screen once game engine and title screen are ready
-    await SplashScreen.hide({ fadeOutDuration: 400 }).catch(() => {});
+    if (plugins.SplashScreen && typeof plugins.SplashScreen.hide === 'function') {
+      await plugins.SplashScreen.hide({ fadeOutDuration: 400 }).catch(() => {});
+    }
 
     // 2. Configure native status bar for immersive dark combat
-    await StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-    await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
-    await StatusBar.setBackgroundColor({ color: '#000000' }).catch(() => {});
+    if (plugins.StatusBar) {
+      if (typeof plugins.StatusBar.setStyle === 'function') {
+        await plugins.StatusBar.setStyle({ style: 'DARK' }).catch(() => {});
+      }
+      if (typeof plugins.StatusBar.setOverlaysWebView === 'function') {
+        await plugins.StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+      }
+      if (typeof plugins.StatusBar.setBackgroundColor === 'function') {
+        await plugins.StatusBar.setBackgroundColor({ color: '#000000' }).catch(() => {});
+      }
+    }
   } catch (err) {
     console.warn('[MobileAppBridge] Native initialization warning:', err);
   }
@@ -43,30 +76,35 @@ export async function initMobileAppBridge() {
  * @param {'light'|'medium'|'heavy'|'impact'|'success'|'warning'|'error'|'selection'} type
  */
 export async function triggerHaptic(type = 'light') {
-  if (isNativeApp) {
+  const cap = getCapacitor();
+  const plugins = cap?.Plugins || {};
+
+  if (cap?.isNativePlatform?.() && plugins.Haptics) {
     try {
       switch (type) {
         case 'heavy':
         case 'impact':
-          await Haptics.impact({ style: ImpactStyle.Heavy });
+          await plugins.Haptics.impact({ style: 'HEAVY' });
           break;
         case 'medium':
-          await Haptics.impact({ style: ImpactStyle.Medium });
+          await plugins.Haptics.impact({ style: 'MEDIUM' });
           break;
         case 'light':
-          await Haptics.impact({ style: ImpactStyle.Light });
+          await plugins.Haptics.impact({ style: 'LIGHT' });
           break;
         case 'success':
-          await Haptics.notification({ type: NotificationType.Success });
+          await plugins.Haptics.notification({ type: 'SUCCESS' });
           break;
         case 'error':
-          await Haptics.notification({ type: NotificationType.Error });
+          await plugins.Haptics.notification({ type: 'ERROR' });
           break;
         case 'selection':
-          await Haptics.selectionChanged();
+          if (typeof plugins.Haptics.selectionChanged === 'function') {
+            await plugins.Haptics.selectionChanged();
+          }
           break;
         default:
-          await Haptics.impact({ style: ImpactStyle.Light });
+          await plugins.Haptics.impact({ style: 'LIGHT' });
           break;
       }
     } catch (e) {}
