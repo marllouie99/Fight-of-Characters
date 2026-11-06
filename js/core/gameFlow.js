@@ -7,7 +7,7 @@ import { stopAllSounds, stopAllLoopingSounds, preloadSound, preloadAudioBuffer, 
 // ─────────────────────────────────────────────
 import { CONFIG, FIGHTER_DEFS, getActiveFighterDefs } from './config.js';
 import { GAME_MODES, MODE_SETTINGS } from './modeConfig.js';
-import { state, createFighterInstance, clearProjectiles, spawnFloatingText, saveFighterSelections, isMobileDevice } from './state.js';
+import { state, createFighterInstance, clearProjectiles, spawnFloatingText, saveFighterSelections, isMobileDevice, recycleFloatingText } from './state.js';
 import { updateFighters, updateProjectiles, spawnFuelPickup } from '../systems/physics.js';
 import { audioSystem } from '../systems/audioSystem.js';
 import { getBasicAttackSoundPaths, getFighterBasicAttackSoundPaths } from '../soundEffects/basicAttackSounds.js';
@@ -228,7 +228,14 @@ export function reinitFighters(isNewMatch = false) {
   clearProjectiles();
   if (state) state.sharedSoccerBall = null;
 
-  if (state.floatingTexts) state.floatingTexts.length = 0;
+  if (state.floatingTexts) {
+    if (typeof recycleFloatingText === 'function') {
+      for (let i = 0; i < state.floatingTexts.length; i++) {
+        recycleFloatingText(state.floatingTexts[i]);
+      }
+    }
+    state.floatingTexts.length = 0;
+  }
   if (state.bloodEffects) state.bloodEffects.length = 0;
   if (state.sparkEffects) state.sparkEffects.length = 0;
   if (state.deathEffects) state.deathEffects.length = 0;

@@ -1290,6 +1290,13 @@ function getContrastColor(colorStr, backgroundIsDark) {
   return `hsl(${h}, ${s}%, ${l}%)`;
 }
 
+const _floatingTextPool = [];
+export function recycleFloatingText(item) {
+  if (item && _floatingTextPool.length < 120) {
+    _floatingTextPool.push(item);
+  }
+}
+
 export function spawnFloatingText(x, y, text, color = '#ffffff') {
   // Support flexible argument order (text, x, y, color)
   let posX = x;
@@ -1377,7 +1384,8 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
 
   // Prune oldest texts when at capacity
   if (state.floatingTexts.length >= MAX_FLOATING_TEXTS) {
-    state.floatingTexts.shift();
+    const dropped = state.floatingTexts.shift();
+    if (dropped) recycleFloatingText(dropped);
   }
 
   _floatingTextSideToggle = -_floatingTextSideToggle;
@@ -1436,29 +1444,29 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
     if (!finalColor) finalColor = '#FFFFFF';
   }
 
-  state.floatingTexts.push({
-    x: posX + spawnOffsetX,
-    y: posY - 6 + spawnOffsetY,
-    vx,
-    vy,
-    gravity,
-    dragX,
-    text: displayText,
-    color: finalColor,
-    rotation,
-    popFrames,
-    popAmount,
-    baseScale,
-    timer: 0,
-    maxTimer,
-    isCrit,
-    isMiss,
-    isDamage,
-    damageValue: isDamage ? numericVal : 0,
-    stackCount: 1,
-    originX: posX,
-    originY: posY
-  });
+  const textObj = _floatingTextPool.length > 0 ? _floatingTextPool.pop() : {};
+  textObj.x = posX + spawnOffsetX;
+  textObj.y = posY - 6 + spawnOffsetY;
+  textObj.vx = vx;
+  textObj.vy = vy;
+  textObj.gravity = gravity;
+  textObj.dragX = dragX;
+  textObj.text = displayText;
+  textObj.color = finalColor;
+  textObj.rotation = rotation;
+  textObj.popFrames = popFrames;
+  textObj.popAmount = popAmount;
+  textObj.baseScale = baseScale;
+  textObj.timer = 0;
+  textObj.maxTimer = maxTimer;
+  textObj.isCrit = isCrit;
+  textObj.isMiss = isMiss;
+  textObj.isDamage = isDamage;
+  textObj.damageValue = isDamage ? numericVal : 0;
+  textObj.stackCount = 1;
+  textObj.originX = posX;
+  textObj.originY = posY;
+  state.floatingTexts.push(textObj);
 }
 
 /**

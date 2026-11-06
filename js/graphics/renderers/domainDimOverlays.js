@@ -285,20 +285,22 @@ export function drawRedDimScreen() {
   ctx.fillStyle = redGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 3. Cinematic dark perimeter vignette around screen edges
-  const centerScreenX = canvas.width / 2;
-  const centerScreenY = canvas.height / 2;
-  const vignetteR1 = Math.min(canvas.width, canvas.height) * 0.38;
-  const vignetteR2 = Math.max(canvas.width, canvas.height) * 0.82;
-  const vignetteGrad = ctx.createRadialGradient(
-    centerScreenX, centerScreenY, vignetteR1,
-    centerScreenX, centerScreenY, vignetteR2
-  );
-  vignetteGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
-  vignetteGrad.addColorStop(0.5, `rgba(0, 0, 0, ${opacity * 0.45})`);
-  vignetteGrad.addColorStop(1.0, `rgba(0, 0, 0, ${opacity * 0.95})`);
-  ctx.fillStyle = vignetteGrad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // 3. Cinematic dark perimeter vignette around screen edges (skipped on mobile to avoid 3rd full-screen radial gradient fill)
+  if (!state.isMobileDevice) {
+    const centerScreenX = canvas.width / 2;
+    const centerScreenY = canvas.height / 2;
+    const vignetteR1 = Math.min(canvas.width, canvas.height) * 0.38;
+    const vignetteR2 = Math.max(canvas.width, canvas.height) * 0.82;
+    const vignetteGrad = ctx.createRadialGradient(
+      centerScreenX, centerScreenY, vignetteR1,
+      centerScreenX, centerScreenY, vignetteR2
+    );
+    vignetteGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
+    vignetteGrad.addColorStop(0.5, `rgba(0, 0, 0, ${opacity * 0.45})`);
+    vignetteGrad.addColorStop(1.0, `rgba(0, 0, 0, ${opacity * 0.95})`);
+    ctx.fillStyle = vignetteGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   // Exclude Gojo's Limitless Infinity Barrier from screen dimming
   excludeGojoInfinityFromDim(ctx);
@@ -424,20 +426,22 @@ export function drawPurpleDimScreen() {
   ctx.fillStyle = state._cachedPurpleDimGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 3. Cinematic dark perimeter vignette around screen edges
-  const centerScreenX = canvas.width / 2;
-  const centerScreenY = canvas.height / 2;
-  const vignetteR1 = Math.min(canvas.width, canvas.height) * 0.38;
-  const vignetteR2 = Math.max(canvas.width, canvas.height) * 0.82;
-  const vignetteGrad = ctx.createRadialGradient(
-    centerScreenX, centerScreenY, vignetteR1,
-    centerScreenX, centerScreenY, vignetteR2
-  );
-  vignetteGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
-  vignetteGrad.addColorStop(0.5, `rgba(0, 0, 0, ${opacity * 0.45})`);
-  vignetteGrad.addColorStop(1.0, `rgba(0, 0, 0, ${opacity * 0.95})`);
-  ctx.fillStyle = vignetteGrad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // 3. Cinematic dark perimeter vignette around screen edges (skipped on mobile to avoid 3rd full-screen radial gradient fill)
+  if (!state.isMobileDevice) {
+    const centerScreenX = canvas.width / 2;
+    const centerScreenY = canvas.height / 2;
+    const vignetteR1 = Math.min(canvas.width, canvas.height) * 0.38;
+    const vignetteR2 = Math.max(canvas.width, canvas.height) * 0.82;
+    const vignetteGrad = ctx.createRadialGradient(
+      centerScreenX, centerScreenY, vignetteR1,
+      centerScreenX, centerScreenY, vignetteR2
+    );
+    vignetteGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
+    vignetteGrad.addColorStop(0.5, `rgba(0, 0, 0, ${opacity * 0.45})`);
+    vignetteGrad.addColorStop(1.0, `rgba(0, 0, 0, ${opacity * 0.95})`);
+    ctx.fillStyle = vignetteGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   // ── Render vibrant Red & Blue radiant bloom halos during Hollow Purple mixing phase ──
   if (gojoFighter && gojoFighter.isChannelingPurple) {

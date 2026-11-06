@@ -3026,6 +3026,53 @@ function _drawPokemonCardSwipeShine(ctx, x, y, w, h, grade, t, idx) {
   ctx.restore();
 }
 
+const _collectorCardBaseCache = new Map();
+const MAX_COLLECTOR_CARD_CACHE = 96;
+
+export function clearCollectorCardCache() {
+  _collectorCardBaseCache.clear();
+}
+
+if (typeof window !== 'undefined') {
+  window.__clearCollectorCardCache = clearCollectorCardCache;
+}
+
+function _getOrRenderCollectorCardBase(def, idx, w, h, element, isBoss, grade, fighterTheme) {
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
+  const cw = Math.max(1, Math.round(w));
+  const ch = Math.max(1, Math.round(h));
+  const toggleKey = (def?.type === 'reze') ? (state.showRezeTransformation ? 1 : 0)
+    : ((def?.type === 'eye_of_cthulhu') ? (state.showEyeOfCthulhuPhase2 ? 1 : 0) : 0);
+  const cacheKey = `${idx}_${cw}_${ch}_${grade}_${def?.hp || 0}_${def?.damage || 0}_${toggleKey}`;
+
+  let cached = _collectorCardBaseCache.get(cacheKey);
+  if (cached) return cached;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  const cctx = canvas.getContext('2d');
+  if (!cctx || typeof cctx.save !== 'function' || typeof cctx.clip !== 'function') return null;
+
+  cctx.save();
+  _traceCollectorCardPath(cctx, 0, 0, cw, ch, 6);
+  cctx.clip();
+
+  const layout = _getPokemonCardLayout(cw, ch);
+  _drawPokemonCardStage(cctx, 0, 0, cw, ch, def, idx, element, grade, 0, layout, fighterTheme);
+  _drawPokemonCardHeader(cctx, 0, 0, cw, ch, def, idx, element, isBoss, layout, grade, 0, fighterTheme);
+  _drawPokemonCardBottomSection(cctx, 0, 0, cw, ch, def, idx, element, grade, layout, fighterTheme);
+
+  cctx.restore();
+
+  if (_collectorCardBaseCache.size >= MAX_COLLECTOR_CARD_CACHE) {
+    const oldestKey = _collectorCardBaseCache.keys().next().value;
+    if (oldestKey !== undefined) _collectorCardBaseCache.delete(oldestKey);
+  }
+  _collectorCardBaseCache.set(cacheKey, canvas);
+  return canvas;
+}
+
 /**
  * Renders a single 16-Bit Retro Pokémon-Style Collector Fighter Card:
  * Features:
@@ -3055,27 +3102,24 @@ export function drawCollectorFighterCard(ctx, def, idx, x, y, w, h, isSelected, 
   _traceCollectorCardPath(ctx, shadowX, shadowY, w, h, 6);
   ctx.fill();
 
-  // 2. Clipped Card Interior (Full-Art Stage + Classic TCG Header + Bottom Section)
-  ctx.save();
-  _traceCollectorCardPath(ctx, x, y, w, h, 6);
-  ctx.clip();
+  // 2. Clipped Card Interior (Cached Static Base + Dynamic Holo Swipe)
+  const cachedBase = _getOrRenderCollectorCardBase(def, idx, w, h, element, isBoss, grade, fighterTheme);
+  if (cachedBase && typeof ctx.drawImage === 'function') {
+    ctx.drawImage(cachedBase, x, y, w, h);
+    _drawPokemonCardSwipeShine(ctx, x, y, w, h, grade, t, idx);
+  } else {
+    ctx.save();
+    _traceCollectorCardPath(ctx, x, y, w, h, 6);
+    ctx.clip();
 
-  // Responsive Layout Budgeting across all viewport modes & card dimensions
-  const layout = _getPokemonCardLayout(w, h);
+    const layout = _getPokemonCardLayout(w, h);
+    _drawPokemonCardStage(ctx, x, y, w, h, def, idx, element, grade, t, layout, fighterTheme);
+    _drawPokemonCardHeader(ctx, x, y, w, h, def, idx, element, isBoss, layout, grade, t, fighterTheme);
+    _drawPokemonCardBottomSection(ctx, x, y, w, h, def, idx, element, grade, layout, fighterTheme);
+    _drawPokemonCardSwipeShine(ctx, x, y, w, h, grade, t, idx);
 
-  // A. Fighter-Themed Card Base + Framed Art Window + Pokédex Ribbon
-  _drawPokemonCardStage(ctx, x, y, w, h, def, idx, element, grade, t, layout, fighterTheme);
-
-  // B. Clean TCG Top Header Bar (Standalone Top HUD Frame Grade Letter, Title Case Name, HP, Energy Orb)
-  _drawPokemonCardHeader(ctx, x, y, w, h, def, idx, element, isBoss, layout, grade, t, fighterTheme);
-
-  // C. Lower TCG Action Section (Attack Move Row + Weakness/Retreat Bar + Set Footer)
-  _drawPokemonCardBottomSection(ctx, x, y, w, h, def, idx, element, grade, layout, fighterTheme);
-
-  // D. Clean Holographic Foil Swipe Shiny Effect (Grades A, S, SS, SSR)
-  _drawPokemonCardSwipeShine(ctx, x, y, w, h, grade, t, idx);
-
-  ctx.restore(); // Restore interior clip
+    ctx.restore();
+  }
 
   // 3. Metallic Silver / Holo Foil Card Frame & Corner Sparkles
   _drawPokemonCardHoloFrame(ctx, x, y, w, h, isSelected, grade, t, idx, fighterTheme);

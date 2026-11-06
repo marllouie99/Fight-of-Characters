@@ -382,7 +382,7 @@ export function renderGame() {
           drawSukunaDomainDimScreen(); // Dark crimson dim overlay when Sukuna's Malevolent Shrine domain is active (full-screen, unclipped)
           drawYutaDomainDimScreen(); // Dark cursed purple dim overlay when Yuta's domain is active (full-screen, unclipped)
           drawMahitoDomainDimScreen(); // Dark cursed purple dim overlay when Mahito's Self-Embodiment of Perfection domain is active (full-screen, unclipped)
-          drawNaoyaDomainDimScreen(); // Dark cursed teal-black cosmic void & coronal iris atmosphere when Naoya's Time Cell Moon Palace is active (full-screen, unclipped)
+          drawNaoyaDomainDimScreen(); // Dark cellular time-cell projection dim overlay when Naoya's Time Cell Moon Palace domain is active (full-screen, unclipped)
           drawMahoragaAdaptationDimScreen();
           drawMahoragaWheelArenaOverlay(); // 2D Eight-Handled Sword Wheel pop & rotation arena overlay
           drawMahoragaLevel8DimScreen();
@@ -409,10 +409,6 @@ export function renderGame() {
         // is repainted here — clipped to the arena — restoring the artwork after the dim wash.
         if (!state.pixiApp && !state.disableDimEffects && state.fighters) {
           const activeDomainFighter = _findActiveDomainFighterFor2D(state.fighters);
-          // Zero-allocation domain lookup handled by _findActiveDomainFighterFor2D
-          // (domainActive / stolenDomainActive / _mahitoDomainActive / CJ Baguvix)
-          // drawDomainBackground check
-          // end domain lookup
           if (activeDomainFighter) {
             const domainArena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena;
             state.ctx.save();
@@ -446,9 +442,6 @@ export function renderGame() {
         }
 
         const isGojoDomainActive = _isGojoOrStolenVoidActive(state.fighters);
-        // Gojo / Rubbick stolen Unlimited Void active check handled by _isGojoOrStolenVoidActive
-        // (zero per-frame closure allocation)
-        // end Gojo domain check
 
         if (!isGojoDomainActive) {
           drawFlames(); // Draw all flames to offscreen canvas (batched for performance)
@@ -549,7 +542,7 @@ export function renderGame() {
 
 
 
-        // Domain clash rift is rendered via hybrid/domain visual systems
+        const isDomainClash = state.fighters && (state.fighters.filter(f => f && f.domainActive).length > 1);
 
         // WebGL particles are rendered automatically by the PixiJS scene graph.
 
@@ -674,8 +667,8 @@ export function renderGame() {
           state.mode === '2v2v2v2 Quad Battle' ||
           state.mode === '2v2v2v2 Quad' ||
           state.mode === 'Grand Colosseum' ||
-          state.mode === 'Classic Minimalist Arena')); //
-        // end Gojo domain check
+          state.mode === 'Classic Minimalist Arena'
+        ));
         if (isGrandBattle) {
           state._topLevelUiDirty = true;
           drawHorizontalPanoramicHud(state.topLevelUiCtx || state.ctx);
@@ -796,11 +789,6 @@ export function renderGame() {
         state.topLevelUiSprite.visible = false;
       } else {
         const hasSuperBeam = _hasActiveSuperBeam(state.fighters);
-        // Super-beam check handled by _hasActiveSuperBeam
-        // (destroyer / disintegrator timers)
-        // (zero per-frame closure allocation)
-        // (windup check)
-        // end super-beam check
         const hasTopUi = Boolean(
           hasSuperBeam ||
           (state.battleStartFadeTimer && state.battleStartFadeTimer > 0) ||

@@ -439,22 +439,30 @@ export function drawHUD() {
   const isBombermanTheme = activeFloor === 'bomberman_normal';
 
   if (topContainer) {
-    if (topContainer.classList && typeof topContainer.classList.toggle === 'function') {
-      topContainer.classList.toggle('hud-top-1v2', Boolean(isRegular1v2));
-      topContainer.classList.toggle('hud-top-bomberman', Boolean(isBombermanTheme));
+    const showTop = Boolean((isBossBattleMode || isDuelTopHud) && topHudOpacity > 0 && !CONFIG.hudHideAll && !CONFIG.hudHideHealthBars);
+    const topStateKey = `${showTop ? 1 : 0}_${isRegular1v2 ? 1 : 0}_${isBombermanTheme ? 1 : 0}_${topHudOpacity}`;
+    if (topContainer._hudStateKey !== topStateKey) {
+      topContainer._hudStateKey = topStateKey;
+      if (topContainer.classList && typeof topContainer.classList.toggle === 'function') {
+        topContainer.classList.toggle('hud-top-1v2', Boolean(isRegular1v2));
+        topContainer.classList.toggle('hud-top-bomberman', Boolean(isBombermanTheme));
+      }
+      if (showTop) {
+        topContainer.style.display = 'flex';
+        topContainer.style.visibility = 'visible';
+        topContainer.style.opacity = topHudOpacity;
+        topContainer.style.pointerEvents = 'none';
+      } else {
+        topContainer.style.display = 'none';
+        topContainer.style.visibility = 'hidden';
+      }
     }
-    if ((isBossBattleMode || isDuelTopHud) && topHudOpacity > 0 && !CONFIG.hudHideAll && !CONFIG.hudHideHealthBars) {
-      topContainer.style.display = 'flex';
-      topContainer.style.visibility = 'visible';
-      topContainer.style.opacity = topHudOpacity;
-      topContainer.style.pointerEvents = 'none';
+    if (showTop) {
       updateTopHudCameraTracking(topContainer);
-    } else {
-      topContainer.style.display = 'none';
-      topContainer.style.visibility = 'hidden';
     }
   }
-  if (bottomContainer) {
+  if (bottomContainer && bottomContainer._hudHiddenKey !== 1) {
+    bottomContainer._hudHiddenKey = 1;
     bottomContainer.style.display = 'none';
     bottomContainer.style.visibility = 'hidden';
   }
@@ -474,33 +482,34 @@ export function drawHUD() {
       bottomHudOpacity = 0;
     }
 
-    containerBottom.classList.toggle('ffa-hud', isFfaMode && !isTactical);
-    containerBottom.classList.toggle('tactical-hud', isTactical);
-    containerBottom.classList.toggle('classic-hud', isClassicHudLayout);
-    containerBottom.classList.toggle('arcade-hud', !isClassicHudLayout);
-    containerBottom.classList.toggle('hud-bottom-bomberman', isBombermanTheme);
-    if (bottomContainer && bottomContainer.classList && typeof bottomContainer.classList.toggle === 'function') {
-      bottomContainer.classList.toggle('hud-bottom-bomberman', isBombermanTheme);
-    }
     const isCameraTracking = (!state.camera || state.camera.mode === 'dynamic');
-    if (isSideHud1v1 || (isHorizontal && isDuelTopHud)) {
-      containerBottom.style.visibility = 'hidden';
-      containerBottom.style.pointerEvents = 'none';
-      containerBottom.style.display = 'none';
-    } else {
-      const isSingleColMode = (!isTactical && (is1v1Mode || isStandOffMode || (isFfaMode && !isHorizontal))) || (isCameraTracking && isTeamMode && !isTactical);
-      containerBottom.classList.toggle('single-column-hud', isSingleColMode);
-      containerBottom.style.opacity = bottomHudOpacity;
-      if (bottomHudOpacity <= 0) {
+    const hideBottom = Boolean(isSideHud1v1 || (isHorizontal && isDuelTopHud) || bottomHudOpacity <= 0);
+    const isSingleColMode = (!isTactical && (is1v1Mode || isStandOffMode || (isFfaMode && !isHorizontal))) || (isCameraTracking && isTeamMode && !isTactical);
+    const botStateKey = `${hideBottom ? 0 : 1}_${isFfaMode && !isTactical ? 1 : 0}_${isTactical ? 1 : 0}_${isClassicHudLayout ? 1 : 0}_${isBombermanTheme ? 1 : 0}_${isSingleColMode ? 1 : 0}_${bottomHudOpacity}`;
+    if (containerBottom._hudStateKey !== botStateKey) {
+      containerBottom._hudStateKey = botStateKey;
+      containerBottom.classList.toggle('ffa-hud', isFfaMode && !isTactical);
+      containerBottom.classList.toggle('tactical-hud', isTactical);
+      containerBottom.classList.toggle('classic-hud', isClassicHudLayout);
+      containerBottom.classList.toggle('arcade-hud', !isClassicHudLayout);
+      containerBottom.classList.toggle('hud-bottom-bomberman', isBombermanTheme);
+      if (bottomContainer && bottomContainer.classList && typeof bottomContainer.classList.toggle === 'function') {
+        bottomContainer.classList.toggle('hud-bottom-bomberman', isBombermanTheme);
+      }
+      if (hideBottom) {
         containerBottom.style.visibility = 'hidden';
         containerBottom.style.pointerEvents = 'none';
         containerBottom.style.display = 'none';
       } else {
+        containerBottom.classList.toggle('single-column-hud', isSingleColMode);
+        containerBottom.style.opacity = bottomHudOpacity;
         containerBottom.style.display = 'flex';
         containerBottom.style.visibility = 'visible';
         containerBottom.style.pointerEvents = 'auto';
-        updateBottomHudCameraTracking(containerBottom);
       }
+    }
+    if (!hideBottom) {
+      updateBottomHudCameraTracking(containerBottom);
     }
   }
   if (containerLeft) {
@@ -508,15 +517,20 @@ export function drawHUD() {
     const mainF = mainFighters;
     const isSide1v1 = isH && !isDuelTopHud && (mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TLFS || mode === 'TLFS' || mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.HORIZONTAL_1V1 || (mainF && mainF.length <= 4 && mode !== GAME_MODES.TWO_VS_TWO && mode !== '2v2'));
     const sideOpacity = (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
-    if (sideOpacity <= 0 || !containerLeft.children || !containerLeft.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4)) {
-      containerLeft.style.visibility = 'hidden';
-      containerLeft.style.pointerEvents = 'none';
-      containerLeft.style.display = 'none';
-    } else {
-      containerLeft.style.opacity = sideOpacity;
-      containerLeft.style.display = 'flex';
-      containerLeft.style.visibility = 'visible';
-      containerLeft.style.pointerEvents = 'auto';
+    const hideLeft = Boolean(sideOpacity <= 0 || !containerLeft.children || !containerLeft.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4));
+    const leftKey = `${hideLeft ? 0 : 1}_${sideOpacity}`;
+    if (containerLeft._hudStateKey !== leftKey) {
+      containerLeft._hudStateKey = leftKey;
+      if (hideLeft) {
+        containerLeft.style.visibility = 'hidden';
+        containerLeft.style.pointerEvents = 'none';
+        containerLeft.style.display = 'none';
+      } else {
+        containerLeft.style.opacity = sideOpacity;
+        containerLeft.style.display = 'flex';
+        containerLeft.style.visibility = 'visible';
+        containerLeft.style.pointerEvents = 'auto';
+      }
     }
   }
   if (containerRight) {
@@ -524,15 +538,20 @@ export function drawHUD() {
     const mainF = mainFighters;
     const isSide1v1 = isH && !isDuelTopHud && (mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TLFS || mode === 'TLFS' || mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.HORIZONTAL_1V1 || (mainF && mainF.length <= 4 && mode !== GAME_MODES.TWO_VS_TWO && mode !== '2v2'));
     const sideOpacity = (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
-    if (sideOpacity <= 0 || !containerRight.children || !containerRight.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4)) {
-      containerRight.style.visibility = 'hidden';
-      containerRight.style.pointerEvents = 'none';
-      containerRight.style.display = 'none';
-    } else {
-      containerRight.style.opacity = sideOpacity;
-      containerRight.style.display = 'flex';
-      containerRight.style.visibility = 'visible';
-      containerRight.style.pointerEvents = 'auto';
+    const hideRight = Boolean(sideOpacity <= 0 || !containerRight.children || !containerRight.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4));
+    const rightKey = `${hideRight ? 0 : 1}_${sideOpacity}`;
+    if (containerRight._hudStateKey !== rightKey) {
+      containerRight._hudStateKey = rightKey;
+      if (hideRight) {
+        containerRight.style.visibility = 'hidden';
+        containerRight.style.pointerEvents = 'none';
+        containerRight.style.display = 'none';
+      } else {
+        containerRight.style.opacity = sideOpacity;
+        containerRight.style.display = 'flex';
+        containerRight.style.visibility = 'visible';
+        containerRight.style.pointerEvents = 'auto';
+      }
     }
     updateSideHudCameraTracking(containerLeft, containerRight);
   }
@@ -1900,11 +1919,13 @@ export function renderTopHudProfileCanvas(canvasEl, fighter) {
     (fIdx !== undefined && fIdx >= 0 && (FIGHTER_DEFS[fIdx]?.type === 'namelessdeity' || FIGHTER_DEFS[fIdx]?.type === 'nameless_deity'))
   );
 
+  const resScale = w / 1400;
+
   if (isNamelessDeity) {
     const deityImg = getDeityCosmicLightImage();
     const destX = Math.round(w / 2);
     const destY = Math.round(h / 2);
-    const drawSize = 820; // Perfectly frames the cosmic starlight emblem in the 58x52px top profile badge
+    const drawSize = Math.round(820 * resScale); // Perfectly frames the cosmic starlight emblem in the 58x52px top profile badge
     const applyHaloDraw = () => {
       ctx.clearRect(0, 0, w, h);
       ctx.save();
@@ -1952,10 +1973,10 @@ export function renderTopHudProfileCanvas(canvasEl, fighter) {
   const customScale = (fighter && (fighter.profileScale ?? fighter._def?.profileScale)) ?? fDef?.profileScale ?? 1.0;
   const customOffX = (fighter && (fighter.profileOffsetX ?? fighter._def?.profileOffsetX)) ?? fDef?.profileOffsetX ?? 0;
   const customOffY = (fighter && (fighter.profileOffsetY ?? fighter._def?.profileOffsetY)) ?? fDef?.profileOffsetY ?? 0;
-  const targetR = Math.round(192 * customScale);
+  const targetR = 192 * customScale * resScale;
   const scale = targetR / baseR;
-  const destX = Math.round(w / 2 + customOffX);
-  const destY = Math.round(h / 2 + customOffY);
+  const destX = Math.round(w / 2 + customOffX * resScale);
+  const destY = Math.round(h / 2 + customOffY * resScale);
 
   if (preview) {
     ctx.save();
@@ -2098,6 +2119,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
   const f1GradeMeta = getGradeMeta(f1Grade);
   const f2GradeMeta = getGradeMeta(f2Grade);
   const f3GradeMeta = getGradeMeta(f3Grade);
+  const profileCanvasSize = (typeof state !== 'undefined' && state.isMobileDevice) ? 160 : 1400;
 
   // Gauntlet Mode: Ghost TOP HUD stacking cards for queued challengers
   const isGauntlet = (state.mode === 'TLFS' || state.mode === GAME_MODES.TLFS);
@@ -2154,7 +2176,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
             </div>
             <div class="hud-top-profile hud-top-ghost-profile" data-grade="${nextGrade}"${isNextNamelessDeity ? ' data-character="namelessdeity"' : ''}>
               <div class="hud-top-profile__bg"></div>
-              <canvas class="hud-top-profile__canvas hud-top-ghost-canvas" width="1400" height="1400"></canvas>
+              <canvas class="hud-top-profile__canvas hud-top-ghost-canvas" width="${profileCanvasSize}" height="${profileCanvasSize}"></canvas>
               <canvas class="hud-top-profile__grade-canvas hud-top-ghost-grade-canvas" data-grade="${nextGrade}" width="128" height="88"></canvas>
             </div>
           </div>
@@ -2171,7 +2193,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
       <div class="hud-top-player hud-top-p1" style="--fighter-theme: ${f1ThemeColor}; --grade-color: ${f1GradeMeta.color};" data-grade="${f1Grade}"${isF1NamelessDeity ? ' data-character="namelessdeity"' : ''}>
         <div class="hud-top-profile" data-grade="${f1Grade}"${isF1NamelessDeity ? ' data-character="namelessdeity"' : ''}>
           <div class="hud-top-profile__bg"></div>
-          <canvas class="hud-top-profile__canvas" width="1400" height="1400"></canvas>
+          <canvas class="hud-top-profile__canvas" width="${profileCanvasSize}" height="${profileCanvasSize}"></canvas>
           <canvas class="hud-top-profile__grade-canvas" data-grade="${f1Grade}" width="128" height="88"></canvas>
         </div>
         <div class="hud-top-content">
@@ -2261,7 +2283,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
           </div>
           <div class="hud-top-profile" data-grade="${f2Grade}"${isF2NamelessDeity ? ' data-character="namelessdeity"' : ''}>
             <div class="hud-top-profile__bg"></div>
-            <canvas class="hud-top-profile__canvas" width="1400" height="1400"></canvas>
+            <canvas class="hud-top-profile__canvas" width="${profileCanvasSize}" height="${profileCanvasSize}"></canvas>
             <canvas class="hud-top-profile__grade-canvas" data-grade="${f2Grade}" width="128" height="88"></canvas>
           </div>
         </div>
@@ -2302,7 +2324,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
           </div>
           <div class="hud-top-profile" data-grade="${f3Grade}"${isF3NamelessDeity ? ' data-character="namelessdeity"' : ''}>
             <div class="hud-top-profile__bg"></div>
-            <canvas class="hud-top-profile__canvas" width="1400" height="1400"></canvas>
+            <canvas class="hud-top-profile__canvas" width="${profileCanvasSize}" height="${profileCanvasSize}"></canvas>
             <canvas class="hud-top-profile__grade-canvas" data-grade="${f3Grade}" width="128" height="88"></canvas>
           </div>
         </div>
@@ -2350,7 +2372,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
         </div>
         <div class="hud-top-profile" data-grade="${f2Grade}"${isF2NamelessDeity ? ' data-character="namelessdeity"' : ''}>
           <div class="hud-top-profile__bg"></div>
-          <canvas class="hud-top-profile__canvas" width="1400" height="1400"></canvas>
+          <canvas class="hud-top-profile__canvas" width="${profileCanvasSize}" height="${profileCanvasSize}"></canvas>
           <canvas class="hud-top-profile__grade-canvas" data-grade="${f2Grade}" width="128" height="88"></canvas>
         </div>
         ${ghostStackHtml}
@@ -2572,8 +2594,9 @@ function updateHealthHud() {
   }
 
   // Performance: Throttle expensive HUD DOM updates to avoid layout reflow stalls on mobile & desktop
+  const isMobile = Boolean(typeof state !== 'undefined' && state.isMobileDevice);
   const isLowQuality = (typeof state !== 'undefined' && (state.performanceMode || (state.qualityLevel && state.qualityLevel < 0.5) || (state.fps && state.fps < 45)));
-  const throttleInterval = isLowQuality ? 8 : 4;
+  const throttleInterval = isLowQuality ? (isMobile ? 12 : 8) : (isMobile ? 8 : 4);
   const isCriticalState = ['roundEnd', 'matchEnd', 'countdown'].includes(state.gameState);
   const isInitialCacheEmpty = (_hudCache.fighters.size === 0 && _hudCache.teams.size === 0);
   
@@ -4346,12 +4369,13 @@ function updateHealthHud() {
         const bossGrade = getFighterGrade(bossFighter);
         const bossGradeMeta = getGradeMeta(bossGrade);
         const isBossNamelessDeity = Boolean(bossFighter.characterId === 'namelessdeity' || bossFighter.characterId === 'nameless_deity' || bossFighter.type === 'namelessdeity' || bossFighter.type === 'nameless_deity');
+        const profileCanvasSize = (typeof state !== 'undefined' && state.isMobileDevice) ? 160 : 1400;
 
         const bossCardHTML = `
           <div class="boss-card has-profile" style="--fighter-theme: ${bossColor}; --grade-color: ${bossGradeMeta.color};" data-grade="${bossGrade}"${isBossNamelessDeity ? ' data-character="namelessdeity"' : ''}>
             <div class="hud-top-profile" data-grade="${bossGrade}"${isBossNamelessDeity ? ' data-character="namelessdeity"' : ''}>
               <div class="hud-top-profile__bg"></div>
-              <canvas class="hud-top-profile__canvas" width="1400" height="1400"></canvas>
+              <canvas class="hud-top-profile__canvas" width="${profileCanvasSize}" height="${profileCanvasSize}"></canvas>
               <canvas class="hud-top-profile__grade-canvas" data-grade="${bossGrade}" width="128" height="88"></canvas>
             </div>
             <div class="boss-card__content">
@@ -5008,9 +5032,21 @@ function updateHealthHud() {
         targetCache.minionHpBarFill.style.background = mfBarColor;
         targetCache.lastMinionBarColor = mfBarColor;
       }
-      targetCache.minionHpBarFill.style.boxShadow = mfGlow.boxShadow || '';
-      targetCache.minionHpBarFill.style.filter = mfGlow.filter || '';
-      targetCache.minionHpBarFill.className = `${mfGlow.className || 'health-card__fill'} health-card__minion-fill`;
+      const bs = mfGlow.boxShadow || '';
+      if (targetCache.lastMinionBoxShadow !== bs) {
+        targetCache.minionHpBarFill.style.boxShadow = bs;
+        targetCache.lastMinionBoxShadow = bs;
+      }
+      const flt = mfGlow.filter || '';
+      if (targetCache.lastMinionFilter !== flt) {
+        targetCache.minionHpBarFill.style.filter = flt;
+        targetCache.lastMinionFilter = flt;
+      }
+      const cName = `${mfGlow.className || 'health-card__fill'} health-card__minion-fill`;
+      if (targetCache.lastMinionFillClass !== cName) {
+        targetCache.minionHpBarFill.className = cName;
+        targetCache.lastMinionFillClass = cName;
+      }
     }
     if (targetCache.minionHpBarGhost) {
       if (!targetCache.minionGhostTracker) targetCache.minionGhostTracker = {};
@@ -5018,10 +5054,18 @@ function updateHealthHud() {
     }
     if (targetCache.minionHpBar) {
       const glowSuffix = mfGlow.className?.includes('hit-glow') ? ' hit-glow' : mfGlow.className?.includes('heal-glow') ? ' heal-glow' : '';
-      targetCache.minionHpBar.className = `health-card__bar health-card__minion-bar${glowSuffix}`;
+      const barClass = `health-card__bar health-card__minion-bar${glowSuffix}`;
+      if (targetCache.lastMinionBarClass !== barClass) {
+        targetCache.minionHpBar.className = barClass;
+        targetCache.lastMinionBarClass = barClass;
+      }
       const mfShakeTimer = mf._healthBarShakeTimer || 0;
       const mfShakeAmount = mfShakeTimer > 0 ? Math.sin((12 - mfShakeTimer) * 0.75) * 3 : 0;
-      targetCache.minionHpBar.style.transform = mfShakeTimer > 0 ? `translateX(${mfShakeAmount}px)` : '';
+      const barTransform = mfShakeTimer > 0 ? `translateX(${mfShakeAmount}px)` : '';
+      if (targetCache.lastMinionBarTransform !== barTransform) {
+        targetCache.minionHpBar.style.transform = barTransform;
+        targetCache.lastMinionBarTransform = barTransform;
+      }
     }
     if (targetCache.minionHpBarText && targetCache.lastMinionHpText !== mfHpText) {
       targetCache.minionHpBarText.textContent = mfHpText;
@@ -5089,9 +5133,21 @@ function updateHealthHud() {
           m.fill.style.background = barColor;
           m.lastBarColor = barColor;
         }
-        m.fill.style.boxShadow = isCj ? '' : (glow.boxShadow || '');
-        m.fill.style.filter = glow.filter || '';
-        m.fill.className = glow.className || 'health-card__fill';
+        const bs = isCj ? '' : (glow.boxShadow || '');
+        if (m.lastBoxShadow !== bs) {
+          m.fill.style.boxShadow = bs;
+          m.lastBoxShadow = bs;
+        }
+        const flt = glow.filter || '';
+        if (m.lastFilter !== flt) {
+          m.fill.style.filter = flt;
+          m.lastFilter = flt;
+        }
+        const cName = glow.className || 'health-card__fill';
+        if (m.lastFillClass !== cName) {
+          m.fill.className = cName;
+          m.lastFillClass = cName;
+        }
 
         if (!m.ghost && m.bar) {
           m.ghost = m.bar.querySelector('.health-card__ghost');
@@ -5113,10 +5169,18 @@ function updateHealthHud() {
         if (m.bar) {
           const cjBarClass = isCj ? ' hud-bar-cj' : '';
           const sansBarClass = isSans ? ' hud-bar-sans-stamina' : '';
-          m.bar.className = `health-card__bar${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+          const barClass = `health-card__bar${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+          if (m.lastBarClass !== barClass) {
+            m.bar.className = barClass;
+            m.lastBarClass = barClass;
+          }
           const memberShakeTimer = fighter._healthBarShakeTimer || 0;
           const memberShakeAmount = memberShakeTimer > 0 ? Math.sin((12 - memberShakeTimer) * 0.75) * 3 : 0;
-          m.bar.style.transform = memberShakeTimer > 0 ? `translateX(${memberShakeAmount}px)` : '';
+          const barTransform = memberShakeTimer > 0 ? `translateX(${memberShakeAmount}px)` : '';
+          if (m.lastBarTransform !== barTransform) {
+            m.bar.style.transform = barTransform;
+            m.lastBarTransform = barTransform;
+          }
         }
 
         if (m.lastHpText !== hpText) {
@@ -5332,7 +5396,9 @@ function updateHealthHud() {
         }
       });
 
-      cachedCard.cardElement.style.transform = '';
+      if (cachedCard.cardElement.style.transform !== '') {
+        cachedCard.cardElement.style.transform = '';
+      }
     });
   }
   if (_hudCache.fighters.size > 0) {
@@ -5387,9 +5453,21 @@ function updateHealthHud() {
           cachedCard.hpBarFill.style.background = barColor;
           cachedCard.lastBarColor = barColor;
         }
-        cachedCard.hpBarFill.style.boxShadow = isCj ? '' : (glow.boxShadow || '');
-        cachedCard.hpBarFill.style.filter = glow.filter || '';
-        cachedCard.hpBarFill.className = glow.className || 'health-card__fill';
+        const bs = isCj ? '' : (glow.boxShadow || '');
+        if (cachedCard.lastBoxShadow !== bs) {
+          cachedCard.hpBarFill.style.boxShadow = bs;
+          cachedCard.lastBoxShadow = bs;
+        }
+        const flt = glow.filter || '';
+        if (cachedCard.lastFilter !== flt) {
+          cachedCard.hpBarFill.style.filter = flt;
+          cachedCard.lastFilter = flt;
+        }
+        const cName = glow.className || 'health-card__fill';
+        if (cachedCard.lastFillClass !== cName) {
+          cachedCard.hpBarFill.className = cName;
+          cachedCard.lastFillClass = cName;
+        }
       }
 
       if (!cachedCard.hpBarGhost && cachedCard.hpBar) {
@@ -5414,14 +5492,23 @@ function updateHealthHud() {
         const cjBarClass = (isCj && !topBarClass) ? ' hud-bar-cj' : '';
         const sansBarClass = isSans ? ' hud-bar-sans-stamina' : '';
         const bossBarClass = isBossBar ? ' boss-bar' : '';
-        cachedCard.hpBar.className = `health-card__bar${topBarClass}${bossBarClass}${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+        const barClass = `health-card__bar${topBarClass}${bossBarClass}${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+        if (cachedCard.lastBarClass !== barClass) {
+          cachedCard.hpBar.className = barClass;
+          cachedCard.lastBarClass = barClass;
+        }
         const shakeTimer = fighter._healthBarShakeTimer || 0;
         const shakeAmount = shakeTimer > 0 ? Math.sin((12 - shakeTimer) * 0.75) * 3 : 0;
+        let newTransform;
         if (topBarClass) {
           const skewAngle = (cachedCard.hpBar.closest && cachedCard.hpBar.closest('.hud-top-p2')) ? 8 : -8;
-          cachedCard.hpBar.style.transform = shakeTimer > 0 ? `skewX(${skewAngle}deg) translateX(${shakeAmount}px)` : `skewX(${skewAngle}deg)`;
+          newTransform = shakeTimer > 0 ? `skewX(${skewAngle}deg) translateX(${shakeAmount}px)` : `skewX(${skewAngle}deg)`;
         } else {
-          cachedCard.hpBar.style.transform = shakeTimer > 0 ? `translateX(${shakeAmount}px)` : '';
+          newTransform = shakeTimer > 0 ? `translateX(${shakeAmount}px)` : '';
+        }
+        if (cachedCard.lastBarTransform !== newTransform) {
+          cachedCard.hpBar.style.transform = newTransform;
+          cachedCard.lastBarTransform = newTransform;
         }
       }
 
@@ -5443,9 +5530,21 @@ function updateHealthHud() {
             cachedCard.bottomHpBarFill.style.background = barColor;
             cachedCard.lastBottomBarColor = barColor;
           }
-          cachedCard.bottomHpBarFill.style.boxShadow = isCj ? '' : (glow.boxShadow || '');
-          cachedCard.bottomHpBarFill.style.filter = glow.filter || '';
-          cachedCard.bottomHpBarFill.className = glow.className || 'health-card__fill';
+          const bs = isCj ? '' : (glow.boxShadow || '');
+          if (cachedCard.lastBottomBoxShadow !== bs) {
+            cachedCard.bottomHpBarFill.style.boxShadow = bs;
+            cachedCard.lastBottomBoxShadow = bs;
+          }
+          const flt = glow.filter || '';
+          if (cachedCard.lastBottomFilter !== flt) {
+            cachedCard.bottomHpBarFill.style.filter = flt;
+            cachedCard.lastBottomFilter = flt;
+          }
+          const cName = glow.className || 'health-card__fill';
+          if (cachedCard.lastBottomFillClass !== cName) {
+            cachedCard.bottomHpBarFill.className = cName;
+            cachedCard.lastBottomFillClass = cName;
+          }
         }
 
         if (cachedCard.bottomHpBarGhost) {
@@ -5455,10 +5554,18 @@ function updateHealthHud() {
 
         const cjBarClass = isCj ? ' hud-bar-cj' : '';
         const sansBarClass = isSans ? ' hud-bar-sans-stamina' : '';
-        cachedCard.bottomHpBar.className = `health-card__bar${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+        const bottomBarClass = `health-card__bar${cjBarClass}${sansBarClass}${glow.className?.includes('hit-glow') ? ' hit-glow' : glow.className?.includes('heal-glow') ? ' heal-glow' : ''}`;
+        if (cachedCard.lastBottomBarClass !== bottomBarClass) {
+          cachedCard.bottomHpBar.className = bottomBarClass;
+          cachedCard.lastBottomBarClass = bottomBarClass;
+        }
         const shakeTimer = fighter._healthBarShakeTimer || 0;
         const shakeAmount = shakeTimer > 0 ? Math.sin((12 - shakeTimer) * 0.75) * 3 : 0;
-        cachedCard.bottomHpBar.style.transform = shakeTimer > 0 ? `translateX(${shakeAmount}px)` : '';
+        const bottomTransform = shakeTimer > 0 ? `translateX(${shakeAmount}px)` : '';
+        if (cachedCard.lastBottomBarTransform !== bottomTransform) {
+          cachedCard.bottomHpBar.style.transform = bottomTransform;
+          cachedCard.lastBottomBarTransform = bottomTransform;
+        }
 
         if (cachedCard.bottomHpBarText && cachedCard.lastBottomHpText !== metaValue) {
           cachedCard.bottomHpBarText.textContent = metaValue;
@@ -5677,7 +5784,9 @@ function updateHealthHud() {
         }
       }
 
-      cachedCard.cardElement.style.transform = '';
+      if (cachedCard.cardElement.style.transform !== '') {
+        cachedCard.cardElement.style.transform = '';
+      }
 
       // 3. Wins bullets
       const isTactical = isTacticalMatch(state);
@@ -5761,8 +5870,9 @@ function updateHealthHud() {
                 cachedSkill.fill.style.display = 'none';
                 cachedSkill.lastDisplay = 'none';
               }
-              if (!cachedSkill.box.classList.contains('hud-skill-text-mode')) {
+              if (!cachedSkill.lastIsTextMode) {
                 cachedSkill.box.classList.add('hud-skill-text-mode');
+                cachedSkill.lastIsTextMode = true;
               }
               const cdText = resolveSkillCooldownText(s, fighter);
               const cleanName = getSkillCleanLabel(s.label);
@@ -5792,11 +5902,13 @@ function updateHealthHud() {
               return;
             }
 
-            if (cachedSkill.box.classList.contains('hud-skill-text-mode')) {
+            if (cachedSkill.lastIsTextMode) {
               cachedSkill.box.classList.remove('hud-skill-text-mode');
+              cachedSkill.lastIsTextMode = false;
             }
-            if (cachedSkill.box.classList.contains('hud-skill-active')) {
+            if (cachedSkill.lastActive) {
               cachedSkill.box.classList.remove('hud-skill-active');
+              cachedSkill.lastActive = false;
             }
 
             if (s.noFill) {

@@ -988,20 +988,15 @@ export function drawBloodEffects(ctx) {
     const e = state.bloodEffects[i];
     if (!e || e.life <= 0) continue;
     const alpha = e.onGround ? Math.max(0, Math.min(1, e.life)) : 1.0;
-    if (e.onGround) {
-      const r = (e.numericColor >> 16) & 0xFF;
-      const g = (e.numericColor >> 8) & 0xFF;
-      const b = e.numericColor & 0xFF;
-      drawCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
-    } else {
-      drawCtx.fillStyle = e.hexColor || '#DC2626';
-    }
+    drawCtx.globalAlpha = alpha;
+    drawCtx.fillStyle = e.hexColor || '#DC2626';
     if (e.onGround) {
       drawCtx.fillRect(e.x - e.size * 0.75, e.y - e.size * 0.325, e.size * 1.5, e.size * 0.65);
     } else {
       drawCtx.fillRect(e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
     }
   }
+  drawCtx.globalAlpha = 1.0;
 }
 
 /**

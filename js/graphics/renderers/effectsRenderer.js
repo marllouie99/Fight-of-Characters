@@ -1,5 +1,5 @@
 import { drawFlamesToCanvas, clearFlameCanvas } from '../canvasManager.js';
-import { state, getProjectiles, triggerGlobalScreenShake } from '../../core/state.js';
+import { state, getProjectiles, triggerGlobalScreenShake, recycleFloatingText } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
 import { drawBlackHoleVisual } from './projectileRenderer.js';
 import { drawShurikenProjectile } from '../weaponVisuals.js';
@@ -247,6 +247,7 @@ export function drawFloatingTexts() {
     }
 
     if (t.timer >= t.maxTimer) {
+      if (typeof recycleFloatingText === 'function') recycleFloatingText(t);
       return false; // Evict expired text
     }
 
@@ -273,7 +274,7 @@ export function drawFloatingTexts() {
       ctx.scale(scale, scale);
     }
 
-    const isCrit = Boolean(t.isCrit || /^CRIT/i.test(t.text));
+    const isCrit = Boolean(t.isCrit);
     ctx.font = isCrit ? FONT_CRIT : FONT_DEFAULT;
 
     // Single crisp solid black outline (Rule 11 compliant, no CPU blur, no multi-pass)
