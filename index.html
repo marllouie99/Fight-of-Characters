@@ -1184,7 +1184,7 @@
                     <div class="card-content">
                       <div class="card-title-row">
                         <span class="card-title">ARENA SOUNDTRACK</span>
-                        <button id="btn-bgm" class="tactical-chip-btn">RANDOM</button>
+                        <button id="btn-bgm" class="tactical-chip-btn">OFF</button>
                       </div>
                     </div>
                   </div>
@@ -1777,7 +1777,7 @@
   <script>
     if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=84').catch((err) => {
+        navigator.serviceWorker.register('./sw.js?v=85').catch((err) => {
           console.warn('[PWA] Service worker registration skipped:', err);
         });
       });

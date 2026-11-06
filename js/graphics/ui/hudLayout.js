@@ -299,7 +299,7 @@ export function updateTopHudCameraTracking(topContainer) {
   const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
   const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
   const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
-  const isCamActive = isDynamic || isZooming;
+  const isCamActive = !state.isMobileDevice && (isDynamic || isZooming);
 
   if (!isCamActive) {
     const curStyle = `static_${baseHudScale}`;
@@ -379,7 +379,7 @@ export function updateBottomHudCameraTracking(bottomContainer) {
   const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
   const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
   const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
-  const isCamActive = isDynamic || isZooming;
+  const isCamActive = !state.isMobileDevice && (isDynamic || isZooming);
 
   if (!isCamActive) {
     const curStyle = `static_${baseHudScale}`;
@@ -472,7 +472,7 @@ export function updateSideHudCameraTracking(containerLeft, containerRight) {
   const cam = (typeof state !== 'undefined' && state.camera) ? state.camera : null;
   const isDynamic = Boolean(cam && cam.enabled && (cam.mode === 'dynamic' || cam.cinematicOverride));
   const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
-  const isCamActive = isDynamic || isZooming;
+  const isCamActive = !state.isMobileDevice && (isDynamic || isZooming);
 
   if (!isCamActive || isTopHud1v1) {
     if (_lastSideHudStyle === 'static' && !isTopHud1v1) return;

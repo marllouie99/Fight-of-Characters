@@ -132,8 +132,9 @@ export function renderGame() {
     // PixiJS will render this transparent canvas over its own background/particle layers
     state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
 
-    if (state.topLevelUiCtx) {
+    if (state.topLevelUiCtx && state._topLevelUiDirty !== false) {
       state.topLevelUiCtx.clearRect(0, 0, state.topLevelUiCanvas.width, state.topLevelUiCanvas.height);
+      state._topLevelUiDirty = false;
     }
 
     // Toggle WebGL layers visibility based on game state to prevent leftover battle visuals
@@ -646,10 +647,8 @@ export function renderGame() {
         }
       }
 
-      // In native Canvas 2D mode, composite floating text canvas onto main canvas in identity space
-      if (!state.pixiApp && state.floatingTextCanvas && state.floatingTexts && state.floatingTexts.length > 0) {
-        state.ctx.drawImage(state.floatingTextCanvas, 0, 0);
-      }
+      // Note: In native Canvas 2D mode (!state.pixiApp), drawFloatingTexts() now renders directly onto state.ctx
+      // inside the camera block above, eliminating a full-screen 540x960 clearRect + drawImage blit every frame.
 
       const originalCtx = state.ctx;
       const originalCanvas = state.canvas;
@@ -678,6 +677,7 @@ export function renderGame() {
           state.mode === 'Classic Minimalist Arena')); //
         // end Gojo domain check
         if (isGrandBattle) {
+          state._topLevelUiDirty = true;
           drawHorizontalPanoramicHud(state.topLevelUiCtx || state.ctx);
         } else if (state.gameState === 'playing' || state.gameState === 'countdown') {
           drawHUD();
@@ -686,17 +686,27 @@ export function renderGame() {
 
       // ── Super-Beam Absolute Top Layer (Rendered ON TOP of World Entities & In-Game HUD, behind Match-End Overlays) ──
       const topBeamCtx = state.topLevelUiCtx || state.ctx;
-      if (topBeamCtx) {
-        topBeamCtx.save();
-        applyCameraToCtx(topBeamCtx);
-        if (state.fighters) {
-          for (const f of state.fighters) {
+      if (topBeamCtx && state.fighters) {
+        let hasTopBeamFighter = false;
+        for (let i = 0; i < state.fighters.length; i++) {
+          const f = state.fighters[i];
+          if (f && f.hp > 0 && typeof f.drawTopLayerBeams === 'function') {
+            hasTopBeamFighter = true;
+            break;
+          }
+        }
+        if (hasTopBeamFighter) {
+          state._topLevelUiDirty = true;
+          topBeamCtx.save();
+          applyCameraToCtx(topBeamCtx);
+          for (let i = 0; i < state.fighters.length; i++) {
+            const f = state.fighters[i];
             if (f && f.hp > 0 && typeof f.drawTopLayerBeams === 'function') {
               f.drawTopLayerBeams(topBeamCtx);
             }
           }
+          topBeamCtx.restore();
         }
-        topBeamCtx.restore();
       }
 
       if (state.gameState === 'playing') {
@@ -704,11 +714,13 @@ export function renderGame() {
 
         // Draw High-Impact FIGHT! Banner during battle start
         if (state.fightBannerTimer && state.fightBannerTimer > 0) {
+          state._topLevelUiDirty = true;
           drawFightBanner(state.topLevelUiCtx || state.ctx, state.canvas.width, state.canvas.height);
         }
 
         // Smooth White Flash Veil Dissolve when entering arena from Face-Off Countdown (disabled in Dark Mode)
         if (!isDarkPlaying && state.battleStartFadeTimer && state.battleStartFadeTimer > 0) {
+          state._topLevelUiDirty = true;
           state.battleStartFadeTimer--;
           const uiCtx = state.topLevelUiCtx || state.ctx;
           const flashAlpha = Math.max(0, state.battleStartFadeTimer / 16);
@@ -722,21 +734,30 @@ export function renderGame() {
           state.battleStartFadeTimer = 0;
         }
         if (state.mode === GAME_MODES.SURVIVOR || state.mode === 'Survivor') {
+          state._topLevelUiDirty = true;
           survivorSystem.drawScreenSpaceUI(state.topLevelUiCtx || state.ctx);
         }
       } else if (state.gameState === 'boss_intro' || BossEntranceSequence.isActive) {
+        state._topLevelUiDirty = true;
         BossEntranceSequence.draw(state.topLevelUiCtx || state.ctx);
       } else if (state.gameState === 'countdown') {
+        state._topLevelUiDirty = true;
         drawCountdown();
       } else if (state.gameState === 'paused') {
+        state._topLevelUiDirty = true;
         drawPauseScreen();
       } else if (state.gameState === 'roundEnd') {
+        state._topLevelUiDirty = true;
         drawRoundEndScreen();
       } else if (state.gameState === 'matchEnd') {
+        state._topLevelUiDirty = true;
         drawMatchEndScreen();
       }
 
       // Render GTA San Andreas "mission passed! RESPECT +" and "WASTED" overlays on top level before champion reveal
+      if (state.missionPassedOverlay && state.missionPassedOverlay.active) state._topLevelUiDirty = true;
+      if (state.wastedOverlay && state.wastedOverlay.active) state._topLevelUiDirty = true;
+      if (state.cameraToast && state.cameraToast.timer > 0) state._topLevelUiDirty = true;
       drawMissionPassedOverlay(state.topLevelUiCtx || state.ctx);
       drawWastedOverlay(state.topLevelUiCtx || state.ctx);
 
@@ -750,7 +771,7 @@ export function renderGame() {
       state.canvas = originalCanvas;
 
       // Guard against redundant CPU blit when topLevelUiCanvas is already composited by the DOM at z-index: 25
-      if (!state.pixiApp && state.topLevelUiCanvas && !state.topLevelUiCanvas.parentNode) {
+      if (!state.pixiApp && state.topLevelUiCanvas && !state.topLevelUiCanvas.parentNode && state._topLevelUiDirty) {
         state.ctx.drawImage(state.topLevelUiCanvas, 0, 0);
       }
     }

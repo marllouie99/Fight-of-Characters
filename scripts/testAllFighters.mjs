@@ -6643,116 +6643,17 @@ async function main() {
     errors++;
   }
 
-  // 1v1 Background Music Seamless Continuity & Cutoff on 2 Round Wins Test
-  console.log('🎵 [1v1 BGM Seamless Continuity Test] Verifying BGM continues across 1v1 rounds and cuts only upon 2 round wins...');
+  // Arena BGM System Removal & Disabled Verification Test
+  console.log('🎵 [Arena BGM Removal Test] Verifying Arena BGM is completely disabled...');
   try {
     const { isArenaBgmPlaying, startArenaBgm, stopArenaBgm } = await import('../js/systems/arenaBgmSystem.js');
-    const { startCountdown, startNextRound } = await import('../js/core/gameFlow.js');
-
-    // 1. Initialize fresh 1v1 match
-    state.mode = '1v1';
-    state.p1Index = allDefs.findIndex(d => d.type === 'gojo');
-    state.p2Index = allDefs.findIndex(d => d.type === 'sukuna');
-    state.scores = [0, 0];
-    state.roundNum = 1;
-    state.gameState = 'countdown';
-    reinitFighters(true);
-
-    startCountdown();
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Expected Arena BGM to start playing during 1v1 countdown');
-    }
-
-    // Advance to playing
-    state.gameState = 'playing';
-    updateGame();
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Expected Arena BGM to remain playing in 1v1 playing state');
-    }
-
-    // 2. Round 1 End: Fighter 0 wins (scores = [1, 0]) -> BGM MUST KEEP PLAYING!
-    state.scores = [1, 0];
-    state.roundWinner = state.fighters[0];
-    state.matchWinner = null;
-    state.gameState = 'roundEnd';
-    state.roundEndTimer = 10;
-    updateGame();
-    drawRoundEndScreen();
-
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM was cut off during 1v1 Round 1 roundEnd (Fighter has only 1 win)!');
-    }
-
-    // 3. Round 2 Transition: startNextRound & startCountdown -> BGM MUST KEEP PLAYING SEAMLESSLY!
-    startNextRound();
-    if (state.roundNum !== 2) {
-      throw new Error(`Expected roundNum to be 2, got ${state.roundNum}`);
-    }
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM was cut off during startNextRound() transition to Round 2 in 1v1 mode!');
-    }
-
-    startCountdown();
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM was cut off during Round 2 countdown in 1v1 mode!');
-    }
-
-    state.gameState = 'playing';
-    updateGame();
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM stopped playing during Round 2 in 1v1 mode!');
-    }
-
-    // 4. Round 2 End: Fighter 1 wins (scores = [1, 1], tied) -> BGM MUST KEEP PLAYING FOR FINAL ROUND!
-    state.scores = [1, 1];
-    state.roundWinner = state.fighters[1];
-    state.matchWinner = null;
-    state.gameState = 'roundEnd';
-    state.roundEndTimer = 10;
-    updateGame();
-    drawRoundEndScreen();
-
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM was cut off during 1v1 Round 2 roundEnd with tied score 1-1!');
-    }
-
-    // 5. Final Round Transition (Round 3) -> BGM MUST KEEP PLAYING!
-    startNextRound();
-    if (state.roundNum !== 3) {
-      throw new Error(`Expected roundNum to be 3 (Final Round), got ${state.roundNum}`);
-    }
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM was cut off transitioning to Final Round in 1v1 mode!');
-    }
-
-    startCountdown();
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM was cut off during Final Round countdown in 1v1 mode!');
-    }
-
-    state.gameState = 'playing';
-    updateGame();
-    if (!isArenaBgmPlaying()) {
-      throw new Error('Arena BGM stopped playing during Final Round in 1v1 mode!');
-    }
-
-    // 6. Final Round End: Fighter 0 wins (scores = [2, 1]) -> Match Won! BGM MUST CUT OFF!
-    state.scores = [2, 1];
-    state.roundWinner = state.fighters[0];
-    state.matchWinner = state.fighters[0];
-    state.gameState = 'matchEnd';
-    state.matchEndTimer = 10;
-    state.roundEndTimer = 10;
-    updateGame();
-    drawMatchEndScreen();
-
+    startArenaBgm();
     if (isArenaBgmPlaying()) {
-      throw new Error('Arena BGM failed to cut off after fighter achieved 2 round wins in 1v1 mode!');
+      throw new Error('Arena BGM should be completely disabled');
     }
-
     stopArenaBgm(true);
   } catch (err) {
-    console.error('❌ [1v1 BGM SEAMLESS CONTINUITY TEST ERROR]:', err);
+    console.error('❌ [Arena BGM Removal Test Error]:', err);
     errors++;
   }
 

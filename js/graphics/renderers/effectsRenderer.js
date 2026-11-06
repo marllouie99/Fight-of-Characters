@@ -197,12 +197,14 @@ const FONT_CRIT = '700 22px "Silkscreen", "Press Start 2P", monospace';
 const FONT_DEFAULT = '700 18px "Silkscreen", "Press Start 2P", monospace';
 
 export function drawFloatingTexts() {
-  const { floatingTextCtx: ctx, floatingTextCanvas: canvas } = state;
+  const useDirectMainCtx = !state.pixiApp && Boolean(state.ctx);
+  const ctx = useDirectMainCtx ? state.ctx : state.floatingTextCtx;
+  const canvas = useDirectMainCtx ? state.canvas : state.floatingTextCanvas;
   if (!ctx || !canvas) return;
 
   const texts = state.floatingTexts;
   if (!texts || texts.length === 0) {
-    if (state._floatingTextCanvasDirty) {
+    if (!useDirectMainCtx && state._floatingTextCanvasDirty) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       state._floatingTextCanvasDirty = false;
       if (state.floatingTextSprite && state.floatingTextSprite.texture) {
@@ -212,11 +214,15 @@ export function drawFloatingTexts() {
     return;
   }
 
-  state._floatingTextCanvasDirty = true;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!useDirectMainCtx) {
+    state._floatingTextCanvasDirty = true;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
 
   ctx.save();
-  applyCameraToCtx(ctx);
+  if (!useDirectMainCtx) {
+    applyCameraToCtx(ctx);
+  }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';

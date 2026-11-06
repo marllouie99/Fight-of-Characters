@@ -183,27 +183,8 @@ export function preloadActiveMatchSounds(fighters) {
     ...getAnnouncerSoundPaths()
   ];
 
-  // Active match Arena BGM (only the chosen track, not all 7 tracks!)
-  try {
-    const trackId = getSavedArenaBgmId();
-    if (trackId !== 'off') {
-      let chosenSrc = null;
-      if (trackId === 'random') {
-        const validTracks = ARENA_BGM_TRACKS.filter(t => t.src !== null);
-        if (validTracks.length > 0) {
-          const randTrack = validTracks[Math.floor(Math.random() * validTracks.length)];
-          chosenSrc = randTrack?.src;
-        }
-      } else {
-        const track = ARENA_BGM_TRACKS.find(t => t.id === trackId);
-        chosenSrc = track ? track.src : null;
-      }
-      if (chosenSrc) {
-        state.activeMatchBgmSrc = chosenSrc;
-        activePaths.push(chosenSrc);
-      }
-    }
-  } catch (e) {}
+  // Active match Arena BGM: Disabled per mobile performance standard
+  state.activeMatchBgmSrc = null;
 
   // Release unused overlay bitmaps on mobile and preload active combatants' visual assets
   releaseInactiveMatchGraphicsMemory(activeFighters);

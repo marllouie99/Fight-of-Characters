@@ -14,36 +14,8 @@ export const ARENA_BGM_PREVIEW_KEY = 'arena_bgm_preview';
 
 export const ARENA_BGM_TRACKS = [
   {
-    id: 'random',
-    name: 'RANDOM',
-    shortName: 'RANDOM',
-    label: 'RANDOM TRACK',
-    src: null
-  },
-  {
-    id: 'guile',
-    name: 'GUILE STAGE',
-    shortName: 'GUILE',
-    label: 'GUILE STAGE',
-    src: 'Assets/Sound Effects/ARENA-BGMUSIC/Street Fighter II Arcade Music - Guile Stage - CPS1.mp3'
-  },
-  {
-    id: 'bison',
-    name: 'M. BISON',
-    shortName: 'M. BISON',
-    label: 'M. BISON STAGE',
-    src: 'Assets/Sound Effects/ARENA-BGMUSIC/Street Fighter II Arcade Music - M Bison Stage - CPS1.mp3'
-  },
-  {
-    id: 'ryu',
-    name: 'RYU STAGE',
-    shortName: 'RYU',
-    label: 'RYU STAGE',
-    src: 'Assets/Sound Effects/ARENA-BGMUSIC/Street Fighter II Arcade Music - Ryu Stage - CPS1.mp3'
-  },
-  {
     id: 'off',
-    name: 'MUSIC: OFF',
+    name: 'DISABLED',
     shortName: 'OFF',
     label: 'MUSIC DISABLED',
     src: null
@@ -243,68 +215,8 @@ export async function deleteCustomTrackFromDB(trackId) {
  * or loaded from Electron and IndexedDB.
  */
 export async function syncArenaBgmTracks() {
-  let diskFiles = [];
-
-  // 1. Electron Native Auto-Scan (if running in desktop Electron)
-  if (typeof window !== 'undefined' && window.electronAPI?.scanBgmFolder) {
-    try {
-      diskFiles = await window.electronAPI.scanBgmFolder();
-    } catch (e) {
-      console.warn('Electron scan failed:', e);
-    }
-  }
-
-  // 2. Fetch manifest.json fallback (if running in standard browser/live-server)
-  if (!diskFiles || diskFiles.length === 0) {
-    try {
-      const res = await fetch('Assets/Sound Effects/ARENA-BGMUSIC/manifest.json?t=' + Date.now());
-      if (res.ok) {
-        diskFiles = await res.json();
-      }
-    } catch (e) {}
-  }
-
-  // 3. Load custom imported songs from IndexedDB
-  const customTracks = await loadCustomTracksFromDB();
-
-  // 4. Merge all discovered disk files into ARENA_BGM_TRACKS
-  if (Array.isArray(diskFiles) && diskFiles.length > 0) {
-    diskFiles.forEach(file => {
-      const srcPath = `Assets/Sound Effects/ARENA-BGMUSIC/${file}`;
-      const cleanId = file.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const alreadyExists = ARENA_BGM_TRACKS.some(t => t.src === srcPath || t.id === cleanId);
-      if (!alreadyExists) {
-        const offIndex = ARENA_BGM_TRACKS.findIndex(t => t.id === 'off');
-        const newTrack = {
-          id: cleanId,
-          name: formatTrackNameFromFilename(file),
-          shortName: formatShortNameFromFilename(file),
-          label: formatTrackNameFromFilename(file),
-          src: srcPath,
-          filename: file,
-          isCustom: false
-        };
-        if (offIndex !== -1) {
-          ARENA_BGM_TRACKS.splice(offIndex, 0, newTrack);
-        } else {
-          ARENA_BGM_TRACKS.push(newTrack);
-        }
-      }
-    });
-  }
-
-  // 5. Merge custom imported tracks
-  customTracks.forEach(ct => {
-    const alreadyExists = ARENA_BGM_TRACKS.some(t => t.id === ct.id);
-    if (!alreadyExists) {
-      const offIndex = ARENA_BGM_TRACKS.findIndex(t => t.id === 'off');
-      if (offIndex !== -1) {
-        ARENA_BGM_TRACKS.splice(offIndex, 0, ct);
-      } else {
-        ARENA_BGM_TRACKS.push(ct);
-      }
-    }
-  });
+  // Arena BGM system removed/disabled - zero network fetch
+  return;
 }
 
 // Automatically sync tracks at startup
@@ -440,79 +352,25 @@ function initBgmFileInputAndDragDrop() {
 // ─────────────────────────────────────────────
 
 export function getSavedArenaBgmId() {
-  if (_selectedTrackId) return _selectedTrackId;
-  try {
-    const saved = localStorage.getItem('circle_arena_bgm_track');
-    if (saved && ARENA_BGM_TRACKS.some(t => t.id === saved)) {
-      _selectedTrackId = saved;
-      return saved;
-    }
-  } catch (e) {}
-  _selectedTrackId = 'random';
-  return 'random';
+  return 'off';
 }
 
 export function setSavedArenaBgmId(trackId) {
-  _selectedTrackId = trackId;
+  _selectedTrackId = 'off';
   try {
-    localStorage.setItem('circle_arena_bgm_track', trackId);
+    localStorage.setItem('circle_arena_bgm_track', 'off');
   } catch (e) {}
 }
 
 export function cycleNextArenaBgmTrack() {
-  const currentId = getSavedArenaBgmId();
-  const currentIndex = ARENA_BGM_TRACKS.findIndex(t => t.id === currentId);
-  const nextIndex = (currentIndex + 1) % ARENA_BGM_TRACKS.length;
-  const nextTrack = ARENA_BGM_TRACKS[nextIndex];
-  setSavedArenaBgmId(nextTrack.id);
-  return nextTrack;
+  return ARENA_BGM_TRACKS[0];
 }
 
 export function getSelectedArenaBgmTrack() {
-  const currentId = getSavedArenaBgmId();
-  return ARENA_BGM_TRACKS.find(t => t.id === currentId) || ARENA_BGM_TRACKS[0];
+  return ARENA_BGM_TRACKS[0];
 }
 
 export function getCurrentPlayingBgmTitle() {
-  const trackId = getSavedArenaBgmId();
-  if (trackId === 'off') return null;
-
-  // If a track is actively playing or was played in the active/current match, resolve the real name
-  const trackSrc = _currentTrackSrc || _lastPlayedTrackSrc;
-  if (trackSrc) {
-    // 1. Try matching from the track registry (handles custom tracks with blob URLs too)
-    const matched = ARENA_BGM_TRACKS.find(t => t.src === trackSrc);
-    if (matched) {
-      // For custom tracks, prefer the stored filename over the formatted name
-      if (matched.filename) {
-        return `🎵 ${formatTrackNameFromFilename(matched.filename)}`;
-      }
-      if (matched.name && matched.name !== 'RANDOM' && matched.name !== 'MUSIC: OFF') {
-        return `🎵 ${matched.name}`;
-      }
-    }
-
-    // 2. Fallback: extract the filename directly from the src path
-    if (trackSrc && !trackSrc.startsWith('blob:')) {
-      const parts = decodeURIComponent(trackSrc).split('/');
-      const fileName = parts[parts.length - 1];
-      if (fileName) {
-        return `🎵 ${formatTrackNameFromFilename(fileName)}`;
-      }
-    }
-  }
-
-  // 3. No track actively playing yet — show the selected track's name
-  const selected = getSelectedArenaBgmTrack();
-  if (selected && selected.id !== 'off') {
-    if (selected.id === 'random') {
-      return `🎵 BGM: RANDOM`;
-    }
-    if (selected.filename) {
-      return `🎵 ${formatTrackNameFromFilename(selected.filename)}`;
-    }
-    return `🎵 ${selected.name}`;
-  }
   return null;
 }
 
@@ -542,50 +400,12 @@ export function shouldDuckArenaBgm() {
 }
 
 export function isArenaBgmPlaying() {
-  return _isArenaBgmPlaying && isLoopingSoundPlaying(ARENA_BGM_LOOP_KEY);
+  return false;
 }
 
 export function startArenaBgm(forceNew = false) {
-  const trackId = getSavedArenaBgmId();
-  if (trackId === 'off') {
-    stopArenaBgm(true);
-    return;
-  }
-
-  // If already playing and forceNew is false, keep playing seamlessly without restarting
-  if (!forceNew && _isArenaBgmPlaying && _currentTrackSrc && isLoopingSoundPlaying(ARENA_BGM_LOOP_KEY)) {
-    return;
-  }
-
-  let chosenSrc = (!forceNew ? state.activeMatchBgmSrc : null) || null;
-  if (!chosenSrc) {
-    if (trackId === 'random') {
-      const validTracks = ARENA_BGM_TRACKS.filter(t => t.src !== null);
-      if (validTracks.length > 0) {
-        const randTrack = validTracks[Math.floor(Math.random() * validTracks.length)];
-        chosenSrc = randTrack?.src || null;
-      }
-    } else {
-      const track = ARENA_BGM_TRACKS.find(t => t.id === trackId);
-      chosenSrc = track ? track.src : null;
-    }
-  }
-
-  if (chosenSrc) {
-    state.activeMatchBgmSrc = chosenSrc;
-  }
-
-  stopPreview();
-  stopLoopingSound(ARENA_BGM_LOOP_KEY);
-
-  _currentTrackSrc = chosenSrc;
-  _lastPlayedTrackSrc = chosenSrc;
-  _isArenaBgmPlaying = true;
-  _isDucked = false;
-
-  if (chosenSrc) {
-    playLoopingSound(ARENA_BGM_LOOP_KEY, chosenSrc, getArenaBgmVolume(), 1.0, 350);
-  }
+  // Arena BGM system disabled - zero background music streaming or decoding
+  stopArenaBgm(true);
 }
 
 export function stopArenaBgm(instant = true) {
@@ -593,38 +413,11 @@ export function stopArenaBgm(instant = true) {
   _isDucked = false;
   _currentTrackSrc = null;
   stopLoopingSound(ARENA_BGM_LOOP_KEY);
+  stopLoopingSound(ARENA_BGM_PREVIEW_KEY);
 }
 
 export function updateArenaBgm() {
-  if (typeof state === 'undefined') return;
-
-  if (state.gameState === 'matchEnd') {
-    if (_isArenaBgmPlaying) {
-      stopArenaBgm(true);
-      return;
-    }
-  } else if (state.gameState === 'roundEnd') {
-    const isMultiRound = (state.mode === '1v1' || state.mode === '1 VS 1' || state.mode === '1v1 Match' || state.mode === GAME_MODES.ONE_VS_ONE || state.mode === '2v2' || state.mode === GAME_MODES.TWO_VS_TWO || state.mode === GAME_MODES.HORIZONTAL_1V1 || state.mode === '1v1 Widescreen Duel');
-    const maxWins = (state.scores && state.scores.length) ? Math.max(...state.scores) : (state.teamScores && state.teamScores.length ? Math.max(...state.teamScores) : 0);
-    const modeRounds = (typeof MODE_SETTINGS !== 'undefined' && MODE_SETTINGS[state.mode]?.rounds) || 3;
-    const winThreshold = modeRounds === 1 ? 1 : Math.ceil(modeRounds / 2);
-    if (!isMultiRound || maxWins >= winThreshold) {
-      if (_isArenaBgmPlaying) {
-        stopArenaBgm(true);
-        return;
-      }
-    }
-  }
-
-  const needsDuck = shouldDuckArenaBgm();
-
-  if (needsDuck && !_isDucked) {
-    _isDucked = true;
-    setLoopingSoundVolume(ARENA_BGM_LOOP_KEY, 0.0001, 700);
-  } else if (!needsDuck && _isDucked) {
-    _isDucked = false;
-    setLoopingSoundVolume(ARENA_BGM_LOOP_KEY, getArenaBgmVolume(), 1200);
-  }
+  // Arena BGM system disabled - zero per-frame CPU processing
 }
 
 // ─────────────────────────────────────────────
