@@ -30,7 +30,7 @@ import {
   drawPiercingBloodBeam,
   drawBloodEdgeSlashArc,
   getRayArenaIntersection
-} from '../../graphics/weapons/chosoBloodGraphics.js?v=81';
+} from '../../graphics/weapons/chosoBloodGraphics.js';
 import { spawnSparks } from '../../graphics/particles/sparkEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { fastCleanArray } from '../../graphics/particles/visualTrailSystem.js';

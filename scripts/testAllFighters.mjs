@@ -3685,7 +3685,7 @@ async function main() {
     const { YutaFighter } = await import('../js/entities/fighters/YutaFighter.js');
     const { CronosFighter } = await import('../js/entities/fighters/CronosFighter.js');
     const { MahitoFighter } = await import('../js/entities/fighters/MahitoFighter.js');
-    const { Fighter } = await import('../js/entities/Fighter.js');
+    const { Fighter } = await import('../js/entities/fighter.js');
 
     // Test Gojo Unlimited Void death clearing
     const gojo = new GojoFighter({ startX: 250, startY: 250, type: 'gojo', color: '#FFFFFF' });

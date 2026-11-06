@@ -65,7 +65,7 @@ import { MakiFighter } from '../fighters/MakiFighter.js';
 import { ShiroFighter } from '../fighters/ShiroFighter.js';
 import { SoraFighter } from '../fighters/SoraFighter.js';
 import { GutsFighter } from '../fighters/GutsFighter.js';
-import { ChosoFighter } from '../fighters/ChosoFighter.js?v=81';
+import { ChosoFighter } from '../fighters/ChosoFighter.js';
 import { AshFighter } from '../fighters/AshFighter.js';
 import { ZombieFighter } from '../fighters/ZombieFighter.js';
 import { UnarmedFighter } from '../fighters/UnarmedFighter.js';
