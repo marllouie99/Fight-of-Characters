@@ -16,6 +16,7 @@
 
 import { COMBAT_SOUND_SPRITE_MANIFEST } from '../configs/combatSoundSpriteManifest.js';
 import { CHARACTER_VOICE_SPRITE_MANIFEST } from '../configs/characterVoiceSpriteManifest.js';
+import { AUDIO_CONFIG } from '../configs/audioConfig.js';
 
 export const CORE_COMBAT_SFX_PATHS = [
   'Assets/Sound Effects/Attacks/fleshhit.mp3',
@@ -128,6 +129,36 @@ class SoundSpriteManager {
         if (lowerKey !== cleanKey) {
           this._addKeyMapping(lowerKey, data);
         }
+
+        // Also map basename (e.g. "fuga.mp3" from "Assets/Sound Effects/Skills/fuga.mp3")
+        if (cleanKey.includes('/')) {
+          const baseName = cleanKey.split('/').pop();
+          const lowerBase = baseName.toLowerCase();
+          if (!sliceMap.has(baseName)) {
+            sliceMap.set(baseName, data);
+            sliceMap.set(lowerBase, data);
+            this._addKeyMapping(baseName, data);
+            if (lowerBase !== baseName) {
+              this._addKeyMapping(lowerBase, data);
+            }
+          }
+        }
+      }
+    }
+
+    // Auto-map AUDIO_CONFIG aliases to sprite slices
+    if (typeof AUDIO_CONFIG !== 'undefined' && AUDIO_CONFIG) {
+      for (const [aliasKey, aliasTarget] of Object.entries(AUDIO_CONFIG)) {
+        if (!aliasTarget) continue;
+        const targetClean = String(aliasTarget).replace(/\\/g, '/');
+        const targetLower = targetClean.toLowerCase();
+        if (sliceMap.has(targetClean) || sliceMap.has(targetLower)) {
+          const sliceData = sliceMap.get(targetClean) || sliceMap.get(targetLower);
+          sliceMap.set(aliasKey, sliceData);
+          sliceMap.set(aliasKey.toLowerCase(), sliceData);
+          this._addKeyMapping(aliasKey, sliceData);
+          this._addKeyMapping(aliasKey.toLowerCase(), sliceData);
+        }
       }
     }
 
@@ -149,8 +180,7 @@ class SoundSpriteManager {
    */
   hasSprite(keyOrSrc) {
     if (!keyOrSrc) return false;
-    const cleanKey = String(keyOrSrc).replace(/\\/g, '/');
-    return this.keyToSheetMap.has(cleanKey) || this.keyToSheetMap.has(cleanKey.toLowerCase());
+    return Boolean(this.getSpriteInfo(keyOrSrc));
   }
 
   /**
@@ -161,10 +191,31 @@ class SoundSpriteManager {
    */
   getSpriteInfo(keyOrSrc) {
     if (!keyOrSrc) return null;
-    const cleanKey = String(keyOrSrc).replace(/\\/g, '/');
-    const lowerKey = cleanKey.toLowerCase();
-    const list = this.keyToSheetListMap.get(cleanKey) || this.keyToSheetListMap.get(lowerKey);
-    if (list && list.length > 1) {
+    let cleanKey = String(keyOrSrc).replace(/\\/g, '/');
+    let lowerKey = cleanKey.toLowerCase();
+
+    // 1. Direct lookup
+    let list = this.keyToSheetListMap.get(cleanKey) || this.keyToSheetListMap.get(lowerKey);
+
+    // 2. AUDIO_CONFIG alias lookup
+    if (!list && typeof AUDIO_CONFIG !== 'undefined' && AUDIO_CONFIG && AUDIO_CONFIG[keyOrSrc]) {
+      const mapped = String(AUDIO_CONFIG[keyOrSrc]).replace(/\\/g, '/');
+      cleanKey = mapped;
+      lowerKey = mapped.toLowerCase();
+      list = this.keyToSheetListMap.get(cleanKey) || this.keyToSheetListMap.get(lowerKey);
+    }
+
+    // 3. Basename lookup (e.g. "fuga.mp3" or "Sukuna-slice.mp3")
+    if (!list && cleanKey.includes('/')) {
+      const base = cleanKey.split('/').pop();
+      list = this.keyToSheetListMap.get(base) || this.keyToSheetListMap.get(base.toLowerCase());
+      if (list) {
+        cleanKey = base;
+        lowerKey = base.toLowerCase();
+      }
+    }
+
+    if (list && list.length > 0) {
       // 1. Prefer sheet that already has a decoded buffer in memory
       for (let i = list.length - 1; i >= 0; i--) {
         const cand = list[i];
@@ -177,8 +228,25 @@ class SoundSpriteManager {
         const sheet = this.spriteSheets.get(cand.sheetId);
         if (sheet && sheet.loadingPromise) return cand;
       }
+      return list[0];
     }
     return this.keyToSheetMap.get(cleanKey) || this.keyToSheetMap.get(lowerKey) || null;
+  }
+
+  /**
+   * Resolves the characterId that owns this sound key/slice.
+   * @param {string} keyOrSrc
+   * @returns {string|null}
+   */
+  getCharacterIdForSound(keyOrSrc) {
+    const info = this.getSpriteInfo(keyOrSrc);
+    if (info && info.sheetId) {
+      const sheet = this.spriteSheets.get(info.sheetId);
+      if (sheet && sheet.characterId) {
+        return sheet.characterId;
+      }
+    }
+    return null;
   }
 
   /**

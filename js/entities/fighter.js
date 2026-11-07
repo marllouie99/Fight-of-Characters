@@ -1,4 +1,4 @@
-import { stopAllSounds, stopAllLoopingSounds, stopSound, stopSoundBySrc, fadeOutSound, stopLoopingSound } from '../systems/soundSystem.js';
+import { stopAllSounds, stopAllLoopingSounds, stopSound, stopSoundBySrc, fadeOutSound, stopLoopingSound, stopFighterVoice } from '../systems/soundSystem.js';
 import { stopArenaBgm } from '../systems/arenaBgmSystem.js';
 // ─────────────────────────────────────────────
 // BASE FIGHTER CLASS
@@ -1704,6 +1704,9 @@ export class Fighter {
     this.clearAllAttackEffects();
     if (forceCancelAll || this.areAttackEffectsSuppressed()) {
       this.clearAllAfterimages();
+      if (forceCancelAll && typeof stopFighterVoice === 'function') {
+        stopFighterVoice(this.characterId || this.type, 100);
+      }
     }
 
     const isChanneling = this.isChannelingDivineFlame || this.isChannelingDomainExpansion || 
@@ -2244,6 +2247,9 @@ export class Fighter {
     this.isDead = true;
     this._hasDied = true;
     this.stopFinisherAudio(null, 200);
+    if (typeof stopFighterVoice === 'function') {
+      stopFighterVoice(this.characterId || this.type, 60);
+    }
     clearFighterDomain(this, typeof state !== 'undefined' ? state : null);
     this.interruptAttacks(true);
     this.hitFlashTimer = 0; // Clear residual white hit-flash so corpses don't render white

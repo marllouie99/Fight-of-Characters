@@ -17,7 +17,8 @@ import {
   getSoundCacheStats,
   isSoundCached,
   isSoundAudioBuffer,
-  soundSpriteManager
+  soundSpriteManager,
+  stopFighterVoice
 } from './soundSystem.js';
 import { AUDIO_CONFIG } from '../configs/audioConfig.js';
 
@@ -28,7 +29,8 @@ export {
   preloadAudioBufferBatch,
   getSoundCacheStats,
   isSoundCached,
-  isSoundAudioBuffer
+  isSoundAudioBuffer,
+  stopFighterVoice
 };
 
 class AudioEventEmitter {
@@ -375,6 +377,10 @@ class AudioEventEmitter {
     fighter._activeVoicelineEndTime = now + durationMs;
 
     return handle;
+  }
+
+  stopFighterVoice(characterId, fadeMs = 80) {
+    stopFighterVoice(characterId, fadeMs);
   }
 
   stopAll() {
