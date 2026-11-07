@@ -107,16 +107,38 @@ const _unlockAudioOnce = () => {
 });
 
 // ─────────────────────────────────────────────
-// STARTUP PRE-WARM & SPLASH SCREEN CONTROLLER
+// STARTUP PRE-WARM & SPLASH SCREEN CONTROLLER (BALL FIGHT LEAGUE STYLE)
 // ─────────────────────────────────────────────
 function initStartupSplashScreen() {
   if (typeof document === 'undefined') return;
   const splash = document.getElementById('splash-screen');
-  const startBtn = document.getElementById('btn-splash-start');
-  const statusEl = document.getElementById('splash-status-text');
+  const loadingBox = document.getElementById('splash-loading-box');
+  const readyBox = document.getElementById('splash-ready-box');
+  const progressBar = document.getElementById('splash-progress-bar');
+  const statusText = document.getElementById('splash-status-text');
+  const statusPct = document.getElementById('splash-status-pct');
   if (!splash) return;
 
+  let isLoaded = false;
   let isDismissed = false;
+
+  const setProgress = (pct, text) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+    if (progressBar) progressBar.style.width = `${clamped}%`;
+    if (statusPct) statusPct.textContent = `${clamped}%`;
+    if (statusText && text) statusText.textContent = text;
+  };
+
+  const markReady = () => {
+    if (isLoaded) return;
+    isLoaded = true;
+    setProgress(100, 'Ready');
+    setTimeout(() => {
+      if (loadingBox) loadingBox.style.display = 'none';
+      if (readyBox) readyBox.style.display = 'flex';
+    }, 180);
+  };
+
   const dismissSplash = async () => {
     if (isDismissed) return;
     isDismissed = true;
@@ -131,40 +153,55 @@ function initStartupSplashScreen() {
     splash.classList.add('splash-hidden');
     setTimeout(() => {
       splash.style.display = 'none';
-    }, 380);
+    }, 350);
   };
 
-  if (startBtn) {
-    startBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
+  const handleInteraction = () => {
+    if (!isLoaded) {
+      markReady();
       dismissSplash();
-    });
-    startBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    } else {
       dismissSplash();
-    }, { passive: false });
-  }
+    }
+  };
 
-  splash.addEventListener('click', dismissSplash);
+  splash.addEventListener('click', handleInteraction);
   splash.addEventListener('touchend', (e) => {
     e.preventDefault();
-    dismissSplash();
+    handleInteraction();
   }, { passive: false });
 
   window.addEventListener('keydown', (e) => {
     if (!isDismissed && (e.key === ' ' || e.key === 'Enter')) {
-      dismissSplash();
+      handleInteraction();
     }
   });
 
-  if (typeof document !== 'undefined' && 'fonts' in document && document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
-      if (statusEl && !isDismissed) {
-        statusEl.textContent = 'READY • 60 FPS PRE-WARMED';
-      }
-    }).catch(() => {});
-  }
+  // Smooth loading progression sequence (~800ms)
+  setProgress(15, 'Loading game assets...');
+
+  setTimeout(() => {
+    if (!isDismissed) setProgress(45, 'Pre-warming combat shaders...');
+  }, 220);
+
+  setTimeout(() => {
+    if (!isDismissed) setProgress(75, 'Initializing audio system...');
+  }, 480);
+
+  // When fonts and core resources are ready:
+  const fontPromise = (typeof document !== 'undefined' && document.fonts && document.fonts.ready)
+    ? document.fonts.ready
+    : Promise.resolve();
+
+  fontPromise.then(() => {
+    setTimeout(() => {
+      if (!isDismissed) markReady();
+    }, 750);
+  }).catch(() => {
+    setTimeout(() => {
+      if (!isDismissed) markReady();
+    }, 750);
+  });
 }
 
 initStartupSplashScreen();

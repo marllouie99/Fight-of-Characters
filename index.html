@@ -252,28 +252,35 @@
         </button>
       </div>
 
-      <!-- STARTUP PRE-WARM & AUDIO UNLOCK SPLASH SCREEN -->
-      <div id="splash-screen" class="splash-screen" role="dialog" aria-label="Game Startup Screen">
-        <div class="splash-badge">★ ARCADE FIGHTING SIMULATOR ★</div>
+      <!-- STARTUP LOADING & PRE-WARM SPLASH SCREEN (BALL FIGHT LEAGUE STYLE) -->
+      <div id="splash-screen" class="splash-screen" role="dialog" aria-label="Game Startup Loading Screen">
         <div class="splash-center">
+          <div class="splash-emblem">
+            <div class="splash-ball splash-ball-left"></div>
+            <div class="splash-clash-sparks">⚔️</div>
+            <div class="splash-ball splash-ball-right"></div>
+          </div>
           <div class="splash-title-wrap">
             <h1 class="splash-title">FIGHT OF CHARACTERS</h1>
-            <div class="splash-subtitle">CIRCLE MINI-BATTLE • MOBILE 60 FPS</div>
+            <div class="splash-subtitle">BALL FIGHT BATTLE</div>
           </div>
-          <button id="btn-splash-start" class="splash-start-btn">
-            <span class="splash-btn-icon">⚔️</span> TAP TO START
-          </button>
-          <div class="splash-meta">
-            <div class="splash-status">
-              <span class="splash-status-dot"></span>
-              <span id="splash-status-text">READY • 60 FPS PRE-WARMED</span>
+
+          <!-- Loading Progress Section -->
+          <div id="splash-loading-box" class="splash-loading-box">
+            <div class="splash-progress-track">
+              <div id="splash-progress-bar" class="splash-progress-bar"></div>
             </div>
-            <div class="splash-audio-hint">🔊 Tap screen to enable combat audio</div>
+            <div class="splash-status-row">
+              <span id="splash-status-text" class="splash-status-text">Loading game assets...</span>
+              <span id="splash-status-pct" class="splash-status-pct">0%</span>
+            </div>
           </div>
-        </div>
-        <div class="splash-footer">
-          <span>v2.5 WEAPON BALL Z STANDARD</span>
-          <span>100% RETINA PRE-BAKED</span>
+
+          <!-- Tap to Start Prompt (fades in when 100% loaded) -->
+          <div id="splash-ready-box" class="splash-ready-box" style="display: none;">
+            <div class="splash-tap-prompt">TAP TO START</div>
+            <div class="splash-tap-sub">Touch anywhere to enter</div>
+          </div>
         </div>
       </div>
 

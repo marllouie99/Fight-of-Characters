@@ -6551,7 +6551,7 @@ html.mobile-device .in-combat-touch-lock canvas {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * STARTUP SPLASH SCREEN & AUDIO UNLOCK OVERLAY (Rule 35)
+ * STARTUP SPLASH SCREEN & PRE-WARM LOADING SCREEN (BALL FIGHT LEAGUE STYLE)
  * ───────────────────────────────────────────────────────────────────────────── */
 .splash-screen {
   position: absolute;
@@ -6559,52 +6559,91 @@ html.mobile-device .in-combat-touch-lock canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 50% 38%, #141724 0%, #07090E 75%, #030407 100%);
+  background: radial-gradient(circle at 50% 45%, #151821 0%, #08090C 70%, #030406 100%);
   z-index: 50000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 48px 24px 36px 24px;
+  justify-content: center;
   box-sizing: border-box;
   text-align: center;
   transition: opacity 0.35s ease, transform 0.35s ease;
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
+  padding: 24px;
 }
 
 .splash-screen.splash-hidden {
   opacity: 0;
   pointer-events: none;
-  transform: scale(1.02);
-}
-
-.splash-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 14px;
-  background: rgba(255, 51, 102, 0.12);
-  border: 1px solid rgba(255, 51, 102, 0.35);
-  border-radius: 999px;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: #FF3366;
-  text-transform: uppercase;
+  transform: scale(1.03);
 }
 
 .splash-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  justify-content: center;
+  gap: 22px;
   width: 100%;
-  max-width: 420px;
+  max-width: 380px;
 }
 
+/* Ball Fight League Two-Orb Emblem */
+.splash-emblem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 52px;
+  margin-bottom: 2px;
+}
+
+.splash-ball {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  position: relative;
+  border: 2px solid #0E0F14;
+}
+
+.splash-ball-left {
+  background: radial-gradient(circle at 35% 35%, #FFA07A 0%, #FF3344 60%, #8B0000 100%);
+  box-shadow: 0 0 16px rgba(255, 51, 68, 0.45);
+  animation: splashBallFloatL 2.4s ease-in-out infinite alternate;
+}
+
+.splash-ball-right {
+  background: radial-gradient(circle at 35% 35%, #70FFFF 0%, #00B4D8 60%, #004488 100%);
+  box-shadow: 0 0 16px rgba(0, 180, 216, 0.45);
+  animation: splashBallFloatR 2.4s ease-in-out infinite alternate;
+}
+
+.splash-clash-sparks {
+  font-size: 20px;
+  color: #FFFFFF;
+  filter: drop-shadow(0 0 8px #FFD700);
+  animation: splashSparkPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes splashBallFloatL {
+  0% { transform: translateY(0px) rotate(-6deg); }
+  100% { transform: translateY(-4px) rotate(4deg); }
+}
+
+@keyframes splashBallFloatR {
+  0% { transform: translateY(0px) rotate(6deg); }
+  100% { transform: translateY(-4px) rotate(-4deg); }
+}
+
+@keyframes splashSparkPulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.15); opacity: 1.0; }
+}
+
+/* Title & Subtitle */
 .splash-title-wrap {
   display: flex;
   flex-direction: column;
@@ -6614,112 +6653,117 @@ html.mobile-device .in-combat-touch-lock canvas {
 
 .splash-title {
   font-family: 'Outfit', 'Bangers', sans-serif;
-  font-size: clamp(34px, 8vw, 44px);
+  font-size: clamp(30px, 7.5vw, 40px);
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: 2px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FFE600 50%, #FF3366 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 16px rgba(255, 51, 102, 0.45));
+  color: #FFFFFF;
+  text-shadow: 0 2px 14px rgba(255, 255, 255, 0.25);
   margin: 0;
 }
 
 .splash-subtitle {
   font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  color: #94A3B8;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 5px;
+  color: #38BDF8;
   text-transform: uppercase;
 }
 
-.splash-start-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 280px;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, #FF3366 0%, #E11D48 60%, #BE123C 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-  color: #FFFFFF;
-  font-family: 'Outfit', 'Rajdhani', sans-serif;
-  font-size: 17px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(255, 51, 102, 0.45), 0 0 12px rgba(255, 51, 102, 0.3);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  animation: splash-pulse-glow 2s infinite ease-in-out;
-}
-
-.splash-start-btn:active {
-  transform: scale(0.96);
-}
-
-@keyframes splash-pulse-glow {
-  0%, 100% {
-    box-shadow: 0 8px 24px rgba(255, 51, 102, 0.4), 0 0 10px rgba(255, 51, 102, 0.2);
-  }
-  50% {
-    box-shadow: 0 10px 32px rgba(255, 51, 102, 0.65), 0 0 20px rgba(255, 51, 102, 0.45);
-  }
-}
-
-.splash-meta {
+/* Loading Box & Progress Bar */
+.splash-loading-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 10px;
+  width: 100%;
+  max-width: 240px;
+  margin-top: 10px;
+  transition: opacity 0.25s ease;
 }
 
-.splash-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'Rajdhani', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #22C55E;
+.splash-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.splash-status-dot {
-  width: 7px;
-  height: 7px;
-  background: #22C55E;
-  border-radius: 50%;
-  box-shadow: 0 0 8px #22C55E;
-  animation: splash-dot-pulse 1.5s infinite;
+.splash-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FF3366, #FF9900, #38BDF8);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  transition: width 0.15s ease-out;
 }
 
-@keyframes splash-dot-pulse {
-  0%, 100% { opacity: 0.6; transform: scale(0.9); }
-  50% { opacity: 1.0; transform: scale(1.15); }
-}
-
-.splash-audio-hint {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px;
-  color: #64748B;
-  letter-spacing: 0.5px;
-}
-
-.splash-footer {
+.splash-status-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  padding: 0 2px;
+}
+
+.splash-status-text {
+  font-family: 'Rajdhani', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #94A3B8;
+}
+
+.splash-status-pct {
   font-family: 'Rajdhani', monospace;
   font-size: 11px;
   font-weight: 700;
-  color: #475569;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  color: #38BDF8;
+}
+
+/* Tap to Start Box */
+.splash-ready-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  animation: splashFadeInUp 0.35s ease-out forwards;
+}
+
+.splash-tap-prompt {
+  font-family: 'Outfit', 'Rajdhani', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #FFFFFF;
+  text-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
+  animation: splashTapPulse 1.6s ease-in-out infinite;
+}
+
+.splash-tap-sub {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: #64748B;
+  text-transform: uppercase;
+}
+
+@keyframes splashTapPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.98); }
+  50% { opacity: 1.0; transform: scale(1.02); }
+}
+
+@keyframes splashFadeInUp {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 
