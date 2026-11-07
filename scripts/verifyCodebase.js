@@ -747,9 +747,19 @@ async function verifyAll() {
       execSync('node scripts/testTagMatch.mjs', { stdio: 'inherit' });
       execSync('node scripts/testInteractions.mjs', { stdio: 'inherit' });
       console.log('\n✅ All simulation and runtime tests passed successfully!');
-      process.exit(0);
     } catch (err) {
       console.error('🚨 Simulation tests failed!');
+      process.exit(1);
+    }
+
+    // 4. Run Mobile 60 FPS Combat Performance Budget Gate (Rule 35)
+    console.log('\n⚡ Running Mobile 60 FPS Combat Performance Budget Gate (Rule 35)...');
+    try {
+      execSync('node scripts/benchmarkCombat.mjs --all --ticks=300 --warmup=30 --gate', { stdio: 'inherit' });
+      console.log('\n✅ Mobile 60 FPS Combat Performance Budget Gate passed successfully!');
+      process.exit(0);
+    } catch (err) {
+      console.error('🚨 Mobile 60 FPS Combat Performance Budget Gate failed! Frame time or spike exceeded budget.');
       process.exit(1);
     }
   }

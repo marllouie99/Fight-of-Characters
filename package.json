@@ -16,6 +16,7 @@
     "test:interactions": "node scripts/testInteractions.mjs",
     "bench:combat": "node scripts/benchmarkCombat.mjs",
     "bench:combat:all": "node scripts/benchmarkCombat.mjs --all",
+    "bench:gate": "node scripts/benchmarkCombat.mjs --all --ticks=300 --warmup=30 --gate",
     "scaffold:fighter": "node scripts/scaffoldFighter.mjs",
     "scaffold:boss": "node scripts/scaffoldBossConfig.mjs",
     "patch-notes": "node scripts/generatePatchNotes.mjs",

@@ -225,7 +225,16 @@ const CANONICAL_MATCHUPS = [
 ];
 
 // 5. Benchmark runner for a single matchup
-function runMatchupBenchmark({ f1Id, f2Id, ticks = 1000, warmupTicks = 50, verbose = false }) {
+function runMatchupBenchmark({
+  f1Id,
+  f2Id,
+  ticks = 1000,
+  warmupTicks = 50,
+  verbose = false,
+  isGate = false,
+  maxAvgMs = 5.0,
+  maxP99Ms = 16.66
+}) {
   const f1Def = findFighterDef(f1Id, FIGHTER_DEFS);
   const f2Def = findFighterDef(f2Id, FIGHTER_DEFS);
 
@@ -383,6 +392,14 @@ function runMatchupBenchmark({ f1Id, f2Id, ticks = 1000, warmupTicks = 50, verbo
     passed = false;
   }
 
+  // Gate Enforcement: Stricter CI / pre-commit performance budget
+  if (isGate) {
+    if (avgMs > maxAvgMs || p99Ms > maxP99Ms) {
+      passed = false;
+      grade = 'GATE_FAIL';
+    }
+  }
+
   return {
     f1Name: f1Def.name || f1Def.id,
     f2Name: f2Def.name || f2Def.id,
@@ -403,7 +420,10 @@ function runMatchupBenchmark({ f1Id, f2Id, ticks = 1000, warmupTicks = 50, verbo
     mobile60FpsHeadroom,
     speedupMultiplier,
     grade,
-    passed
+    passed,
+    isGate,
+    maxAvgMs,
+    maxP99Ms
   };
 }
 
@@ -423,6 +443,9 @@ function printMatchupCard(res) {
   console.log(`║   • Duration:       ${pad(`${res.ticks.toLocaleString()} simulated frames (60 FPS Mobile Loop)`, 54)}║`);
   console.log(`║   • Mode / Arena:   ${pad(`1v1 Duel | 450×450 Vertical Layout (Rule 28)`, 54)}║`);
   console.log(`║   • Hardware Target:${pad(`Mobile 60 FPS Standard (Rule 35) [16.66 ms budget]`, 54)}║`);
+  if (res.isGate) {
+    console.log(`║   • Budget Gate:    ${pad(`ACTIVE (Max Avg <= ${res.maxAvgMs.toFixed(2)} ms, Max 99th% <= ${res.maxP99Ms.toFixed(2)} ms)`, 54)}║`);
+  }
   console.log(`╠${subBorder}╣`);
   console.log(`║ Frame Execution Times (Simulation JIT + Canvas 2D Raster):                  ║`);
   console.log(`║   • Average Frame:  ${rpad(res.avgMs.toFixed(2), 6)} ms   (${rpad(res.fpsEquivalent.toFixed(0), 4)} Headless FPS | +${res.mobile60FpsHeadroom.toFixed(1)}% headroom)   ║`);
@@ -443,7 +466,7 @@ function printMatchupCard(res) {
 }
 
 // 7. Formats leaderboard table for all canonical matchups
-function printLeaderboard(results) {
+function printLeaderboard(results, isGate = false, maxAvgMs = 5.0, maxP99Ms = 16.66) {
   const border = '═'.repeat(88);
   const subBorder = '─'.repeat(88);
   const pad = (s, len) => String(s).padEnd(len);
@@ -467,8 +490,12 @@ function printLeaderboard(results) {
 
   console.log(`╠${border}╣`);
   const summaryStr = allPassed
-    ? '✅ SUITE STATUS: ALL MATCHUPS PASSED (100% Mobile 60 FPS Headroom Compliant)'
-    : '❌ SUITE STATUS: PERFORMANCE REGRESSIONS DETECTED (Exceeded 16.66ms Mobile Target)';
+    ? (isGate
+        ? `✅ GATE STATUS: ALL MATCHUPS PASSED (Avg <= ${maxAvgMs.toFixed(1)}ms, 99th% <= ${maxP99Ms.toFixed(1)}ms)`
+        : '✅ SUITE STATUS: ALL MATCHUPS PASSED (100% Mobile 60 FPS Headroom Compliant)')
+    : (isGate
+        ? `❌ GATE STATUS: PERFORMANCE REGRESSION DETECTED (Exceeded ${maxAvgMs.toFixed(1)}ms / ${maxP99Ms.toFixed(1)}ms)`
+        : '❌ SUITE STATUS: PERFORMANCE REGRESSIONS DETECTED (Exceeded 16.66ms Mobile Target)');
   console.log(`║ ${pad(summaryStr, 86)} ║`);
   console.log(`╚${border}╝\n`);
 }
@@ -482,10 +509,15 @@ async function main() {
 🥋 CIRCLE MINI-BATTLE COMBAT BENCHMARK HARNESS
 Usage:
   npm run bench:combat
+  npm run bench:combat:all
   node scripts/benchmarkCombat.mjs [options]
 
 Options:
   --all               Run all 5 canonical matchups and print a comparative leaderboard
+  --gate, --ci        Run in CI/Budget Gate mode (fails if avg > 5.0ms or 99th% > 16.66ms)
+  --max-avg=<ms>      Custom gate max average frame time in ms (default: 5.0)
+  --max-p99=<ms>      Custom gate max 99th% frame time in ms (default: 16.66)
+  --summary-only      Only print final leaderboard and status, suppressing individual cards
   --f1=<id>           First fighter ID or name (default: toji)
   --f2=<id>           Second fighter ID or name (default: sukuna)
   --ticks=<count>     Number of simulated frames per matchup (default: 1000)
@@ -504,6 +536,10 @@ Canonical Matchups (--all):
   }
 
   let isAll = false;
+  let isGate = false;
+  let maxAvgMs = 5.0;
+  let maxP99Ms = 16.66;
+  let summaryOnly = false;
   let f1 = 'toji';
   let f2 = 'sukuna';
   let ticks = 1000;
@@ -513,33 +549,53 @@ Canonical Matchups (--all):
   for (const arg of args) {
     if (arg === '--all') isAll = true;
     else if (arg === '--json') jsonOutput = true;
+    else if (arg === '--gate' || arg === '--ci') isGate = true;
+    else if (arg === '--summary-only') summaryOnly = true;
+    else if (arg.startsWith('--max-avg=')) maxAvgMs = parseFloat(arg.slice(10)) || 5.0;
+    else if (arg.startsWith('--max-p99=')) maxP99Ms = parseFloat(arg.slice(10)) || 16.66;
     else if (arg.startsWith('--f1=')) f1 = arg.slice(5);
     else if (arg.startsWith('--f2=')) f2 = arg.slice(5);
     else if (arg.startsWith('--ticks=')) ticks = parseInt(arg.slice(8), 10) || 1000;
     else if (arg.startsWith('--warmup=')) warmup = parseInt(arg.slice(9), 10) || 50;
   }
 
-  console.log(`\n🚀 Initializing Combat Performance Benchmark (${ticks} frames/matchup, mobile mode)...`);
+  console.log(`\n🚀 Initializing Combat Performance Benchmark (${ticks} frames/matchup, mobile mode${isGate ? ' [GATE ACTIVE]' : ''})...`);
 
   const results = [];
 
   if (isAll) {
     for (const m of CANONICAL_MATCHUPS) {
       console.log(`   ► Benchmarking ${m.title}...`);
-      const res = runMatchupBenchmark({ f1Id: m.f1, f2Id: m.f2, ticks, warmupTicks: warmup });
+      const res = runMatchupBenchmark({
+        f1Id: m.f1,
+        f2Id: m.f2,
+        ticks,
+        warmupTicks: warmup,
+        isGate,
+        maxAvgMs,
+        maxP99Ms
+      });
       results.push(res);
-      if (!jsonOutput) {
+      if (!jsonOutput && !summaryOnly) {
         printMatchupCard(res);
       }
     }
     if (!jsonOutput) {
-      printLeaderboard(results);
+      printLeaderboard(results, isGate, maxAvgMs, maxP99Ms);
     }
   } else {
     console.log(`   ► Benchmarking ${f1} vs ${f2}...`);
-    const res = runMatchupBenchmark({ f1Id: f1, f2Id: f2, ticks, warmupTicks: warmup });
+    const res = runMatchupBenchmark({
+      f1Id: f1,
+      f2Id: f2,
+      ticks,
+      warmupTicks: warmup,
+      isGate,
+      maxAvgMs,
+      maxP99Ms
+    });
     results.push(res);
-    if (!jsonOutput) {
+    if (!jsonOutput && !summaryOnly) {
       printMatchupCard(res);
     }
   }
@@ -550,9 +606,16 @@ Canonical Matchups (--all):
 
   const hasFailures = results.some(r => !r.passed);
   if (hasFailures) {
-    console.error('❌ Benchmark failed: One or more matchups exceeded mobile frame budget.');
+    if (isGate) {
+      console.error(`❌ [PERFORMANCE BUDGET GATE FAILED]: One or more matchups exceeded the mobile budget limit (Avg <= ${maxAvgMs.toFixed(2)} ms, 99th% <= ${maxP99Ms.toFixed(2)} ms). Commit blocked.`);
+    } else {
+      console.error('❌ Benchmark failed: One or more matchups exceeded mobile frame budget.');
+    }
     process.exit(1);
   } else {
+    if (isGate) {
+      console.log(`⚡ [PERFORMANCE BUDGET GATE VERIFIED]: All ${results.length} canonical matchups strictly satisfy the mobile 60 FPS budget!`);
+    }
     process.exit(0);
   }
 }

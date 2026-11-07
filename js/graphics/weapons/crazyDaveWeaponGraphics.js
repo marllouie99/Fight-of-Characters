@@ -224,6 +224,138 @@ export const CrazyDave_WEAPON_GRAPHICS = {
   }
 };
 
+// High-performance pre-baked offscreen canvas quad for Crazy Dave's Shovel (Rule 35)
+let _cachedCrazyDaveShovelCanvas = null;
+
+function _getCrazyDaveShovelCanvas() {
+  if (_cachedCrazyDaveShovelCanvas) return _cachedCrazyDaveShovelCanvas;
+  if (typeof document === 'undefined') return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 74;
+  canvas.height = 24;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(2, 12);
+
+  // 1. D-GRIP HANDLE (X: 0..8, Y: -7..7)
+  ctx.fillStyle = '#0E0F14';
+  ctx.fillRect(0, -7, 3, 14);
+  ctx.fillRect(2, -8, 6, 3);
+  ctx.fillRect(2, 5, 6, 3);
+  ctx.fillRect(6, -4, 2, 8);
+
+  ctx.fillStyle = '#451A03';
+  ctx.fillRect(1, -6, 2, 12);
+
+  ctx.fillStyle = '#78350F';
+  ctx.fillRect(2, -6, 4, 2);
+  ctx.fillRect(2, 4, 4, 2);
+  ctx.fillRect(1, -4, 1, 8);
+
+  ctx.fillStyle = '#B45309';
+  ctx.fillRect(2, -7, 4, 1);
+  ctx.fillRect(1, -5, 1, 5);
+  ctx.fillStyle = '#FEF08A';
+  ctx.fillRect(3, -7, 2, 1);
+
+  // 2. WOODEN SHAFT (X: 7..37, Y: -3..3)
+  ctx.fillStyle = '#0E0F14';
+  ctx.fillRect(7, -3, 30, 1);
+  ctx.fillRect(7, 2, 30, 1);
+
+  ctx.fillStyle = '#78350F';
+  ctx.fillRect(7, -2, 30, 4);
+
+  ctx.fillStyle = '#B45309';
+  ctx.fillRect(7, -2, 30, 1);
+
+  ctx.fillStyle = '#D97706';
+  ctx.fillRect(12, -2, 5, 1);
+  ctx.fillRect(22, -2, 7, 1);
+  ctx.fillRect(32, -2, 3, 1);
+  ctx.fillStyle = '#9A3412';
+  ctx.fillRect(16, -1, 4, 1);
+  ctx.fillRect(27, -1, 4, 1);
+
+  ctx.fillStyle = '#451A03';
+  ctx.fillRect(7, 1, 30, 1);
+
+  // 3. REINFORCED STEEL SOCKET COLLAR (X: 36..42, Y: -5..5)
+  ctx.fillStyle = '#0E0F14';
+  ctx.fillRect(36, -5, 6, 10);
+
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(37, -4, 4, 8);
+
+  ctx.fillStyle = '#64748B';
+  ctx.fillRect(37, -4, 4, 2);
+  ctx.fillStyle = '#E2E8F0';
+  ctx.fillRect(38, -4, 2, 1);
+
+  ctx.fillStyle = '#0E0F14';
+  ctx.fillRect(38, -1, 2, 2);
+  ctx.fillStyle = '#CBD5E1';
+  ctx.fillRect(38, -1, 1, 1);
+
+  // 4. METALLIC STEEL SPADE SCOOP HEAD (X: 42..66, Y: -9..9)
+  ctx.fillStyle = '#0E0F14';
+  ctx.fillRect(42, -9, 8, 2);
+  ctx.fillRect(42, 7, 8, 2);
+  ctx.fillRect(50, -8, 6, 2);
+  ctx.fillRect(50, 6, 6, 2);
+  ctx.fillRect(55, -6, 5, 2);
+  ctx.fillRect(55, 4, 5, 2);
+  ctx.fillRect(59, -4, 4, 2);
+  ctx.fillRect(59, 2, 4, 2);
+  ctx.fillRect(62, -2, 3, 2);
+  ctx.fillRect(62, 0, 3, 2);
+  ctx.fillRect(65, -1, 2, 2);
+
+  ctx.fillStyle = '#94A3B8';
+  ctx.fillRect(42, -7, 8, 14);
+  ctx.fillRect(50, -6, 6, 12);
+  ctx.fillRect(55, -4, 5, 8);
+  ctx.fillRect(59, -2, 4, 4);
+  ctx.fillRect(62, -1, 3, 2);
+
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(44, -4, 6, 8);
+  ctx.fillRect(51, -2, 4, 4);
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(45, -2, 4, 4);
+
+  ctx.fillStyle = '#CBD5E1';
+  ctx.fillRect(43, -7, 6, 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(43, -7, 4, 1);
+  ctx.fillRect(50, -6, 4, 1);
+  ctx.fillRect(55, -4, 3, 1);
+  ctx.fillRect(59, -2, 2, 1);
+
+  ctx.fillStyle = '#E2E8F0';
+  ctx.fillRect(52, -1, 7, 1);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(55, 0, 6, 1);
+
+  ctx.fillStyle = '#1E293B';
+  ctx.fillRect(43, 5, 6, 2);
+  ctx.fillRect(50, 4, 4, 2);
+  ctx.fillRect(55, 2, 3, 2);
+
+  ctx.fillStyle = '#78350F';
+  ctx.fillRect(61, 0, 2, 1);
+  ctx.fillRect(58, 2, 2, 1);
+  ctx.fillStyle = '#451A03';
+  ctx.fillRect(63, -1, 2, 1);
+  ctx.fillStyle = '#15803D';
+  ctx.fillRect(53, 5, 2, 1);
+
+  _cachedCrazyDaveShovelCanvas = canvas;
+  return _cachedCrazyDaveShovelCanvas;
+}
+
 /**
  * Draws Crazy Dave's Shovel in 100% discrete Pixel Art style.
  * Features an authentic walnut D-grip, grained wooden shaft, reinforced steel socket,
@@ -260,136 +392,11 @@ export function drawCrazyDaveShovel(
   const scale = (r / 25) * 0.95;
   ctx.scale(scale, scale);
 
-  // 1. D-GRIP HANDLE (X: 0..8, Y: -7..7)
-  // Outer Manga Dark Ink Outline (#0E0F14)
-  ctx.fillStyle = '#0E0F14';
-  ctx.fillRect(0, -7, 3, 14);
-  ctx.fillRect(2, -8, 6, 3);
-  ctx.fillRect(2, 5, 6, 3);
-  ctx.fillRect(6, -4, 2, 8);
-
-  // Deep Mahogany Base (#451A03)
-  ctx.fillStyle = '#451A03';
-  ctx.fillRect(1, -6, 2, 12);
-
-  // Rich Walnut Wood Body (#78350F)
-  ctx.fillStyle = '#78350F';
-  ctx.fillRect(2, -6, 4, 2);
-  ctx.fillRect(2, 4, 4, 2);
-  ctx.fillRect(1, -4, 1, 8);
-
-  // Amber Wood Grain Highlights (#B45309 / #D97706)
-  ctx.fillStyle = '#B45309';
-  ctx.fillRect(2, -7, 4, 1);
-  ctx.fillRect(1, -5, 1, 5);
-  ctx.fillStyle = '#FEF08A'; // Specular top glint
-  ctx.fillRect(3, -7, 2, 1);
-
-  // 2. WOODEN SHAFT (X: 7..37, Y: -3..3)
-  // Top & Bottom Manga Ink Borders
-  ctx.fillStyle = '#0E0F14';
-  ctx.fillRect(7, -3, 30, 1);
-  ctx.fillRect(7, 2, 30, 1);
-
-  // Walnut Wood Core (#78350F)
-  ctx.fillStyle = '#78350F';
-  ctx.fillRect(7, -2, 30, 4);
-
-  // Upper Wood Grain Highlight (#B45309)
-  ctx.fillStyle = '#B45309';
-  ctx.fillRect(7, -2, 30, 1);
-
-  // Tactile Grain Streaks (#D97706 & #9A3412)
-  ctx.fillStyle = '#D97706';
-  ctx.fillRect(12, -2, 5, 1);
-  ctx.fillRect(22, -2, 7, 1);
-  ctx.fillRect(32, -2, 3, 1);
-  ctx.fillStyle = '#9A3412';
-  ctx.fillRect(16, -1, 4, 1);
-  ctx.fillRect(27, -1, 4, 1);
-
-  // Underside Shadow Band (#451A03)
-  ctx.fillStyle = '#451A03';
-  ctx.fillRect(7, 1, 30, 1);
-
-  // 3. REINFORCED STEEL SOCKET COLLAR (X: 36..42, Y: -5..5)
-  ctx.fillStyle = '#0E0F14';
-  ctx.fillRect(36, -5, 6, 10);
-
-  ctx.fillStyle = '#334155'; // Dark Parkerized Steel
-  ctx.fillRect(37, -4, 4, 8);
-
-  // Socket Upper Chamfer Highlight (#64748B & #E2E8F0)
-  ctx.fillStyle = '#64748B';
-  ctx.fillRect(37, -4, 4, 2);
-  ctx.fillStyle = '#E2E8F0';
-  ctx.fillRect(38, -4, 2, 1);
-
-  // Hardened Rivet Pin
-  ctx.fillStyle = '#0E0F14';
-  ctx.fillRect(38, -1, 2, 2);
-  ctx.fillStyle = '#CBD5E1';
-  ctx.fillRect(38, -1, 1, 1);
-
-  // 4. METALLIC STEEL SPADE SCOOP HEAD (X: 42..66, Y: -9..9)
-  // Step 4a: Outer Dark Manga Ink Shell (#0E0F14)
-  ctx.fillStyle = '#0E0F14';
-  ctx.fillRect(42, -9, 8, 2);
-  ctx.fillRect(42, 7, 8, 2);
-  ctx.fillRect(50, -8, 6, 2);
-  ctx.fillRect(50, 6, 6, 2);
-  ctx.fillRect(55, -6, 5, 2);
-  ctx.fillRect(55, 4, 5, 2);
-  ctx.fillRect(59, -4, 4, 2);
-  ctx.fillRect(59, 2, 4, 2);
-  ctx.fillRect(62, -2, 3, 2);
-  ctx.fillRect(62, 0, 3, 2);
-  ctx.fillRect(65, -1, 2, 2); // Pointed Spade Tip
-
-  // Step 4b: Polished Slate Steel Base Body (#94A3B8)
-  ctx.fillStyle = '#94A3B8';
-  ctx.fillRect(42, -7, 8, 14);
-  ctx.fillRect(50, -6, 6, 12);
-  ctx.fillRect(55, -4, 5, 8);
-  ctx.fillRect(59, -2, 4, 4);
-  ctx.fillRect(62, -1, 3, 2);
-
-  // Step 4c: Concave Dish / Hollow Depth Shadow (#475569 & #334155)
-  ctx.fillStyle = '#475569';
-  ctx.fillRect(44, -4, 6, 8);
-  ctx.fillRect(51, -2, 4, 4);
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(45, -2, 4, 4);
-
-  // Step 4d: Specular Blade Ridge & Top Edge Glint (#CBD5E1, #E2E8F0, #FFFFFF)
-  ctx.fillStyle = '#CBD5E1';
-  ctx.fillRect(43, -7, 6, 2);
-  ctx.fillStyle = '#FFFFFF'; // Pure Specular Highlight
-  ctx.fillRect(43, -7, 4, 1);
-  ctx.fillRect(50, -6, 4, 1);
-  ctx.fillRect(55, -4, 3, 1);
-  ctx.fillRect(59, -2, 2, 1);
-
-  // Central Spine Ridge
-  ctx.fillStyle = '#E2E8F0';
-  ctx.fillRect(52, -1, 7, 1);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(55, 0, 6, 1);
-
-  // Step 4e: Underside Bevel Shadow (#1E293B)
-  ctx.fillStyle = '#1E293B';
-  ctx.fillRect(43, 5, 6, 2);
-  ctx.fillRect(50, 4, 4, 2);
-  ctx.fillRect(55, 2, 3, 2);
-
-  // Step 4f: PvZ Gardener Soil & Lawn Grass Stains on Edge
-  ctx.fillStyle = '#78350F'; // Earthy Loam
-  ctx.fillRect(61, 0, 2, 1);
-  ctx.fillRect(58, 2, 2, 1);
-  ctx.fillStyle = '#451A03'; // Deep Soil
-  ctx.fillRect(63, -1, 2, 1);
-  ctx.fillStyle = '#15803D'; // Grass Stain
-  ctx.fillRect(53, 5, 2, 1);
+  // 1-4. Shovel Quad Blit (Rule 35: 100% pre-baked offscreen canvas quad)
+  const shovelCanvas = _getCrazyDaveShovelCanvas();
+  if (shovelCanvas) {
+    ctx.drawImage(shovelCanvas, -2, -12);
+  }
 
   // 5. HAND GRIP (When rendered standalone or in preview)
   if (!shouldHideHands) {
@@ -398,6 +405,139 @@ export function drawCrazyDaveShovel(
   }
 
   ctx.restore();
+}
+
+// Pre-baked offscreen radial glow and procedural sun caches (Rule 35)
+let _sunBloomCanvas = null;
+let _sunLightCanvas = null;
+const _pixelSunCanvasCache = new Map();
+
+function _getSunBloomCanvas() {
+  if (_sunBloomCanvas) return _sunBloomCanvas;
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const grad = ctx.createRadialGradient(64, 64, 8, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255, 250, 205, 0.42)');
+  grad.addColorStop(0.38, 'rgba(255, 205, 45, 0.20)');
+  grad.addColorStop(1, 'rgba(255, 174, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(64, 64, 64, 0, Math.PI * 2);
+  ctx.fill();
+  _sunBloomCanvas = canvas;
+  return _sunBloomCanvas;
+}
+
+function _getSunLightCanvas() {
+  if (_sunLightCanvas) return _sunLightCanvas;
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const grad = ctx.createRadialGradient(42, 38, 0, 56, 56, 64);
+  grad.addColorStop(0, 'rgba(255, 255, 238, 0.50)');
+  grad.addColorStop(0.42, 'rgba(255, 240, 160, 0.17)');
+  grad.addColorStop(1, 'rgba(255, 220, 90, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(64, 64, 64, 0, Math.PI * 2);
+  ctx.fill();
+  _sunLightCanvas = canvas;
+  return _sunLightCanvas;
+}
+
+function _getProceduralPixelSunCanvas(r) {
+  if (typeof document === 'undefined') return null;
+  const intR = Math.round(r || 30);
+  let cached = _pixelSunCanvasCache.get(intR);
+  if (cached) return cached;
+
+  const P = 2.0;
+  const maxR = intR + 10;
+  const size = Math.ceil(maxR * 2 + P * 4);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size / 2);
+
+  // 1. Ray Petals
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * Math.PI) / 4;
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+    const perpX = -sinA;
+    const perpY = cosA;
+
+    const tipDist = intR + 6;
+    const baseDist = intR - 2;
+
+    for (let d = baseDist; d <= tipDist; d += P) {
+      const t = (d - baseDist) / (tipDist - baseDist);
+      const halfW = (1.0 - t * 0.75) * 2.8;
+
+      for (let w = -halfW; w <= halfW; w += 1.0) {
+        const px = Math.round(cosA * d + perpX * w);
+        const py = Math.round(sinA * d + perpY * w);
+
+        const isTip = t > 0.8;
+        const isEdge = Math.abs(w) >= halfW - 0.8;
+
+        let col = '#FBBF24';
+        if (isTip || isEdge) col = '#B45309';
+        else if (t < 0.4) col = '#FDE047';
+
+        ctx.fillStyle = col;
+        ctx.fillRect(px - P / 2, py - P / 2, P, P);
+      }
+    }
+  }
+
+  // 2. Central Sun Disk
+  const steps = Math.ceil((intR + P) / P);
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      const rx = gx * P;
+      const ry = gy * P;
+      const dist = Math.hypot(rx, ry);
+      if (dist > intR) continue;
+
+      const px = Math.round(rx - P / 2);
+      const py = Math.round(ry - P / 2);
+
+      const isBorder = (
+        Math.hypot((gx + 1) * P, gy * P) > intR ||
+        Math.hypot((gx - 1) * P, gy * P) > intR ||
+        Math.hypot(gx * P, (gy + 1) * P) > intR ||
+        Math.hypot(gx * P, (gy - 1) * P) > intR
+      );
+
+      if (isBorder) {
+        ctx.fillStyle = '#78350F';
+      } else if (rx >= -intR * 0.55 && rx <= -intR * 0.25 && ry >= -intR * 0.55 && ry <= -intR * 0.25) {
+        ctx.fillStyle = '#FFFFFF';
+      } else if (rx < 0 && ry < 0 && dist < intR * 0.75) {
+        ctx.fillStyle = '#FEF08A';
+      } else if (rx > intR * 0.35 || ry > intR * 0.35) {
+        ctx.fillStyle = '#EAB308';
+      } else {
+        ctx.fillStyle = '#FACC15';
+      }
+
+      ctx.fillRect(px, py, P, P);
+    }
+  }
+
+  _pixelSunCanvasCache.set(intR, canvas);
+  return canvas;
 }
 
 /**
@@ -414,20 +554,17 @@ export function drawSunDrop(ctx, sun) {
   ctx.save();
   ctx.translate(x, y);
 
+  // 1. Pre-baked Warm Ambient Bloom Quad (Rule 35)
   const bloomRadius = r * 1.85 + pulse;
-  const bloom = ctx.createRadialGradient(0, 0, r * 0.12, 0, 0, bloomRadius);
-  bloom.addColorStop(0, 'rgba(255, 250, 205, 0.42)');
-  bloom.addColorStop(0.38, 'rgba(255, 205, 45, 0.20)');
-  bloom.addColorStop(1, 'rgba(255, 174, 0, 0)');
-  ctx.fillStyle = bloom;
-  ctx.beginPath();
-  ctx.arc(0, 0, bloomRadius, 0, Math.PI * 2);
-  ctx.fill();
+  const bloomGlow = _getSunBloomCanvas();
+  if (bloomGlow) {
+    ctx.drawImage(bloomGlow, -bloomRadius, -bloomRadius, bloomRadius * 2, bloomRadius * 2);
+  }
 
   const sunImg = getSunSprite();
   const hasImg = Boolean(sunImg && sunImg.complete && sunImg.naturalWidth > 0);
 
-  // 1. Soft Warm Ambient Halo Ring (Zero shadowBlur - Rule 2.2, 60 FPS Hardware Arc)
+  // 2. Soft Warm Ambient Halo Ring (Zero shadowBlur - Rule 2.2, 60 FPS Hardware Arc)
   const haloR = r + 4 + pulse;
   const innerR = r + 2;
   const ringWidth = Math.max(1, haloR - innerR);
@@ -437,7 +574,7 @@ export function drawSunDrop(ctx, sun) {
   ctx.arc(0, 0, (innerR + haloR) / 2, 0, Math.PI * 2);
   ctx.stroke();
 
-  // 2. Render Official Sun Sprite or Procedural Pixel Fallback
+  // 3. Render Official Sun Sprite or Procedural Pixel Fallback Quad (Rule 35)
   if (hasImg) {
     ctx.save();
     ctx.rotate(rotAngle);
@@ -449,97 +586,30 @@ export function drawSunDrop(ctx, sun) {
     _drawProceduralPixelSun(ctx, r, pulse, rotAngle);
   }
 
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
+  // 4. Pre-baked Specular Screen Lighting Quad (Rule 35)
   const lightRadius = r * 1.15;
-  const lighting = ctx.createRadialGradient(-r * 0.34, -r * 0.42, 0, -r * 0.12, -r * 0.12, lightRadius);
-  lighting.addColorStop(0, 'rgba(255, 255, 238, 0.50)');
-  lighting.addColorStop(0.42, 'rgba(255, 240, 160, 0.17)');
-  lighting.addColorStop(1, 'rgba(255, 220, 90, 0)');
-  ctx.fillStyle = lighting;
-  ctx.beginPath();
-  ctx.arc(0, 0, lightRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  const lightGlow = _getSunLightCanvas();
+  if (lightGlow) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.drawImage(lightGlow, -lightRadius, -lightRadius, lightRadius * 2, lightRadius * 2);
+    ctx.restore();
+  }
 
   ctx.restore();
 }
 
 /**
- * Procedural pixel art sun fallback
+ * Procedural pixel art sun fallback (Rule 35: Cached Offscreen Canvas Quad)
  */
 function _drawProceduralPixelSun(ctx, r, pulse, rotAngle) {
-  const P = 2.0;
+  const sunCanvas = _getProceduralPixelSunCanvas(r);
+  if (!sunCanvas) return;
 
-  // Rotating Ray Petals
   ctx.save();
   ctx.rotate(rotAngle);
-  for (let i = 0; i < 8; i++) {
-    const angle = (i * Math.PI) / 4;
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
-    const perpX = -sinA;
-    const perpY = cosA;
-
-    const tipDist = r + 6 + (pulse * 0.5);
-    const baseDist = r - 2;
-
-    for (let d = baseDist; d <= tipDist; d += P) {
-      const t = (d - baseDist) / (tipDist - baseDist);
-      const halfW = (1.0 - t * 0.75) * 2.8;
-
-      for (let w = -halfW; w <= halfW; w += 1.0) {
-        const px = Math.round(cosA * d + perpX * w);
-        const py = Math.round(sinA * d + perpY * w);
-
-        const isTip = t > 0.8;
-        const isEdge = Math.abs(w) >= halfW - 0.8;
-
-        let col = '#FBBF24'; // Warm Gold
-        if (isTip || isEdge) col = '#B45309';
-        else if (t < 0.4) col = '#FDE047';
-
-        ctx.fillStyle = col;
-        ctx.fillRect(px - P / 2, py - P / 2, P, P);
-      }
-    }
-  }
+  ctx.drawImage(sunCanvas, -sunCanvas.width / 2, -sunCanvas.height / 2);
   ctx.restore();
-
-  // Central Sun Disk
-  const steps = Math.ceil((r + P) / P);
-  for (let gy = -steps; gy <= steps; gy++) {
-    for (let gx = -steps; gx <= steps; gx++) {
-      const rx = gx * P;
-      const ry = gy * P;
-      const dist = Math.hypot(rx, ry);
-      if (dist > r) continue;
-
-      const px = Math.round(rx - P / 2);
-      const py = Math.round(ry - P / 2);
-
-      const isBorder = (
-        Math.hypot((gx + 1) * P, gy * P) > r ||
-        Math.hypot((gx - 1) * P, gy * P) > r ||
-        Math.hypot(gx * P, (gy + 1) * P) > r ||
-        Math.hypot(gx * P, (gy - 1) * P) > r
-      );
-
-      if (isBorder) {
-        ctx.fillStyle = '#78350F';
-      } else if (rx >= -r * 0.55 && rx <= -r * 0.25 && ry >= -r * 0.55 && ry <= -r * 0.25) {
-        ctx.fillStyle = '#FFFFFF';
-      } else if (rx < 0 && ry < 0 && dist < r * 0.75) {
-        ctx.fillStyle = '#FEF08A';
-      } else if (rx > r * 0.35 || ry > r * 0.35) {
-        ctx.fillStyle = '#EAB308';
-      } else {
-        ctx.fillStyle = '#FACC15';
-      }
-
-      ctx.fillRect(px, py, P, P);
-    }
-  }
 }
 
 // High-performance reusable offscreen buffer for sprite silhouette hit-flashes (Zero GC / Rule 2.2 compliant)
@@ -709,10 +779,25 @@ export function drawSnowPea(ctx, snowpea) {
   ctx.restore();
 }
 
-/**
- * Procedural fallback for Peashooter
- */
-function _drawProceduralPeashooter(ctx, r, isHit, shootTimer) {
+// Pre-baked Peashooter & Snow Pea procedural canvas quads (Rule 35)
+const _peashooterCanvasCache = new Map();
+const _snowPeaCanvasCache = new Map();
+
+function _getProceduralPeashooterCanvas(r, isHit) {
+  if (typeof document === 'undefined') return null;
+  const key = `${Math.round(r)}_${isHit ? 1 : 0}`;
+  let cached = _peashooterCanvasCache.get(key);
+  if (cached) return cached;
+
+  const size = Math.ceil(r * 2.8);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size * 0.72);
+
   // Leaf Skirt
   ctx.fillStyle = isHit ? '#FFFFFF' : '#15803D';
   ctx.strokeStyle = '#0E0F14';
@@ -741,16 +826,30 @@ function _drawProceduralPeashooter(ctx, r, isHit, shootTimer) {
   ctx.stroke();
 
   // Snout
-  const snoutLen = r * 0.65 + (shootTimer > 0 ? 3 : 0);
+  const snoutLen = r * 0.65;
   ctx.fillStyle = isHit ? '#FFFFFF' : '#22C55E';
   ctx.fillRect(r * 0.2, -r * 0.75, snoutLen, r * 0.5);
   ctx.strokeRect(r * 0.2, -r * 0.75, snoutLen, r * 0.5);
+
+  _peashooterCanvasCache.set(key, canvas);
+  return canvas;
 }
 
-/**
- * Procedural fallback for Snow Pea
- */
-function _drawProceduralSnowPea(ctx, r, isHit, shootTimer) {
+function _getProceduralSnowPeaCanvas(r, isHit) {
+  if (typeof document === 'undefined') return null;
+  const key = `${Math.round(r)}_${isHit ? 1 : 0}`;
+  let cached = _snowPeaCanvasCache.get(key);
+  if (cached) return cached;
+
+  const size = Math.ceil(r * 2.8);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size * 0.72);
+
   // Leaf Skirt
   ctx.fillStyle = isHit ? '#FFFFFF' : '#0E7490';
   ctx.strokeStyle = '#0E0F14';
@@ -784,17 +883,38 @@ function _drawProceduralSnowPea(ctx, r, isHit, shootTimer) {
   }
 
   // Head
-  ctx.fillStyle = isHit ? '#FFFFFF' : '#38BDF8'; // Icy Sky Blue
+  ctx.fillStyle = isHit ? '#FFFFFF' : '#38BDF8';
   ctx.beginPath();
   ctx.arc(0, -r * 0.5, r * 0.65, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
   // Snout
-  const snoutLen = r * 0.65 + (shootTimer > 0 ? 3 : 0);
+  const snoutLen = r * 0.65;
   ctx.fillStyle = isHit ? '#FFFFFF' : '#0284C7';
   ctx.fillRect(r * 0.2, -r * 0.75, snoutLen, r * 0.5);
   ctx.strokeRect(r * 0.2, -r * 0.75, snoutLen, r * 0.5);
+
+  _snowPeaCanvasCache.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * Procedural fallback for Peashooter (Rule 35: Cached Offscreen Canvas Quad)
+ */
+function _drawProceduralPeashooter(ctx, r, isHit, shootTimer) {
+  const pCanvas = _getProceduralPeashooterCanvas(r, isHit);
+  if (!pCanvas) return;
+  ctx.drawImage(pCanvas, -pCanvas.width / 2, -pCanvas.height * 0.72);
+}
+
+/**
+ * Procedural fallback for Snow Pea (Rule 35: Cached Offscreen Canvas Quad)
+ */
+function _drawProceduralSnowPea(ctx, r, isHit, shootTimer) {
+  const pCanvas = _getProceduralSnowPeaCanvas(r, isHit);
+  if (!pCanvas) return;
+  ctx.drawImage(pCanvas, -pCanvas.width / 2, -pCanvas.height * 0.72);
 }
 
 /**
@@ -865,17 +985,30 @@ export function drawWallnut(ctx, wallnut) {
   ctx.restore();
 }
 
-/**
- * Procedural fallback for Wall-nut in case sprite sheet is loading or missing.
- */
-function _drawProceduralWallnut(ctx, r, isHit, hpRatio) {
+// Pre-baked Wall-nut procedural canvas quad cache across 3 damage states (Rule 35)
+const _wallnutCanvasCache = new Map();
+
+function _getProceduralWallnutCanvas(r, isHit, damageState) {
+  if (typeof document === 'undefined') return null;
+  const key = `${Math.round(r)}_${isHit ? 1 : 0}_${damageState}`;
+  let cached = _wallnutCanvasCache.get(key);
+  if (cached) return cached;
+
+  const size = Math.ceil(r * 2.8);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size / 2);
+
   const baseColor = isHit ? '#FFFFFF' : '#A16207';
   const highlightColor = isHit ? '#FFFFFF' : '#CA8A04';
   const shadowColor = isHit ? '#E2E8F0' : '#78350F';
   const outlineColor = '#0E0F14';
 
-  ctx.save();
-  // Draw walnut egg-shaped shell
+  // Shell
   ctx.beginPath();
   ctx.ellipse(0, -r * 0.2, r * 0.85, r * 1.05, 0, 0, Math.PI * 2);
   ctx.fillStyle = baseColor;
@@ -896,8 +1029,8 @@ function _drawProceduralWallnut(ctx, r, isHit, hpRatio) {
   ctx.fillStyle = shadowColor;
   ctx.fill();
 
-  // Eyes (Classic PvZ Wallnut eyes)
-  if (hpRatio > 0.33) {
+  // Eyes
+  if (damageState !== 'severe') {
     const eyeY = -r * 0.25;
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
@@ -959,8 +1092,8 @@ function _drawProceduralWallnut(ctx, r, isHit, hpRatio) {
     ctx.stroke();
   }
 
-  // Crack lines if damaged
-  if (hpRatio <= 0.66) {
+  // Cracks
+  if (damageState === 'cracked' || damageState === 'severe') {
     ctx.strokeStyle = '#451A03';
     ctx.lineWidth = 1.8;
     ctx.beginPath();
@@ -969,7 +1102,7 @@ function _drawProceduralWallnut(ctx, r, isHit, hpRatio) {
     ctx.lineTo(r * 0.1, -r * 0.45);
     ctx.stroke();
   }
-  if (hpRatio <= 0.33) {
+  if (damageState === 'severe') {
     ctx.beginPath();
     ctx.moveTo(-r * 0.65, -r * 0.3);
     ctx.lineTo(-r * 0.4, -r * 0.1);
@@ -977,7 +1110,18 @@ function _drawProceduralWallnut(ctx, r, isHit, hpRatio) {
     ctx.stroke();
   }
 
-  ctx.restore();
+  _wallnutCanvasCache.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * Procedural fallback for Wall-nut (Rule 35: Cached Offscreen Canvas Quad)
+ */
+function _drawProceduralWallnut(ctx, r, isHit, hpRatio) {
+  const damageState = hpRatio > 0.66 ? 'healthy' : (hpRatio > 0.33 ? 'cracked' : 'severe');
+  const wCanvas = _getProceduralWallnutCanvas(r, isHit, damageState);
+  if (!wCanvas) return;
+  ctx.drawImage(wCanvas, -wCanvas.width / 2, -wCanvas.height / 2);
 }
 
 /**
@@ -1167,16 +1311,28 @@ export function drawTorchwood(ctx, torchwood) {
   ctx.restore();
 }
 
-/**
- * Procedural fallback for Torchwood in case sprite sheet is loading or missing.
- */
-function _drawProceduralTorchwood(ctx, r, isHit) {
+// Pre-baked Torchwood procedural canvas quad cache (Rule 35)
+const _torchwoodCanvasCache = new Map();
+
+function _getProceduralTorchwoodCanvas(r, isHit, frameIdx = 0) {
+  if (typeof document === 'undefined') return null;
+  const key = `${Math.round(r)}_${isHit ? 1 : 0}_${frameIdx % 4}`;
+  let cached = _torchwoodCanvasCache.get(key);
+  if (cached) return cached;
+
+  const size = Math.ceil(r * 3.2);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size * 0.65);
+  ctx.scale(1.35, 1.35);
+
   const stumpColor = isHit ? '#FFFFFF' : '#78350F';
   const barkColor = isHit ? '#FFFFFF' : '#92400E';
   const outlineColor = '#0E0F14';
-
-  ctx.save();
-  ctx.scale(1.35, 1.35);
 
   // Tree stump body
   ctx.beginPath();
@@ -1212,20 +1368,39 @@ function _drawProceduralTorchwood(ctx, r, isHit) {
   ctx.fill();
   ctx.stroke();
 
-  // Fire flames on top
+  // Deterministic 4-frame flame animation (zero Math.random in render loop)
+  const flameHeights = [
+    [0.75, 1.05, 0.85, 0.95, 0.70],
+    [0.90, 0.80, 1.10, 0.75, 1.00],
+    [1.05, 0.95, 0.75, 1.10, 0.80],
+    [0.80, 1.10, 0.90, 0.80, 1.05]
+  ];
+  const heights = flameHeights[frameIdx % 4];
   const flameColors = ['#FDE047', '#FBBF24', '#F97316', '#EA580C'];
+
   for (let i = 0; i < 5; i++) {
     const flameX = (i - 2) * r * 0.28;
-    const flameH = r * (0.6 + Math.random() * 0.5);
+    const flameH = r * heights[i];
     ctx.beginPath();
     ctx.moveTo(flameX - r * 0.12, -r * 0.3);
-    ctx.quadraticCurveTo(flameX + Math.random() * 4 - 2, -r * 0.3 - flameH, flameX + r * 0.12, -r * 0.3);
+    ctx.quadraticCurveTo(flameX, -r * 0.3 - flameH, flameX + r * 0.12, -r * 0.3);
     ctx.closePath();
     ctx.fillStyle = flameColors[i % flameColors.length];
     ctx.fill();
   }
 
-  ctx.restore();
+  _torchwoodCanvasCache.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * Procedural fallback for Torchwood (Rule 35: Cached Offscreen Canvas Quad)
+ */
+function _drawProceduralTorchwood(ctx, r, isHit) {
+  const frameIdx = Math.floor(Date.now() / 120) % 4;
+  const tCanvas = _getProceduralTorchwoodCanvas(r, isHit, frameIdx);
+  if (!tCanvas) return;
+  ctx.drawImage(tCanvas, -tCanvas.width / 2, -tCanvas.height * 0.65);
 }
 
 /**
@@ -1402,17 +1577,27 @@ export function drawLawnmower(ctx, mower) {
   ctx.restore();
 }
 
-/**
- * Procedural fallback for Lawnmower.
- */
-function _drawProceduralLawnmower(ctx, r, isCharging) {
+// Pre-baked Lawnmower procedural canvas quad cache (Rule 35)
+let _lawnmowerCanvas = null;
+
+function _getProceduralLawnmowerCanvas(r) {
+  if (typeof document === 'undefined') return null;
+  if (_lawnmowerCanvas) return _lawnmowerCanvas;
+
+  const size = Math.ceil(r * 3.4);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size / 2);
+
   const redColor = '#DC2626';
-  const darkRed = '#991B1B';
   const metalColor = '#CBD5E1';
   const wheelColor = '#1E293B';
   const outlineColor = '#0E0F14';
 
-  ctx.save();
   // Chassis
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function') {
@@ -1450,7 +1635,17 @@ function _drawProceduralLawnmower(ctx, r, isCharging) {
   ctx.lineWidth = 1.2;
   ctx.stroke();
 
-  ctx.restore();
+  _lawnmowerCanvas = canvas;
+  return _lawnmowerCanvas;
+}
+
+/**
+ * Procedural fallback for Lawnmower (Rule 35: Cached Offscreen Canvas Quad)
+ */
+function _drawProceduralLawnmower(ctx, r, isCharging) {
+  const mCanvas = _getProceduralLawnmowerCanvas(r);
+  if (!mCanvas) return;
+  ctx.drawImage(mCanvas, -mCanvas.width / 2, -mCanvas.height / 2);
 }
 
 /**
@@ -1636,18 +1831,27 @@ function _drawPotatoMineExplosionVFX(ctx, r, explodeProg) {
   }
 }
 
-/**
- * Procedural fallback for Potato Mine when sprite sheet is unavailable.
- */
-function _drawProceduralPotatoMine(ctx, r, isArmed, isExploding, isHit, explodeProg = 0) {
+// Pre-baked Potato Mine procedural canvas quad cache (Rule 35)
+const _potatoMineCanvasCache = new Map();
+
+function _getProceduralPotatoMineCanvas(r, isArmed, isHit) {
+  if (typeof document === 'undefined') return null;
+  const key = `${Math.round(r)}_${isArmed ? 1 : 0}_${isHit ? 1 : 0}`;
+  let cached = _potatoMineCanvasCache.get(key);
+  if (cached) return cached;
+
+  const size = Math.ceil(r * 2.8);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.translate(size / 2, size / 2);
+
   const bodyColor = isHit ? '#FFFFFF' : '#B8860B';
   const dirtColor = isHit ? '#FFFFFF' : '#5C3317';
   const outlineColor = '#0E0F14';
-
-  if (isExploding) {
-    _drawPotatoMineExplosionVFX(ctx, r, explodeProg);
-    return;
-  }
 
   // Dirt mound base
   ctx.beginPath();
@@ -1684,4 +1888,20 @@ function _drawProceduralPotatoMine(ctx, r, isArmed, isExploding, isHit, explodeP
     ctx.fillStyle = '#FFFFFF';
     ctx.fill();
   }
+
+  _potatoMineCanvasCache.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * Procedural fallback for Potato Mine when sprite sheet is unavailable (Rule 35: Cached Offscreen Canvas Quad).
+ */
+function _drawProceduralPotatoMine(ctx, r, isArmed, isExploding, isHit, explodeProg = 0) {
+  if (isExploding) {
+    _drawPotatoMineExplosionVFX(ctx, r, explodeProg);
+    return;
+  }
+  const mCanvas = _getProceduralPotatoMineCanvas(r, isArmed, isHit);
+  if (!mCanvas) return;
+  ctx.drawImage(mCanvas, -mCanvas.width / 2, -mCanvas.height / 2);
 }
