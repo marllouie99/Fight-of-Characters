@@ -5756,7 +5756,13 @@ async function runInteractionTests() {
     assert(stats.totalSheets >= 2, 'getSpriteStats totalSheets must be >= 2');
     assert(stats.totalSlices >= 8, 'getSpriteStats totalSlices must count registered slices');
 
-    console.log('      ✅ Sound Sprite Manager, virtual AudioBuffer stitching, slice metadata, and sprite diagnostics verified successfully.');
+    // D. Secondary Character Voice Line & SFX Sound Sprite Atlases
+    assert(soundSpriteManager.hasCharacterVoiceSprite('gojo') === true, 'Gojo must have a registered character voice sprite atlas');
+    assert(soundSpriteManager.hasCharacterVoiceSprite('sukuna') === true, 'Sukuna must have a registered character voice sprite atlas');
+    assert(soundSpriteManager.getCharacterSheetId('gojo') === 'char_voice_gojo', 'getCharacterSheetId must resolve char_voice_gojo');
+    assert(soundSpriteManager.isKeyInSheet('Assets/Sound Effects/Skills/gojodomain.mp3', 'char_voice_gojo') === true, 'gojodomain.mp3 must be packed inside char_voice_gojo');
+
+    console.log('      ✅ Sound Sprite Manager, virtual AudioBuffer stitching, character voice atlases, slice metadata, and sprite diagnostics verified successfully.');
   }
 
   // ── TEST 50: Eye of Cthulhu vs Gojo Limitless Infinity Collision & Push Immunity (Rule 1.7) ──

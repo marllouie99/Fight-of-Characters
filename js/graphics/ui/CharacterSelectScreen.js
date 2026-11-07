@@ -23,6 +23,7 @@ import { audioSystem } from '../../systems/audioSystem.js';
 import { drawArenaBgmSelector, isArenaBgmModalOpen, drawArenaBgmModal, closeArenaBgmModal } from '../../systems/arenaBgmSystem.js';
 import { drawArenaThemeSelector, isArenaThemeModalOpen, drawArenaThemeModal, closeArenaThemeModal } from '../../systems/arenaThemeSystem.js';
 import { GAME_MODES, MODE_SETTINGS } from '../../core/modeConfig.js';
+import { drawScreentoneModalBackdrop, getScreentonePattern, prewarmScreentone } from './mangaScreentone.js';
 import { getBossConfig } from '../../configs/bosses/bossConfigRegistry.js';
 import { drawGradeBadge } from '../../configs/gradeConfig.js';
 
@@ -656,9 +657,8 @@ function drawFighterSelectModal() {
   const mx = Math.round((canvas.width - modalW) / 2);
   const my = Math.round((canvas.height - modalH) / 2);
 
-  // Darken arena/menu behind modal
-  ctx.fillStyle = 'rgba(20, 5, 10, 0.86)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Manga screentone backdrop behind modal (pre-baked halftone vignette, 1 drawImage)
+  drawScreentoneModalBackdrop(ctx, canvas.width, canvas.height);
 
   // Click outside closes modal
   _registerButton(0, 0, canvas.width, canvas.height, () => {
@@ -1948,20 +1948,9 @@ function drawHeroicFighterCard(slotProp, title, x, y, w, h, isP1, enabled, isMir
   return drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMirrored, customSlotTag, customSlotLetter);
 }
 
-let _cachedDotGridPattern = null;
+/** Faint white 45° screentone behind the deployment screen (cached pattern via mangaScreentone). */
 function _getDotGridPattern(ctx) {
-  if (_cachedDotGridPattern) return _cachedDotGridPattern;
-  if (typeof document === 'undefined') return null;
-  const pCanvas = document.createElement('canvas');
-  pCanvas.width = 18;
-  pCanvas.height = 18;
-  const pCtx = pCanvas.getContext('2d');
-  if (pCtx) {
-    pCtx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    pCtx.fillRect(8, 8, 2, 2);
-    _cachedDotGridPattern = ctx.createPattern(pCanvas, 'repeat');
-  }
-  return _cachedDotGridPattern;
+  return getScreentonePattern(ctx, { spacing: 12, radius: 1, color: 'rgba(255, 255, 255, 0.07)' });
 }
 
 function drawSelectScreen() {
@@ -1971,11 +1960,15 @@ function drawSelectScreen() {
   clearHealthHud();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // Bake the halftone modal overlay once on entering the screen so the first
+  // fighter/BGM/theme modal opens without a bake stall (cached per canvas size)
+  prewarmScreentone(canvas.width, canvas.height);
+
   // Clean Dark Matte Backdrop
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Subtle Dot Grid (Cached Pattern)
+  // Subtle Screentone Lattice (Cached Pattern)
   const dotPattern = _getDotGridPattern(ctx);
   if (dotPattern) {
     ctx.fillStyle = dotPattern;

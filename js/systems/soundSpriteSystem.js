@@ -15,6 +15,7 @@
  */
 
 import { COMBAT_SOUND_SPRITE_MANIFEST } from '../configs/combatSoundSpriteManifest.js';
+import { CHARACTER_VOICE_SPRITE_MANIFEST } from '../configs/characterVoiceSpriteManifest.js';
 
 export const CORE_COMBAT_SFX_PATHS = [
   'Assets/Sound Effects/Attacks/fleshhit.mp3',
@@ -37,8 +38,9 @@ export const CORE_COMBAT_SFX_PATHS = [
 
 class SoundSpriteManager {
   constructor() {
-    this.spriteSheets = new Map(); // id -> { url, buffer, loadingPromise, sprites: Map(key -> {offset, duration}) }
+    this.spriteSheets = new Map(); // id -> { id, url, buffer, loadingPromise, sprites: Map, isVirtual, characterId }
     this.keyToSheetMap = new Map(); // sfxKey / fileSrc -> { sheetId, offset, duration }
+    this.keyToSheetListMap = new Map(); // sfxKey / fileSrc -> Array<{ sheetId, offset, duration }>
     this._initDefaultSheets();
   }
 
@@ -68,6 +70,36 @@ class SoundSpriteManager {
         false
       );
     }
+
+    // 3. Register per-character voice line & SFX sprite atlases
+    if (typeof CHARACTER_VOICE_SPRITE_MANIFEST !== 'undefined' && CHARACTER_VOICE_SPRITE_MANIFEST) {
+      for (const entry of Object.values(CHARACTER_VOICE_SPRITE_MANIFEST)) {
+        if (entry && entry.sheetId && entry.audioUrl && entry.slices) {
+          this.registerSpriteSheet(
+            entry.sheetId,
+            entry.audioUrl,
+            entry.slices,
+            false,
+            entry.characterId || null
+          );
+        }
+      }
+    }
+  }
+
+  _addKeyMapping(key, data) {
+    this.keyToSheetMap.set(key, data);
+    let list = this.keyToSheetListMap.get(key);
+    if (!list) {
+      list = [];
+      this.keyToSheetListMap.set(key, list);
+    }
+    const existingIdx = list.findIndex(item => item.sheetId === data.sheetId);
+    if (existingIdx !== -1) {
+      list[existingIdx] = data;
+    } else {
+      list.push(data);
+    }
   }
 
   /**
@@ -76,8 +108,9 @@ class SoundSpriteManager {
    * @param {string} sheetUrl - Path to the concatenated audio file
    * @param {Record<string, [number, number]>} spriteSlices - Map of soundKey -> [offsetInSeconds, durationInSeconds]
    * @param {boolean} [isVirtual=false] - Whether this is an in-memory stitched virtual sheet
+   * @param {string|null} [characterId=null] - Optional fighter characterId for per-character voice sheets
    */
-  registerSpriteSheet(sheetId, sheetUrl, spriteSlices, isVirtual = false) {
+  registerSpriteSheet(sheetId, sheetUrl, spriteSlices, isVirtual = false, characterId = null) {
     if (!sheetId || !sheetUrl || !spriteSlices) return;
 
     const isVirt = Boolean(isVirtual || (sheetUrl && sheetUrl.startsWith('virtual://')));
@@ -88,9 +121,13 @@ class SoundSpriteManager {
         const duration = Number(slice[1]) || 0.1;
         const data = { sheetId, offset, duration };
         const cleanKey = String(key).replace(/\\/g, '/');
+        const lowerKey = cleanKey.toLowerCase();
         sliceMap.set(cleanKey, data);
-        this.keyToSheetMap.set(cleanKey, data);
-        this.keyToSheetMap.set(cleanKey.toLowerCase(), data);
+        sliceMap.set(lowerKey, data);
+        this._addKeyMapping(cleanKey, data);
+        if (lowerKey !== cleanKey) {
+          this._addKeyMapping(lowerKey, data);
+        }
       }
     }
 
@@ -100,7 +137,8 @@ class SoundSpriteManager {
       buffer: null,
       loadingPromise: null,
       sprites: sliceMap,
-      isVirtual: isVirt
+      isVirtual: isVirt,
+      characterId: characterId ? String(characterId).toLowerCase() : null
     });
   }
 
@@ -117,13 +155,94 @@ class SoundSpriteManager {
 
   /**
    * Retrieve the sprite slice metadata for a given key.
+   * Prefers a sheet whose AudioBuffer is already loaded or actively loading in memory.
    * @param {string} keyOrSrc
    * @returns {{ sheetId: string, offset: number, duration: number } | null}
    */
   getSpriteInfo(keyOrSrc) {
     if (!keyOrSrc) return null;
     const cleanKey = String(keyOrSrc).replace(/\\/g, '/');
-    return this.keyToSheetMap.get(cleanKey) || this.keyToSheetMap.get(cleanKey.toLowerCase()) || null;
+    const lowerKey = cleanKey.toLowerCase();
+    const list = this.keyToSheetListMap.get(cleanKey) || this.keyToSheetListMap.get(lowerKey);
+    if (list && list.length > 1) {
+      // 1. Prefer sheet that already has a decoded buffer in memory
+      for (let i = list.length - 1; i >= 0; i--) {
+        const cand = list[i];
+        const sheet = this.spriteSheets.get(cand.sheetId);
+        if (sheet && sheet.buffer) return cand;
+      }
+      // 2. Prefer sheet that is currently loading in flight
+      for (let i = list.length - 1; i >= 0; i--) {
+        const cand = list[i];
+        const sheet = this.spriteSheets.get(cand.sheetId);
+        if (sheet && sheet.loadingPromise) return cand;
+      }
+    }
+    return this.keyToSheetMap.get(cleanKey) || this.keyToSheetMap.get(lowerKey) || null;
+  }
+
+  /**
+   * Resolves the registered character voice sprite sheet ID for a given characterId.
+   * @param {string|number} characterId
+   * @returns {string|null}
+   */
+  getCharacterSheetId(characterId) {
+    if (!characterId) return null;
+    const charKey = String(characterId).toLowerCase();
+    const sheetId = `char_voice_${charKey}`;
+    return this.spriteSheets.has(sheetId) ? sheetId : null;
+  }
+
+  /**
+   * Checks whether a character has a registered voice/SFX sprite atlas.
+   * @param {string|number} characterId
+   * @returns {boolean}
+   */
+  hasCharacterVoiceSprite(characterId) {
+    return Boolean(this.getCharacterSheetId(characterId));
+  }
+
+  /**
+   * Preloads and decodes a character's voice/SFX sprite atlas into Web Audio memory.
+   * @param {string|number} characterId
+   * @param {AudioContext} [audioCtx]
+   * @returns {Promise<AudioBuffer|null>}
+   */
+  async loadCharacterVoiceSprite(characterId, audioCtx) {
+    const sheetId = this.getCharacterSheetId(characterId);
+    if (!sheetId) return null;
+    return this.loadSpriteSheet(sheetId, audioCtx);
+  }
+
+  /**
+   * Checks if a given sound key or path belongs to a specific sprite sheet.
+   * @param {string} keyOrSrc
+   * @param {string} sheetId
+   * @returns {boolean}
+   */
+  isKeyInSheet(keyOrSrc, sheetId) {
+    if (!keyOrSrc || !sheetId) return false;
+    const sheet = this.spriteSheets.get(sheetId);
+    if (!sheet || !sheet.sprites) return false;
+    const cleanKey = String(keyOrSrc).replace(/\\/g, '/');
+    return sheet.sprites.has(cleanKey) || sheet.sprites.has(cleanKey.toLowerCase());
+  }
+
+  /**
+   * Releases decoded AudioBuffers for character voice sprite sheets that are not part
+   * of the active match roster, preventing mobile Web Audio PCM memory accumulation.
+   * @param {Array<string>} activeCharacterIds
+   */
+  releaseInactiveCharacterSheets(activeCharacterIds = []) {
+    const activeSet = new Set(
+      (activeCharacterIds || []).filter(Boolean).map(id => String(id).toLowerCase())
+    );
+    for (const sheet of this.spriteSheets.values()) {
+      if (sheet && sheet.characterId && !activeSet.has(sheet.characterId)) {
+        sheet.buffer = null;
+        sheet.loadingPromise = null;
+      }
+    }
   }
 
   /**
@@ -237,9 +356,13 @@ class SoundSpriteManager {
       const data = { sheetId, offset: offsetSec, duration: durationSec };
 
       const cleanKey = String(key).replace(/\\/g, '/');
+      const lowerKey = cleanKey.toLowerCase();
       sliceMap.set(cleanKey, data);
-      this.keyToSheetMap.set(cleanKey, data);
-      this.keyToSheetMap.set(cleanKey.toLowerCase(), data);
+      sliceMap.set(lowerKey, data);
+      this._addKeyMapping(cleanKey, data);
+      if (lowerKey !== cleanKey) {
+        this._addKeyMapping(lowerKey, data);
+      }
 
       const bufLen = buf.length || Math.floor(buf.duration * sampleRate);
       if (compositeBuffer && typeof compositeBuffer.copyToChannel === 'function') {

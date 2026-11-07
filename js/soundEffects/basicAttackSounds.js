@@ -1388,6 +1388,26 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
       return CONFIG.creeper?.soundVolumes?.headbutt ?? 0.85;
     },
     delay: 0,
+  },
+  'maki': {
+    src: 'Assets/Sound Effects/Attacks/swordswing.mp3',
+    volume: 0.85,
+    delay: 0,
+  },
+  'isagi': {
+    src: 'Assets/Sound Effects/Attacks/heavypunch1.mp3',
+    volume: 0.85,
+    delay: 0,
+  },
+  'warden': {
+    src: 'Assets/Sound Effects/Attacks/heavypunch3.mp3',
+    volume: 0.95,
+    delay: 0,
+  },
+  'chigiri': {
+    src: 'Assets/Sound Effects/Attacks/heavypunch1.mp3',
+    volume: 0.85,
+    delay: 0,
   }
 };
 

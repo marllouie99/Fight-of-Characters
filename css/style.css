@@ -5429,15 +5429,20 @@ body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-val {
   position: relative;
   width: 100px;
   height: 100px;
-  background: #020617;
-  border: 2px solid #0284c7;
-  border-radius: 6px;
+  background-color: #000000;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+  border: 2px solid #000000;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  box-shadow: 2px 2px 0px #000000;
 }
 
 #pixelModelPreviewCanvas {
@@ -5453,8 +5458,9 @@ body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-val {
   position: absolute;
   bottom: 3px;
   right: 3px;
-  background: rgba(2, 132, 199, 0.85);
-  color: #ffffff;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
   font-family: 'Press Start 2P', monospace;
   font-size: 5.5px;
   padding: 1.5px 3px;
@@ -5472,7 +5478,7 @@ body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-val {
   font-family: 'Outfit', 'Rajdhani', sans-serif;
   font-size: 13px;
   font-weight: 900;
-  color: #38bdf8;
+  color: #000000;
   letter-spacing: 0.5px;
 }
 
@@ -5480,15 +5486,15 @@ body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-val {
   font-family: 'Rajdhani', sans-serif;
   font-size: 10.5px;
   font-weight: 600;
-  color: #cbd5e1;
+  color: #222222;
   line-height: 1.35;
 }
 
 .pixelmodel-control-card {
-  background: #fcedf0;
-  border: 2px solid #21050c;
-  border-radius: 6px;
-  box-shadow: inset 0 1px 0 #ffffff, 0 2px 0 #baa88c, 0 3px 0 #21050c;
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  box-shadow: 3px 3px 0px #000000;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
@@ -5505,14 +5511,14 @@ body.hud-layout-classic .hud-skill-box.hud-skill-text-mode .hud-stat-val {
   font-family: 'Outfit', 'Rajdhani', sans-serif;
   font-size: 10.5px;
   font-weight: 900;
-  color: #21050c;
+  color: #000000;
   letter-spacing: 0.5px;
 }
 
 .pixelmodel-control-val {
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
-  color: #cf3355;
+  color: #000000;
   letter-spacing: 0.4px;
 }
 

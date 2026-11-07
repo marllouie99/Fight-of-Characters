@@ -225,18 +225,24 @@ export function releaseInactiveMatchAudioMemory(activeFighters = []) {
   if (!_isMobileSound && (typeof state === 'undefined' || !state.isMobileDevice)) {
     return;
   }
-  if (_cache.size <= 16) return;
 
   const activeIdentifiers = new Set([
     'attack', 'dash', 'hit', 'clash', 'parry', 'announcer', 'fight', 'bell', 'whoosh', 'timertick'
   ]);
   for (const f of activeFighters) {
     if (!f) continue;
-    const charId = (f.characterId || f.id || f.type || '').toLowerCase();
+    const charId = String(f.characterId || f.id || f.type || '').toLowerCase();
     if (charId) activeIdentifiers.add(charId);
-    const defId = (f._def?.id || f._def?.type || '').toLowerCase();
+    const defId = String(f._def?.id || f._def?.type || '').toLowerCase();
     if (defId) activeIdentifiers.add(defId);
   }
+
+  // Release decoded AudioBuffers for inactive character voice sprite atlases
+  if (typeof soundSpriteManager?.releaseInactiveCharacterSheets === 'function') {
+    soundSpriteManager.releaseInactiveCharacterSheets([...activeIdentifiers]);
+  }
+
+  if (_cache.size <= 16) return;
 
   for (const [key, val] of _cache.entries()) {
     // Keep active BGM

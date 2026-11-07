@@ -8,6 +8,7 @@ import { GAME_MODES } from '../core/modeConfig.js';
 import { playLoopingSound, stopLoopingSound, setLoopingSoundVolume, isLoopingSoundPlaying } from './soundSystem.js';
 import { _registerButton, drawChamferedRect, drawPanel, drawButton, fitSingleLineText } from '../graphics/ui/uiFramework.js';
 import { isTodoTakadaSongEnabled } from '../entities/fighters/todo/todoSkills.js';
+import { drawScreentoneModalBackdrop } from '../graphics/ui/mangaScreentone.js';
 
 export const ARENA_BGM_LOOP_KEY = 'arena_bgm_loop';
 export const ARENA_BGM_PREVIEW_KEY = 'arena_bgm_preview';
@@ -527,11 +528,8 @@ export function drawArenaBgmModal(ctx) {
   const currentTrack = getSelectedArenaBgmTrack();
   const isElectron = typeof window !== 'undefined' && Boolean(window.electronAPI?.scanBgmFolder);
 
-  // 1. Fullscreen Dimmed Modal Backdrop
-  ctx.save();
-  ctx.fillStyle = 'rgba(33, 5, 12, 0.88)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
+  // 1. Manga screentone modal backdrop (pre-baked halftone vignette)
+  drawScreentoneModalBackdrop(ctx, canvas.width, canvas.height);
 
   // Backdrop click closes modal
   _registerButton(0, 0, canvas.width, canvas.height, () => {

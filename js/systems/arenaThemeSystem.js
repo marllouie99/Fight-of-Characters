@@ -15,6 +15,7 @@ import { getOrCreateEndStoneFloorCanvas } from '../graphics/renderers/endStoneFl
 import { getOrCreateEndStoneBricksFloorCanvas } from '../graphics/renderers/endStoneBricksFloorRenderer.js';
 import { getOrCreateMossyStoneFloorCanvas } from '../graphics/renderers/mossyStoneFloorRenderer.js';
 import { getOrCreateFootballFieldFloorCanvas, _renderFootballFieldFloor } from '../graphics/renderers/footballFieldRenderer.js';
+import { drawScreentoneModalBackdrop } from '../graphics/ui/mangaScreentone.js';
 
 export const ARENA_THEME_STORAGE_KEY = 'circle_selected_arena_theme';
 export const LEGACY_ARENA_FLOOR_STORAGE_KEY = 'circle_selected_arena_floor';
@@ -1664,8 +1665,8 @@ export function drawArenaThemeModal(ctx) {
 
   // 1. Dark Backdrop Overlay
   ctx.save();
-  ctx.fillStyle = 'rgba(33, 5, 12, 0.88)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawScreentoneModalBackdrop(ctx, canvas.width, canvas.height); // Manga halftone vignette (pre-baked)
+  // (single drawImage of the cached halftone overlay; no extra full-screen fill)
 
   // Backdrop click closes modal
   _registerButton(0, 0, canvas.width, canvas.height, () => {

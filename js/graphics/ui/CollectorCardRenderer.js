@@ -5,6 +5,7 @@ import { _registerButton, drawButton, drawStatBar, drawChamferedRect, fitSingleL
 import { audioSystem } from '../../systems/audioSystem.js';
 import { drawGradeBadge, getFighterGrade } from '../../configs/gradeConfig.js';
 import { getFighterCardElement, drawEnergyOrb } from '../../configs/cardElementConfig.js';
+import { getScreentonePattern } from './mangaScreentone.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COLLECTOR CARD THEME ENGINE (Reference 1 Aotu-Style Pastel & Vibrant Palettes)
@@ -3164,13 +3165,11 @@ export function drawCollectorModalBackdrop(ctx, mx, my, modalW, modalH) {
   drawChamferedRect(ctx, mx + 2, my + 2, modalW - 4, modalH - 4, 5);
   ctx.clip();
 
-  // Subtle industrial blueprint dot grid
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-  const step = 16;
-  for (let py = my + 8; py < my + modalH; py += step) {
-    for (let px = mx + 8; px < mx + modalW; px += step) {
-      ctx.fillRect(px - 1, py - 1, 2, 2);
-    }
+  // Printed manga screentone (cached 45° halftone pattern, single fillRect — Rule 35)
+  const tone = getScreentonePattern(ctx, { spacing: 10, radius: 1, color: 'rgba(255, 255, 255, 0.08)' });
+  if (tone) {
+    ctx.fillStyle = tone;
+    ctx.fillRect(mx, my, modalW, modalH);
   }
 
   ctx.restore();
@@ -3378,6 +3377,17 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
   drawChamferedRect(ctx, col3X, y + 6, col3W, h - 12, 3);
   ctx.fill();
   ctx.stroke();
+
+  // Subtle halftone screentone inside weapon preview cell (cached 45° dot pattern)
+  const wTone = getScreentonePattern(ctx, { spacing: 8, radius: 1, color: 'rgba(255, 255, 255, 0.08)' });
+  if (wTone) {
+    ctx.save();
+    drawChamferedRect(ctx, col3X + 1, y + 7, col3W - 2, h - 14, 2.5);
+    ctx.clip();
+    ctx.fillStyle = wTone;
+    ctx.fillRect(col3X, y + 6, col3W, h - 12);
+    ctx.restore();
+  }
 
   _drawCornerBrackets(ctx, col3X + 2, y + 8, col3W - 4, h - 16, 5, '#FFFFFF', 1.0);
 

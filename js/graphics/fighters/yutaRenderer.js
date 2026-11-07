@@ -29,6 +29,132 @@ const _YUTA_DOMAIN_EMBERS = Array.from({ length: 32 }, (_, i) => ({
 }));
 
 const _yutaAuraCanvasCache = new Map();
+const _rikaTorsoCanvasCache = new Map();
+const _rikaHeadCanvasCache = new Map();
+let _thinIceBreakerFistCanvas = null;
+
+function _getRikaTorsoCanvas(r, P) {
+  const intR = Math.round(r);
+  if (_rikaTorsoCanvasCache.has(intR)) return _rikaTorsoCanvasCache.get(intR);
+  if (typeof document === 'undefined') return null;
+
+  const torsoR = intR;
+  const steps = Math.ceil(torsoR / P);
+  const pad = Math.ceil((steps + 2) * P);
+  const size = pad * 2;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const octx = c.getContext('2d');
+  if (!octx) return null;
+
+  octx.translate(pad, pad);
+
+  // Outer Dark Pixel Ink Outline Shell
+  octx.fillStyle = '#111114';
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      const d = Math.hypot(gx * P, gy * P);
+      if (d <= torsoR + P * 0.85) {
+        octx.fillRect(Math.round(gx * P / P) * P, Math.round(gy * P / P) * P, P, P);
+      }
+    }
+  }
+
+  // Base Bone-White Body (Stepped Pixel Fill)
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      const d = Math.hypot(gx * P, gy * P);
+      if (d <= torsoR) {
+        const rx = gx * P;
+        const ry = gy * P;
+        let col = '#FFFFFF';
+        if (rx < -torsoR * 0.3 || Math.abs(ry) > torsoR * 0.7) {
+          col = (rx < -torsoR * 0.65) ? '#B8B2C4' : '#D8D4E2';
+        } else if (rx > torsoR * 0.05 && Math.abs(ry) < torsoR * 0.5) {
+          col = '#FFFFFF';
+        } else {
+          col = '#F6F4FA';
+        }
+        octx.fillStyle = col;
+        octx.fillRect(Math.round(rx / P) * P, Math.round(ry / P) * P, P, P);
+      }
+    }
+  }
+
+  // Stepped Pixel Ribcage & Spinal Bone Segments on the Back/Shoulders
+  for (let rib = -2; rib <= 2; rib++) {
+    const ry = rib * (P * 3);
+    const rx = -torsoR * 0.35 + Math.abs(rib) * (P * 1.5);
+    const rw = P * 3.5;
+
+    octx.fillStyle = '#22202A';
+    octx.fillRect(Math.round(rx / P) * P, Math.round(ry / P) * P, rw, P);
+
+    octx.fillStyle = '#FFFFFF';
+    octx.fillRect(Math.round(rx / P) * P + P, Math.round((ry - P) / P) * P, rw - P, P);
+  }
+
+  const entry = { canvas: c, pad };
+  _rikaTorsoCanvasCache.set(intR, entry);
+  return entry;
+}
+
+function _getRikaHeadCanvas(r, P) {
+  const intR = Math.round(r);
+  if (_rikaHeadCanvasCache.has(intR)) return _rikaHeadCanvasCache.get(intR);
+  if (typeof document === 'undefined') return null;
+
+  const headCenterX = intR * 0.52;
+  const headR = intR * 0.42;
+  const headSteps = Math.ceil(headR / P);
+  const pad = Math.ceil((headSteps + 3) * P);
+  const size = pad * 2;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const octx = c.getContext('2d');
+  if (!octx) return null;
+
+  octx.translate(pad - headCenterX, pad);
+
+  // Head Pixel Outline
+  octx.fillStyle = '#111114';
+  for (let gy = -headSteps; gy <= headSteps; gy++) {
+    for (let gx = -headSteps; gx <= headSteps; gx++) {
+      const d = Math.hypot(gx * P, gy * P);
+      if (d <= headR + P * 0.8) {
+        octx.fillRect(Math.round((headCenterX + gx * P) / P) * P, Math.round(gy * P / P) * P, P, P);
+      }
+    }
+  }
+
+  // Head Dome Base Bone Fill
+  for (let gy = -headSteps; gy <= headSteps; gy++) {
+    for (let gx = -headSteps; gx <= headSteps; gx++) {
+      const d = Math.hypot(gx * P, gy * P);
+      if (d <= headR) {
+        const rx = gx * P;
+        const ry = gy * P;
+        let col = '#FFFFFF';
+        if (rx < -headR * 0.2 || Math.abs(ry) > headR * 0.6) {
+          col = '#DCD8E6';
+        }
+        octx.fillStyle = col;
+        octx.fillRect(Math.round((headCenterX + rx) / P) * P, Math.round(ry / P) * P, P, P);
+      }
+    }
+  }
+
+  // Cranial Suture Plate Cracks
+  octx.fillStyle = '#111114';
+  octx.fillRect(Math.round((headCenterX - P * 2) / P) * P, Math.round(-headR * 0.3 / P) * P, P * 4, P);
+  octx.fillRect(Math.round(headCenterX / P) * P, Math.round(-headR * 0.6 / P) * P, P, P * 4);
+
+  const entry = { canvas: c, pad, headCenterX };
+  _rikaHeadCanvasCache.set(intR, entry);
+  return entry;
+}
 
 export class YutaRenderer {
   static drawDomainBackground(ctx, fighter, isClashSecondary = false) {
@@ -544,59 +670,11 @@ export class YutaRenderer {
     // Right Arm (+y side)
     fighter._drawTopDownArmAndClaw(ctx, r * 0.2, r * 1.1, r * 1.3, r * 1.3, false, rightArmTimer, isGamePlay);
 
-    // ── 3. PIXEL-ART MAIN BONE-WHITE TORSO CIRCLE & SKELETAL RIBCAGE ──
-    ctx.save();
-    const torsoR = r + pulse * 0.4;
-    const steps = Math.ceil(torsoR / P);
-
-    // Outer Dark Pixel Ink Outline Shell
-    ctx.fillStyle = '#111114';
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const d = Math.hypot(gx * P, gy * P);
-        if (d <= torsoR + P * 0.85) {
-          ctx.fillRect(Math.round(gx * P / P) * P, Math.round(gy * P / P) * P, P, P);
-        }
-      }
+    // ── 3. PIXEL-ART MAIN BONE-WHITE TORSO CIRCLE & SKELETAL RIBCAGE (Rule 35 Pre-Baked Quad) ──
+    const torsoEntry = _getRikaTorsoCanvas(r, P);
+    if (torsoEntry && torsoEntry.canvas) {
+      ctx.drawImage(torsoEntry.canvas, -torsoEntry.pad, -torsoEntry.pad);
     }
-
-    // Base Bone-White Body (Stepped Pixel Fill)
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const d = Math.hypot(gx * P, gy * P);
-        if (d <= torsoR) {
-          const rx = gx * P;
-          const ry = gy * P;
-          // Pure Bone-White Palette: Highlight (#FFFFFF), Body (#F8F6FA), Soft Silver-Slate Shadow (#D8D4E2 / #B8B2C4)
-          let col = '#FFFFFF';
-          if (rx < -torsoR * 0.3 || Math.abs(ry) > torsoR * 0.7) {
-            col = (rx < -torsoR * 0.65) ? '#B8B2C4' : '#D8D4E2';
-          } else if (rx > torsoR * 0.05 && Math.abs(ry) < torsoR * 0.5) {
-            col = '#FFFFFF';
-          } else {
-            col = '#F6F4FA';
-          }
-          ctx.fillStyle = col;
-          ctx.fillRect(Math.round(rx / P) * P, Math.round(ry / P) * P, P, P);
-        }
-      }
-    }
-
-    // Stepped Pixel Ribcage & Spinal Bone Segments on the Back/Shoulders
-    for (let rib = -2; rib <= 2; rib++) {
-      const ry = rib * (P * 3);
-      const rx = -torsoR * 0.35 + Math.abs(rib) * (P * 1.5);
-      const rw = P * 3.5;
-
-      // Dark seam under rib
-      ctx.fillStyle = '#22202A';
-      ctx.fillRect(Math.round(rx / P) * P, Math.round(ry / P) * P, rw, P);
-
-      // Raised pure white bone plate
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(Math.round(rx / P) * P + P, Math.round((ry - P) / P) * P, rw - P, P);
-    }
-    ctx.restore();
 
     // ── 4. PIXEL-ART FLOWING CONNECTED WHITE MANE & HAIR STRANDS (Zero Gaps) ──
     ctx.save();
@@ -661,44 +739,14 @@ export class YutaRenderer {
     });
     ctx.restore();
 
-    // ── 5. PIXEL-ART BONE-WHITE HEAD DOME & GAPING MAW ──
+    // ── 5. PIXEL-ART BONE-WHITE HEAD DOME & GAPING MAW (Rule 35 Pre-Baked Quad) ──
     ctx.save();
     const headCenterX = r * 0.52;
     const headR = r * 0.42;
-    const headSteps = Math.ceil(headR / P);
-
-    // Head Pixel Outline
-    ctx.fillStyle = '#111114';
-    for (let gy = -headSteps; gy <= headSteps; gy++) {
-      for (let gx = -headSteps; gx <= headSteps; gx++) {
-        const d = Math.hypot(gx * P, gy * P);
-        if (d <= headR + P * 0.8) {
-          ctx.fillRect(Math.round((headCenterX + gx * P) / P) * P, Math.round(gy * P / P) * P, P, P);
-        }
-      }
+    const headEntry = _getRikaHeadCanvas(r, P);
+    if (headEntry && headEntry.canvas) {
+      ctx.drawImage(headEntry.canvas, headCenterX - headEntry.pad, -headEntry.pad);
     }
-
-    // Head Dome Base Bone Fill (Pure White #FFFFFF / #F6F4FA)
-    for (let gy = -headSteps; gy <= headSteps; gy++) {
-      for (let gx = -headSteps; gx <= headSteps; gx++) {
-        const d = Math.hypot(gx * P, gy * P);
-        if (d <= headR) {
-          const rx = gx * P;
-          const ry = gy * P;
-          let col = '#FFFFFF';
-          if (rx < -headR * 0.2 || Math.abs(ry) > headR * 0.6) {
-            col = '#DCD8E6';
-          }
-          ctx.fillStyle = col;
-          ctx.fillRect(Math.round((headCenterX + rx) / P) * P, Math.round(ry / P) * P, P, P);
-        }
-      }
-    }
-
-    // Cranial Suture Plate Cracks (Dark pixel cracks)
-    ctx.fillStyle = '#111114';
-    ctx.fillRect(Math.round((headCenterX - P * 2) / P) * P, Math.round(-headR * 0.3 / P) * P, P * 4, P);
-    ctx.fillRect(Math.round(headCenterX / P) * P, Math.round(-headR * 0.6 / P) * P, P, P * 4);
 
     // Gaping Maw Void (Abyssal Crimson-Black)
     const mouthOpen = isAttacking ? 18 : 10;

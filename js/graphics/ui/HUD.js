@@ -6,6 +6,7 @@ import { toggleCameraMode } from '../../systems/cameraSystem.js';
 import { GAME_MODES } from '../../core/modeConfig.js';
 import { drawSmallFighterBadge } from './CharacterSelectScreen.js';
 import { _clearButtons, _registerButton, handleUIMove, handleUIClick, drawPanel, drawButton, wrapText, drawPremiumStatBar, drawStatBar } from './uiFramework.js';
+import { drawScreentoneModalBackdrop } from './mangaScreentone.js';
 
 
 function drawHpPanel(fighter, x, y, alignRight, fighterIndex) {
@@ -167,8 +168,8 @@ function drawPauseScreen() {
   _clearButtons();
 
   // Dark backdrop overlay to make the top pause panel pop over the top of the screen
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.50)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawScreentoneModalBackdrop(ctx, canvas.width, canvas.height, 0.45);
+  // (single drawImage of cached halftone vignette overlay)
 
   drawHUD(); // Keep HUD visible in background
 
@@ -184,13 +185,13 @@ function drawPauseScreen() {
 
   // Drag handle grip bar indicator at top of panel
   ctx.save();
-  ctx.fillStyle = state.isDraggingPauseMenu ? '#ffd700' : 'rgba(255, 255, 255, 0.45)';
+  ctx.fillStyle = state.isDraggingPauseMenu ? '#000000' : 'rgba(0, 0, 0, 0.35)';
   ctx.beginPath();
   ctx.roundRect(cx - 24, cy - panelH / 2 + 10, 48, 4, 2);
   ctx.fill();
   ctx.restore();
 
-  ctx.fillStyle = '#b45309'; // Rich dark amber/gold
+  ctx.fillStyle = '#000000'; // Crisp black manga ink
   ctx.font = '900 22px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

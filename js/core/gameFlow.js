@@ -174,6 +174,29 @@ export function preloadFighterAssets(fighterOrId, isPriority = false) {
 
   const uniquePaths = [...new Set(paths.filter(Boolean))];
   if (uniquePaths.length === 0) return Promise.resolve();
+
+  const charSheetId = (typeof soundSpriteManager !== 'undefined' && soundSpriteManager.getCharacterSheetId)
+    ? (soundSpriteManager.getCharacterSheetId(charId) ||
+       soundSpriteManager.getCharacterSheetId(fType) ||
+       soundSpriteManager.getCharacterSheetId(fId))
+    : null;
+
+  if (charSheetId) {
+    return (async () => {
+      const audioCtx = typeof getAudioContext === 'function' ? getAudioContext() : null;
+      const sheetBuffer = await soundSpriteManager.loadSpriteSheet(charSheetId, audioCtx);
+      if (sheetBuffer) {
+        const remainingPaths = uniquePaths.filter(p =>
+          !soundSpriteManager.isKeyInSheet(p, charSheetId) &&
+          !soundSpriteManager.isKeyInSheet(p, 'combat_core_sfx')
+        );
+        if (remainingPaths.length === 0) return sheetBuffer;
+        return preloadSound(remainingPaths, { priority: isPriority, idle: !isPriority });
+      }
+      return preloadSound(uniquePaths, { priority: isPriority, idle: !isPriority });
+    })();
+  }
+
   return preloadSound(uniquePaths, { priority: isPriority, idle: !isPriority });
 }
 

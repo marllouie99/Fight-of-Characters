@@ -271,6 +271,13 @@ function runMatchupBenchmark({
   if (state.plants) state.plants.length = 0;
   if (state.turrets) state.turrets.length = 0;
   if (state.dispensers) state.dispensers.length = 0;
+  if (state.wallCracks) state.wallCracks.length = 0;
+  if (state.shatteredWalls) state.shatteredWalls.length = 0;
+  if (state.droppedMagazines) state.droppedMagazines.length = 0;
+  if (state.thrownGuns) state.thrownGuns.length = 0;
+  if (state.spentCasings) state.spentCasings.length = 0;
+  if (state.effects) state.effects.length = 0;
+  if (state.tombstoneDeathEffects) state.tombstoneDeathEffects.length = 0;
 
   const f1 = new F1Class({
     ...f1Def,
@@ -297,8 +304,21 @@ function runMatchupBenchmark({
     state.gameState = 'playing';
     state.roundEndTimer = 0;
     state.matchEndTimer = 0;
-    for (const f of state.fighters) {
-      if (f.hp <= 0 || f.dead) {
+
+    // Purge dead sub-entities (plants, minions, turrets) from state.fighters so they don't accumulate
+    if (Array.isArray(state.fighters) && state.fighters.length > 2) {
+      for (let i = state.fighters.length - 1; i >= 2; i--) {
+        const sub = state.fighters[i];
+        if (sub && (sub.hp <= 0 || sub.dead || sub.isDying)) {
+          state.fighters.splice(i, 1);
+        }
+      }
+    }
+
+    // Only revive the two primary duelists (f1 and f2)
+    for (let i = 0; i < Math.min(2, state.fighters.length); i++) {
+      const f = state.fighters[i];
+      if (f && (f.hp <= 0 || f.dead)) {
         f.hp = f.maxHp;
         f.dead = false;
         f.isDying = false;

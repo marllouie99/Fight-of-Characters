@@ -13,6 +13,7 @@ import {
 } from '../../core/state.js';
 import { FIGHTER_DEFS, CONFIG } from '../../core/config.js';
 import { _clearButtons, _registerButton, handleUIMove, handleUIClick, drawPanel, drawButton, wrapText, drawChamferedRect } from './uiFramework.js';
+import { drawScreentoneModalBackdrop } from './mangaScreentone.js';
 import { getFighterPreview, getFighterStickerPreview } from './FighterPreviewCache.js';
 import { drawIchigoSkin, _drawIchigoHair, _getIchigoHairImage } from '../fighters/ichigoSkin.js';
 import { drawGojoBody, _drawGojoHair, _getGojoHairImage } from '../fighters/gojoSkin.js';
@@ -3474,11 +3475,8 @@ export function drawSkinStudioScreen() {
 
   // ── Tier 5: Fighter Selection Modal Overlay ──
   if (state.studioSkinModalOpen) {
-    // 1. Dim background backdrop
-    ctx.save();
-    ctx.fillStyle = 'rgba(4, 6, 12, 0.82)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
+    // 1. Manga screentone modal backdrop (pre-baked halftone vignette)
+    drawScreentoneModalBackdrop(ctx, canvas.width, canvas.height);
 
     // Backdrop click closes modal
     _registerButton(0, 0, canvas.width, canvas.height, () => {
