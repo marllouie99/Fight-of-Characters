@@ -1,4 +1,5 @@
 import { drawHUD } from '../hudManager.js';
+import { isMobileCanvasHudActive, drawMobileCanvasHud } from './canvasMobileHud.js';
 import { drawCountdownIntro } from './CountdownIntro.js';
 import { restartCurrentRound, goToTitle } from '../../core/gameFlow.js';
 import { state } from '../../core/state.js';
@@ -171,7 +172,11 @@ function drawPauseScreen() {
   drawScreentoneModalBackdrop(ctx, canvas.width, canvas.height, 0.45);
   // (single drawImage of cached halftone vignette overlay)
 
-  drawHUD(); // Keep HUD visible in background
+  if (isMobileCanvasHudActive()) {
+    drawMobileCanvasHud(ctx);
+  } else {
+    drawHUD(); // Keep HUD visible in background
+  }
 
   if (state.pauseMenuX === undefined) state.pauseMenuX = canvas.width / 2;
   if (state.pauseMenuY === undefined) state.pauseMenuY = 195;

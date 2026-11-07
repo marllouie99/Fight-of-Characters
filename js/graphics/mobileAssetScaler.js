@@ -364,11 +364,11 @@ export function prewarmMatchAssets(fighters, gameCtx = null) {
     if (id) activeIds.add(id);
   }
 
-  // 2. Trigger deferred image loads for active fighters & shared combat effects
+  // 2. Trigger deferred image loads for active fighters, shared combat effects & universal death sprites
   if (_deferredImages.size > 0 && typeof _triggerDeferredImageLoadRef === 'function') {
     for (const img of Array.from(_deferredImages)) {
       const p = img._normalizedAssetPath || '';
-      let shouldLoad = p.startsWith('assets/effects/');
+      let shouldLoad = p.startsWith('assets/effects/') || p.includes('arena decoration/');
       if (!shouldLoad) {
         for (const id of activeIds) {
           if (p.includes(`/${id}/`) || p.includes(`/${id}-`) || p.includes(`_${id}`)) {

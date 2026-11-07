@@ -458,6 +458,78 @@ function formatTeamWinText(names, defaultFallback = 'FIGHTER WINS!') {
 }
 
 // ─────────────────────────────────────────────
+// PRE-BAKED WINNER TEXT OVERLAY CACHE (Rule 35 Mobile 60 FPS Standard)
+// ─────────────────────────────────────────────
+const _winnerOverlayTextCache = new Map();
+
+function _getCachedWinnerOverlayCanvas(mainText, subText, showSubText, themeColor, subColor, maxAllowedWidth) {
+  if (typeof document === 'undefined' || (typeof state !== 'undefined' && !state.isMobileDevice)) return null;
+  const key = `${mainText}|${showSubText ? subText : ''}|${themeColor}|${subColor || ''}|${Math.round(maxAllowedWidth)}`;
+  let entry = _winnerOverlayTextCache.get(key);
+  if (entry) return entry;
+
+  if (_winnerOverlayTextCache.size >= 16) {
+    const oldestKey = _winnerOverlayTextCache.keys().next().value;
+    _winnerOverlayTextCache.delete(oldestKey);
+  }
+
+  const cssW = Math.max(320, Math.ceil(maxAllowedWidth + 48));
+  const cssH = 96;
+  const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(cssW * dpr);
+  canvas.height = Math.ceil(cssH * dpr);
+  const bCtx = canvas.getContext('2d');
+  if (!bCtx) return null;
+
+  bCtx.save();
+  bCtx.scale(dpr, dpr);
+  bCtx.translate(cssW / 2, cssH / 2);
+  bCtx.textAlign = 'center';
+  bCtx.textBaseline = 'middle';
+
+  const retroFontFamily = '"Silkscreen", "Press Start 2P", monospace, sans-serif';
+  let baseFontSize = 26;
+  bCtx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
+  const textWidth = measureDecoratedFighterName(bCtx, mainText);
+  if (textWidth > maxAllowedWidth) {
+    baseFontSize = Math.max(12, Math.floor(baseFontSize * (maxAllowedWidth / textWidth)));
+    bCtx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
+  }
+
+  const mainY = showSubText ? -12 : 0;
+  const subY = 22;
+
+  bCtx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
+  bCtx.strokeStyle = '#000000';
+  bCtx.fillStyle = themeColor;
+  bCtx.lineWidth = 6;
+  bCtx.lineJoin = 'round';
+  drawDecoratedFighterName(bCtx, mainText, 0, mainY, {
+    stroke: true,
+    color: themeColor
+  });
+
+  if (showSubText && subText) {
+    const subFontSize = 13;
+    bCtx.font = `700 ${subFontSize}px ${retroFontFamily}`;
+    bCtx.strokeStyle = '#000000';
+    bCtx.lineWidth = 4;
+    bCtx.lineJoin = 'round';
+    bCtx.strokeText(subText, 0, subY);
+    bCtx.fillStyle = subColor || '#FFFFFF';
+    bCtx.fillText(subText, 0, subY);
+  }
+
+  bCtx.restore();
+
+  entry = { canvas, cssW, cssH };
+  _winnerOverlayTextCache.set(key, entry);
+  return entry;
+}
+
+// ─────────────────────────────────────────────
 // SIMPLE IN-ARENA TACTICAL WINNER OVERLAY
 // (Clean In-Arena Text: e.g. "M4A1 & SPAS-12 WIN!")
 // ─────────────────────────────────────────────
@@ -540,35 +612,36 @@ function drawTacticalWinnerOverlay(ctx, winner, timer, mode, isMatchEnd) {
   const animProgress = Math.min(1.0, timer / 14);
   const alpha = animProgress;
   const scale = 0.90 + 0.10 * easeOutBack(animProgress);
+  const maxAllowedWidth = Math.min(arenaW * 0.88, 440);
+  const cached = _getCachedWinnerOverlayCanvas(winText, '', false, themeColor, '#FFFFFF', maxAllowedWidth);
 
   ctx.save();
   ctx.translate(centerX, centerY);
   ctx.scale(scale, scale);
   ctx.globalAlpha = alpha;
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  const retroFontFamily = '"Silkscreen", "Press Start 2P", monospace, sans-serif';
-  const maxAllowedWidth = Math.min(arenaW * 0.88, 440);
-  let baseFontSize = 26;
-
-  ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
-  let textWidth = measureDecoratedFighterName(ctx, winText);
-  if (textWidth > maxAllowedWidth) {
-    baseFontSize = Math.max(12, Math.floor(baseFontSize * (maxAllowedWidth / textWidth)));
+  if (cached && cached.canvas) {
+    ctx.drawImage(cached.canvas, -cached.cssW / 2, -cached.cssH / 2, cached.cssW, cached.cssH);
+  } else {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const retroFontFamily = '"Silkscreen", "Press Start 2P", monospace, sans-serif';
+    let baseFontSize = 26;
     ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
+    let textWidth = measureDecoratedFighterName(ctx, winText);
+    if (textWidth > maxAllowedWidth) {
+      baseFontSize = Math.max(12, Math.floor(baseFontSize * (maxAllowedWidth / textWidth)));
+      ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
+    }
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = themeColor;
+    ctx.lineJoin = 'round';
+    drawDecoratedFighterName(ctx, winText, 0, 0, {
+      stroke: true,
+      color: themeColor
+    });
   }
-
-  // Thick dark stroke for high readability against map floor
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = '#000000';
-  ctx.fillStyle = themeColor;
-  ctx.lineJoin = 'round';
-  drawDecoratedFighterName(ctx, winText, 0, 0, {
-    stroke: true,
-    color: themeColor
-  });
 
   ctx.restore();
 }
@@ -632,56 +705,51 @@ function draw1v1WinnerOverlay(ctx, winner, timer, mode, isMatchEnd) {
   const animProgress = Math.min(1.0, timer / 14);
   const alpha = animProgress;
   const scale = 0.90 + 0.10 * easeOutBack(animProgress);
+  const isDark = (state.arenaTheme === 'dark');
+  const isFinal = isMatchEnd || roundNum >= 3;
+  const subColor = isDraw ? '#FFD700' : (isFinal ? '#FF4D4D' : (isDark ? '#E2E8F0' : '#FFFFFF'));
+  const maxAllowedWidth = Math.min(arenaW * 0.88, 440);
+  const cached = _getCachedWinnerOverlayCanvas(mainText, subText, showSubText, themeColor, subColor, maxAllowedWidth);
 
   ctx.save();
   ctx.translate(centerX, centerY);
   ctx.scale(scale, scale);
   ctx.globalAlpha = alpha;
 
-  const isDark = (state.arenaTheme === 'dark');
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  // Dynamic font sizing
-  const maxAllowedWidth = Math.min(arenaW * 0.88, 440);
-  let baseFontSize = 26;
-  const retroFontFamily = '"Silkscreen", "Press Start 2P", monospace, sans-serif';
-
-  ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
-  let textWidth = measureDecoratedFighterName(ctx, mainText);
-  if (textWidth > maxAllowedWidth) {
-    baseFontSize = Math.max(12, Math.floor(baseFontSize * (maxAllowedWidth / textWidth)));
+  if (cached && cached.canvas) {
+    ctx.drawImage(cached.canvas, -cached.cssW / 2, -cached.cssH / 2, cached.cssW, cached.cssH);
+  } else {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let baseFontSize = 26;
+    const retroFontFamily = '"Silkscreen", "Press Start 2P", monospace, sans-serif';
     ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
-  }
-
-  const mainY = showSubText ? -12 : 0;
-  const subY = 22;
-
-  // Main winner text - Heavy black outline for maximum contrast
-  ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
-  ctx.strokeStyle = '#000000';
-  ctx.fillStyle = themeColor;
-  ctx.lineWidth = 6;
-  ctx.lineJoin = 'round';
-  drawDecoratedFighterName(ctx, mainText, 0, mainY, {
-    stroke: true,
-    color: themeColor
-  });
-
-  // Subtitle / Round tag text - only in 1v1 multi-round mode or draw
-  if (showSubText) {
-    const subFontSize = 13;
-    ctx.font = `700 ${subFontSize}px ${retroFontFamily}`;
+    let textWidth = measureDecoratedFighterName(ctx, mainText);
+    if (textWidth > maxAllowedWidth) {
+      baseFontSize = Math.max(12, Math.floor(baseFontSize * (maxAllowedWidth / textWidth)));
+      ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
+    }
+    const mainY = showSubText ? -12 : 0;
+    const subY = 22;
+    ctx.font = `700 ${baseFontSize}px ${retroFontFamily}`;
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
+    ctx.fillStyle = themeColor;
+    ctx.lineWidth = 6;
     ctx.lineJoin = 'round';
-    ctx.strokeText(subText, 0, subY);
-
-    const isFinal = isMatchEnd || roundNum >= 3;
-    const subColor = isDraw ? '#FFD700' : (isFinal ? '#FF4D4D' : (isDark ? '#E2E8F0' : '#FFFFFF'));
-    ctx.fillStyle = subColor;
-    ctx.fillText(subText, 0, subY);
+    drawDecoratedFighterName(ctx, mainText, 0, mainY, {
+      stroke: true,
+      color: themeColor
+    });
+    if (showSubText) {
+      const subFontSize = 13;
+      ctx.font = `700 ${subFontSize}px ${retroFontFamily}`;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 4;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(subText, 0, subY);
+      ctx.fillStyle = subColor;
+      ctx.fillText(subText, 0, subY);
+    }
   }
 
   ctx.restore();
@@ -792,7 +860,9 @@ function drawInArenaChampionLayout(winner, timer, titleText, mode, isMatchEnd) {
 function drawRoundEndScreen() {
   const { ctx, roundWinner, roundNum, roundEndTimer, mode, ffaMatchComplete, scores } = state;
   _clearButtons();
-  drawHUD();
+  // Note: renderSystem.js already renders the active HUD (Canvas Mobile HUD on mobile, DOM HUD on desktop)
+  // before invoking drawRoundEndScreen(). Calling drawHUD() unconditionally here previously resurrected
+  // the hidden DOM HUD on mobile devices and caused a severe post-win FPS drop.
 
   if (roundEndTimer <= 2) {
     state._winnerStartPositions = null;
@@ -861,7 +931,8 @@ function drawFfaChampionReveal(winner, timer) {
 function drawMatchEndScreen() {
   const { ctx, canvas, matchWinner, fighters, mode, matchEndTimer } = state;
   _clearButtons();
-  drawHUD();
+  // Note: renderSystem.js already renders the active HUD (Canvas Mobile HUD on mobile, DOM HUD on desktop)
+  // before invoking drawMatchEndScreen().
 
   if (matchEndTimer <= 2) {
     state._winnerStartPositions = null;

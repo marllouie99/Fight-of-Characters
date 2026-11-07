@@ -70,7 +70,14 @@ export const CORE_SOUND_ENTRIES = [
   { keys: ['bell', 'ui_bell'], path: 'Assets/Sound Effects/Announcer/bell.mp3' },
   { keys: ['fight'], path: 'Assets/Sound Effects/Announcer/fight.mp3' },
   { keys: ['ringbell', 'ring_bell'], path: 'Assets/Sound Effects/Announcer/ring-bell.mp3' },
-  { keys: ['battleintro_transitions', 'battleintro-transitions'], path: 'Assets/Sound Effects/Announcer/era_dev-duplicispear-swing.wav' }
+  { keys: ['battleintro_transitions', 'battleintro-transitions'], path: 'Assets/Sound Effects/Announcer/era_dev-duplicispear-swing.wav' },
+  { keys: ['faah'], path: 'Assets/Sound Effects/Announcer/faah.mp3' },
+  { keys: ['youwin', 'street_fighter_you_win'], path: 'Assets/Sound Effects/Announcer/street-fighter-ii-you-win.mp3' },
+  { keys: ['fighter_summon', 'era_eno_clericstaffhit'], path: 'Assets/Sound Effects/Announcer/era_eno_clericstaffhit.wav' },
+
+  // Universal Fighter Death & Tombstone SFX
+  { keys: ['crazydave_planting'], path: 'Assets/Sound Effects/SkillEffects/crazydave-Planting.ogg' },
+  { keys: ['effect_flare'], path: 'Assets/Sound Effects/SkillEffects/flare.mp3' }
 ];
 
 const _durationCache = new Map();

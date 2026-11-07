@@ -10,6 +10,37 @@ import { audioSystem } from '../../systems/audioSystem.js';
 
 let _tombstoneImage = null;
 let _ghostImage = null;
+let _ghostAuraCanvas = null;
+
+/**
+ * Returns a cached 64x64 offscreen radial glow canvas for the ascending ghost soul (Rule 35).
+ * Eliminates per-frame ctx.createRadialGradient() shader/LUT allocations during roundEnd/matchEnd.
+ * @returns {HTMLCanvasElement|null}
+ */
+function _getGhostAuraCanvas() {
+  if (typeof document === 'undefined') return null;
+  if (_ghostAuraCanvas) return _ghostAuraCanvas;
+
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const bCtx = c.getContext('2d');
+  if (!bCtx) return null;
+
+  const half = size / 2;
+  const grad = bCtx.createRadialGradient(half, half, 2, half, half, half);
+  grad.addColorStop(0, 'rgba(224, 242, 254, 0.6)');
+  grad.addColorStop(0.5, 'rgba(56, 189, 248, 0.3)');
+  grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+  bCtx.fillStyle = grad;
+  bCtx.beginPath();
+  bCtx.arc(half, half, half, 0, Math.PI * 2);
+  bCtx.fill();
+
+  _ghostAuraCanvas = c;
+  return _ghostAuraCanvas;
+}
 
 /**
  * Returns the cached or freshly initialized Image object for the gravestone/tombstone.
@@ -347,20 +378,19 @@ export function drawTombstoneDeathEffects(ctx) {
         }
       }
 
-      // Ethereal Aura Glow Disc behind the ghost
+      // Ethereal Aura Glow Disc behind the ghost (Pre-baked offscreen quad — Rule 35)
+      const auraR = g.targetW * 0.85;
+      const auraCanvas = _getGhostAuraCanvas();
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1.0, g.alpha * 0.38));
-      const auraGrad = ctx.createRadialGradient(
-        g.x + sway, g.y, 2,
-        g.x + sway, g.y, g.targetW * 0.85
-      );
-      auraGrad.addColorStop(0, 'rgba(224, 242, 254, 0.6)');
-      auraGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.3)');
-      auraGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-      ctx.fillStyle = auraGrad;
-      ctx.beginPath();
-      ctx.arc(g.x + sway, g.y, g.targetW * 0.85, 0, Math.PI * 2);
-      ctx.fill();
+      if (auraCanvas) {
+        ctx.drawImage(auraCanvas, g.x + sway - auraR, g.y - auraR, auraR * 2, auraR * 2);
+      } else {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+        ctx.beginPath();
+        ctx.arc(g.x + sway, g.y, auraR, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
 
       // Ghost Pixel Sprite

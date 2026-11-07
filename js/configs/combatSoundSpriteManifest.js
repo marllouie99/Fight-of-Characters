@@ -2,8 +2,8 @@
 export const COMBAT_SOUND_SPRITE_MANIFEST = {
   sheetId: 'combat_core_sfx',
   audioUrl: 'Assets/Sound Effects/Sprites/combat_core_sfx.mp3',
-  totalDuration: 34.21,
-  sliceCount: 31,
+  totalDuration: 40.81,
+  sliceCount: 36,
   slices: {
   "punch": [
     0,
@@ -500,6 +500,74 @@ export const COMBAT_SOUND_SPRITE_MANIFEST = {
   "assets/sound effects/announcer/era_dev-duplicispear-swing.wav": [
     33.316,
     0.847
+  ],
+  "faah": [
+    34.213,
+    1.927
+  ],
+  "Assets/Sound Effects/Announcer/faah.mp3": [
+    34.213,
+    1.927
+  ],
+  "assets/sound effects/announcer/faah.mp3": [
+    34.213,
+    1.927
+  ],
+  "youwin": [
+    36.19,
+    1.256
+  ],
+  "street_fighter_you_win": [
+    36.19,
+    1.256
+  ],
+  "Assets/Sound Effects/Announcer/street-fighter-ii-you-win.mp3": [
+    36.19,
+    1.256
+  ],
+  "assets/sound effects/announcer/street-fighter-ii-you-win.mp3": [
+    36.19,
+    1.256
+  ],
+  "fighter_summon": [
+    37.496,
+    1.211
+  ],
+  "era_eno_clericstaffhit": [
+    37.496,
+    1.211
+  ],
+  "Assets/Sound Effects/Announcer/era_eno_clericstaffhit.wav": [
+    37.496,
+    1.211
+  ],
+  "assets/sound effects/announcer/era_eno_clericstaffhit.wav": [
+    37.496,
+    1.211
+  ],
+  "crazydave_planting": [
+    38.757,
+    0.755
+  ],
+  "Assets/Sound Effects/SkillEffects/crazydave-Planting.ogg": [
+    38.757,
+    0.755
+  ],
+  "assets/sound effects/skilleffects/crazydave-planting.ogg": [
+    38.757,
+    0.755
+  ],
+  "effect_flare": [
+    39.562,
+    1.202
+  ],
+  "Assets/Sound Effects/SkillEffects/flare.mp3": [
+    39.562,
+    1.202
+  ],
+  "assets/sound effects/skilleffects/flare.mp3": [
+    39.562,
+    1.202
   ]
 }
 };

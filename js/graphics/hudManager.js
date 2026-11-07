@@ -341,6 +341,9 @@ let _cachedBottomRight = null;
 
 
 export function drawHUD() {
+  if (typeof state !== 'undefined' && state.isMobileDevice && state.viewOrientation !== 'horizontal' && CONFIG.mobileCanvasHudEnabled !== false) {
+    return;
+  }
   _isHudAlreadyCleared = false;
 
   // Mirror the preferred HUD layout onto <body> so CSS can switch the bar skin between the
@@ -2604,10 +2607,11 @@ function updateHealthHud() {
   const isMobile = Boolean(typeof state !== 'undefined' && state.isMobileDevice);
   const isLowQuality = (typeof state !== 'undefined' && (state.performanceMode || (state.qualityLevel && state.qualityLevel < 0.5) || (state.fps && state.fps < 45)));
   const throttleInterval = isLowQuality ? (isMobile ? 12 : 8) : (isMobile ? 8 : 4);
-  const isCriticalState = ['roundEnd', 'matchEnd', 'countdown'].includes(state.gameState);
+  const isStateTransition = (state._lastHudGameState !== state.gameState);
+  state._lastHudGameState = state.gameState;
   const isInitialCacheEmpty = (_hudCache.fighters.size === 0 && _hudCache.teams.size === 0);
   
-  if (!isCriticalState && !isInitialCacheEmpty && (state._hudFrameCount % throttleInterval !== 0)) {
+  if (!isStateTransition && !isInitialCacheEmpty && (state._hudFrameCount % throttleInterval !== 0)) {
     return; // Skip DOM update this frame to preserve CPU and lock 60 FPS
   }
 

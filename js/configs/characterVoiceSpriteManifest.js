@@ -346,8 +346,8 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
     "sheetId": "char_voice_gojo",
     "characterId": "gojo",
     "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_gojo_sfx.mp3",
-    "totalDuration": 17.53,
-    "sliceCount": 12,
+    "totalDuration": 16.28,
+    "sliceCount": 11,
     "slices": {
       "Assets/Sound Effects/Skills/gojodomain.mp3": [
         0,
@@ -397,100 +397,88 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
         5.192,
         1.123
       ],
-      "Assets/Sound Effects/SkillEffects/flare.mp3": [
-        6.365,
-        1.202
-      ],
-      "flare.mp3": [
-        6.365,
-        1.202
-      ],
-      "flare": [
-        6.365,
-        1.202
-      ],
       "Assets/Sound Effects/Skills/purpledeploy.mp3": [
-        7.617,
+        6.365,
         1.176
       ],
       "purpledeploy.mp3": [
-        7.617,
+        6.365,
         1.176
       ],
       "purpledeploy": [
-        7.617,
+        6.365,
         1.176
       ],
       "Assets/Sound Effects/Skills/redcharging.mp3": [
-        8.842,
+        7.59,
         1.672
       ],
       "redcharging.mp3": [
-        8.842,
+        7.59,
         1.672
       ],
       "redcharging": [
-        8.842,
+        7.59,
         1.672
       ],
       "Assets/Sound Effects/Skills/redchanneling.mp3": [
-        10.564,
+        9.312,
         1.254
       ],
       "redchanneling.mp3": [
-        10.564,
+        9.312,
         1.254
       ],
       "redchanneling": [
-        10.564,
+        9.312,
         1.254
       ],
       "Assets/Sound Effects/Skills/reddeploy.mp3": [
-        11.868,
+        10.616,
         0.627
       ],
       "reddeploy.mp3": [
-        11.868,
+        10.616,
         0.627
       ],
       "reddeploy": [
-        11.868,
+        10.616,
         0.627
       ],
       "Assets/Sound Effects/Skills/redblast.mp3": [
-        12.545,
+        11.293,
         2.717
       ],
       "redblast.mp3": [
-        12.545,
+        11.293,
         2.717
       ],
       "redblast": [
-        12.545,
+        11.293,
         2.717
       ],
       "Assets/Sound Effects/Skills/repair.mp3": [
-        15.311,
+        14.06,
         0.967
       ],
       "repair.mp3": [
-        15.311,
+        14.06,
         0.967
       ],
       "repair": [
-        15.311,
+        14.06,
         0.967
       ],
       "Assets/Sound Effects/SkillEffects/infinity-collide.mp3": [
-        16.328,
+        15.076,
         1.149
       ],
       "infinity-collide.mp3": [
-        16.328,
+        15.076,
         1.149
       ],
       "infinity-collide": [
-        16.328,
+        15.076,
         1.149
       ]
     }
@@ -1414,8 +1402,8 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
     "sheetId": "char_voice_ichigo",
     "characterId": "ichigo",
     "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ichigo_sfx.mp3",
-    "totalDuration": 12.33,
-    "sliceCount": 10,
+    "totalDuration": 11.08,
+    "sliceCount": 9,
     "slices": {
       "Assets/Sound Effects/Skills/shieldblock2.mp3": [
         0,
@@ -1513,28 +1501,16 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
         8.866,
         1.019
       ],
-      "Assets/Sound Effects/SkillEffects/flare.mp3": [
-        9.935,
-        1.202
-      ],
-      "flare.mp3": [
-        9.935,
-        1.202
-      ],
-      "flare": [
-        9.935,
-        1.202
-      ],
       "Assets/Sound Effects/Skills/Ichigo-bankai-charging-voiceline.mp3": [
-        11.186,
+        9.935,
         1.097
       ],
       "Ichigo-bankai-charging-voiceline.mp3": [
-        11.186,
+        9.935,
         1.097
       ],
       "Ichigo-bankai-charging-voiceline": [
-        11.186,
+        9.935,
         1.097
       ]
     }
@@ -3064,163 +3040,151 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
     "sheetId": "char_voice_crazydave",
     "characterId": "crazydave",
     "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_crazydave_sfx.mp3",
-    "totalDuration": 17.46,
-    "sliceCount": 13,
+    "totalDuration": 16.65,
+    "sliceCount": 12,
     "slices": {
-      "Assets/Sound Effects/SkillEffects/crazydave-Planting.ogg": [
-        0,
-        0.755
-      ],
-      "crazydave-Planting.ogg": [
-        0,
-        0.755
-      ],
-      "crazydave-Planting": [
-        0,
-        0.755
-      ],
       "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (1).ogg": [
-        0.805,
+        0,
         1.169
       ],
       "crazydave-noise1 (1).ogg": [
-        0.805,
+        0,
         1.169
       ],
       "crazydave-noise1 (1)": [
-        0.805,
+        0,
         1.169
       ],
       "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (2).ogg": [
-        2.024,
+        1.219,
         0.907
       ],
       "crazydave-noise1 (2).ogg": [
-        2.024,
+        1.219,
         0.907
       ],
       "crazydave-noise1 (2)": [
-        2.024,
+        1.219,
         0.907
       ],
       "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (3).ogg": [
-        2.981,
+        2.176,
         1.087
       ],
       "crazydave-noise1 (3).ogg": [
-        2.981,
+        2.176,
         1.087
       ],
       "crazydave-noise1 (3)": [
-        2.981,
+        2.176,
         1.087
       ],
       "Assets/Sound Effects/Sprites SFX/crazydave-sun-pickup.mp3": [
-        4.118,
+        3.313,
         1.207
       ],
       "crazydave-sun-pickup.mp3": [
-        4.118,
+        3.313,
         1.207
       ],
       "crazydave-sun-pickup": [
-        4.118,
+        3.313,
         1.207
       ],
       "Assets/Sound Effects/Attacks/crazydave-peashooter-shot.mp3": [
-        5.375,
+        4.571,
         0.802
       ],
       "crazydave-peashooter-shot.mp3": [
-        5.375,
+        4.571,
         0.802
       ],
       "crazydave-peashooter-shot": [
-        5.375,
+        4.571,
         0.802
       ],
       "Assets/Sound Effects/Attacks/crazydave-snow_pea_sparkles.ogg": [
-        6.227,
+        5.423,
         0.557
       ],
       "crazydave-snow_pea_sparkles.ogg": [
-        6.227,
+        5.423,
         0.557
       ],
       "crazydave-snow_pea_sparkles": [
-        6.227,
+        5.423,
         0.557
       ],
       "Assets/Sound Effects/SkillEffects/crazydave-snowpea-freeze.mp3": [
-        6.834,
+        6.03,
         2.717
       ],
       "crazydave-snowpea-freeze.mp3": [
-        6.834,
+        6.03,
         2.717
       ],
       "crazydave-snowpea-freeze": [
-        6.834,
+        6.03,
         2.717
       ],
       "Assets/Sound Effects/SkillEffects/splat3.ogg": [
-        9.601,
+        8.797,
         0.682
       ],
       "splat3.ogg": [
-        9.601,
+        8.797,
         0.682
       ],
       "splat3": [
-        9.601,
+        8.797,
         0.682
       ],
       "Assets/Sound Effects/Skills/shieldblock2.mp3": [
-        10.333,
+        9.529,
         0.653
       ],
       "shieldblock2.mp3": [
-        10.333,
+        9.529,
         0.653
       ],
       "shieldblock2": [
-        10.333,
+        9.529,
         0.653
       ],
       "Assets/Sound Effects/Sprites SFX/Lawn Mower.mp3": [
-        11.036,
+        10.232,
         2.926
       ],
       "Lawn Mower.mp3": [
-        11.036,
+        10.232,
         2.926
       ],
       "Lawn Mower": [
-        11.036,
+        10.232,
         2.926
       ],
       "Assets/Sound Effects/Skills/spinslash.mp3": [
-        14.012,
+        13.207,
         1.646
       ],
       "spinslash.mp3": [
-        14.012,
+        13.207,
         1.646
       ],
       "spinslash": [
-        14.012,
+        13.207,
         1.646
       ],
       "Assets/Sound Effects/Skills/fugaexplode.mp3": [
-        15.708,
+        14.903,
         1.698
       ],
       "fugaexplode.mp3": [
-        15.708,
+        14.903,
         1.698
       ],
       "fugaexplode": [
-        15.708,
+        14.903,
         1.698
       ]
     }

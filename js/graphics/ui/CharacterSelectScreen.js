@@ -5,8 +5,10 @@ import { CONFIG, FIGHTER_DEFS, getActiveFighterDefs } from '../../core/config.js
 import { Fighter } from '../../entities/fighter.js';
 import { FIGHTER_CLASS_MAP } from '../../entities/factories/fighterFactory.js';
 import { clearHealthHud } from '../hudManager.js';
-import { _clearButtons, _registerButton, handleUIMove, handleUIClick, drawPanel, drawButton, wrapText, fitSingleLineText, drawPremiumStatBar, drawStatBar, drawChamferedRect } from './uiFramework.js';
+import { _clearButtons, _registerButton, handleUIMove, handleUIClick, getMousePosition, drawPanel, drawButton, wrapText, fitSingleLineText, drawPremiumStatBar, drawStatBar, drawChamferedRect } from './uiFramework.js';
 import { getFighterPreview, getFighterStickerPreview } from './FighterPreviewCache.js';
+import { soundSpriteManager } from '../../systems/soundSpriteSystem.js';
+import { getAudioContext } from '../../systems/soundSystem.js';
 import {
   drawCollectorFighterCard,
   drawCollectorModalBackdrop,
@@ -46,6 +48,81 @@ let _playerCardBounds = [];
 let tlfsPoolPage = 0;
 let _tlfsEnemyPoolBounds = null;
 let _lastTlfsWheelTime = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IDLE CHARACTER SELECT HOVER / INSPECTION PRE-WARMING (350ms Debounced)
+// Pre-warms highlighted fighter's char_<id>_sfx.mp3 voice atlas & sprite assets
+// during idle UI browsing so the Pre-Battle VS Curtain load is 0ms instantaneous.
+// ─────────────────────────────────────────────────────────────────────────────
+const IDLE_PREWARM_DEBOUNCE_MS = 350;
+let _idlePrewarmTimer = null;
+let _lastHoveredModalCardIdx = -1;
+
+function _resolveFighterCharIdByIndex(fighterIndex) {
+  const currentDefs = getActiveFighterDefs();
+  const def = currentDefs[fighterIndex] || FIGHTER_DEFS[fighterIndex];
+  if (!def) return '';
+  return String(def.type || def.id || '').toLowerCase();
+}
+
+function _getActiveSelectedCharacterIds(extraIndex = -1) {
+  const ids = new Set();
+  const slotProps = [
+    'p1Index', 'p2Index', 'p3Index', 'p4Index',
+    'p5Index', 'p6Index', 'p7Index', 'p8Index',
+    'p9Index', 'p10Index', 'p11Index', 'p12Index'
+  ];
+  for (let i = 0; i < slotProps.length; i++) {
+    const idx = state[slotProps[i]];
+    if (typeof idx === 'number' && idx >= 0) {
+      const cid = _resolveFighterCharIdByIndex(idx);
+      if (cid) ids.add(cid);
+    }
+  }
+  if (Array.isArray(state.horizontalRosterSlots)) {
+    for (let i = 0; i < state.horizontalRosterSlots.length; i++) {
+      const idx = state.horizontalRosterSlots[i];
+      if (typeof idx === 'number' && idx >= 0) {
+        const cid = _resolveFighterCharIdByIndex(idx);
+        if (cid) ids.add(cid);
+      }
+    }
+  }
+  if (typeof extraIndex === 'number' && extraIndex >= 0) {
+    const cid = _resolveFighterCharIdByIndex(extraIndex);
+    if (cid) ids.add(cid);
+  }
+  return ids;
+}
+
+function _evictUnselectedCharacterVoiceSprites(extraKeepIndex = -1) {
+  if (typeof state === 'undefined' || !state.isMobileDevice) return;
+  const activeIds = _getActiveSelectedCharacterIds(extraKeepIndex);
+  soundSpriteManager.releaseInactiveCharacterSheets(activeIds);
+}
+
+export function scheduleIdleFighterPrewarm(fighterIndex, isHoverOnly = false) {
+  if (typeof fighterIndex !== 'number' || fighterIndex < 0) return;
+  if (_idlePrewarmTimer !== null) {
+    clearTimeout(_idlePrewarmTimer);
+    _idlePrewarmTimer = null;
+  }
+  _idlePrewarmTimer = setTimeout(() => {
+    _idlePrewarmTimer = null;
+    const charId = _resolveFighterCharIdByIndex(fighterIndex);
+    if (!charId) return;
+    // 1. Pre-warm character voice & skill audio sprite atlas (1 HTTP request + 1 decode)
+    soundSpriteManager.loadCharacterVoiceSprite(charId, getAudioContext()).catch(() => {});
+    // 2. If inspecting/selecting a slot (or desktop hover), also warm image/preview assets
+    if (!isHoverOnly || !state.isMobileDevice) {
+      preloadFighterAssets(fighterIndex, false);
+    }
+    // 3. Keep mobile decoded PCM memory bounded to active slots + currently inspected fighter
+    if (state.isMobileDevice) {
+      _evictUnselectedCharacterVoiceSprites(fighterIndex);
+    }
+  }, IDLE_PREWARM_DEBOUNCE_MS);
+}
 
 
 function drawSurvivorBriefingCard(x, y, w, h) {
@@ -558,9 +635,15 @@ function applyFighterSelection() {
       else if (selectingSlot === 'p6Index' && state.horizontalRosterSlots) state.horizontalRosterSlots[5] = modalInspectIndex;
     }
     saveFighterSelections();
+    if (_idlePrewarmTimer !== null) {
+      clearTimeout(_idlePrewarmTimer);
+      _idlePrewarmTimer = null;
+    }
     preloadFighterAssets(modalInspectIndex);
+    _evictUnselectedCharacterVoiceSprites(modalInspectIndex);
   }
   selectingSlot = null;
+  _lastHoveredModalCardIdx = -1;
 }
 
 function _handleCollectorCardSelect(idx) {
@@ -573,7 +656,7 @@ function _handleCollectorCardSelect(idx) {
   _lastCardClickTime = now;
   if (modalInspectIndex !== idx) {
     modalInspectIndex = idx;
-    preloadFighterAssets(idx);
+    scheduleIdleFighterPrewarm(idx, false);
     if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
       audioSystem.playSFX('skill_dash5', 0.14);
     }
@@ -698,6 +781,8 @@ function drawFighterSelectModal() {
 
   const startIdx = modalPage * itemsPerPage;
   const pageFighters = modalAvailableFighters.slice(startIdx, startIdx + itemsPerPage);
+  const mousePos = getMousePosition();
+  let hoveredCardIdx = -1;
 
   if (isLandscape) {
     // ── LANDSCAPE (960x540): 6x2 Collector Card Grid + Top Pagination + Bottom Dossier & Lock-In ──
@@ -716,6 +801,9 @@ function drawFighterSelectModal() {
       const row = Math.floor(localPos / cols);
       const cardX = listX + col * (cardW + gapX);
       const cardY = listY + row * rowStride;
+      if (mousePos.x >= cardX && mousePos.x <= cardX + cardW && mousePos.y >= cardY && mousePos.y <= cardY + cardH) {
+        hoveredCardIdx = idx;
+      }
       drawCollectorFighterCard(
         ctx,
         def,
@@ -736,7 +824,7 @@ function drawFighterSelectModal() {
 
     const btnCenterX = listX + dossierW + 14 + 84;
     drawButton('LOCK IN // 确认', btnCenterX, bottomY + 21, () => applyFighterSelection(), 168, 40, '#F5A623', 4);
-    drawButton('CANCEL', btnCenterX, bottomY + 65, () => { selectingSlot = null; }, 168, 34, '#20242E', 4);
+    drawButton('CANCEL', btnCenterX, bottomY + 65, () => { selectingSlot = null; _lastHoveredModalCardIdx = -1; }, 168, 34, '#20242E', 4);
   } else {
     // ── PORTRAIT (540x960): Scaled-Up 3x3 Full-Width Collector Card Grid (9 Cards) ──
     const cols = 3;
@@ -754,6 +842,9 @@ function drawFighterSelectModal() {
       const row = Math.floor(localPos / cols);
       const cardX = listX + col * (cardW + gapX);
       const cardY = listY + row * rowStride;
+      if (mousePos.x >= cardX && mousePos.x <= cardX + cardW && mousePos.y >= cardY && mousePos.y <= cardY + cardH) {
+        hoveredCardIdx = idx;
+      }
       drawCollectorFighterCard(
         ctx,
         def,
@@ -780,10 +871,19 @@ function drawFighterSelectModal() {
     const btnW = Math.floor((availW - 16) / 2);
     drawButton('CANCEL', listX + btnW / 2, footerY, () => {
       selectingSlot = null;
+      _lastHoveredModalCardIdx = -1;
     }, btnW, 36, '#20242E', 4);
     drawButton('LOCK IN // 确认', listX + availW - btnW / 2, footerY, () => {
       applyFighterSelection();
     }, btnW, 36, '#F5A623', 4);
+  }
+
+  // Trigger 350ms debounced voice atlas pre-warming when resting cursor over a Collector Card
+  if (hoveredCardIdx !== _lastHoveredModalCardIdx) {
+    _lastHoveredModalCardIdx = hoveredCardIdx;
+    if (hoveredCardIdx >= 0) {
+      scheduleIdleFighterPrewarm(hoveredCardIdx, true);
+    }
   }
 }
 
@@ -1748,7 +1848,7 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
       else if (slotProp === 'p5Index' && state.horizontalRosterSlots) state.horizontalRosterSlots[4] = state.p5Index;
       else if (slotProp === 'p6Index' && state.horizontalRosterSlots) state.horizontalRosterSlots[5] = state.p6Index;
       saveFighterSelections();
-      preloadFighterAssets(state[slotProp]);
+      scheduleIdleFighterPrewarm(state[slotProp], false);
       if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
         audioSystem.playSFX('skill_dash5', 0.12);
       }
@@ -3980,6 +4080,8 @@ function drawPlayerCard(slotProp, title, x, y, w, h, accentColor, enabled, isLar
 function openFighterSelectModal(slotProp, fighterIndex) {
   selectingSlot = slotProp;
   modalInspectIndex = fighterIndex;
+  _lastHoveredModalCardIdx = -1;
+  scheduleIdleFighterPrewarm(fighterIndex, false);
   const modalAvailableFighters = FIGHTER_DEFS.map((def, idx) => ({ def, idx }))
     .filter(({ def }) => !(!state.dummyEnabled && def.type === 'dummy'));
   const pos = modalAvailableFighters.findIndex(f => f.idx === fighterIndex);
@@ -4188,6 +4290,7 @@ window.addEventListener('wheel', (e) => {
       if (nextPos !== listPos && nextPos >= 0 && nextPos < count) {
         state[card.slotProp] = availableFighters[nextPos].idx;
         saveFighterSelections();
+        scheduleIdleFighterPrewarm(state[card.slotProp], false);
         if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
           audioSystem.playSFX('skill_dash5', 0.12);
         }
