@@ -289,6 +289,9 @@ function _drawCenterTopTimer(ctx) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('⚙️', gearX + gearW / 2, topY + pillH / 2);
+  if (state.gameState === 'playing') {
+    _clearButtons();
+  }
   _registerButton(gearX, topY, gearW, pillH, () => {
     openSettingsModal('paused');
   });

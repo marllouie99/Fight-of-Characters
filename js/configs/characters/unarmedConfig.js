@@ -13,8 +13,8 @@ export const unarmedConfig = {
   // Baseline Attributes
   hp: 1100,
   maxHp: 1100,
-  speed: 5.0,
-  moveSpeed: 5.0,
+  speed: 3.0,
+  moveSpeed: 3.0,
   r: 25,
   radius: 25,
   hideHands: true,                  // Official Earclacks standard: Unarmed is a pure weaponless & handless physics ball
@@ -31,7 +31,7 @@ export const unarmedConfig = {
   startY: 250,
   startVx: 2.2,
   startVy: 1.8,
-  damage: 35,
+  damage: 6,
   cooldown: 40,
   projectileSpeedMultiplier: 1.0,
   ability: 'Permanent Momentum Scaling & Super Unarmed',
@@ -68,7 +68,7 @@ export const unarmedConfig = {
   maxTerminalVelocity: null,        // Uncapped: Speed scales infinitely without terminal velocity limits (zero cap)
   wallBounceMultiplier: 1.0,        // Wall bounces conserve natural velocity without artificial acceleration
   permanentSpeedScaling: true,      // Gained speed and momentum never decay over time
-  baseCollisionDamage: 30,          // Base kinetic damage on opponent collision
+  baseCollisionDamage: 3,          // Base kinetic damage on opponent collision
   speedDamageScale: 0.0,            // Additional damage per unit of velocity above base
   collisionKnockbackBase: 14,       // Base knockback impulse
   collisionKnockbackScale: 1.5,     // Knockback multiplier per unit of velocity
@@ -96,7 +96,7 @@ export const unarmedConfig = {
   kineticSurgeBonusStacks: 2,       // Immediately adds 2 momentum stacks
 
   // ── 5. Skill 2 / Ultimate: Super Unarmed (Official Earclacks Super Form) ──
-  enableSuperUnarmed: true,         // Master toggle for Ultimate: Super Unarmed Overdrive
+  enableSuperUnarmed: 0,         // Master toggle for Ultimate: Super Unarmed Overdrive
   superUnarmedCooldownMax: 600,     // 10.0s cooldown
   superUnarmedDuration: 240,        // 4.0s overdrive duration
   superUnarmedSpeed: 18.0,          // Top speed throughout Super Form
@@ -104,10 +104,10 @@ export const unarmedConfig = {
   superUnarmedShockwaveRadius: 85,  // Shockwave radius on wall/target slam
 
   // ── 6. Evade Mechanic: Kinetic Evasion (Gains evade chance for each hit) ──
-  enableEvade: true,                // Master toggle for Evade mechanic
+  enableEvade: 0,                // Master toggle for Evade mechanic
   baseEvadeChance: 0.00,            // 5% baseline evade chance
-  evadeBonusPerHit: 0.01,           // +3% evade chance gained per hit
-  maxEvadeChance: 1.0,             // 65% max evade cap
+  evadeBonusPerHit: 0.00,           // +3% evade chance gained per hit
+  maxEvadeChance: 0.0,             // 65% max evade cap
   maxEvadeStacks: 20,               // Max hits counted for evade scaling
 
   // ── 7. Visual Trail Settings ──

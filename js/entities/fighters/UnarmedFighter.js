@@ -81,6 +81,10 @@ export class UnarmedFighter extends Fighter {
 
     // Rebound Damage Mechanic (Earclacks Standard: must rebounce to the wall first to deal damage)
     this.hasWallRebounded = false;
+    this._hitMinionsSinceWallBounce = new Set();
+    this._minionNextBumpFrame = new WeakMap();
+    this._frameCounter = 0;
+    this.minionBumpCooldown = 0;
 
     // Declarative Skill Registration (Rule 18 HUD Theme Consistency)
     // Official Earclacks Canon: Basic Attack is bumping into the enemy to deal damage and gain speed
@@ -147,6 +151,11 @@ export class UnarmedFighter extends Fighter {
     this.evadeHits = 0;
     this._syncEvadeChance();
     this.hasWallRebounded = false;
+    if (this._hitMinionsSinceWallBounce) this._hitMinionsSinceWallBounce.clear();
+    else this._hitMinionsSinceWallBounce = new Set();
+    this._minionNextBumpFrame = new WeakMap();
+    this._frameCounter = 0;
+    this.minionBumpCooldown = 0;
     if (this.afterimages) this.afterimages.length = 0;
     else this.afterimages = [];
     if (this.visualShockwaves) this.visualShockwaves.length = 0;
@@ -278,6 +287,8 @@ export class UnarmedFighter extends Fighter {
     const isGhost = Boolean((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman);
     if (forceCancelAll || isGhost) {
       this.hasWallRebounded = false;
+      this._hitMinionsSinceWallBounce?.clear();
+      this.minionBumpCooldown = 0;
       if (this.visualShockwaves) this.visualShockwaves.length = 0;
       if (this.afterimages) this.afterimages.length = 0;
     }
@@ -337,6 +348,8 @@ export class UnarmedFighter extends Fighter {
       : Infinity;
     this.momentumStacks = Math.min(maxStacks, this.momentumStacks + 2);
     this.hasWallRebounded = true; // Empowers burst dash with primed wall-rebound force
+    this._hitMinionsSinceWallBounce?.clear();
+    this.minionBumpCooldown = 0;
     this._syncLiveDamageAndSpeed();
 
     // Rocket forward impulse
@@ -369,6 +382,8 @@ export class UnarmedFighter extends Fighter {
     }
     this.evadeHits = (CONFIG.unarmed?.maxEvadeStacks || 20);
     this.hasWallRebounded = true; // Super form enters primed with explosive force
+    this._hitMinionsSinceWallBounce?.clear();
+    this.minionBumpCooldown = 0;
     this._syncEvadeChance();
     this._syncLiveDamageAndSpeed();
 
@@ -523,14 +538,22 @@ export class UnarmedFighter extends Fighter {
       const isGhost = Boolean((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman);
       if (isGhost) {
         this.hasWallRebounded = false;
+        this._hitMinionsSinceWallBounce?.clear();
+        this.minionBumpCooldown = 0;
         if (this.visualShockwaves && this.visualShockwaves.length > 0) {
           this.visualShockwaves.length = 0;
         }
         return bounced;
       }
 
-      // Wall rebounce primes Unarmed's damage capability (Earclacks Standard)
+      // Wall rebounce primes Unarmed's damage capability (Earclacks Standard) and resets single-pass minion gate
       this.hasWallRebounded = true;
+      this._hitMinionsSinceWallBounce?.clear();
+      if ((this._frameCounter || 0) > 0) {
+        this.minionBumpCooldown = Math.max(this.minionBumpCooldown || 0, 10);
+      } else {
+        this.minionBumpCooldown = 0;
+      }
 
       // Natural wall bounce: reflects velocity along collision normal (conserves current kinetic speed)
       // Pure natural specular reflection with billiard cushion dispersion — zero artificial steering or homing!
@@ -585,6 +608,58 @@ export class UnarmedFighter extends Fighter {
   }
 
   /**
+   * Checks whether a target is an immovable plant/barrier (e.g. Wall-nut, turret, ice wall).
+   */
+  _isWallnutOrBarrierTarget(target) {
+    if (!target) return false;
+    return Boolean(
+      target.isWallnut ||
+      target.isPlantBarrier ||
+      target.isBuilding ||
+      target.isTurret ||
+      target.isDispenser ||
+      target.isIceWall ||
+      target.isBarrier ||
+      (target.isImmovable && (target.isPlant || target.isMinion))
+    );
+  }
+
+  /**
+   * Checks whether a target is a small minion/illusion (e.g. Servant of Cthulhu, clone).
+   */
+  _isSmallMinionTarget(target) {
+    if (!target) return false;
+    return Boolean(
+      (target.isMinion || target.isIllusion || target.isServantOfCthulhu || target.isPlant || target.isPlantMinion) &&
+      !this._isWallnutOrBarrierTarget(target)
+    );
+  }
+
+  /**
+   * Prevents rapid multi-bumping against orbiting minions (e.g. Eye of Cthulhu's Servants):
+   * Unarmed must have an active wall-rebound charge (hasWallRebounded) to bump a minion,
+   * and bumping a minion consumes the charge so Unarmed rebounces cleanly to the wall without mid-air multi-bumps.
+   */
+  _canBumpSmallMinion(target) {
+    if (!target) return false;
+    const cfg = CONFIG.unarmed || {};
+    const requireRebound = this.isSkillEnabled(cfg.requireWallBounceForDamage, true);
+    if (requireRebound && !this.hasWallRebounded) {
+      return false;
+    }
+    if (this._hitMinionsSinceWallBounce && this._hitMinionsSinceWallBounce.has(target)) {
+      return false;
+    }
+    if (this._minionNextBumpFrame && (this._frameCounter || 0) < (this._minionNextBumpFrame.get(target) || 0)) {
+      return false;
+    }
+    if ((this.minionBumpCooldown || 0) > 0 && ((this._frameCounter || 0) > 0 || (this.collisionCooldown || 0) > 0)) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Universal Engine Physics Collision Hook (invoked by physics.js lines 312-313 & 1316).
    * Delivers Unarmed's iconic kinetic slam / basic attack body bump!
    */
@@ -615,31 +690,22 @@ export class UnarmedFighter extends Fighter {
     if (!this._isValidCombatTarget(target)) return;
     if (this.isCaughtInBeam() || this.isWallPinnedByMakima || this.isWallPinnedBySaitama) return;
 
+    const isWallnutOrBarrier = this._isWallnutOrBarrierTarget(target);
+    const isSmallMinion = this._isSmallMinionTarget(target);
+    if (isSmallMinion && !this._canBumpSmallMinion(target)) return;
+
     const dx = target.x - this.x;
     const dy = target.y - this.y;
     const dist = Math.hypot(dx, dy) || 1;
 
     const curSpeed = Math.hypot(this.vx, this.vy);
     const cfg = CONFIG.unarmed || {};
-    const isWallnutOrBarrier = Boolean(
-      target.isWallnut ||
-      target.isPlantBarrier ||
-      target.isBuilding ||
-      target.isTurret ||
-      target.isDispenser ||
-      target.isIceWall ||
-      target.isBarrier ||
-      (target.isImmovable && (target.isPlant || target.isMinion))
-    );
-    const isSmallMinion = Boolean(
-      (target.isMinion || target.isIllusion || target.isServantOfCthulhu || target.isPlant || target.isPlantMinion) &&
-      !isWallnutOrBarrier
-    );
     const requireRebound = this.isSkillEnabled(cfg.requireWallBounceForDamage, true);
-    // Small minions take collision damage directly when rammed; primary fighters, Wall-nuts & barriers require wall rebound priming
-    const canDealDamage = isSmallMinion || !requireRebound || this.hasWallRebounded;
+    // All targets (fighters, minions, Wall-nuts & barriers) require wall rebound priming when requireWallBounceForDamage is enabled
+    const canDealDamage = !requireRebound || this.hasWallRebounded;
 
     if (!canDealDamage) {
+      if (isSmallMinion) return;
       // Unarmed bumped an enemy WITHOUT rebouncing to the wall first:
       // Zero damage is dealt, zero momentum/evade stacks gained.
       // Elastic deflection separates fighters and directs Unarmed towards the walls.
@@ -746,14 +812,16 @@ export class UnarmedFighter extends Fighter {
         }
       }
 
-      // 2. Apply hit slow movement to Unarmed
-      if (typeof this.applySlow === 'function') {
-        this.applySlow(slowDur, slowMult, { isUnarmedImpact: true });
-      } else if (this.statusEffects && typeof this.statusEffects.applySlow === 'function') {
-        this.statusEffects.applySlow(slowDur, slowMult, { isUnarmedImpact: true });
-      } else {
-        this.slowTimer = Math.max(this.slowTimer || 0, slowDur);
-        this.slowMultiplier = slowMult;
+      // 2. Apply hit slow movement to Unarmed ONLY on primary fighters / barriers (never self-slow on small minions)
+      if (!isSmallMinion) {
+        if (typeof this.applySlow === 'function') {
+          this.applySlow(slowDur, slowMult, { isUnarmedImpact: true });
+        } else if (this.statusEffects && typeof this.statusEffects.applySlow === 'function') {
+          this.statusEffects.applySlow(slowDur, slowMult, { isUnarmedImpact: true });
+        } else {
+          this.slowTimer = Math.max(this.slowTimer || 0, slowDur);
+          this.slowMultiplier = slowMult;
+        }
       }
     }
 
@@ -780,8 +848,9 @@ export class UnarmedFighter extends Fighter {
     const rawKbForce = kbBase + (curSpeed / this.baseSpeed) * kbScale * 5;
     const kbForce = rawKbForce * enemySlowMult;
 
-    // Target receives forward impulse along normal while conserving tangential momentum (immovable targets resist impulse)
-    if (!target.isImmovable && !target.cannotBeKnockbacked && !target.immuneToPush && !target.immuneToKnockback) {
+    // Primary fighters receive forward impulse along normal while conserving tangential momentum
+    // (Small minions and immovable targets do NOT get knocked back — Unarmed rebounces off them!)
+    if (!isSmallMinion && !target.isImmovable && !target.cannotBeKnockbacked && !target.immuneToPush && !target.immuneToKnockback) {
       const targetKbVx = (v2t * tx + nx * (v2n + kbForce)) * enemySlowMult;
       const targetKbVy = (v2t * ty + ny * (v2n + kbForce)) * enemySlowMult;
       target.vx = targetKbVx;
@@ -791,10 +860,10 @@ export class UnarmedFighter extends Fighter {
       }
     }
 
-    // Resolve physical overlap on collision: push Unarmed cleanly outside immovable barriers
+    // Resolve physical overlap on collision: push Unarmed cleanly outside minions and immovable barriers
     const hitMinDist = this.r + (target.r || 24);
     if (dist < hitMinDist && dist > 0) {
-      if (target.isImmovable || target.cannotBeDisplaced) {
+      if (isSmallMinion || target.isImmovable || target.cannotBeDisplaced) {
         this.x = target.x - nx * (hitMinDist + 2);
         this.y = target.y - ny * (hitMinDist + 2);
       } else {
@@ -806,10 +875,18 @@ export class UnarmedFighter extends Fighter {
       }
     }
 
-    // Cancel active kinetic surge dash so surge speed does not bypass hit slow
+    if (isSmallMinion) {
+      if (!this._hitMinionsSinceWallBounce) this._hitMinionsSinceWallBounce = new Set();
+      if (!this._minionNextBumpFrame) this._minionNextBumpFrame = new WeakMap();
+      this._hitMinionsSinceWallBounce.add(target);
+      this._minionNextBumpFrame.set(target, (this._frameCounter || 0) + 36);
+      this.minionBumpCooldown = 24;
+    }
+
+    // Cancel active kinetic surge dash so surge speed does not bypass rebound
     this.surgeTimer = 0;
 
-    // Unarmed 2D elastic rebound: tangential velocity is conserved for natural angular deflection!
+    // Unarmed 2D elastic rebound: Unarmed rebounces off anything it bumps into (fighters, minions, Wall-nuts & barriers)!
     const reboundBaseSpeed = Math.max(this.baseSpeed, Math.max(curSpeed, this.speed));
     if (this.isSuperUnarmed || this.isTerminalVelocity) {
       // Super Unarmed has unstoppable kinetic mass — punches through with minimal normal reflection
@@ -822,18 +899,10 @@ export class UnarmedFighter extends Fighter {
         : Math.max(reboundBaseSpeed, 18.0);
       this.vx = (sVx / sSpd) * superTopSpeed * slowMult;
       this.vy = (sVy / sSpd) * superTopSpeed * slowMult;
-    } else if (isSmallMinion) {
-      // Smashing into a small minion: Unarmed plows through with slight damping rather than full rebound
-      const punchThroughNormal = Math.max(v1n * 0.65, 3.0);
-      let pVx = (nx * punchThroughNormal + tx * v1t);
-      let pVy = (ny * punchThroughNormal + ty * v1t);
-      const pSpd = Math.hypot(pVx, pVy) || 1;
-      this.vx = (pVx / pSpd) * reboundBaseSpeed;
-      this.vy = (pVy / pSpd) * reboundBaseSpeed;
     } else {
-      // Normal Unarmed, Wall-nuts & barriers rebound elastically off target normal while retaining full tangential momentum
+      // Normal Unarmed rebounds elastically off target normal (fighters, minions, Wall-nuts & barriers) while retaining tangential momentum
       const reboundNormal = -Math.max(Math.abs(v1n) * 0.85, 4.0);
-      const reboundSpeed = reboundBaseSpeed * slowMult;
+      const reboundSpeed = reboundBaseSpeed * (isSmallMinion ? 1.0 : slowMult);
       let rVx = nx * reboundNormal + tx * v1t;
       let rVy = ny * reboundNormal + ty * v1t;
       const rSpd = Math.hypot(rVx, rVy) || 1;
@@ -842,9 +911,8 @@ export class UnarmedFighter extends Fighter {
     }
     this.gunAngle = Math.atan2(this.vy, this.vx);
 
-    // Small minion hits have a shorter recovery cooldown so Unarmed doesn't feel sluggish mowing through swarms.
-    // Wall-nuts, barriers, and primary fighters enforce full recovery collision cooldown.
-    this.collisionCooldown = isSmallMinion ? 6 : Math.max(14, slowDur + 2);
+    // Enforce full collision recovery cooldown so Unarmed never rapid-fires collisions on consecutive frames
+    this.collisionCooldown = Math.max(14, slowDur + 2);
 
     if (actuallyDamagedEntity) {
       // ── 1. Official Earclacks Gimmick: Permanent Momentum & Speed Scaling ──
@@ -887,10 +955,8 @@ export class UnarmedFighter extends Fighter {
       spawnSparks(midX, midY, 4, '#A1A1AA');
     }
 
-    // Consumes wall rebounce charge: must rebounce to the arena wall first to deal damage again to primary fighters and Wall-nuts/barriers!
-    if (!isSmallMinion) {
-      this.hasWallRebounded = false;
-    }
+    // Consumes wall rebounce charge on any bump (including minions): must rebounce to the arena wall first to deal damage again!
+    this.hasWallRebounded = false;
   }
 
   /**
@@ -1065,7 +1131,7 @@ export class UnarmedFighter extends Fighter {
       targets.push(opponent);
     }
 
-    // Sort by proximity so the closest enemy target is collided with first
+    // Sort by proximity so the closest valid enemy target is collided with first
     targets.sort((a, b) => {
       const da = Math.hypot((a.x || 0) - this.x, (a.y || 0) - this.y);
       const db = Math.hypot((b.x || 0) - this.x, (b.y || 0) - this.y);
@@ -1073,6 +1139,7 @@ export class UnarmedFighter extends Fighter {
     });
 
     for (const target of targets) {
+      if (this._isSmallMinionTarget(target) && !this._canBumpSmallMinion(target)) continue;
       const dx = (target.x || 0) - this.x;
       const dy = (target.y || 0) - this.y;
       const dist = Math.hypot(dx, dy);
@@ -1117,20 +1184,29 @@ export class UnarmedFighter extends Fighter {
     // 1.5. Pac-Man Ghost & Swallowed State Guard
     if (this._handlePacmanGhostState ? this._handlePacmanGhostState(arena, opponent) : ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman)) {
       this.hasWallRebounded = false;
+      this._hitMinionsSinceWallBounce?.clear();
+      this.minionBumpCooldown = 0;
       this.surgeTimer = 0;
       if (this.visualShockwaves && this.visualShockwaves.length > 0) this.visualShockwaves.length = 0;
       if (this.afterimages && this.afterimages.length > 0) this.afterimages.length = 0;
       return;
     }
 
+    this._frameCounter = (this._frameCounter || 0) + 1;
+    if (this.minionBumpCooldown > 0) this.minionBumpCooldown--;
+
+    const prevSurgeCd = this.kineticSurgeCooldown;
+    const prevSuperCd = this.superUnarmedCooldown;
+    const prevCollisionCd = this.collisionCooldown;
+
     this.handleStatusEffects();
     this._tickCooldowns();
     this._tickAttackSound();
 
-    if (this.kineticSurgeCooldown > 0) this.kineticSurgeCooldown--;
-    if (this.superUnarmedCooldown > 0) this.superUnarmedCooldown--;
+    if (this.kineticSurgeCooldown > 0 && this.kineticSurgeCooldown === prevSurgeCd) this.kineticSurgeCooldown--;
+    if (this.superUnarmedCooldown > 0 && this.superUnarmedCooldown === prevSuperCd) this.superUnarmedCooldown--;
     if (this.terminalVelocityCooldown > 0) this.terminalVelocityCooldown--;
-    if (this.collisionCooldown > 0) this.collisionCooldown--;
+    if (this.collisionCooldown > 0 && this.collisionCooldown === prevCollisionCd) this.collisionCooldown--;
     if (this.punchAnimTimer > 0) this.punchAnimTimer--;
 
     // 2. Super Unarmed Overdrive Timer (Wiki: Maintains top speed for entire duration)

@@ -352,7 +352,8 @@ inputTarget?.addEventListener('mousedown', (e) => {
   const my = (e.clientY - rect.top) * scaleY;
 
   if (isSettingsModalOpen()) {
-    if (handleSettingsMouseDown(mx, my)) return;
+    handleSettingsMouseDown(mx, my);
+    return;
   }
 
   if (isPerkDraftModalOpen()) {

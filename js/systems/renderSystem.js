@@ -47,7 +47,6 @@ import { getAudioLatencyMs } from './soundSystem.js';
 import { syncPixiCanvasTextureSize } from '../core/viewportManager.js';
 import { BossAuraRenderer, BossPhaseTransitionVfx, BossEntranceSequence, YutaBushEntrance, EyeOfCthulhuEntrance } from '../bosses/index.js';
 import { drawFocMap, getActiveFocMap } from '../maps/index.js';
-import { drawCinematicKo } from '../graphics/renderers/cinematicKoRenderer.js';
 import { drawTouchControls } from './touchControls.js';
 import { drawPerkDraftModal, isPerkDraftModalOpen } from '../graphics/ui/PerkDraftModal.js';
 // Cached DOM elements to adhere strictly to Rule 13 (UI & DOM Query Caching Requirement)
@@ -59,7 +58,7 @@ let _cachedHudRight = null;
 
 const _NON_BATTLE_STATES = new Set([
   'title', 'select', 'index', 'indexDetail', 'leaderboard', 'weapons',
-  'weaponDetail', 'weaponStudio', 'skinStudio', 'survivorStudio', 'faceoff', 'curtain'
+  'weaponDetail', 'weaponStudio', 'skinStudio', 'survivorStudio', 'faceoff', 'curtain', 'settings'
 ]);
 
 const _TOP_UI_STATES = new Set([
@@ -248,6 +247,9 @@ export function renderGame() {
     if (state.gameState === 'title') {
       try {
         drawTitleScreen();
+        if (isSettingsModalOpen()) {
+          drawSettingsModal(state.ctx);
+        }
       } catch (screenError) {
         console.error('drawTitleScreen error:', screenError);
         // Fallback: clear and show empty canvas
@@ -276,9 +278,13 @@ export function renderGame() {
     } else if (state.gameState === 'survivorStudio') {
       drawSurvivorStudioScreen();
     } else if (state.gameState === 'settings') {
-      drawSettingsModal(state.topLevelUiCtx || state.ctx);
+      drawSelectScreen();
+      drawSettingsModal(state.ctx);
     } else if (state.gameState === 'horizontal_select') {
       drawHorizontalTeamSelectScreen(state.ctx);
+      if (isSettingsModalOpen()) {
+        drawSettingsModal(state.ctx);
+      }
     } else if (state.gameState === 'faceoff') {
       // Hide gameplay WebGL layers and DOM HUD elements so they never linger on the showoff screen
       if (state.floatingTextSprite) state.floatingTextSprite.visible = false;
@@ -590,7 +596,6 @@ export function renderGame() {
         drawTojiImpactEffects(state.ctx); // Draw Toji Split Soul Katana spatial soul cleave impact effects
         updateRhittaSlashCutImpacts();
         drawRhittaSlashCutImpacts(state.ctx); // Draw Escanor Rhitta Holy Solar Slash Cut impacts on target bodies
-        drawCinematicKo(state.ctx); // Cinematic Slow-Motion K.O. Mach shockwave & Comic Ink Stamp
 
         // Nanami 7:3 Ratio Ruler & Blood Rupture overlay renders ON TOP of all fighters & entities
         if (!state.disableDimEffects) {
@@ -833,6 +838,8 @@ export function renderGame() {
         const hasSuperBeam = _hasActiveSuperBeam(state.fighters);
         const hasTopUi = Boolean(
           hasSuperBeam ||
+          isSettingsModalOpen() ||
+          isPerkDraftModalOpen() ||
           (state.battleStartFadeTimer && state.battleStartFadeTimer > 0) ||
           (state.countdownTimer !== undefined && state.countdownTimer < 14) ||
           (state.missionPassedOverlay && state.missionPassedOverlay.active) ||

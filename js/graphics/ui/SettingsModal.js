@@ -28,11 +28,16 @@ export function isSettingsModalOpen() {
   return _isSettingsOpen;
 }
 
-export function openSettingsModal(returnState = 'title') {
+export function openSettingsModal(returnState) {
   _isSettingsOpen = true;
-  _returnGameState = returnState || state.previousGameState || 'title';
-  state.previousGameState = state.gameState;
-  state.gameState = 'settings';
+  const current = state.gameState || 'title';
+  if (current === 'playing' || current === 'countdown') {
+    state.previousGameState = current;
+    state.gameState = 'paused';
+    _returnGameState = 'paused';
+  } else {
+    _returnGameState = returnState || (current !== 'settings' ? current : (state.previousGameState || 'title'));
+  }
   triggerHaptic('selection');
 }
 
@@ -41,7 +46,9 @@ export function closeSettingsModal() {
   _activeDraggingSlider = null;
   saveSettingsToStorage();
   triggerHaptic('selection');
-  state.gameState = _returnGameState || 'title';
+  if (state.gameState === 'settings') {
+    state.gameState = _returnGameState || 'title';
+  }
   if (state.canvas && state.canvas.style) {
     state.canvas.style.cursor = 'default';
   }

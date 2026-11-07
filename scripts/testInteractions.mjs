@@ -12218,10 +12218,13 @@ async function runInteractionTests() {
     assert(Math.hypot(unarmed.vx, unarmed.vy) >= 15.0, 'Kinetic surge must rocket Unarmed forward at high speed');
 
     // 4. Super Unarmed Overdrive (Wiki: White ball with light grey outline, top speed throughout duration)
+    const savedEnableSuperUnarmed = CONFIG.unarmed.enableSuperUnarmed;
+    CONFIG.unarmed.enableSuperUnarmed = true;
     unarmed._castSuperUnarmed(dummy);
     assert(unarmed.isSuperUnarmed === true, 'Super Unarmed must activate');
     assert(unarmed.momentumStacks >= 22, 'Super Unarmed must elevate momentum stacks into overdrive');
     assert(Math.hypot(unarmed.vx, unarmed.vy) >= 17.5, 'Super Unarmed must propel Unarmed at top terminal velocity');
+    CONFIG.unarmed.enableSuperUnarmed = savedEnableSuperUnarmed;
 
     // 5. Update Loop, Afterimages & Visual Decay (Rule 25)
     unarmed.update(dummy, 0, arena);
@@ -12284,13 +12287,13 @@ async function runInteractionTests() {
 
     // 7.6 Basic Skill HUD Registration & Config Ability Toggles
     const { unarmedConfig } = await import('../js/configs/characters/unarmedConfig.js');
-    assert(unarmedConfig.enableKineticBump === true, 'unarmedConfig must define enableKineticBump toggle');
-    assert(unarmedConfig.enableMomentumScaling === true, 'unarmedConfig must define enableMomentumScaling toggle');
-    assert(unarmedConfig.enableSuperUnarmed === true, 'unarmedConfig must define enableSuperUnarmed toggle');
-    assert(unarmedConfig.enableHitSlow === true, 'unarmedConfig must define enableHitSlow toggle');
-    assert(unarmedConfig.enableKineticSurge === true, 'unarmedConfig must define enableKineticSurge toggle');
+    assert(unarmedConfig.enableKineticBump !== undefined, 'unarmedConfig must define enableKineticBump toggle');
+    assert(unarmedConfig.enableMomentumScaling !== undefined, 'unarmedConfig must define enableMomentumScaling toggle');
+    assert(unarmedConfig.enableSuperUnarmed !== undefined, 'unarmedConfig must define enableSuperUnarmed toggle');
+    assert(unarmedConfig.enableHitSlow !== undefined, 'unarmedConfig must define enableHitSlow toggle');
+    assert(unarmedConfig.enableKineticSurge !== undefined, 'unarmedConfig must define enableKineticSurge toggle');
     assert(unarmedConfig.enableBallSteering !== undefined, 'unarmedConfig must define enableBallSteering toggle');
-    assert(unarmedConfig.requireWallBounceForDamage === true, 'unarmedConfig must define requireWallBounceForDamage toggle');
+    assert(unarmedConfig.requireWallBounceForDamage !== undefined, 'unarmedConfig must define requireWallBounceForDamage toggle');
 
     const basicSkill = unarmed.skillManager.getSkill('kineticBump');
     assert(Boolean(basicSkill), 'Unarmed must register Kinetic Bump as its declarative basic attack skill in SkillManager');
@@ -12323,13 +12326,24 @@ async function runInteractionTests() {
     unarmedConfig.enableSuperUnarmed = false;
     unarmed._castSuperUnarmed(dummy);
     assert(unarmed.isSuperUnarmed === false, '_castSuperUnarmed must be gated when enableSuperUnarmed is false');
-    unarmedConfig.enableSuperUnarmed = true;
+    unarmedConfig.enableSuperUnarmed = savedEnableSuperUnarmed;
 
     // 8. Real-Time HUD Stats (DMG & SPD Dynamic Scaling with Momentum)
     const { drawHUD, clearHealthHud } = await import('../js/graphics/hudManager.js');
+    const savedEnableEvade = unarmedConfig.enableEvade;
+    const savedBaseEvade = unarmedConfig.baseEvadeChance;
+    const savedEvadeBonus = unarmedConfig.evadeBonusPerHit;
+    const savedMaxEvade = unarmedConfig.maxEvadeChance;
+    unarmedConfig.enableEvade = true;
+    unarmedConfig.baseEvadeChance = 0.05;
+    unarmedConfig.evadeBonusPerHit = 0.03;
+    unarmedConfig.maxEvadeChance = 0.65;
+    unarmedConfig.enableSuperUnarmed = true;
+
     unarmed.momentumStacks = 0;
     unarmed.isSuperUnarmed = false;
     unarmed.isTerminalVelocity = false;
+    unarmed._syncEvadeChance();
     unarmed._syncLiveDamageAndSpeed();
     assert(unarmed.damage === (unarmedConfig.baseCollisionDamage || 30), 'Unarmed damage at 0 momentum must equal base collision damage');
     assert(unarmed.speed === (unarmedConfig.speed || 5.0), 'Unarmed speed at 0 momentum must equal base speed');
@@ -12394,6 +12408,12 @@ async function runInteractionTests() {
     const didEvade = !unarmed._filterDamageImmunityAndEvade(25, dummy, { isBasicAttack: true });
     Math.random = origRandom;
     assert(didEvade, 'Unarmed must successfully evade basic attack when evade chance succeeds');
+
+    unarmedConfig.enableEvade = savedEnableEvade;
+    unarmedConfig.baseEvadeChance = savedBaseEvade;
+    unarmedConfig.evadeBonusPerHit = savedEvadeBonus;
+    unarmedConfig.maxEvadeChance = savedMaxEvade;
+    unarmedConfig.enableSuperUnarmed = savedEnableSuperUnarmed;
 
     // Anti-Summon Bug: Ensure distance teleport/summon never creates rogue afterimages
     unarmed.clearAllAfterimages();
@@ -18629,12 +18649,31 @@ async function runInteractionTests() {
     // Run collision check / update
     unarmed._checkFighterCollision(eye);
 
-    // Verify Servant of Cthulhu took damage from Unarmed
-    assert(servant.hp < initialServantHp, `Servant of Cthulhu must take damage from Unarmed (expected < 120, got ${servant.hp})`);
-    assert(servant.knockbackVx > 0 || servant.vx > 0, 'Servant of Cthulhu must receive knockback impulse away from Unarmed');
-    assert(unarmed.hasWallRebounded === true, 'Hitting a minion must NOT consume Unarmed wall rebound charge for the primary boss');
+    // Verify Servant of Cthulhu took damage from Unarmed, Servant received NO knockback, and Unarmed rebounced!
+    const hpAfterFirstBump = servant.hp;
+    assert(hpAfterFirstBump < initialServantHp, `Servant of Cthulhu must take damage from Unarmed (expected < 120, got ${servant.hp})`);
+    assert(servant.knockbackVx === 0 && servant.vx === 0, 'Servant of Cthulhu must NOT receive knockback impulse when bumped by Unarmed');
+    assert(unarmed.vx < 0, `Unarmed must rebounce backward when bumping into a Servant of Cthulhu (expected vx < 0, got ${unarmed.vx})`);
+    assert(unarmed.hasWallRebounded === false, 'Bumping into a minion must consume Unarmed wall rebound charge so he must rebounce off the wall before bumping again');
 
-    // 2. Test Unarmed continuing and hitting Eye of Cthulhu with remaining wall rebound
+    // 1.5. Regression check: Servant hovering/orbiting around Unarmed in mid-air must NOT cause rapid multi-bumping
+    const stacksAfterFirstBump = unarmed.momentumStacks;
+    for (let f = 0; f < 30; f++) {
+      // Simulate Servant orbiting closely around Unarmed in mid-air without Unarmed hitting a wall
+      servant.x = unarmed.x + Math.cos(f * 0.2) * 20;
+      servant.y = unarmed.y + Math.sin(f * 0.2) * 20;
+      unarmed.collisionCooldown = 0;
+      unarmed._checkFighterCollision(eye);
+    }
+    assert(servant.hp === hpAfterFirstBump, `Unarmed must NOT rapidly re-bump the same orbiting Servant before bouncing off a wall (expected HP ${hpAfterFirstBump}, got ${servant.hp})`);
+    assert(unarmed.momentumStacks === stacksAfterFirstBump, `Unarmed must NOT farm rapid momentum stacks off the same orbiting Servant in mid-air (expected ${stacksAfterFirstBump}, got ${unarmed.momentumStacks})`);
+
+    // 2. Test Unarmed rebounding off the arena wall and then hitting Eye of Cthulhu
+    unarmed.x = testArena.x - 5;
+    unarmed.vx = -6.0;
+    unarmed.resolveWallBounce(testArena, eye);
+    assert(unarmed.hasWallRebounded === true, 'Bouncing off the arena wall must re-prime Unarmed wall rebound charge');
+
     unarmed.x = 350;
     unarmed.y = 300;
     unarmed.collisionCooldown = 0;
@@ -18733,12 +18772,16 @@ async function runInteractionTests() {
     };
     state.illusions.push(minion);
 
+    unarmed.hasWallRebounded = true;
     unarmed.collisionCooldown = 0;
     unarmed.x = 225;
     unarmed.y = 300;
+    unarmed.vx = 10.0;
+    unarmed.vy = 0;
     unarmed._checkFighterCollision(gojo);
 
     assert(minion.hp < 100, 'Minion must take damage from Unarmed collision');
+    assert(unarmed.vx < 0, 'Unarmed must rebounce off minion after collision');
     assert(unarmed.momentumStacks === 2, 'Unarmed must gain momentum stack when actually damaging a minion entity');
     assert(unarmed.speed === unarmed.baseSpeed + 2 * unarmed.speedPerHit, 'Unarmed speed must scale permanently after damaging minion');
 

@@ -24,7 +24,7 @@ import { spawnFloatingText } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { drawArenaBgmSelector, isArenaBgmModalOpen, drawArenaBgmModal, closeArenaBgmModal } from '../../systems/arenaBgmSystem.js';
 import { drawArenaThemeSelector, isArenaThemeModalOpen, drawArenaThemeModal, closeArenaThemeModal } from '../../systems/arenaThemeSystem.js';
-import { openSettingsModal } from './SettingsModal.js';
+import { openSettingsModal, isSettingsModalOpen, drawSettingsModal, closeSettingsModal } from './SettingsModal.js';
 import { GAME_MODES, MODE_SETTINGS } from '../../core/modeConfig.js';
 import { drawScreentoneModalBackdrop, getScreentonePattern, prewarmScreentone } from './mangaScreentone.js';
 import { getBossConfig } from '../../configs/bosses/bossConfigRegistry.js';
@@ -1862,7 +1862,7 @@ function _drawComicSteppedInfoStack(ctx, def, fighterIndex, isP1, palette, isMir
 
 function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMirrored = null, customSlotTag = null, customSlotLetter = null) {
   const { ctx } = state;
-  const isAnyModalOpen = (selectingSlot !== null || isArenaBgmModalOpen() || isArenaThemeModalOpen());
+  const isAnyModalOpen = (selectingSlot !== null || isArenaBgmModalOpen() || isArenaThemeModalOpen() || isSettingsModalOpen());
   const isInteractive = enabled && !isAnyModalOpen;
 
   const currentDefs = getActiveFighterDefs();
@@ -2620,6 +2620,10 @@ function drawSelectScreen() {
 
   if (isArenaThemeModalOpen()) {
     drawArenaThemeModal(state.ctx);
+  }
+
+  if (isSettingsModalOpen()) {
+    drawSettingsModal(state.ctx);
   }
 }
 
@@ -4215,6 +4219,13 @@ window.addEventListener('keydown', (e) => {
         return;
       }
     }
+    if (isSettingsModalOpen()) {
+      if (e.key === 'Escape' || e.key === 'Enter') {
+        closeSettingsModal();
+        e.preventDefault();
+        return;
+      }
+    }
     if (selectingSlot !== null) {
       if (e.key === 'Escape') {
         selectingSlot = null;
@@ -4277,8 +4288,8 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('wheel', (e) => {
   if (state.gameState !== 'select' && state.gameState !== 'horizontal_select') return;
 
-  // Block card wheel cycling when Arena BGM or Arena Theme modal is active
-  if (isArenaBgmModalOpen() || isArenaThemeModalOpen()) {
+  // Block card wheel cycling when Arena BGM, Arena Theme, or Settings modal is active
+  if (isArenaBgmModalOpen() || isArenaThemeModalOpen() || isSettingsModalOpen()) {
     return;
   }
 

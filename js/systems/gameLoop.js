@@ -9,7 +9,6 @@ import { updateGame } from './updateSystem.js';
 import { renderGame } from './renderSystem.js';
 import { getAudioCurrentTime } from './soundSystem.js';
 import { syncWakeLockWithGameState } from './screenLockSystem.js';
-import { updateCinematicKo } from '../graphics/renderers/cinematicKoRenderer.js';
 
 export const isMobile = isMobileDevice;
 export const TARGET_FPS = 60; // Standard 60 FPS across all devices for consistent combat physics
@@ -266,11 +265,9 @@ export function animate(timestamp) {
 
     const _t0 = performance.now();
 
-    const timeDilation = state.timeDilation || 1.0;
-
     if (state.highRefreshActive) {
       // Decoupled High-Refresh Pipeline: Fixed 60Hz Physics Accumulator + Native 90/120Hz Rasterization
-      const delta = Math.min(elapsed, 50.0) * timeDilation; // Scale accumulator step by time dilation
+      const delta = Math.min(elapsed, 50.0);
       _physicsAccumulator += delta;
 
       let updates = 0;
@@ -282,21 +279,11 @@ export function animate(timestamp) {
       if (_physicsAccumulator > PHYSICS_STEP * 2) {
         _physicsAccumulator = 0;
       }
-      updateCinematicKo();
       renderGame();
     } else {
-      // Standard Canonical 60 FPS Lockstep (with time dilation accumulator support)
-      if (timeDilation < 0.99) {
-        _physicsAccumulator += PHYSICS_STEP * timeDilation;
-        if (_physicsAccumulator >= PHYSICS_STEP) {
-          updateGame();
-          _physicsAccumulator -= PHYSICS_STEP;
-        }
-      } else {
-        _physicsAccumulator = 0;
-        updateGame();
-      }
-      updateCinematicKo();
+      // Standard Canonical 60 FPS Lockstep
+      _physicsAccumulator = 0;
+      updateGame();
       renderGame();
     }
 
