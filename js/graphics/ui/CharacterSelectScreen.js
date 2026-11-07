@@ -124,6 +124,62 @@ export function scheduleIdleFighterPrewarm(fighterIndex, isHoverOnly = false) {
   }, IDLE_PREWARM_DEBOUNCE_MS);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTIVE MATCHUP SELECT SCREEN LAZY PRE-WARMING
+// Automatically pre-warms the active selected fighters' character voice atlases
+// (char_<id>_sfx.mp3) on the Matchup Select Screen so audio is 100% resident
+// in memory with zero HTTP delays or individual file fallback when combat starts.
+// ─────────────────────────────────────────────────────────────────────────────
+let _lastPrewarmedRosterKey = '';
+
+export function prewarmActiveMatchupVoiceAtlases() {
+  if (typeof state === 'undefined') return;
+
+  const mode = state.mode || '';
+  const indices = [];
+
+  if (state.viewOrientation === 'horizontal' && Array.isArray(state.horizontalRosterSlots) && state.horizontalRosterSlots.length > 0) {
+    indices.push(...state.horizontalRosterSlots.filter(idx => typeof idx === 'number' && idx >= 0));
+  } else if (mode === GAME_MODES.TAG_MATCH || mode === 'Tag Match') {
+    indices.push(state.p1Index ?? 0, state.p2Index ?? 1, state.p3Index ?? 2, state.p4Index ?? 3, state.p5Index ?? 4, state.p6Index ?? 5);
+  } else if (mode === GAME_MODES.TWO_VS_TWO || mode === '2v2' || mode === GAME_MODES.FFA || mode === 'FFA') {
+    indices.push(state.p1Index ?? 0, state.p2Index ?? 1, state.p3Index ?? 2, state.p4Index ?? 3);
+  } else if (mode === GAME_MODES.ONE_VS_TWO || mode === '1v2' || mode === GAME_MODES.STAND_OFF_1V2 || mode === 'Boss Battle') {
+    indices.push(state.p1Index ?? 0, state.p2Index ?? 1, state.p3Index ?? 2);
+  } else if (mode === GAME_MODES.SURVIVOR || mode === 'Survivor') {
+    indices.push(state.p1Index ?? 0);
+  } else {
+    // 1v1, Standoff, TLFS, etc.
+    indices.push(state.p1Index ?? 0, state.p2Index ?? 1);
+  }
+
+  const validIndices = indices.filter(idx => typeof idx === 'number' && idx >= 0);
+  const rosterKey = `${mode}:${validIndices.join(',')}`;
+
+  if (rosterKey === _lastPrewarmedRosterKey) {
+    return; // Already pre-warmed for this exact matchup roster
+  }
+  _lastPrewarmedRosterKey = rosterKey;
+
+  const audioCtx = typeof getAudioContext === 'function' ? getAudioContext() : null;
+
+  for (let i = 0; i < validIndices.length; i++) {
+    const idx = validIndices[i];
+    const charId = _resolveFighterCharIdByIndex(idx);
+    if (charId && typeof soundSpriteManager !== 'undefined' && soundSpriteManager.hasCharacterVoiceSprite(charId)) {
+      soundSpriteManager.loadCharacterVoiceSprite(charId, audioCtx).catch(() => {});
+    }
+    try {
+      preloadFighterAssets(idx, false);
+    } catch (_) {}
+  }
+
+  // Bounded memory management on mobile devices: release sheets of unselected fighters
+  if (state.isMobileDevice) {
+    _evictUnselectedCharacterVoiceSprites();
+  }
+}
+
 
 function drawSurvivorBriefingCard(x, y, w, h) {
   const { ctx } = state;
@@ -640,6 +696,7 @@ function applyFighterSelection() {
       _idlePrewarmTimer = null;
     }
     preloadFighterAssets(modalInspectIndex);
+    prewarmActiveMatchupVoiceAtlases();
     _evictUnselectedCharacterVoiceSprites(modalInspectIndex);
   }
   selectingSlot = null;
@@ -1848,6 +1905,7 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
       else if (slotProp === 'p5Index' && state.horizontalRosterSlots) state.horizontalRosterSlots[4] = state.p5Index;
       else if (slotProp === 'p6Index' && state.horizontalRosterSlots) state.horizontalRosterSlots[5] = state.p6Index;
       saveFighterSelections();
+      prewarmActiveMatchupVoiceAtlases();
       scheduleIdleFighterPrewarm(state[slotProp], false);
       if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
         audioSystem.playSFX('skill_dash5', 0.12);
@@ -2058,6 +2116,7 @@ function drawSelectScreen() {
   _clearButtons();
   _playerCardBounds = [];
   clearHealthHud();
+  prewarmActiveMatchupVoiceAtlases();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Bake the halftone modal overlay once on entering the screen so the first
@@ -2571,6 +2630,7 @@ function randomize1v1Fighters() {
     const remaining = available.filter(idx => idx !== state.p1Index);
     state.p2Index = remaining.length > 0 ? remaining[Math.floor(Math.random() * remaining.length)] : state.p1Index;
     saveFighterSelections();
+    prewarmActiveMatchupVoiceAtlases();
   }
 }
 
@@ -2586,6 +2646,7 @@ function randomize1v2Fighters() {
       state.p3Index = rem2.length > 0 ? rem2[Math.floor(Math.random() * rem2.length)] : state.p2Index;
     }
     saveFighterSelections();
+    prewarmActiveMatchupVoiceAtlases();
   }
 }
 
@@ -2604,6 +2665,7 @@ function randomizeFfaFighters() {
     state.p4Index = indices[3] ?? (indices.length > 3 ? 3 : 0);
   }
   saveFighterSelections();
+  prewarmActiveMatchupVoiceAtlases();
 }
 
 export function getFighterWeaponInfo(def) {
@@ -4290,6 +4352,7 @@ window.addEventListener('wheel', (e) => {
       if (nextPos !== listPos && nextPos >= 0 && nextPos < count) {
         state[card.slotProp] = availableFighters[nextPos].idx;
         saveFighterSelections();
+        prewarmActiveMatchupVoiceAtlases();
         scheduleIdleFighterPrewarm(state[card.slotProp], false);
         if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
           audioSystem.playSFX('skill_dash5', 0.12);

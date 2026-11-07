@@ -859,6 +859,33 @@ export function reinitFighters(isNewMatch = false) {
 
 }
 
+/**
+ * Pre-warms sound sprite sheets and audio assets for a roster of fighter indices.
+ * @param {Array<number>} fighterIndices
+ */
+function _prewarmRosterVoiceAtlases(fighterIndices = []) {
+  if (!Array.isArray(fighterIndices) || fighterIndices.length === 0) return;
+  const currentDefs = getActiveFighterDefs();
+  const audioCtx = typeof getAudioContext === 'function' ? getAudioContext() : null;
+  const activeCharIds = [];
+  for (const idx of fighterIndices) {
+    if (typeof idx !== 'number' || isNaN(idx)) continue;
+    const def = currentDefs[idx] || FIGHTER_DEFS[idx];
+    if (!def) continue;
+    const charId = def.characterId || def.type || def.id;
+    if (charId) activeCharIds.push(charId);
+    if (typeof soundSpriteManager !== 'undefined' && soundSpriteManager.hasCharacterVoiceSprite(charId)) {
+      soundSpriteManager.loadCharacterVoiceSprite(charId, audioCtx).catch(() => {});
+    }
+    try {
+      preloadFighterAssets(idx, false);
+    } catch (_) {}
+  }
+  if (state.isMobileDevice && typeof soundSpriteManager !== 'undefined') {
+    soundSpriteManager.releaseInactiveCharacterSheets(activeCharIds);
+  }
+}
+
 export function randomize1v1Fighters() {
   const currentDefs = getActiveFighterDefs();
   if (currentDefs.length < 2) return;
@@ -871,6 +898,7 @@ export function randomize1v1Fighters() {
 
   state.p1Index = indices[0];
   state.p2Index = indices[1];
+  _prewarmRosterVoiceAtlases([state.p1Index, state.p2Index]);
 }
 
 export function resetMatchWithRandom1v1Fighters() {
@@ -905,6 +933,7 @@ export function randomize1v2Fighters() {
   if (!state.bossBattleNoTeammate && indices.length > 2) {
     state.p3Index = indices[2];
   }
+  _prewarmRosterVoiceAtlases([state.p1Index, state.p2Index, state.p3Index]);
 }
 
 export function resetMatchWithRandom1v2Fighters() {
@@ -937,6 +966,7 @@ export function randomize2v2Fighters() {
   state.p3Index = indices[1];
   state.p2Index = indices[2];
   state.p4Index = indices[3];
+  _prewarmRosterVoiceAtlases([state.p1Index, state.p2Index, state.p3Index, state.p4Index]);
 }
 
 export function startRandom2v2Battle() {
@@ -967,6 +997,7 @@ export function randomizeFfaFighters() {
   if (state.viewOrientation === 'horizontal') {
     state.p4Index = indices[3];
   }
+  _prewarmRosterVoiceAtlases([state.p1Index, state.p2Index, state.p3Index, state.p4Index]);
 }
 
 export function startRandomFfaBattle() {
@@ -998,6 +1029,7 @@ export function randomizeTagMatchFighters() {
   state.p4Index = indices[4];
   state.p6Index = indices[5];
   saveFighterSelections();
+  _prewarmRosterVoiceAtlases([indices[0], indices[1], indices[2], indices[3], indices[4], indices[5]]);
 }
 
 export function resetMatchWithRandomTagMatchFighters() {

@@ -19405,7 +19405,9 @@ async function runInteractionTests() {
 }
 
 
-runInteractionTests().catch(err => {
+runInteractionTests().then(() => {
+  process.exit(0);
+}).catch(err => {
   console.error('🚨 Interaction Test Suite Encountered an Error:', err);
   process.exit(1);
 });

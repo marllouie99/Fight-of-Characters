@@ -3,7 +3,7 @@ import { CONFIG, FIGHTER_DEFS, getActiveFighterDefs } from '../../core/config.js
 import { GAME_MODES } from '../../core/modeConfig.js';
 import { HORIZONTAL_MAPS, getActiveHorizontalMap, setActiveHorizontalMap } from '../../systems/horizontalMapSystem.js';
 import { _clearButtons, _registerButton, drawPanel, drawButton, drawStatBar, drawChamferedRect, fitSingleLineText, wrapText } from './uiFramework.js';
-import { openFighterSelectModal, isFighterSelectModalOpen, drawFighterSelectModal, drawPlayerCard, getFighterWeaponInfo, drawHeroicFighterCard, drawDynamicVsClashEmblem } from './CharacterSelectScreen.js';
+import { openFighterSelectModal, isFighterSelectModalOpen, drawFighterSelectModal, drawPlayerCard, getFighterWeaponInfo, drawHeroicFighterCard, drawDynamicVsClashEmblem, prewarmActiveMatchupVoiceAtlases } from './CharacterSelectScreen.js';
 import { drawCornerBrackets, drawHazardStripes } from './CollectorCardRenderer.js';
 import { getFighterPreview } from './FighterPreviewCache.js';
 import { drawWeaponPreview } from './WeaponIndexScreen.js';
@@ -64,6 +64,7 @@ export function initHorizontalTeamSelectScreen() {
     state.p3Index = state.horizontalRosterSlots[2] ?? state.p3Index ?? 2;
     state.p4Index = state.horizontalRosterSlots[3] ?? state.p4Index ?? 3;
   }
+  prewarmActiveMatchupVoiceAtlases();
 }
 
 /**
@@ -92,6 +93,7 @@ function _cycleFighterSlot(slotIndex, direction) {
   else if (slotIndex === 2) state.p3Index = nextIdx;
   else if (slotIndex === 3) state.p4Index = nextIdx;
   saveFighterSelections();
+  prewarmActiveMatchupVoiceAtlases();
   if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
     audioSystem.playSFX('skill_dash5', 0.12);
   }
@@ -129,6 +131,7 @@ export function randomizeHorizontalRoster() {
     }
   }
   saveFighterSelections();
+  prewarmActiveMatchupVoiceAtlases();
 }
 
 /**
@@ -173,6 +176,7 @@ function _drawFighterModelStage(ctx, cx, cy, radius, fighterIndex, def) {
  */
 export function drawHorizontalTeamSelectScreen(ctx) {
   _clearButtons();
+  prewarmActiveMatchupVoiceAtlases();
   const defs = getActiveFighterDefs();
   const w = state.canvas.width || 960;
   const h = state.canvas.height || 540;
