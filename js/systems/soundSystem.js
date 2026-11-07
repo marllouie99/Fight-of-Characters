@@ -28,12 +28,12 @@ const _isMobileSound = typeof navigator !== 'undefined' && (
   (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024)
 );
 
-// Sound cache management to prevent unbounded memory growth (capped to 24 on mobile to stop uncompressed PCM memory ballooning)
-const MAX_CACHE_SIZE = _isMobileSound ? 24 : 1000;
+// Sound cache management to prevent unbounded memory growth (80 on mobile allows full match audio in memory under 12 MB)
+const MAX_CACHE_SIZE = _isMobileSound ? 80 : 1000;
 
 // ── CONCURRENT SOUND LIMITING (prevents audio bus overload → crackling & mobile thermal heating) ──
-export const MAX_ACTIVE_MOBILE_VOICES = 6; // Section 5.13: Mobile active voice cap (6 voices for low-latency DSP)
-const MAX_CONCURRENT_SOUNDS = _isMobileSound ? MAX_ACTIVE_MOBILE_VOICES : 40; // Hard cap on simultaneous Web Audio sources (6 on mobile to protect audio DSP)
+export const MAX_ACTIVE_MOBILE_VOICES = 16; // Mobile active voice cap (16 voices allows full combat combos + voice + SFX without eviction)
+const MAX_CONCURRENT_SOUNDS = _isMobileSound ? MAX_ACTIVE_MOBILE_VOICES : 40;
 // Micro-fade duration in seconds to prevent click/pop artifacts on start/stop without delaying attack transient
 const MICRO_FADE_IN = 0.002;  // 2ms fade-in (preserves crisp punch/slash attack snap)
 const MICRO_FADE_OUT = 0.015; // 15ms fade-out
@@ -139,12 +139,16 @@ export function isVoicelineAudio(src) {
   if (!src) return false;
   const s = String(src).toLowerCase();
 
-  // Exclude physical combat impact SFX, explosions, and dash whooshes
+  // Exclude physical combat impact SFX, explosions, dashes, and mechanical skill SFX
   if (s.includes('fleshhit') || s.includes('punch') || s.includes('swordswing') ||
       s.includes('groundsmash') || s.includes('explosion') || s.includes('laserpew') ||
       s.includes('spaceshot') || s.includes('walk-on-grass') || s.includes('parry') ||
       s.includes('clash') || s.includes('block') || s.includes('dash1') || s.includes('dash3') ||
-      s.includes('dash5') || s.includes('flamespray') || s.includes('fugatravel') || s.includes('fugaexplode')) {
+      s.includes('dash5') || s.includes('flamespray') || s.includes('fugatravel') || s.includes('fugaexplode') ||
+      s.includes('purpledeploy') || s.includes('reddeploy') || s.includes('redcharging') ||
+      s.includes('redchanneling') || s.includes('redblast') || s.includes('mixing') ||
+      s.includes('gojodomaindeploy') || s.includes('bang') || s.includes('thunderclap') ||
+      s.includes('machinegunblow') || s.includes('mahoraga_summon')) {
     return false;
   }
 
@@ -153,17 +157,11 @@ export function isVoicelineAudio(src) {
          s.includes('vocal') ||
          s.includes('chant') ||
          s.includes('hollowpurple') ||
-         s.includes('purpledeploy') ||
-         s.includes('mixing') ||
-         s.includes('reddeploy') ||
-         s.includes('redcharging') ||
-         s.includes('redchanneling') ||
          s.includes('gojodomain') ||
          s.includes('yutadomainexpansion') ||
          s.includes('domainexpansion') ||
          s.includes('shrine') ||
          s.includes('sukuna_mahoraga_summon') ||
-         s.includes('mahoraga_summon') ||
          (s.includes('fuga') && !s.includes('travel') && !s.includes('explode') && !s.includes('ignite')) ||
          s.includes('mybestfriend') ||
          s.includes('bestfriend') ||
@@ -179,11 +177,8 @@ export function isVoicelineAudio(src) {
          s.includes('seriouspunch') ||
          s.includes('bankai') ||
          s.includes('incinerat') ||
-         s.includes('machinegunblow') ||
-         s.includes('bang') ||
          s.includes('bakketsu') ||
-         s.includes('hinokami') ||
-         s.includes('thunderclap');
+         s.includes('hinokami');
 }
 
 /**
@@ -299,12 +294,24 @@ export function getCharacterIdFromSound(src) {
  * Stop active voice playback on a fighter character's single-voice channel.
  * @param {string} characterId
  * @param {number} [fadeMs=80]
+ * @param {boolean} [force=false] - If true, forces cancellation regardless of priority (e.g. fighter death).
  */
-export function stopFighterVoice(characterId, fadeMs = 80) {
+export function stopFighterVoice(characterId, fadeMs = 80, force = false) {
   if (!characterId) return;
   const cId = String(characterId).toLowerCase();
   const rec = _activeCharacterVoiceHandles.get(cId);
   if (rec && rec.handle) {
+    // If not forced (e.g. death or round end), protect Priority 3 voice lines (Domain Expansions, Ultimates)
+    // from being killed by minor interruptions while the fighter is still alive
+    if (!force && rec.priority >= 3) {
+      if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+        const fighter = state.fighters.find(f => f && String(f.characterId || f.type || '').toLowerCase() === cId);
+        if (fighter && (fighter.hp > 0 && !fighter.isDead && !fighter.dead)) {
+          return; // Living fighter is chanting an ultimate/domain; do not cut off their voice!
+        }
+      }
+    }
+
     if (fadeMs > 0) {
       fadeOutSound(rec.handle, fadeMs);
     } else {
@@ -368,16 +375,21 @@ function _pruneSoundCache() {
       _cache.delete(key);
       removed++;
     }
-    if (_cache.size > MAX_CACHE_SIZE) {
+    // Only prune non-protected older sounds if still overflowing
+    if (_cache.size > MAX_CACHE_SIZE * 1.5) {
       const remaining = _cache.size - MAX_CACHE_SIZE;
-      const oldestKeys = Array.from(_cache.keys()).slice(0, remaining);
-      oldestKeys.forEach(k => {
-        const val = _cache.get(k);
+      let extraRemoved = 0;
+      for (const [key, val] of _cache.entries()) {
+        if (extraRemoved >= remaining) break;
+        if (isAnnouncerSound(key) || (typeof state !== 'undefined' && state.activeMatchBgmSrc === key)) {
+          continue;
+        }
         if (val && typeof val.pause === 'function') {
           try { val.pause(); val.src = ''; val.load(); } catch (e) {}
         }
-        _cache.delete(k);
-      });
+        _cache.delete(key);
+        extraRemoved++;
+      }
     }
   }
 }
@@ -579,6 +591,9 @@ export async function unlockAudio() {
   try {
     const audioCtx = getAudioContext();
     if (!audioCtx) return false;
+    if (_audioUnlocked && audioCtx.state === 'running') {
+      return true;
+    }
     if (audioCtx.state === 'suspended') {
       await audioCtx.resume();
     }
@@ -591,7 +606,7 @@ export async function unlockAudio() {
       source.connect(audioCtx.destination);
       source.start(0);
     } catch (_) {}
-    _audioUnlocked = audioCtx.state === 'running';
+    _audioUnlocked = (audioCtx.state === 'running');
     return _audioUnlocked;
   } catch (e) {
     _audioUnlocked = false;
@@ -1252,8 +1267,20 @@ function _evictOldestSound() {
     break;
   }
 
-  // If all active handles are protected voice clips, evict the absolute oldest handle
+  // If all active handles are protected voice clips, ONLY evict Priority 1 (minor grunt) handles, NEVER Priority 2/3
   if (!candidate) {
+    for (const handle of _activeSoundHandles) {
+      if (!handle) continue;
+      const prio = getVoicelinePriority(handle.src);
+      if (prio <= 1 && !isAnnouncerSound(handle.src)) {
+        candidate = handle;
+        break;
+      }
+    }
+  }
+
+  // If still no candidate, do not evict protected ultimates/announcer audio unless over 1.5x hard limit
+  if (!candidate && _activeSoundHandles.size >= MAX_CONCURRENT_SOUNDS * 1.5) {
     candidate = _activeSoundHandles.values().next().value;
   }
   if (!candidate) return false;
@@ -1422,7 +1449,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
       const source = audioCtx.createBufferSource();
       source.buffer = cached;
       const gainNode = audioCtx.createGain();
-      const isBgm = (key === 'arena_bgm_loop' || key === 'arena_bgm_preview');
+      const isBgm = (resolvedSrc === 'arena_bgm_loop' || resolvedSrc === 'arena_bgm_preview' || String(resolvedSrc).toLowerCase().includes('bgm'));
       const targetGain = Math.max(0, Math.min(25.0, isBgm ? volume : volume * _sfxVolume));
 
       // Calculate hardware timeline start timestamp (delay is scheduled on audio card clock, not CPU JS loop)
@@ -1445,19 +1472,20 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
       const endTime = startTime + duration;
 
       if (isSprite) {
-        source.start(startTime, offsetSec, remainingDuration);
-        // Explicit Web Audio hardware stop schedule: Guarantees mobile browser Web Audio clock stops this node
-        // at exactly the slice boundary and NEVER bleeds into adjacent audio in the sprite sheet
+        // For sound sprites: Add a 30ms tail cushion (well within the 50ms padding gap)
+        // so syllable endings, consonants, and reverb decays never get chopped off mid-sound
+        const spriteTailCushion = 0.030;
+        const playDuration = Math.min(cached.duration - offsetSec, remainingDuration + spriteTailCushion);
+        const spriteEndTime = startTime + (playDuration / safeSpeed);
+
+        source.start(startTime, offsetSec, playDuration);
         try {
-          source.stop(endTime);
+          source.stop(spriteEndTime);
         } catch (e) {}
       } else {
+        // Standalone AudioBuffer: Web Audio API naturally completes playback cleanly at the exact buffer end.
+        // Never call source.stop() prematurely for standalone buffers so natural reverberation tails are preserved.
         source.start(startTime, offsetSec);
-        if (remainingDuration > 0 && Number.isFinite(remainingDuration)) {
-          try {
-            source.stop(endTime);
-          } catch (e) {}
-        }
       }
 
       // Stop any lingering HTMLAudioElement clone of this sound to avoid dual-playback
@@ -2030,7 +2058,13 @@ export { resolveCombatSFX };
 if (typeof window !== 'undefined') {
   const unlockEvents = ['pointerdown', 'keydown', 'touchstart', 'click'];
   const handleUnlock = () => {
-    unlockAudio();
+    unlockAudio().then((unlocked) => {
+      if (unlocked) {
+        unlockEvents.forEach((evt) => {
+          try { window.removeEventListener(evt, handleUnlock, { passive: true }); } catch (_) {}
+        });
+      }
+    });
   };
   unlockEvents.forEach((evt) => {
     window.addEventListener(evt, handleUnlock, { passive: true });

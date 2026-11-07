@@ -417,8 +417,8 @@ class AudioEventEmitter {
     return handle;
   }
 
-  stopFighterVoice(characterId, fadeMs = 80) {
-    stopFighterVoice(characterId, fadeMs);
+  stopFighterVoice(characterId, fadeMs = 80, force = false) {
+    stopFighterVoice(characterId, fadeMs, force);
   }
 
   stopAll() {

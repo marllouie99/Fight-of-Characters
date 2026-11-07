@@ -31,7 +31,6 @@ import { isInsideRubbickStolenVoid } from './fighters/rubbick/rubbickThemes.js';
 import { BalanceManager } from '../configs/balanceManager.js';
 import { resolveEntityPlusObstacleCollision, getArenaCenterObstacle, isPointInsidePlusObstacle, isLineOfSightBlockedByObstacle } from '../systems/arenaObstacleSystem.js';
 import { triggerHaptic } from '../systems/mobileAppBridge.js';
-import { triggerCinematicKo } from '../graphics/renderers/cinematicKoRenderer.js';
 import { isJoystickActive, getJoystickVector } from '../systems/touchControls.js';
 import { triggerKineticShockWave } from '../systems/perkSystem.js';
 
@@ -1709,7 +1708,11 @@ export class Fighter {
     if (forceCancelAll || this.areAttackEffectsSuppressed()) {
       this.clearAllAfterimages();
       if (forceCancelAll && typeof stopFighterVoice === 'function') {
-        stopFighterVoice(this.characterId || this.type, 100);
+        const isDead = this.hp <= 0 || this.isDead || this.dead;
+        const hasFinisher = typeof this.hasActiveFinishingAbility === 'function' && this.hasActiveFinishingAbility();
+        if (isDead || !hasFinisher) {
+          stopFighterVoice(this.characterId || this.type, 100, isDead);
+        }
       }
     }
 
@@ -2252,7 +2255,7 @@ export class Fighter {
     this._hasDied = true;
     this.stopFinisherAudio(null, 200);
     if (typeof stopFighterVoice === 'function') {
-      stopFighterVoice(this.characterId || this.type, 60);
+      stopFighterVoice(this.characterId || this.type, 60, true);
     }
     clearFighterDomain(this, typeof state !== 'undefined' ? state : null);
     this.interruptAttacks(true);
@@ -3195,9 +3198,6 @@ export class Fighter {
     }
 
     recordKill();
-    if (state && state.gameState === 'playing') {
-      triggerCinematicKo(this.x, this.y, realAttacker, this);
-    }
     this.checkRoundOrMatchEnd(realAttacker);
   }
 
