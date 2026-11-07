@@ -26,6 +26,60 @@ let _cachedFistRadius = 0;
 let _todoBfGlowCanvas = null;
 let _todoBlueGlowCanvas = null;
 
+// Pre-rendered Pixel Art Cursed Rock Cache (Rule 35: Cached Offscreen Canvas Quads)
+const _cachedTodoRockCanvases = new Map();
+
+function _getTodoRockCanvas(rkR, P = 2.0) {
+  const intR = Math.round(rkR);
+  if (_cachedTodoRockCanvases.has(intR)) {
+    return _cachedTodoRockCanvases.get(intR);
+  }
+  if (typeof document === 'undefined') return null;
+
+  const rkSteps = Math.ceil((intR + P) / P);
+  const size = (rkSteps * 2 + 1) * P;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = size;
+  offCanvas.height = size;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const center = size / 2;
+  const snap = (v) => Math.round(v / P) * P;
+
+  // Dark Manga Outline Shell
+  offCtx.fillStyle = '#0E0F14';
+  for (let gy = -rkSteps; gy <= rkSteps; gy++) {
+    for (let gx = -rkSteps; gx <= rkSteps; gx++) {
+      const dist = Math.hypot(gx * P, gy * P);
+      if (dist <= intR + P * 0.75) {
+        offCtx.fillRect(center + snap(gx * P), center + snap(gy * P), P, P);
+      }
+    }
+  }
+
+  // Stepped Grey Facet Fill
+  for (let gy = -rkSteps; gy <= rkSteps; gy++) {
+    for (let gx = -rkSteps; gx <= rkSteps; gx++) {
+      const rx = gx * P;
+      const ry = gy * P;
+      const dist = Math.hypot(rx, ry);
+      if (dist <= intR) {
+        let col = '#5A5F6E';
+        if (ry < -intR * 0.35 && rx < intR * 0.35) {
+          col = '#8B93A6'; // Top-left facet highlight
+        } else if (ry > intR * 0.35 || rx > intR * 0.35) {
+          col = '#363942'; // Bottom-right facet shadow
+        }
+        offCtx.fillStyle = col;
+        offCtx.fillRect(center + snap(rx), center + snap(ry), P, P);
+      }
+    }
+  }
+
+  _cachedTodoRockCanvases.set(intR, offCanvas);
+  return offCanvas;
+}
+
 // Pre-rendered Pixel Art Heart & Star Canvases for Takada Idol Aura (Zero GC)
 let _cachedPixelHeartPinkCanvas = null;
 let _cachedPixelHeartGoldCanvas = null;
@@ -892,42 +946,15 @@ export function drawCursedRocks(ctx, fighter) {
       GojoRenderer._drawJJKCursedEnergyAura(ctx, rockFighter, 'blue', rock.x, rock.y, rockAuraRadius);
     }
 
-    // 2. Stepped Pixel-Art Cursed Rock Body
+    // 2. Stepped Pixel-Art Cursed Rock Body (Rule 35: Cached Offscreen Canvas Quad)
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(rock.x, rock.y);
 
     const rkR = rock.radius || 12;
-    const rkSteps = Math.ceil((rkR + P) / P);
-
-    // Dark Manga Outline Shell
-    ctx.fillStyle = '#0E0F14';
-    for (let gy = -rkSteps; gy <= rkSteps; gy++) {
-      for (let gx = -rkSteps; gx <= rkSteps; gx++) {
-        const dist = Math.hypot(gx * P, gy * P);
-        if (dist <= rkR + P * 0.75) {
-          ctx.fillRect(snap(gx * P), snap(gy * P), P, P);
-        }
-      }
-    }
-
-    // Stepped Grey Facet Fill
-    for (let gy = -rkSteps; gy <= rkSteps; gy++) {
-      for (let gx = -rkSteps; gx <= rkSteps; gx++) {
-        const rx = gx * P;
-        const ry = gy * P;
-        const dist = Math.hypot(rx, ry);
-        if (dist <= rkR) {
-          let col = '#5A5F6E';
-          if (ry < -rkR * 0.35 && rx < rkR * 0.35) {
-            col = '#8B93A6'; // Top-left facet highlight
-          } else if (ry > rkR * 0.35 || rx > rkR * 0.35) {
-            col = '#363942'; // Bottom-right facet shadow
-          }
-          ctx.fillStyle = col;
-          ctx.fillRect(snap(rx), snap(ry), P, P);
-        }
-      }
+    const rockCanvas = _getTodoRockCanvas(rkR, P);
+    if (rockCanvas) {
+      ctx.drawImage(rockCanvas, -rockCanvas.width / 2, -rockCanvas.height / 2);
     }
 
     ctx.restore();

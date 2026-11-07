@@ -19,6 +19,52 @@ let _cachedSaitamaGhostOriginY = 0;
 let _cachedSaitamaGloveCanvas = null;
 let _cachedSaitamaGloveRadius = 0;
 
+let _cachedSaitamaCollarButtonCanvas = null;
+let _cachedSaitamaCollarButtonR = 0;
+
+function _getSaitamaCollarButtonCanvas(btnR, P = 2.0) {
+  const intBtnR = Math.round(btnR);
+  if (_cachedSaitamaCollarButtonCanvas && _cachedSaitamaCollarButtonR === intBtnR) {
+    return _cachedSaitamaCollarButtonCanvas;
+  }
+  if (typeof document === 'undefined') return null;
+
+  const steps = Math.ceil(intBtnR / P);
+  const size = (steps * 2 + 1) * P;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = size;
+  offCanvas.height = size;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const center = size / 2;
+
+  // Outline
+  offCtx.fillStyle = '#111114';
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      if (Math.hypot(gx * P, gy * P) <= intBtnR + P * 0.5) {
+        offCtx.fillRect(center + gx * P, center + gy * P, P, P);
+      }
+    }
+  }
+  // Button Core
+  offCtx.fillStyle = '#222228';
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      if (Math.hypot(gx * P, gy * P) <= intBtnR) {
+        offCtx.fillRect(center + gx * P, center + gy * P, P, P);
+      }
+    }
+  }
+  // Specular Glint
+  offCtx.fillStyle = '#AAAAAA';
+  offCtx.fillRect(center - P, center - P, P, P);
+
+  _cachedSaitamaCollarButtonCanvas = offCanvas;
+  _cachedSaitamaCollarButtonR = intBtnR;
+  return offCanvas;
+}
+
 export function _getSaitamaGloveSpriteCanvas() {
   if (_saitamaGloveSpriteCanvas) {
     return _saitamaGloveSpriteCanvas;
@@ -1043,34 +1089,15 @@ function drawSaitamaPixelCape(ctx, r, inertiaX = 0, inertiaY = 0, gentleSway1 = 
     foldCol
   );
 
-  // Pass 5: Stepped Pixel Cape Collar Buttons
+  // Pass 5: Stepped Pixel Cape Collar Buttons (Rule 35: Cached Offscreen Canvas Quad)
   const drawPixelCollarButton = (bx, by) => {
     const cx = snap(bx);
     const cy = snap(by);
     const btnR = snap(r * 0.12);
-    const steps = Math.ceil(btnR / P);
-
-    // Outline
-    ctx.fillStyle = '#111114';
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        if (Math.hypot(gx * P, gy * P) <= btnR + P * 0.5) {
-          ctx.fillRect(cx + gx * P, cy + gy * P, P, P);
-        }
-      }
+    const btnCanvas = _getSaitamaCollarButtonCanvas(btnR, P);
+    if (btnCanvas) {
+      ctx.drawImage(btnCanvas, Math.round(cx - btnCanvas.width / 2), Math.round(cy - btnCanvas.height / 2));
     }
-    // Button Core
-    ctx.fillStyle = '#222228';
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        if (Math.hypot(gx * P, gy * P) <= btnR) {
-          ctx.fillRect(cx + gx * P, cy + gy * P, P, P);
-        }
-      }
-    }
-    // Specular Glint
-    ctx.fillStyle = '#AAAAAA';
-    ctx.fillRect(cx - P, cy - P, P, P);
   };
 
   drawPixelCollarButton(topAttach.x, topAttach.y);

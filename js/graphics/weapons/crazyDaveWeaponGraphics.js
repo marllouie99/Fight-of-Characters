@@ -4,6 +4,7 @@
 
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
 import { getHandSize } from '../../core/config.js';
+import { drawAtlasSprite } from '../atlases/WeaponAtlas.js';
 
 const PLANT_VISUAL_SCALE = 0.92;
 
@@ -426,19 +427,15 @@ export function drawSunDrop(ctx, sun) {
   const sunImg = getSunSprite();
   const hasImg = Boolean(sunImg && sunImg.complete && sunImg.naturalWidth > 0);
 
-  // 1. Soft Warm Ambient Pixel Halo Ring (Zero shadowBlur - Rule 2.2)
-  const P = 2.0;
-  ctx.fillStyle = 'rgba(254, 240, 138, 0.22)';
+  // 1. Soft Warm Ambient Halo Ring (Zero shadowBlur - Rule 2.2, 60 FPS Hardware Arc)
   const haloR = r + 4 + pulse;
-  const haloSteps = Math.ceil(haloR / P);
-  for (let gy = -haloSteps; gy <= haloSteps; gy++) {
-    for (let gx = -haloSteps; gx <= haloSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist >= r + 2 && dist <= haloR) {
-        ctx.fillRect(gx * P - P / 2, gy * P - P / 2, P, P);
-      }
-    }
-  }
+  const innerR = r + 2;
+  const ringWidth = Math.max(1, haloR - innerR);
+  ctx.strokeStyle = 'rgba(254, 240, 138, 0.22)';
+  ctx.lineWidth = ringWidth;
+  ctx.beginPath();
+  ctx.arc(0, 0, (innerR + haloR) / 2, 0, Math.PI * 2);
+  ctx.stroke();
 
   // 2. Render Official Sun Sprite or Procedural Pixel Fallback
   if (hasImg) {
@@ -1035,28 +1032,8 @@ export function drawPeaBullet(ctx, p) {
     const size = r * 2.4;
     ctx.drawImage(projImg, frame.sx, frame.sy, frame.sw, frame.sh, -size / 2, -size / 2, size, size);
   } else {
-    // Glowing Pea Sphere Fallback
-    const halo = ctx.createRadialGradient(0, 0, 1, 0, 0, r + 4);
-    halo.addColorStop(0, 'rgba(134, 239, 172, 0.7)');
-    halo.addColorStop(1, 'rgba(34, 197, 94, 0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#22C55E';
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#065F46';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(-r * 0.35, -r * 0.35, r * 0.3, 0, Math.PI * 2);
-    ctx.fill();
+    // Glowing Pea Sphere Fallback (Rule 35: Weapon Texture Atlas Single Blit)
+    drawAtlasSprite(ctx, 'pea_core_green', 0, 0, 0, r / 6.0);
   }
 
   ctx.restore();
@@ -1112,29 +1089,8 @@ export function drawSnowPeaBullet(ctx, p) {
     const size = r * 2.4;
     ctx.drawImage(projImg, frame.sx, frame.sy, frame.sw, frame.sh, -size / 2, -size / 2, size, size);
   } else {
-    // Chilling Frost Halo Fallback
-    const halo = ctx.createRadialGradient(0, 0, 1, 0, 0, r + 5);
-    halo.addColorStop(0, 'rgba(186, 230, 253, 0.8)');
-    halo.addColorStop(0.5, 'rgba(56, 189, 248, 0.4)');
-    halo.addColorStop(1, 'rgba(2, 132, 199, 0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#38BDF8'; // Vivid Ice Blue
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#0369A1';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(-r * 0.35, -r * 0.35, r * 0.35, 0, Math.PI * 2);
-    ctx.fill();
+    // Chilling Frost Halo Fallback (Rule 35: Weapon Texture Atlas Single Blit)
+    drawAtlasSprite(ctx, 'pea_core_ice', 0, 0, 0, r / 6.0);
   }
 
   ctx.restore();
@@ -1376,26 +1332,10 @@ export function drawFirePeaBullet(ctx, p) {
 
 /**
  * Procedural fallback for Fire Pea bullet in case sprite sheet is loading or missing.
+ * (Rule 35: Weapon Texture Atlas Single Blit)
  */
 function _drawProceduralFirePeaBullet(ctx, r) {
-  const coreGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r);
-  coreGrad.addColorStop(0, '#FEF08A');
-  coreGrad.addColorStop(0.3, '#FBBF24');
-  coreGrad.addColorStop(0.65, '#F97316');
-  coreGrad.addColorStop(1, '#DC2626');
-  ctx.fillStyle = coreGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = '#7C2D12';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.arc(-r * 0.3, -r * 0.35, r * 0.3, 0, Math.PI * 2);
-  ctx.fill();
+  drawAtlasSprite(ctx, 'pea_core_fire', 0, 0, 0, r / 7.0);
 }
 
 /**

@@ -2,6 +2,7 @@ import { state } from '../../core/state.js';
 import { getHandSize } from '../../core/config.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
 import { drawAlucardHand } from '../fighters/gunSlingerSkin.js';
+import { drawAtlasSprite } from '../atlases/WeaponAtlas.js';
 
 // ─────────────────────────────────────────────
 // ALUCARD WEAPON GRAPHICS (The .454 Casull & 13mm Jackal)
@@ -78,90 +79,18 @@ export const GUNSLINGER_BULLET_GRAPHICS = {
 
 /**
  * Draws the .454 Casull Sacred Silver bullet and speed streak
+ * (Rule 35: Weapon Texture Atlas Single Blit)
  */
 export function drawAlucardCasullBullet(ctx, x, y, angle, scale = 1, lifeRatio = 1) {
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-
-  const P = 0.95 * scale;
-
-  const rect = (gx, gy, gw, gh, color) => {
-    if (!color) return;
-    ctx.fillStyle = color;
-    ctx.fillRect(Math.round(gx * P), Math.round(gy * P), Math.round(gw * P), Math.round(gh * P));
-  };
-
-  // Holy Silver Speed Streak
-  const trailLen = Math.round(12 * lifeRatio);
-  for (let i = 1; i <= trailLen; i++) {
-    const alpha = Math.max(0, (1.0 - i / trailLen) * 0.75 * lifeRatio);
-    ctx.globalAlpha = alpha;
-    if (i % 2 === 0) {
-      rect(-i * 2 - 4, -1, 2, 2, '#FFFFFF');
-    } else {
-      rect(-i * 2 - 4, 0, 2, 1, '#CBD5E1');
-    }
-  }
-
-  ctx.globalAlpha = 1.0;
-  // Consecrated Silver Heavy Cartridge
-  rect(-4, -2, 6, 4, '#0E0F14');
-  rect(-3, -1, 5, 2, '#E2E8F0');
-  rect(-3, -1, 5, 1, '#FFFFFF');
-  rect(-3, 1, 5, 1, '#94A3B8');
-
-  // Sacred Bullet Head
-  rect(2, -2, 3, 4, '#FFFFFF');
-  rect(3, -1, 2, 2, '#F8FAFC');
-  rect(5, 0, 1, 1, '#FFFFFF');
-
-  ctx.restore();
+  drawAtlasSprite(ctx, 'bullet_casull_silver', x, y, angle, scale, lifeRatio);
 }
 
 /**
  * Draws the 13mm Jackal Armor-Piercing Explosive Mercury bullet and trail
+ * (Rule 35: Weapon Texture Atlas Single Blit)
  */
 export function drawAlucardJackalBullet(ctx, x, y, angle, scale = 1, lifeRatio = 1) {
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-
-  const P = 1.05 * scale;
-
-  const rect = (gx, gy, gw, gh, color) => {
-    if (!color) return;
-    ctx.fillStyle = color;
-    ctx.fillRect(Math.round(gx * P), Math.round(gy * P), Math.round(gw * P), Math.round(gh * P));
-  };
-
-  // Dark Crimson Smoke Trail
-  const trailLen = Math.round(14 * lifeRatio);
-  for (let i = 1; i <= trailLen; i++) {
-    const alpha = Math.max(0, (1.0 - i / trailLen) * 0.8 * lifeRatio);
-    ctx.globalAlpha = alpha;
-    if (i % 2 === 0) {
-      rect(-i * 2 - 5, -1, 2, 2, '#DC2626');
-    } else {
-      rect(-i * 2 - 5, 0, 2, 1, '#7F1D1D');
-    }
-  }
-
-  ctx.globalAlpha = 1.0;
-  // 13mm Heavy Matte Black Slug
-  rect(-5, -2, 8, 4, '#0E0F14');
-  rect(-4, -1, 7, 2, '#1E293B');
-  rect(-4, -1, 7, 1, '#475569');
-  rect(-4, 1, 7, 1, '#0F172A');
-
-  // Mercury Explosive Crimson Tip
-  rect(3, -2, 3, 4, '#DC2626');
-  rect(4, -1, 2, 2, '#EF4444');
-  rect(5, 0, 2, 1, '#F87171');
-
-  ctx.restore();
+  drawAtlasSprite(ctx, 'bullet_jackal_black', x, y, angle, scale, lifeRatio);
 }
 
 export function drawGunSlingerBullet(ctx, x, y, angle, scale = 1, lifeRatio = 1) {

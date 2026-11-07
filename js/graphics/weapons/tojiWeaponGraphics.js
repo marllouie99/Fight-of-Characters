@@ -1,6 +1,7 @@
 import { CONFIG, getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
+import { drawAtlasSprite } from '../atlases/WeaponAtlas.js';
 
 /**
  * Visual & Animation Speed Configuration for Toji's Weapons.
@@ -28,49 +29,74 @@ function snap(v) {
   return Math.round(v / P) * P;
 }
 
-/**
- * Draws Toji's hand/grip in authentic stepped pixel art style.
- */
-function drawTojiPixelWeaponGrip(ctx, x, y, radius, handColor = '#E8BD9B') {
-  ctx.save();
+// ─── Offscreen Canvas Cache for Toji Pixel Weapon Grip (Rule 35: Cached Offscreen Canvas Quads) ───
+const _tojiGripCache = new Map();
+
+function _getTojiGripCanvas(radius, handColor = '#E8BD9B') {
   const r = Math.max(P * 2, radius);
-  const steps = Math.ceil(r / P);
+  const intR = Math.round(r);
+  const key = `${intR}_${handColor}`;
+  if (_tojiGripCache.has(key)) {
+    return _tojiGripCache.get(key);
+  }
+  if (typeof document === 'undefined') return null;
+
+  const steps = Math.ceil(intR / P);
+  const size = (steps * 2 + 1) * P;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = size;
+  offCanvas.height = size;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const center = size / 2;
 
   // 1. Manga dark outline shell (#0E0F14)
-  ctx.fillStyle = '#0E0F14';
+  offCtx.fillStyle = '#0E0F14';
   for (let gy = -steps; gy <= steps; gy++) {
     for (let gx = -steps; gx <= steps; gx++) {
-      if (Math.hypot(gx * P, gy * P) <= r + P * 0.75) {
-        ctx.fillRect(snap(x + gx * P), snap(y + gy * P), P, P);
+      if (Math.hypot(gx * P, gy * P) <= intR + P * 0.75) {
+        offCtx.fillRect(center + gx * P, center + gy * P, P, P);
       }
     }
   }
 
   // 2. Tan skin body
-  ctx.fillStyle = handColor || '#E8BD9B';
+  offCtx.fillStyle = handColor || '#E8BD9B';
   for (let gy = -steps; gy <= steps; gy++) {
     for (let gx = -steps; gx <= steps; gx++) {
-      if (Math.hypot(gx * P, gy * P) <= r - P * 0.35) {
-        ctx.fillRect(snap(x + gx * P), snap(y + gy * P), P, P);
+      if (Math.hypot(gx * P, gy * P) <= intR - P * 0.35) {
+        offCtx.fillRect(center + gx * P, center + gy * P, P, P);
       }
     }
   }
 
   // 3. Knuckle shadow blocks
-  ctx.fillStyle = '#C68A65';
+  offCtx.fillStyle = '#C68A65';
   for (let gy = 0; gy <= steps; gy++) {
     for (let gx = -steps; gx <= steps; gx++) {
-      if (Math.hypot(gx * P, gy * P) <= r - P * 0.35 && (gy * P > r * 0.20 || gx * P < -r * 0.35)) {
-        ctx.fillRect(snap(x + gx * P), snap(y + gy * P), P, P);
+      if (Math.hypot(gx * P, gy * P) <= intR - P * 0.35 && (gy * P > intR * 0.20 || gx * P < -intR * 0.35)) {
+        offCtx.fillRect(center + gx * P, center + gy * P, P, P);
       }
     }
   }
 
   // 4. Specular highlight
-  ctx.fillStyle = '#FFE5D0';
-  ctx.fillRect(snap(x + P * 0.5), snap(y - r * 0.45), P, P);
+  offCtx.fillStyle = '#FFE5D0';
+  offCtx.fillRect(center + P * 0.5, center - intR * 0.45, P, P);
 
-  ctx.restore();
+  _tojiGripCache.set(key, offCanvas);
+  return offCanvas;
+}
+
+/**
+ * Draws Toji's hand/grip in authentic stepped pixel art style.
+ * Uses cached offscreen canvas blitting (Rule 35 compliant).
+ */
+function drawTojiPixelWeaponGrip(ctx, x, y, radius, handColor = '#E8BD9B') {
+  const gripCanvas = _getTojiGripCanvas(radius, handColor);
+  if (gripCanvas) {
+    ctx.drawImage(gripCanvas, snap(x - gripCanvas.width / 2), snap(y - gripCanvas.height / 2));
+  }
 }
 
 /**
@@ -938,40 +964,7 @@ export function drawTojiBullet(ctx, p) {
     ctx.restore();
   }
 
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(angle);
-
-  // 2. High-speed supersonic motion trail
-  const trailLen = 28;
-  ctx.fillStyle = _getTojiBulletTrailGrad(ctx);
-  ctx.beginPath();
-  ctx.moveTo(-trailLen, 0);
-  ctx.lineTo(-len * 0.5, -width * 0.9);
-  ctx.lineTo(0, 0);
-  ctx.lineTo(-len * 0.5, width * 0.9);
-  ctx.closePath();
-  ctx.fill();
-
-  // 3. Bullet Core (Sharp metal jacket bullet)
-  ctx.fillStyle = _getTojiBulletCoreGrad(ctx);
-  ctx.strokeStyle = '#0E0F14';
-  ctx.lineWidth = 0.8;
-
-  ctx.beginPath();
-  ctx.moveTo(-len / 2, -width / 2);
-  ctx.lineTo(len * 0.15, -width / 2);
-  ctx.quadraticCurveTo(len * 0.5, -width * 0.3, len * 0.55, 0);
-  ctx.quadraticCurveTo(len * 0.5, width * 0.3, len * 0.15, width / 2);
-  ctx.lineTo(-len / 2, width / 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // 4. Razor specular shine line
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(-len * 0.3, -width * 0.35, len * 0.5, 0.9);
-
-  ctx.restore();
+  // 2. High-speed supersonic motion trail & bullet core (Rule 35: Weapon Texture Atlas Single Blit)
+  drawAtlasSprite(ctx, 'bullet_metal_jacket', p.x, p.y, angle);
 }
 

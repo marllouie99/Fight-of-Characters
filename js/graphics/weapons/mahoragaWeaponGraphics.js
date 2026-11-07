@@ -823,6 +823,82 @@ function _drawMahoragaKinematicArm(ctx, sx, sy, hx, hy, isRightArm, r, skinColor
   ctx.fill();
 }
 
+// ─── Offscreen Canvas Caches for Mahoraga Clenched Fist & Gauntlet Ring (Rule 35: Cached Offscreen Canvas Quads) ───
+const _mahoragaFistCache = new Map();
+let _mahoragaGauntletRingCanvas = null;
+
+function _getMahoragaFistCanvas(fistColor = '#E8DEC8') {
+  if (_mahoragaFistCache.has(fistColor)) {
+    return _mahoragaFistCache.get(fistColor);
+  }
+  if (typeof document === 'undefined') return null;
+
+  const fistRadius = 14.0;
+  const sP = 2.0;
+  const fistGridR = Math.ceil(fistRadius / sP);
+  const size = (fistGridR * 2 + 1) * sP;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = size;
+  offCanvas.height = size;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const center = size / 2;
+
+  for (let gy = -fistGridR; gy <= fistGridR; gy++) {
+    for (let gx = -fistGridR; gx <= fistGridR; gx++) {
+      const dist = Math.sqrt(gx * gx + gy * gy) * sP;
+      if (dist > fistRadius + sP * 0.3) continue;
+      const px = center + gx * sP;
+      const py = center + gy * sP;
+      if (dist > fistRadius - sP * 0.5) {
+        offCtx.fillStyle = '#000000';
+      } else if (gx <= -2 && gy <= -2 && dist < fistRadius * 0.35) {
+        offCtx.fillStyle = '#FFFFFF';
+      } else {
+        offCtx.fillStyle = fistColor;
+      }
+      offCtx.fillRect(px - sP * 0.5, py - sP * 0.5, sP, sP);
+    }
+  }
+
+  _mahoragaFistCache.set(fistColor, offCanvas);
+  return offCanvas;
+}
+
+function _getMahoragaGauntletRingCanvas() {
+  if (_mahoragaGauntletRingCanvas) {
+    return _mahoragaGauntletRingCanvas;
+  }
+  if (typeof document === 'undefined') return null;
+
+  const sP = 2.0;
+  const ringW = 10;
+  const ringH = 22;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = ringW;
+  offCanvas.height = ringH;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+
+  for (let gy = 0; gy < Math.ceil(ringH / sP); gy++) {
+    for (let gx = 0; gx < Math.ceil(ringW / sP); gx++) {
+      const px = gx * sP;
+      const py = gy * sP;
+      if (gx === 0 || gx >= Math.ceil(ringW / sP) - 1 || gy === 0 || gy >= Math.ceil(ringH / sP) - 1) {
+        offCtx.fillStyle = '#000000';
+      } else if (gx === 2) {
+        offCtx.fillStyle = '#55555C'; // Metallic highlight stripe
+      } else {
+        offCtx.fillStyle = '#1A1A1D';
+      }
+      offCtx.fillRect(px, py, sP, sP);
+    }
+  }
+
+  _mahoragaGauntletRingCanvas = offCanvas;
+  return offCanvas;
+}
+
 export function drawMahoragaSword(ctx, x = 0, y = 0, gunAngle = 0, r = 30, punchAnimTimer = 0, isCleaving = false, color = '#F5F5DC', swordCombo = 0, isThrowing = false, bladeRetractProgress = 1.0, maxAnimTimer = 22, isWorldCutting = false, worldCuttingTimer = 0) {
   let fighterObj = null;
   if (typeof x === 'object' && x !== null) {
@@ -1246,43 +1322,16 @@ export function drawMahoragaSword(ctx, x = 0, y = 0, gunAngle = 0, r = 30, punch
   const sP = 2.0;
   const sSnap = (v) => Math.round(v / sP) * sP;
 
-  // 2. Pixel Art Clenched Fist
-  const fistRadius = 14.0;
-  const fistGridR = Math.ceil(fistRadius / sP);
-  for (let gy = -fistGridR; gy <= fistGridR; gy++) {
-    for (let gx = -fistGridR; gx <= fistGridR; gx++) {
-      const dist = Math.sqrt(gx * gx + gy * gy) * sP;
-      if (dist > fistRadius + sP * 0.3) continue;
-      const px = sSnap(-2 + gx * sP);
-      const py = sSnap(3 + gy * sP);
-      if (dist > fistRadius - sP * 0.5) {
-        ctx.fillStyle = '#000000';
-      } else if (gx <= -2 && gy <= -2 && dist < fistRadius * 0.35) {
-        ctx.fillStyle = '#FFFFFF'; // Specular glint
-      } else {
-        ctx.fillStyle = fistColor;
-      }
-      ctx.fillRect(px - sP * 0.5, py - sP * 0.5, sP, sP);
-    }
+  // 2. Pixel Art Clenched Fist (Rule 35: Cached Offscreen Canvas Quad)
+  const fistCanvas = _getMahoragaFistCanvas(fistColor);
+  if (fistCanvas) {
+    ctx.drawImage(fistCanvas, sSnap(-2 - fistCanvas.width / 2), sSnap(3 - fistCanvas.height / 2));
   }
 
-  // 3. Pixel Art Black Gauntlet Wrist Ring Holder
-  const ringW = 9;
-  const ringH = 21;
-  const ringX0 = -7, ringY0 = -Math.floor(ringH / 2);
-  for (let gy = 0; gy < Math.ceil(ringH / sP); gy++) {
-    for (let gx = 0; gx < Math.ceil(ringW / sP); gx++) {
-      const px = sSnap(ringX0 + gx * sP);
-      const py = sSnap(ringY0 + gy * sP);
-      if (gx === 0 || gx >= Math.ceil(ringW / sP) - 1 || gy === 0 || gy >= Math.ceil(ringH / sP) - 1) {
-        ctx.fillStyle = '#000000';
-      } else if (gx === 2) {
-        ctx.fillStyle = '#55555C'; // Metallic highlight stripe
-      } else {
-        ctx.fillStyle = '#1A1A1D';
-      }
-      ctx.fillRect(px, py, sP, sP);
-    }
+  // 3. Pixel Art Black Gauntlet Wrist Ring Holder (Rule 35: Cached Offscreen Canvas Quad)
+  const ringCanvas = _getMahoragaGauntletRingCanvas();
+  if (ringCanvas) {
+    ctx.drawImage(ringCanvas, sSnap(-7), sSnap(-Math.floor(21 / 2)));
   }
 
   // 4. RETRACTABLE SWORD OF EXTERMINATION BLADE — Pixel Art
@@ -1583,26 +1632,10 @@ export function drawMahoragaLeftPunch(ctx, fighter) {
     ctx.fill();
   }
 
-  // 1. PIXEL ART CLENCHED LEFT FIST (Radius = 14.0px, matching right sword hand size!)
-  const fistRadius = 14.0;
-  const _lP = 2.0;
-  const _lSnap = (v) => Math.round(v / _lP) * _lP;
-  const _lGridR = Math.ceil(fistRadius / _lP);
-  for (let gy = -_lGridR; gy <= _lGridR; gy++) {
-    for (let gx = -_lGridR; gx <= _lGridR; gx++) {
-      const dist = Math.sqrt(gx * gx + gy * gy) * _lP;
-      if (dist > fistRadius + _lP * 0.3) continue;
-      const px = _lSnap(gx * _lP);
-      const py = _lSnap(gy * _lP);
-      if (dist > fistRadius - _lP * 0.5) {
-        ctx.fillStyle = '#000000';
-      } else if (gx <= -2 && gy <= -2 && dist < fistRadius * 0.35) {
-        ctx.fillStyle = '#FFFFFF'; // Specular glint
-      } else {
-        ctx.fillStyle = fistColor;
-      }
-      ctx.fillRect(px - _lP * 0.5, py - _lP * 0.5, _lP, _lP);
-    }
+  // 1. PIXEL ART CLENCHED LEFT FIST (Rule 35: Cached Offscreen Canvas Quad)
+  const fistCanvas = _getMahoragaFistCanvas(fistColor);
+  if (fistCanvas) {
+    ctx.drawImage(fistCanvas, Math.round(-fistCanvas.width / 2), Math.round(-fistCanvas.height / 2));
   }
 
 

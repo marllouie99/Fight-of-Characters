@@ -537,10 +537,160 @@ function _distToSegmentSq(px, py, ax, ay, bx, by) {
   return (px - projX) * (px - projX) + (py - projY) * (py - projY);
 }
 
+// ─── Offscreen Canvas Cache for Resurrección Bat Wings (Rule 35: Cached Offscreen Canvas Quads) ───
+let _cachedUlqWingCanvas = null;
+let _cachedUlqWingKey = '';
+let _cachedUlqWingOriginX = 0;
+let _cachedUlqWingOriginY = 0;
+
+function _getUlquiorraWingCanvas(r, isSegunda = false) {
+  if (typeof document === 'undefined') return null;
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isSegunda ? 1 : 0}`;
+  if (_cachedUlqWingCanvas && _cachedUlqWingKey === key) {
+    return {
+      canvas: _cachedUlqWingCanvas,
+      originX: _cachedUlqWingOriginX,
+      originY: _cachedUlqWingOriginY
+    };
+  }
+
+  const P = 2.0;
+  const snap = (v) => Math.round(v / P) * P;
+  const membraneColor = isSegunda ? '#040508' : '#141720';
+  const boneHighlight = isSegunda ? '#00FF88' : '#2D3440';
+  const shellColor    = '#080A0E';
+
+  // Key Landmarks based on intR
+  const root       = { x: 0, y: 0 };
+  const elbowApex  = { x: -intR * 1.35, y: -intR * 1.85 };
+  const elbowHook  = { x: -intR * 1.12, y: -intR * 2.12 };
+  const hookBarb   = { x: -intR * 1.25, y: -intR * 1.95 };
+
+  const tip1 = { x: -intR * 2.65, y: intR * 0.95 };
+  const tip2 = { x: -intR * 1.80, y: intR * 0.65 };
+  const tip3 = { x: -intR * 1.15, y: intR * 0.40 };
+  const waistRoot = { x: -intR * 0.15, y: intR * 0.20 };
+
+  const valley1_2 = { x: -intR * 2.05, y: -intR * 0.20 };
+  const valley2_3 = { x: -intR * 1.45, y: -intR * 0.25 };
+  const valley3_B = { x: -intR * 0.75, y: -intR * 0.05 };
+
+  const poly = [];
+  const sampleQuad = (p0, p1, p2, n = 8) => {
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const mt = 1 - t;
+      poly.push({
+        x: mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x,
+        y: mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y
+      });
+    }
+  };
+
+  sampleQuad(root, { x: -intR * 0.45, y: -intR * 1.30 }, elbowApex, 8);
+  sampleQuad(elbowApex, { x: -intR * 1.20, y: -intR * 2.05 }, elbowHook, 5);
+  poly.push(hookBarb);
+  poly.push(elbowApex);
+  sampleQuad(elbowApex, { x: -intR * 2.15, y: -intR * 1.35 }, tip1, 12);
+  sampleQuad(tip1, { x: valley1_2.x - intR * 0.15, y: valley1_2.y + intR * 0.25 }, valley1_2, 6);
+  sampleQuad(valley1_2, { x: valley1_2.x + intR * 0.10, y: valley1_2.y + intR * 0.40 }, tip2, 6);
+  sampleQuad(tip2, { x: valley2_3.x - intR * 0.10, y: valley2_3.y + intR * 0.20 }, valley2_3, 6);
+  sampleQuad(valley2_3, { x: valley2_3.x + intR * 0.10, y: valley2_3.y + intR * 0.30 }, tip3, 6);
+  sampleQuad(tip3, { x: valley3_B.x - intR * 0.10, y: valley3_B.y + intR * 0.15 }, valley3_B, 6);
+  sampleQuad(valley3_B, { x: valley3_B.x + intR * 0.15, y: valley3_B.y + intR * 0.15 }, waistRoot, 6);
+
+  const tuftsPoly = [
+    { x: root.x + intR * 0.05, y: root.y - intR * 0.10 },
+    { x: root.x - intR * 0.35, y: root.y - intR * 0.35 },
+    { x: root.x - intR * 0.10, y: root.y - intR * 0.05 },
+    { x: root.x - intR * 0.40, y: root.y - intR * 0.15 },
+    { x: root.x - intR * 0.05, y: root.y + intR * 0.10 }
+  ];
+
+  let minX = 0, maxX = -intR * 2.8, minY = intR, maxY = -intR * 2.5;
+  poly.forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
+
+  const pad = P * 4;
+  const originX = Math.ceil(-minX + pad);
+  const originY = Math.ceil(-minY + pad);
+  const width = Math.ceil(originX + maxX + pad);
+  const height = Math.ceil(originY + maxY + pad);
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = width;
+  offCanvas.height = height;
+  const cctx = offCanvas.getContext('2d');
+  cctx.imageSmoothingEnabled = false;
+
+  const startGx = Math.floor((minX - P) / P);
+  const endGx   = Math.ceil((maxX + P) / P);
+  const startGy = Math.floor((minY - P) / P);
+  const endGy   = Math.ceil((maxY + P) / P);
+
+  for (let gy = startGy; gy <= endGy; gy++) {
+    for (let gx = startGx; gx <= endGx; gx++) {
+      const rx = gx * P;
+      const ry = gy * P;
+
+      const inWing = _isPointInPoly(rx, ry, poly);
+      const inTuft = _isPointInPoly(rx, ry, tuftsPoly);
+      if (!inWing && !inTuft) continue;
+
+      const px = originX + snap(rx);
+      const py = originY + snap(ry);
+
+      const isBorder = (!_isPointInPoly(rx + P, ry, poly) && !_isPointInPoly(rx + P, ry, tuftsPoly)) ||
+                       (!_isPointInPoly(rx - P, ry, poly) && !_isPointInPoly(rx - P, ry, tuftsPoly)) ||
+                       (!_isPointInPoly(rx, ry + P, poly) && !_isPointInPoly(rx, ry + P, tuftsPoly)) ||
+                       (!_isPointInPoly(rx, ry - P, poly) && !_isPointInPoly(rx, ry - P, tuftsPoly));
+
+      if (isBorder) {
+        cctx.fillStyle = shellColor;
+        cctx.fillRect(px, py, P, P);
+        continue;
+      }
+
+      if (inTuft) {
+        cctx.fillStyle = '#090C11';
+        cctx.fillRect(px, py, P, P);
+        continue;
+      }
+
+      const dStrut1 = Math.sqrt(_distToSegmentSq(rx, ry, elbowApex.x, elbowApex.y, tip1.x, tip1.y));
+      const dStrut2 = Math.sqrt(_distToSegmentSq(rx, ry, elbowApex.x, elbowApex.y, tip2.x, tip2.y));
+      const dStrut3 = Math.sqrt(_distToSegmentSq(rx, ry, elbowApex.x, elbowApex.y, tip3.x, tip3.y));
+      const dArm    = Math.sqrt(_distToSegmentSq(rx, ry, root.x, root.y, elbowApex.x, elbowApex.y));
+
+      if (dStrut1 <= P * 0.75 || dStrut2 <= P * 0.75 || dStrut3 <= P * 0.75 || dArm <= P * 0.75) {
+        cctx.fillStyle = boneHighlight;
+      } else {
+        cctx.fillStyle = membraneColor;
+      }
+      cctx.fillRect(px, py, P, P);
+    }
+  }
+
+  _cachedUlqWingCanvas = offCanvas;
+  _cachedUlqWingKey = key;
+  _cachedUlqWingOriginX = originX;
+  _cachedUlqWingOriginY = originY;
+
+  return {
+    canvas: offCanvas,
+    originX,
+    originY
+  };
+}
+
 /**
  * Draws Ulquiorra's authentic gothic Resurrección bat wings in True Stepped Pixel Art Style.
- * Uses procedural 2D grid scan rasterization matching drawUlquiorraPixelBody and Saitama's cape.
- * 4-neighbor grid testing guarantees a 100% attached, crisp outer shell with zero floating crumbs.
+ * Uses cached offscreen canvas blitting (Rule 35 compliant).
  */
 function _drawUlquiorraPixelWings(ctx, r, isSegunda = false) {
   const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
@@ -548,13 +698,9 @@ function _drawUlquiorraPixelWings(ctx, r, isSegunda = false) {
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  const P = 2.0;
-  const snap = (v) => Math.round(v / P) * P;
 
   const wingScale = isSegunda ? 1.25 : 1.0;
-  const membraneColor = isSegunda ? '#040508' : '#141720';
-  const boneHighlight  = isSegunda ? '#00FF88' : '#2D3440';
-  const shellColor     = '#080A0E';
+  const wingData = _getUlquiorraWingCanvas(r, isSegunda);
 
   const drawOneWing = (sign) => {
     ctx.save();
@@ -562,115 +708,9 @@ function _drawUlquiorraPixelWings(ctx, r, isSegunda = false) {
     ctx.rotate(sign * (-0.10 + flapAngle));
     ctx.scale(sign * wingScale, wingScale);
 
-    // Key Landmarks
-    const root       = { x: 0, y: 0 };
-    const elbowApex  = { x: -r * 1.35, y: -r * 1.85 }; // High arched elbow
-    const elbowHook  = { x: -r * 1.12, y: -r * 2.12 }; // Curled thumb hook tip
-    const hookBarb   = { x: -r * 1.25, y: -r * 1.95 };
-
-    const tip1 = { x: -r * 2.65, y: r * 0.95 };  // Primary outer longest needle spire
-    const tip2 = { x: -r * 1.80, y: r * 0.65 };  // Middle needle spire
-    const tip3 = { x: -r * 1.15, y: r * 0.40 };  // Inner needle spire
-    const waistRoot = { x: -r * 0.15, y: r * 0.20 };
-
-    const valley1_2 = { x: -r * 2.05, y: -r * 0.20 };
-    const valley2_3 = { x: -r * 1.45, y: -r * 0.25 };
-    const valley3_B = { x: -r * 0.75, y: -r * 0.05 };
-
-    // Build the closed wing polygon
-    const poly = [];
-    const sampleQuad = (p0, p1, p2, n = 8) => {
-      for (let i = 0; i <= n; i++) {
-        const t = i / n;
-        const mt = 1 - t;
-        poly.push({
-          x: mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x,
-          y: mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y
-        });
-      }
-    };
-
-    sampleQuad(root, { x: -r * 0.45, y: -r * 1.30 }, elbowApex, 8);
-    sampleQuad(elbowApex, { x: -r * 1.20, y: -r * 2.05 }, elbowHook, 5);
-    poly.push(hookBarb);
-    poly.push(elbowApex);
-    sampleQuad(elbowApex, { x: -r * 2.15, y: -r * 1.35 }, tip1, 12);
-    sampleQuad(tip1, { x: valley1_2.x - r * 0.15, y: valley1_2.y + r * 0.25 }, valley1_2, 6);
-    sampleQuad(valley1_2, { x: valley1_2.x + r * 0.10, y: valley1_2.y + r * 0.40 }, tip2, 6);
-    sampleQuad(tip2, { x: valley2_3.x - r * 0.10, y: valley2_3.y + r * 0.20 }, valley2_3, 6);
-    sampleQuad(valley2_3, { x: valley2_3.x + r * 0.10, y: valley2_3.y + r * 0.30 }, tip3, 6);
-    sampleQuad(tip3, { x: valley3_B.x - r * 0.10, y: valley3_B.y + r * 0.15 }, valley3_B, 6);
-    sampleQuad(valley3_B, { x: valley3_B.x + r * 0.15, y: valley3_B.y + r * 0.15 }, waistRoot, 6);
-
-    // Shoulder tufts polygon
-    const tuftsPoly = [
-      { x: root.x + r * 0.05, y: root.y - r * 0.10 },
-      { x: root.x - r * 0.35, y: root.y - r * 0.35 },
-      { x: root.x - r * 0.10, y: root.y - r * 0.05 },
-      { x: root.x - r * 0.40, y: root.y - r * 0.15 },
-      { x: root.x - r * 0.05, y: root.y + r * 0.10 }
-    ];
-
-    // Compute bounding box
-    let minX = 0, maxX = -r * 2.8, minY = r, maxY = -r * 2.5;
-    poly.forEach(p => {
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
-    });
-
-    const startGx = Math.floor((minX - P) / P);
-    const endGx   = Math.ceil((maxX + P) / P);
-    const startGy = Math.floor((minY - P) / P);
-    const endGy   = Math.ceil((maxY + P) / P);
-
-    // Discrete 2D Rasterization Loop (Exact same technique as drawUlquiorraPixelBody)
-    for (let gy = startGy; gy <= endGy; gy++) {
-      for (let gx = startGx; gx <= endGx; gx++) {
-        const rx = gx * P;
-        const ry = gy * P;
-
-        const inWing = _isPointInPoly(rx, ry, poly);
-        const inTuft = _isPointInPoly(rx, ry, tuftsPoly);
-        if (!inWing && !inTuft) continue;
-
-        const px = snap(rx);
-        const py = snap(ry);
-
-        // 4-neighbor boundary test for pixel-perfect attached black border
-        const isBorder = (!_isPointInPoly(rx + P, ry, poly) && !_isPointInPoly(rx + P, ry, tuftsPoly)) ||
-                         (!_isPointInPoly(rx - P, ry, poly) && !_isPointInPoly(rx - P, ry, tuftsPoly)) ||
-                         (!_isPointInPoly(rx, ry + P, poly) && !_isPointInPoly(rx, ry + P, tuftsPoly)) ||
-                         (!_isPointInPoly(rx, ry - P, poly) && !_isPointInPoly(rx, ry - P, tuftsPoly));
-
-        if (isBorder) {
-          ctx.fillStyle = shellColor;
-          ctx.fillRect(px, py, P, P);
-          continue;
-        }
-
-        if (inTuft) {
-          ctx.fillStyle = '#090C11';
-          ctx.fillRect(px, py, P, P);
-          continue;
-        }
-
-        // Bone strut check (Forearm / Finger 2 / Finger 3)
-        const dStrut1 = Math.sqrt(_distToSegmentSq(rx, ry, elbowApex.x, elbowApex.y, tip1.x, tip1.y));
-        const dStrut2 = Math.sqrt(_distToSegmentSq(rx, ry, elbowApex.x, elbowApex.y, tip2.x, tip2.y));
-        const dStrut3 = Math.sqrt(_distToSegmentSq(rx, ry, elbowApex.x, elbowApex.y, tip3.x, tip3.y));
-        const dArm    = Math.sqrt(_distToSegmentSq(rx, ry, root.x, root.y, elbowApex.x, elbowApex.y));
-
-        if (dStrut1 <= P * 0.75 || dStrut2 <= P * 0.75 || dStrut3 <= P * 0.75 || dArm <= P * 0.75) {
-          ctx.fillStyle = boneHighlight;
-        } else {
-          ctx.fillStyle = membraneColor;
-        }
-        ctx.fillRect(px, py, P, P);
-      }
+    if (wingData && wingData.canvas) {
+      ctx.drawImage(wingData.canvas, -wingData.originX, -wingData.originY);
     }
-
     ctx.restore();
   };
 
@@ -802,53 +842,31 @@ function _drawUlquiorraPixelTail(ctx, r) {
     { x: tipX + sinA * 6.5, y: tipY - cosA * 6.5 }              // Bottom wing
   ];
 
-  // Compute bounding box
-  let minX = 9999, maxX = -9999, minY = 9999, maxY = -9999;
-  [...tailPoly, ...diamondPoly].forEach(p => {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  });
-
-  const startGx = Math.floor((minX - P) / P);
-  const endGx   = Math.ceil((maxX + P) / P);
-  const startGy = Math.floor((minY - P) / P);
-  const endGy   = Math.ceil((maxY + P) / P);
-
-  // 2D Pixel Grid Rasterization Loop
-  for (let gy = startGy; gy <= endGy; gy++) {
-    for (let gx = startGx; gx <= endGx; gx++) {
-      const rx = gx * P;
-      const ry = gy * P;
-
-      const inTail = _isPointInPoly(rx, ry, tailPoly);
-      const inDiamond = _isPointInPoly(rx, ry, diamondPoly);
-      if (!inTail && !inDiamond) continue;
-
-      const px = snap(rx);
-      const py = snap(ry);
-
-      // 4-neighbor attached border test
-      const isBorder = (!_isPointInPoly(rx + P, ry, tailPoly) && !_isPointInPoly(rx + P, ry, diamondPoly)) ||
-                       (!_isPointInPoly(rx - P, ry, tailPoly) && !_isPointInPoly(rx - P, ry, diamondPoly)) ||
-                       (!_isPointInPoly(rx, ry + P, tailPoly) && !_isPointInPoly(rx, ry + P, diamondPoly)) ||
-                       (!_isPointInPoly(rx, ry - P, tailPoly) && !_isPointInPoly(rx, ry - P, diamondPoly));
-
-      if (isBorder) {
-        ctx.fillStyle = '#080A0E';
-        ctx.fillRect(px, py, P, P);
-        continue;
-      }
-
-      if (inDiamond) {
-        ctx.fillStyle = '#00FF88'; // Emerald Reishi arrowhead spade
-      } else {
-        ctx.fillStyle = '#070A0F'; // Obsidian whip spine
-      }
-      ctx.fillRect(px, py, P, P);
-    }
+  // Tail Whip Spine & Shell (Rule 35: 60 FPS Clean Path Geometry)
+  ctx.beginPath();
+  ctx.moveTo(tailPoly[0].x, tailPoly[0].y);
+  for (let i = 1; i < tailPoly.length; i++) {
+    ctx.lineTo(tailPoly[i].x, tailPoly[i].y);
   }
+  ctx.closePath();
+  ctx.fillStyle = '#070A0F'; // Obsidian whip spine
+  ctx.fill();
+  ctx.strokeStyle = '#080A0E'; // Attached dark outer shell
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  // Emerald Reishi Arrowhead Spade Diamond
+  ctx.beginPath();
+  ctx.moveTo(diamondPoly[0].x, diamondPoly[0].y);
+  for (let i = 1; i < diamondPoly.length; i++) {
+    ctx.lineTo(diamondPoly[i].x, diamondPoly[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#00FF88'; // Emerald Reishi arrowhead spade
+  ctx.fill();
+  ctx.strokeStyle = '#080A0E';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
 
   ctx.restore();
 }

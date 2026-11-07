@@ -5,6 +5,7 @@
 
 import { state } from '../../core/state.js';
 import { getHandSize } from '../../core/config.js';
+import { drawAtlasSprite } from '../atlases/WeaponAtlas.js';
 
 export const JOHN_WICK_WEAPON_GRAPHICS = {
   pistol: {
@@ -1103,50 +1104,8 @@ export function drawJohnWickBullet(ctx, p) {
     ctx.restore();
   }
 
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(angle);
-
-  // 1. High-speed Motion Trail (Fading gradient streak trailing backward - Reused Cache)
-  const trailLen = 32;
-  ctx.fillStyle = _getBulletTrailGrad(ctx);
-  ctx.beginPath();
-  ctx.moveTo(-trailLen, 0);
-  ctx.lineTo(-len / 2, -width * 0.8);
-  ctx.lineTo(0, 0);
-  ctx.lineTo(-len / 2, width * 0.8);
-  ctx.closePath();
-  ctx.fill();
-
-  // 2. Copper/Gold Bullet Core (Sharp metal jacket bullet - Reused Cache)
-  ctx.fillStyle = _getBulletCoreGrad(ctx);
-  ctx.strokeStyle = '#78350F';
-  ctx.lineWidth = 0.8;
-
-  ctx.beginPath();
-  // Flat back
-  ctx.moveTo(-len / 2, -width / 2);
-  // Straight body
-  ctx.lineTo(len * 0.15, -width / 2);
-  // Pointed aerodynamic tip
-  ctx.quadraticCurveTo(len / 2, 0, len / 2, 0);
-  ctx.quadraticCurveTo(len * 0.15, width / 2, len * 0.15, width / 2);
-  // Straight body bottom
-  ctx.lineTo(-len / 2, width / 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // 3. Inner Hot-White core shine
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.moveTo(-len * 0.2, -width * 0.25);
-  ctx.lineTo(len * 0.2, 0);
-  ctx.lineTo(-len * 0.2, width * 0.25);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.restore();
+  // 1. High-speed Motion Trail & Bullet Core (Rule 35: Weapon Texture Atlas Single Blit)
+  drawAtlasSprite(ctx, 'bullet_metal_jacket', p.x, p.y, angle);
 }
 
 /**

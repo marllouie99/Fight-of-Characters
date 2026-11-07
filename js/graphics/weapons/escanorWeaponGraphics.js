@@ -180,20 +180,34 @@ const WEAPON_SHAFT_LEN = 412.6;
 // Natural angle pointing from Grip to Hub in raw image: -153.45° = -2.678244 rad
 const WEAPON_ROT_ALIGN = 2.678244;
 
-/**
- * Escanor Holy Knight Gauntlet for Weapon Studio Showcase
- */
-function _drawEscanorPreviewGauntlet(ctx, cx, cy, radius, isTheOne = false) {
-  if (radius <= 0) return;
-  const steps = Math.ceil((radius + P) / P);
+// ─── Offscreen Canvas Cache for Escanor Preview Gauntlet (Rule 35: Cached Offscreen Canvas Quads) ───
+const _escanorGauntletCache = new Map();
+
+function _getEscanorGauntletCanvas(radius, isTheOne = false) {
+  if (radius <= 0) return null;
+  const intR = Math.round(radius);
+  const key = `${intR}_${isTheOne ? 1 : 0}`;
+  if (_escanorGauntletCache.has(key)) {
+    return _escanorGauntletCache.get(key);
+  }
+  if (typeof document === 'undefined') return null;
+
+  const steps = Math.ceil((intR + P) / P);
+  const size = (steps * 2 + 1) * P;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = size;
+  offCanvas.height = size;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const center = size / 2;
 
   // 1. Dark Bronze Outline Shell
-  ctx.fillStyle = isTheOne ? '#92400E' : '#78350F';
+  offCtx.fillStyle = isTheOne ? '#92400E' : '#78350F';
   for (let gy = -steps; gy <= steps; gy++) {
     for (let gx = -steps; gx <= steps; gx++) {
       const d = Math.hypot(gx * P, gy * P);
-      if (d <= radius + P * 0.85) {
-        ctx.fillRect(snap(cx + gx * P), snap(cy + gy * P), P, P);
+      if (d <= intR + P * 0.85) {
+        offCtx.fillRect(center + snap(gx * P), center + snap(gy * P), P, P);
       }
     }
   }
@@ -204,25 +218,37 @@ function _drawEscanorPreviewGauntlet(ctx, cx, cy, radius, isTheOne = false) {
       const rx = gx * P;
       const ry = gy * P;
       const d = Math.hypot(rx, ry);
-      if (d > radius) continue;
+      if (d > intR) continue;
 
-      const px = snap(cx + rx);
-      const py = snap(cy + ry);
-
-      if (ry < -radius * 0.25 && rx > -radius * 0.35) {
-        ctx.fillStyle = isTheOne ? '#FFFFFF' : '#FFF795'; // Brilliant armor shine
-      } else if (ry > radius * 0.40) {
-        ctx.fillStyle = isTheOne ? '#B45309' : '#D97706'; // Warm amber gold shadow
+      if (ry < -intR * 0.25 && rx > -intR * 0.35) {
+        offCtx.fillStyle = isTheOne ? '#FFFFFF' : '#FFF795'; // Brilliant armor shine
+      } else if (ry > intR * 0.40) {
+        offCtx.fillStyle = isTheOne ? '#B45309' : '#D97706'; // Warm amber gold shadow
       } else {
-        ctx.fillStyle = isTheOne ? '#FEF08A' : '#FDC236'; // Holy Knight armor gold
+        offCtx.fillStyle = isTheOne ? '#FEF08A' : '#FDC236'; // Holy Knight armor gold
       }
-      ctx.fillRect(px, py, P, P);
+      offCtx.fillRect(center + snap(rx), center + snap(ry), P, P);
     }
   }
 
   // Segmented Knuckle Ridge Specular Pixel
-  ctx.fillStyle = isTheOne ? '#FFFFFF' : '#FFF795';
-  ctx.fillRect(snap(cx - radius * 0.2), snap(cy - radius * 0.2), P, P);
+  offCtx.fillStyle = isTheOne ? '#FFFFFF' : '#FFF795';
+  offCtx.fillRect(center + snap(-intR * 0.2), center + snap(-intR * 0.2), P, P);
+
+  _escanorGauntletCache.set(key, offCanvas);
+  return offCanvas;
+}
+
+/**
+ * Escanor Holy Knight Gauntlet for Weapon Studio Showcase
+ * Uses cached offscreen canvas blitting (Rule 35 compliant).
+ */
+function _drawEscanorPreviewGauntlet(ctx, cx, cy, radius, isTheOne = false) {
+  if (radius <= 0) return;
+  const gauntletCanvas = _getEscanorGauntletCanvas(radius, isTheOne);
+  if (gauntletCanvas) {
+    ctx.drawImage(gauntletCanvas, snap(cx - gauntletCanvas.width / 2), snap(cy - gauntletCanvas.height / 2));
+  }
 }
 
 /**
@@ -1142,9 +1168,80 @@ if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof st
   _getEscanorSunExplosionSpriteImage();
 }
 
+// ─── Offscreen Canvas Cache for Cruel Sun Procedural Pixel Sphere (Rule 35: Cached Offscreen Canvas Quads) ───
+const _cruelSunSphereCache = new Map();
+
+function _getCruelSunSphereCanvas(coreR, isTheOne, plasmaTick) {
+  const intR = Math.round(coreR);
+  const key = `${intR}_${isTheOne ? 1 : 0}_${plasmaTick}`;
+  if (_cruelSunSphereCache.has(key)) {
+    return _cruelSunSphereCache.get(key);
+  }
+  if (typeof document === 'undefined') return null;
+
+  const steps = Math.ceil((intR + P) / P);
+  const size = (steps * 2 + 1) * P;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = size;
+  offCanvas.height = size;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const center = size / 2;
+
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      const rx = gx * P;
+      const ry = gy * P;
+      const d = Math.hypot(rx, ry);
+      if (d > intR) continue;
+
+      const px = center + snap(rx);
+      const py = center + snap(ry);
+      const normD = d / intR;
+
+      if (d >= intR - P) {
+        offCtx.fillStyle = isTheOne ? '#7C2D12' : '#3B0A0A';
+        offCtx.fillRect(px, py, P, P);
+        continue;
+      }
+
+      const plasmaNoise = Math.sin(gx * 0.7 + gy * 0.7 + plasmaTick * 1.57);
+
+      if (normD > 0.78) {
+        if (plasmaNoise > 0.4) {
+          offCtx.fillStyle = isTheOne ? '#F59E0B' : '#B91C1C';
+        } else if (plasmaNoise < -0.4) {
+          offCtx.fillStyle = isTheOne ? '#FBBF24' : '#EA580C';
+        } else {
+          offCtx.fillStyle = isTheOne ? '#FEF08A' : '#F59E0B';
+        }
+      } else if (normD > 0.52) {
+        if (plasmaNoise > 0.3) {
+          offCtx.fillStyle = isTheOne ? '#FEF08A' : '#FBBF24';
+        } else {
+          offCtx.fillStyle = isTheOne ? '#FFFFFF' : '#FDE047';
+        }
+      } else if (normD > 0.28) {
+        if (plasmaNoise > 0.2) {
+          offCtx.fillStyle = isTheOne ? '#FFFFFF' : '#FDE047';
+        } else {
+          offCtx.fillStyle = isTheOne ? '#FFFFFF' : '#FEF08A';
+        }
+      } else {
+        offCtx.fillStyle = '#FFFFFF';
+      }
+
+      offCtx.fillRect(px, py, P, P);
+    }
+  }
+
+  _cruelSunSphereCache.set(key, offCanvas);
+  return offCanvas;
+}
+
 /**
  * Procedural Discrete Integer Grid Solar Sphere Fallback
- * Used when sprite sheet is loading or unavailable.
+ * Used when sprite sheet is loading or unavailable (Rule 35: Cached Offscreen Canvas Quads).
  */
 export function drawProceduralPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne = false, now = Date.now(), alpha = 1.0, showCorona = true) {
   if (radius <= 0 || alpha <= 0) return;
@@ -1155,7 +1252,6 @@ export function drawProceduralPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne 
   const snapCx = snap(cx);
   const snapCy = snap(cy);
   const coreR = Math.max(P * 2, snap(radius));
-  const steps = Math.ceil((coreR + P) / P);
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
@@ -1181,53 +1277,11 @@ export function drawProceduralPixelCruelSunSphere(ctx, cx, cy, radius, isTheOne 
     }
   }
 
+  // Pre-baked procedural pixel plasma core (Rule 35: Cached Offscreen Canvas Quad)
   const plasmaTick = Math.floor(currentNow / 80) % 4;
-
-  for (let gy = -steps; gy <= steps; gy++) {
-    for (let gx = -steps; gx <= steps; gx++) {
-      const rx = gx * P;
-      const ry = gy * P;
-      const d = Math.hypot(rx, ry);
-      if (d > coreR) continue;
-
-      const px = snapCx + snap(rx);
-      const py = snapCy + snap(ry);
-      const normD = d / coreR;
-
-      if (d >= coreR - P) {
-        ctx.fillStyle = isTheOne ? '#7C2D12' : '#3B0A0A';
-        ctx.fillRect(px, py, P, P);
-        continue;
-      }
-
-      const plasmaNoise = Math.sin(gx * 0.7 + gy * 0.7 + plasmaTick * 1.57);
-
-      if (normD > 0.78) {
-        if (plasmaNoise > 0.4) {
-          ctx.fillStyle = isTheOne ? '#F59E0B' : '#B91C1C';
-        } else if (plasmaNoise < -0.4) {
-          ctx.fillStyle = isTheOne ? '#FBBF24' : '#EA580C';
-        } else {
-          ctx.fillStyle = isTheOne ? '#FEF08A' : '#F59E0B';
-        }
-      } else if (normD > 0.52) {
-        if (plasmaNoise > 0.3) {
-          ctx.fillStyle = isTheOne ? '#FEF08A' : '#FBBF24';
-        } else {
-          ctx.fillStyle = isTheOne ? '#FFFFFF' : '#FDE047';
-        }
-      } else if (normD > 0.28) {
-        if (plasmaNoise > 0.2) {
-          ctx.fillStyle = isTheOne ? '#FFFFFF' : '#FDE047';
-        } else {
-          ctx.fillStyle = isTheOne ? '#FFFFFF' : '#FEF08A';
-        }
-      } else {
-        ctx.fillStyle = '#FFFFFF';
-      }
-
-      ctx.fillRect(px, py, P, P);
-    }
+  const sphereCanvas = _getCruelSunSphereCanvas(coreR, isTheOne, plasmaTick);
+  if (sphereCanvas) {
+    ctx.drawImage(sphereCanvas, snapCx - sphereCanvas.width / 2, snapCy - sphereCanvas.height / 2);
   }
 
   if (showCorona && coreR >= P * 4) {
@@ -2037,24 +2091,28 @@ export function drawPrideFlareShockwave(ctx, x, y, currentRadius, maxRadius, alp
   ctx.translate(snap(x), snap(y));
   ctx.globalAlpha = Math.max(0, Math.min(1.0, alpha));
 
-  const curR = snap(currentRadius);
-  const steps = Math.ceil((curR + P) / P);
+  // Concentric Shockwave Rings (Rule 26 & Rule 35: 60 FPS Single Draw Calls)
+  if (curR > P * 2) {
+    // Outer gold rim
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = P * 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(0.1, curR - P * 0.75), 0, Math.PI * 2);
+    ctx.stroke();
 
-  // Stepped Pixel Art Shockwave Ring
-  for (let gy = -steps; gy <= steps; gy += 2) {
-    for (let gx = -steps; gx <= steps; gx += 2) {
-      const d = Math.hypot(gx * P, gy * P);
-      if (d > curR || d < curR - P * 3) continue;
+    // Mid hot yellow
+    ctx.strokeStyle = '#FEF08A';
+    ctx.lineWidth = P;
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(0.1, curR - P * 1.75), 0, Math.PI * 2);
+    ctx.stroke();
 
-      if (d >= curR - P) {
-        ctx.fillStyle = '#F59E0B'; // Outer gold rim
-      } else if (d >= curR - P * 2) {
-        ctx.fillStyle = '#FEF08A'; // Mid hot yellow
-      } else {
-        ctx.fillStyle = '#FFFFFF'; // Inner white-hot rim
-      }
-      ctx.fillRect(gx * P, gy * P, P * 2, P * 2);
-    }
+    // Inner white-hot rim
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = P;
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(0.1, curR - P * 2.5), 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   ctx.restore();
