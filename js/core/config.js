@@ -233,6 +233,7 @@ export const CONFIG = {
     maxAfterimages: 8,                         // Alias for standOff1v2.maxAfterimages
     afterimageDecayMultiplier: 1.5,
   },
+  enableHighRefreshRate: true,   // Adaptive 90Hz / 120Hz high-refresh rate render unlock on supported mobile displays
   blackFlash: blackFlashConfig,
   hudShowFighterDescription: true, // Set to true to display fighter description in HUD card instead of skill progress bars
   mobileCanvasHudEnabled: 'auto', // 'auto' = direct 60 FPS canvas HUD on mobile; true = force canvas; false = HTML DOM

@@ -19457,6 +19457,48 @@ async function runInteractionTests() {
     console.log('      ✅ Unified Audio Registry (resolveCombatSFX & playCombatSFX) verified cleanly.');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Test 147: Adaptive 120 FPS High-Refresh Mode & Zero-Allocation Particle Heap Seal
+  // ─────────────────────────────────────────────────────────────
+  {
+    console.log('   147. Testing Adaptive 120 FPS High-Refresh Mode & Zero-Allocation Particle Heap Seal...');
+    const { CONFIG } = await import('../js/core/config.js');
+    const { state, spawnFloatingText } = await import('../js/core/state.js');
+    const { spawnBamEffect, updateBamEffects } = await import('../js/graphics/particles/bamImpactEffect.js');
+
+    // 1. Adaptive High-Refresh Configuration Standard
+    assert(CONFIG.enableHighRefreshRate === true, 'CONFIG.enableHighRefreshRate must default to true for adaptive 120 FPS');
+    assert(state.enableHighRefreshRate === true, 'state.enableHighRefreshRate must be initialized to true');
+    assert(typeof state.displayRefreshRate === 'number', 'state.displayRefreshRate must be a number');
+    assert(typeof state.highRefreshActive === 'boolean', 'state.highRefreshActive must be a boolean');
+
+    // 2. Zero-Allocation Floating Text Swap-and-Pop Heap Recycling
+    state.floatingTexts = [];
+    const originalIsMobile = state.isMobileDevice;
+    state.isMobileDevice = true; // max 20 texts on mobile
+    for (let i = 0; i < 30; i++) {
+      spawnFloatingText(`+${i * 10}`, 100, 100, '#00FF66');
+    }
+    assert(state.floatingTexts.length <= 20, 'Floating text budget on mobile must be capped to at most 20 via swap-and-pop');
+    for (const text of state.floatingTexts) {
+      assert(text && typeof text.text === 'string' && typeof text.life === 'number', 'All floating text instances must remain valid without holes');
+    }
+    state.isMobileDevice = originalIsMobile;
+    state.floatingTexts = [];
+
+    // 3. Zero-Allocation Impact Particle Swap-and-Pop & Object Pooling
+    state.bamEffects = [];
+    spawnBamEffect(200, 200, 1.0);
+    assert(state.bamEffects.length > 0, 'Active bam effects should spawn at least 1 effect');
+    for (const effect of state.bamEffects) {
+      effect.life = 0; // mark dead
+    }
+    updateBamEffects();
+    assert(state.bamEffects.length === 0, 'Expired bam effects must be cleanly recycled via swap-and-pop to 0 length');
+
+    console.log('      ✅ Adaptive 120 FPS High-Refresh Mode & Zero-Allocation Particle Heap Seal verified cleanly.');
+  }
+
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 

@@ -22,7 +22,8 @@ export function updateLightningEffects() {
     
     strike.life--;
     if (strike.life <= 0) {
-      state.zeusStormStrikes.splice(i, 1);
+      state.zeusStormStrikes[i] = state.zeusStormStrikes[state.zeusStormStrikes.length - 1];
+      state.zeusStormStrikes.pop();
     }
   }
 }

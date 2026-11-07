@@ -224,7 +224,8 @@ export function updateTombstoneDeathEffects() {
       p.vx *= 0.93; // Air friction
       p.life -= p.decay;
       if (p.life <= 0) {
-        t.debris.splice(d, 1);
+        t.debris[d] = t.debris[t.debris.length - 1];
+        t.debris.pop();
       }
     }
 
@@ -299,7 +300,8 @@ export function updateTombstoneDeathEffects() {
         mote.y += mote.vy;
         mote.life -= mote.decay;
         if (mote.life <= 0) {
-          g.trailParticles.splice(m, 1);
+          g.trailParticles[m] = g.trailParticles[g.trailParticles.length - 1];
+          g.trailParticles.pop();
         }
       }
     }
@@ -308,7 +310,8 @@ export function updateTombstoneDeathEffects() {
     const tombstoneDone = t.alpha <= 0;
     const ghostDone = !g.active || (g.age >= g.maxLife && g.trailParticles.length === 0);
     if (tombstoneDone && ghostDone) {
-      state.tombstoneDeathEffects.splice(i, 1);
+      state.tombstoneDeathEffects[i] = state.tombstoneDeathEffects[state.tombstoneDeathEffects.length - 1];
+      state.tombstoneDeathEffects.pop();
     }
   }
 }

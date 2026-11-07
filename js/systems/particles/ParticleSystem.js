@@ -144,8 +144,12 @@ export class ParticleSystem {
     const is1v2 = typeof state !== 'undefined' && state.mode && (state.mode === '1v2' || state.mode.includes('1v2'));
     const isDomainClash = Boolean(state && state.fighters && (state.fighters.filter(f => f && f.domainActive).length > 1));
     const dynamicQuality = this.getDynamicQuality(isDomainClash);
-    const isMobile = (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) || (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024);
-    const mobileBudgetFactor = isMobile ? 0.40 : 1.0;
+    const isMobile = Boolean(
+      (typeof state !== 'undefined' && state.isMobileDevice) ||
+      (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ||
+      (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024)
+    );
+    const mobileBudgetFactor = isMobile ? 0.35 : 1.0;
 
     // Stand Off mode has high-frequency clashes across 2000-2500 HP: limit max active particles to prevent FPS drop and mobile heating
     const MAX_PARTICLES = isDomainClash ? (isMobile ? 12 : 25) : isStandOff ? (isMobile ? 18 : 40) : is1v2 ? (isMobile ? 20 : 45) : Math.floor((isMulti ? (isMobile ? 25 : 80) : (isMobile ? 35 : 70)) * dynamicQuality);

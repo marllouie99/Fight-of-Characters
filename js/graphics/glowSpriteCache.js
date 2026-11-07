@@ -31,8 +31,8 @@ function _ensureSharedAtlas() {
   return true;
 }
 
-function _buildStopsKey(stops) {
-  let key = '';
+function _buildStopsKey(stops, innerRatio = 0) {
+  let key = innerRatio > 0 ? `ir:${Math.round(innerRatio * 100)}|` : '';
   for (let i = 0; i < stops.length; i++) {
     const s = stops[i];
     if (!s) continue;
@@ -44,15 +44,17 @@ function _buildStopsKey(stops) {
 /**
  * Returns (and caches) a slot `{ sx, sy, sw, sh }` inside the shared 1024×1024
  * glow sprite atlas `<canvas>` (Section 5.14 single-texture atlas packing).
+ * Supports optional `innerRatio` for radial vignettes and donut-style glow rings.
  * @param {Array<[number, string]>} stops
+ * @param {number} [innerRatio=0] - Inner radius ratio (0 to 1) for concentric halos / vignettes
  * @returns {{ canvas: HTMLCanvasElement, sx: number, sy: number, sw: number, sh: number }|null}
  */
-export function getCachedRadialGlowAtlasSlot(stops) {
+export function getCachedRadialGlowAtlasSlot(stops, innerRatio = 0) {
   if (!Array.isArray(stops) || stops.length === 0 || !_ensureSharedAtlas()) {
     return null;
   }
 
-  const key = _buildStopsKey(stops);
+  const key = _buildStopsKey(stops, innerRatio);
   let slot = _atlasSlotMap.get(key);
   if (slot) return slot;
 
@@ -75,7 +77,8 @@ export function getCachedRadialGlowAtlasSlot(stops) {
   const cy = sy + half;
 
   _sharedAtlasCtx.clearRect(sx, sy, GLOW_SPRITE_SIZE, GLOW_SPRITE_SIZE);
-  const grad = _sharedAtlasCtx.createRadialGradient(cx, cy, 0, cx, cy, half);
+  const r0 = innerRatio > 0 ? Math.max(0, Math.min(half - 1, half * innerRatio)) : 0;
+  const grad = _sharedAtlasCtx.createRadialGradient(cx, cy, r0, cx, cy, half);
   for (let i = 0; i < stops.length; i++) {
     const s = stops[i];
     if (s && s.length >= 2) {
@@ -140,6 +143,7 @@ export function getCachedRadialGlowCanvas(stops) {
 /**
  * Blits a pre-baked radial glow sprite from the shared 1024×1024 texture atlas
  * centered at (x, y) with radius `r`.
+ * Supports optional `innerRatio` for donut halos and vignettes.
  * Falls back to direct arc + radialGradient in headless environments.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} x - Center X
@@ -147,11 +151,12 @@ export function getCachedRadialGlowCanvas(stops) {
  * @param {number} r - Outer radius
  * @param {Array<[number, string]>} stops - Color stop pairs [[0, 'rgba(...)'], [1, 'rgba(...)']]
  * @param {number} [alpha=1.0] - Optional multiplier for globalAlpha
+ * @param {number} [innerRatio=0] - Optional inner radius fraction (0.0 to 1.0)
  */
-export function drawCachedRadialGlow(ctx, x, y, r, stops, alpha = 1.0) {
+export function drawCachedRadialGlow(ctx, x, y, r, stops, alpha = 1.0, innerRatio = 0) {
   if (!ctx || r <= 0 || alpha <= 0.005) return;
 
-  const slot = getCachedRadialGlowAtlasSlot(stops);
+  const slot = getCachedRadialGlowAtlasSlot(stops, innerRatio);
   if (slot && slot.canvas && slot.canvas !== ctx.canvas) {
     ctx.save();
     if (alpha < 0.999) {
@@ -168,7 +173,8 @@ export function drawCachedRadialGlow(ctx, x, y, r, stops, alpha = 1.0) {
   if (alpha < 0.999) {
     ctx.globalAlpha *= alpha;
   }
-  const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+  const r0 = innerRatio > 0 ? r * innerRatio : 0;
+  const grad = ctx.createRadialGradient(x, y, r0, x, y, r);
   for (let i = 0; i < stops.length; i++) {
     const s = stops[i];
     if (s && s.length >= 2) {
@@ -181,3 +187,103 @@ export function drawCachedRadialGlow(ctx, x, y, r, stops, alpha = 1.0) {
   ctx.fill();
   ctx.restore();
 }
+
+/**
+ * Draws a pre-baked radial domain halo or atmospheric vignette.
+ * Uses the cached 1024×1024 atlas quad instead of per-frame createRadialGradient,
+ * eliminating shader recompilation and LUT generation on mobile tile-based GPUs.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} cx - Center X
+ * @param {number} cy - Center Y
+ * @param {number} r - Outer radius
+ * @param {Array<[number, string]>} stops - Color stop pairs
+ * @param {number} [alpha=1.0] - Opacity
+ * @param {number} [innerRatio=0] - Inner radius fraction (e.g. 0.15 to 0.35)
+ */
+export function drawCachedDomainHalo(ctx, cx, cy, r, stops, alpha = 1.0, innerRatio = 0) {
+  drawCachedRadialGlow(ctx, cx, cy, r, stops, alpha, innerRatio);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRE-DEFINED CANONICAL DOMAIN COLOR STOPS (Eliminates per-frame array allocations)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MAHITO_NEBULA_STOPS = Object.freeze([
+  [0, 'rgba(217, 70, 239, 0.50)'],
+  [0.25, 'rgba(147, 51, 234, 0.35)'],
+  [0.55, 'rgba(88, 28, 135, 0.25)'],
+  [0.85, 'rgba(26, 3, 40, 0.15)'],
+  [1, 'rgba(4, 0, 8, 0.0)']
+]);
+
+export const MAHITO_VIGNETTE_STOPS = Object.freeze([
+  [0.00, 'rgba(20, 2, 28, 0.08)'],
+  [0.35, 'rgba(14, 1, 22, 0.32)'],
+  [0.65, 'rgba(8, 0, 14, 0.62)'],
+  [0.85, 'rgba(4, 0, 8, 0.82)'],
+  [1.00, 'rgba(2, 0, 4, 0.94)']
+]);
+
+export const RUBBICK_EMERALD_NEBULA_STOPS = Object.freeze([
+  [0, 'rgba(0, 255, 100, 0.45)'],
+  [0.3, 'rgba(0, 180, 70, 0.30)'],
+  [0.65, 'rgba(0, 60, 25, 0.20)'],
+  [1, 'rgba(1, 17, 6, 0.0)']
+]);
+
+export const YUTA_NEBULA_STOPS = Object.freeze([
+  [0, 'rgba(193, 0, 70, 0.50)'],
+  [0.25, 'rgba(151, 3, 54, 0.35)'],
+  [0.55, 'rgba(107, 8, 53, 0.25)'],
+  [0.85, 'rgba(53, 7, 25, 0.15)'],
+  [1, 'rgba(8, 8, 8, 0.0)']
+]);
+
+export const YUTA_VIGNETTE_STOPS = Object.freeze([
+  [0.00, 'rgba(0, 0, 0, 0.0)'],
+  [0.60, 'rgba(24, 4, 18, 0.15)'],
+  [1.00, 'rgba(8, 8, 8, 0.55)']
+]);
+
+export const YUTA_VIGNETTE_TOJI_STOPS = Object.freeze([
+  [0.00, 'rgba(0, 0, 0, 0.0)'],
+  [0.60, 'rgba(24, 4, 18, 0.08)'],
+  [1.00, 'rgba(8, 8, 8, 0.35)']
+]);
+
+export const RIKA_SURGE_STOPS = Object.freeze([
+  [0, 'rgba(255, 20, 147, 0.85)'],
+  [0.3, 'rgba(138, 43, 226, 0.55)'],
+  [0.6, 'rgba(75, 0, 130, 0.25)'],
+  [1, 'rgba(0, 0, 0, 0)']
+]);
+
+export const TOJI_SHADOW_STOPS = Object.freeze([
+  [0, 'rgba(0, 0, 0, 0.75)'],
+  [0.35, 'rgba(0, 0, 0, 0.85)'],
+  [1.0, '#000000']
+]);
+
+export const TOJI_SHADOW_YUTA_STOPS = Object.freeze([
+  [0, 'rgba(0, 0, 0, 0.45)'],
+  [0.35, 'rgba(0, 0, 0, 0.65)'],
+  [1.0, 'rgba(0, 0, 0, 0.85)']
+]);
+
+export const TOJI_VIGNETTE_STOPS = Object.freeze([
+  [0.00, 'rgba(0, 0, 0, 0.0)'],
+  [0.65, 'rgba(0, 0, 0, 0.45)'],
+  [1.00, 'rgba(0, 0, 0, 0.95)']
+]);
+
+export const TOJI_VIGNETTE_YUTA_STOPS = Object.freeze([
+  [0.00, 'rgba(0, 0, 0, 0.0)'],
+  [0.65, 'rgba(0, 0, 0, 0.25)'],
+  [1.00, 'rgba(0, 0, 0, 0.65)']
+]);
+
+export const SUKUNA_WATER_VIGNETTE_STOPS = Object.freeze([
+  [0.0, 'rgba(0, 0, 0, 0)'],
+  [0.6, 'rgba(0, 0, 0, 0.15)'],
+  [1.0, 'rgba(0, 0, 0, 0.40)']
+]);

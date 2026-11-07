@@ -2,6 +2,7 @@ import { state, getProjectiles } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
 import { excludeGojoInfinityFromDim, applyDomainArenaVignetteCutout } from './arenaRenderer.js';
 import { worldToScreen } from '../../systems/cameraSystem.js';
+import { drawCachedDomainHalo, MAHITO_NEBULA_STOPS, MAHITO_VIGNETTE_STOPS } from '../glowSpriteCache.js';
 
 let currentZeusStormDimOpacity = 0;
 
@@ -359,26 +360,14 @@ export function renderMahitoDomainBackground(fighter, ctx, isClashSecondary = fa
     ctx.imageSmoothingEnabled = false; // Nearest-neighbor scaling preserves crisp pixel art
     ctx.drawImage(img, ax, ay, aw, ah);
   } else {
-    // Procedural Cursed Violet Nebula fallback while asset initializes
-    const nebulaGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxR);
-    nebulaGrad.addColorStop(0, 'rgba(217, 70, 239, 0.50)');
-    nebulaGrad.addColorStop(0.25, 'rgba(147, 51, 234, 0.35)');
-    nebulaGrad.addColorStop(0.55, 'rgba(88, 28, 135, 0.25)');
-    nebulaGrad.addColorStop(0.85, 'rgba(26, 3, 40, 0.15)');
-    nebulaGrad.addColorStop(1, 'rgba(4, 0, 8, 0.0)');
-    ctx.fillStyle = nebulaGrad;
-    ctx.fillRect(ax, ay, aw, ah);
+    // Procedural Cursed Violet Nebula fallback while asset initializes (Pre-baked atlas quad)
+    drawCachedDomainHalo(ctx, cx, cy, maxR, MAHITO_NEBULA_STOPS);
   }
 
   // 4. Dark Multi-Stop Cursed Radial Vignette (keeps center hands clear while darkening perimeter)
-  const vignetteGrad = ctx.createRadialGradient(cx, cy, Math.min(aw, ah) * 0.15, cx, cy, maxR);
-  vignetteGrad.addColorStop(0.00, 'rgba(20, 2, 28, 0.08)');
-  vignetteGrad.addColorStop(0.35, 'rgba(14, 1, 22, 0.32)');
-  vignetteGrad.addColorStop(0.65, 'rgba(8, 0, 14, 0.62)');
-  vignetteGrad.addColorStop(0.85, 'rgba(4, 0, 8, 0.82)');
-  vignetteGrad.addColorStop(1.00, 'rgba(2, 0, 4, 0.94)');
-  ctx.fillStyle = vignetteGrad;
-  ctx.fillRect(ax, ay, aw, ah);
+  // Pre-baked offscreen atlas quad eliminates per-frame createRadialGradient GPU LUT allocation stalls
+  const innerRatio = (Math.min(aw, ah) * 0.15) / maxR;
+  drawCachedDomainHalo(ctx, cx, cy, maxR, MAHITO_VIGNETTE_STOPS, 1.0, innerRatio);
 
   // 5. Exclude Gojo Limitless Infinity Barrier from dark overlay (Rule #9)
   excludeGojoInfinityFromDim(ctx);

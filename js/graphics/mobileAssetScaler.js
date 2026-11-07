@@ -7,6 +7,18 @@
 import { MOBILE_ASSET_MANIFEST } from '../configs/mobileAssetManifest.js';
 import { warmActiveFighterTexturesOnGpu } from './graphicsCache.js';
 import { drawPixelHand } from './renderers/fighterRenderer.js';
+import {
+  getCachedRadialGlowAtlasSlot,
+  MAHITO_NEBULA_STOPS,
+  MAHITO_VIGNETTE_STOPS,
+  RUBBICK_EMERALD_NEBULA_STOPS,
+  YUTA_NEBULA_STOPS,
+  YUTA_VIGNETTE_STOPS,
+  RIKA_SURGE_STOPS,
+  SUKUNA_WATER_VIGNETTE_STOPS,
+  TOJI_SHADOW_STOPS,
+  TOJI_VIGNETTE_STOPS
+} from './glowSpriteCache.js';
 
 function normalizeAssetPath(url) {
   if (!url || typeof url !== 'string') return '';
@@ -410,6 +422,24 @@ export function prewarmMatchAssets(fighters, gameCtx = null) {
         try {
           f.drawWeapon(wCtx, f);
         } catch (_) {}
+      }
+
+      // Pre-warm active combatants' domain halos into the shared atlas (Rule 35)
+      const fId = String(f.characterId || f.type || '').toLowerCase();
+      if (fId === 'mahito') {
+        getCachedRadialGlowAtlasSlot(MAHITO_NEBULA_STOPS);
+        getCachedRadialGlowAtlasSlot(MAHITO_VIGNETTE_STOPS, 0.15);
+      } else if (fId === 'gojo' || fId === 'rubbick') {
+        getCachedRadialGlowAtlasSlot(RUBBICK_EMERALD_NEBULA_STOPS);
+      } else if (fId === 'yuta') {
+        getCachedRadialGlowAtlasSlot(YUTA_NEBULA_STOPS);
+        getCachedRadialGlowAtlasSlot(YUTA_VIGNETTE_STOPS, 0.20);
+        getCachedRadialGlowAtlasSlot(RIKA_SURGE_STOPS);
+      } else if (fId === 'sukuna') {
+        getCachedRadialGlowAtlasSlot(SUKUNA_WATER_VIGNETTE_STOPS, 0.15);
+      } else if (fId === 'toji') {
+        getCachedRadialGlowAtlasSlot(TOJI_SHADOW_STOPS);
+        getCachedRadialGlowAtlasSlot(TOJI_VIGNETTE_STOPS, 0.25);
       }
       wCtx.restore();
     } catch (e) {

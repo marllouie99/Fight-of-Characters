@@ -3,6 +3,7 @@ import { CONFIG } from '../../../core/config.js';
 import { spawnSparks, spawnImpactFlash } from '../../../graphics/particles/sparkEffect.js';
 import { spawnEyeOfCthulhuDomainSlashGore } from '../../../graphics/particles/deathShatterEffect.js';
 import { audioSystem } from '../../../systems/audioSystem.js';
+import { drawCachedDomainHalo, SUKUNA_WATER_VIGNETTE_STOPS } from '../../../graphics/glowSpriteCache.js';
 
 export function renderSukunaDomainBackground(fighter, ctx, isClashSecondary = false) {
   if (!fighter || !fighter.domainActive) return;
@@ -184,23 +185,16 @@ export function renderSukunaDomainBackground(fighter, ctx, isClashSecondary = fa
   ctx.fillRect(0, waterLineY - mistH, screenW, mistH * 2);
   ctx.restore();
 
-  // ── 4. DARK VIGNETTE OVERLAY ON WATER (CACHED RADIAL GRADIENT) ──
+  // ── 4. DARK VIGNETTE OVERLAY ON WATER (PRE-BAKED ATLAS QUAD) ──
   if (!isLowQuality) {
     ctx.save();
     const vigCx = sx;
     const vigCy = (waterLineY + screenH) / 2;
     const vigR = Math.max(screenW, screenH) * 0.7;
-    if (!fighter._cachedWaterVigGrad || fighter._cachedVigCx !== vigCx || fighter._cachedVigCy !== vigCy || fighter._cachedVigR !== vigR) {
-      fighter._cachedVigCx = vigCx;
-      fighter._cachedVigCy = vigCy;
-      fighter._cachedVigR = vigR;
-      fighter._cachedWaterVigGrad = ctx.createRadialGradient(vigCx, vigCy, vigR * 0.15, vigCx, vigCy, vigR);
-      fighter._cachedWaterVigGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
-      fighter._cachedWaterVigGrad.addColorStop(0.6, 'rgba(0, 0, 0, 0.15)');
-      fighter._cachedWaterVigGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0.40)');
-    }
-    ctx.fillStyle = fighter._cachedWaterVigGrad;
-    ctx.fillRect(0, Math.max(0, waterLineY), screenW, Math.max(0, screenH - waterLineY));
+    ctx.beginPath();
+    ctx.rect(0, Math.max(0, waterLineY), screenW, Math.max(0, screenH - waterLineY));
+    ctx.clip();
+    drawCachedDomainHalo(ctx, vigCx, vigCy, vigR, SUKUNA_WATER_VIGNETTE_STOPS, 1.0, 0.15);
     ctx.restore();
   }
 

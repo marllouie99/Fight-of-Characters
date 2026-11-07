@@ -60,7 +60,11 @@ function _getThrottledMobileSkillRows(f, themeColor) {
 export function isMobileCanvasHudActive() {
   if (typeof state === 'undefined') return false;
   if (state.viewOrientation === 'horizontal') return false;
-  return Boolean(CONFIG.mobileCanvasHudEnabled === true);
+  if (CONFIG.mobileCanvasHudEnabled === true) return true;
+  if (CONFIG.mobileCanvasHudEnabled === 'auto' || CONFIG.mobileCanvasHudEnabled === undefined) {
+    return Boolean(state.isMobileDevice);
+  }
+  return false;
 }
 
 export function syncMobileDomHudVisibility(active) {
@@ -193,8 +197,10 @@ export function drawMobileCanvasHud(ctx) {
   if (!ctx || !isMobileCanvasHudActive()) return;
 
   const { fighters, mode, scores, gameState } = state;
-  if (!fighters || fighters.length === 0) return;
-  if (gameState !== 'playing' && gameState !== 'countdown' && gameState !== 'roundEnd' && gameState !== 'matchEnd') return;
+  if (!fighters || fighters.length === 0 || (gameState !== 'playing' && gameState !== 'countdown' && gameState !== 'roundEnd' && gameState !== 'matchEnd')) {
+    syncMobileDomHudVisibility(false);
+    return;
+  }
 
   syncMobileDomHudVisibility(true);
 
@@ -241,7 +247,7 @@ function _drawCenterTopTimer(ctx) {
   const topY = arena.y - 38;
 
   // Background pill
-  const pillW = 110;
+  const pillW = 120;
   const pillH = 26;
   const pillX = cx - pillW / 2;
 
@@ -258,11 +264,12 @@ function _drawCenterTopTimer(ctx) {
   const secStr = String(totalSec % 60).padStart(2, '0');
   const timeStr = `${minStr}:${secStr}`;
 
-  ctx.font = '900 13px "Outfit", "Segoe UI", monospace';
+  ctx.font = '900 12.5px "Outfit", "Segoe UI", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(timeStr, cx, topY + pillH / 2);
+  const roundPrefix = (state.roundNum && state.roundNum > 1) ? `R${state.roundNum} • ` : '';
+  ctx.fillText(`${roundPrefix}${timeStr}`, cx, topY + pillH / 2);
 }
 
 function _drawFighterCanvasCard(ctx, x, y, w, h, f, fighterIndex, wins, isRightAlign) {

@@ -139,7 +139,8 @@ export function updateDoppelgangerDeathEffects() {
     }
 
     if (p.life <= 0) {
-      state.doppelgangerDeathEffects.splice(i, 1);
+      state.doppelgangerDeathEffects[i] = state.doppelgangerDeathEffects[state.doppelgangerDeathEffects.length - 1];
+      state.doppelgangerDeathEffects.pop();
     }
   }
 }

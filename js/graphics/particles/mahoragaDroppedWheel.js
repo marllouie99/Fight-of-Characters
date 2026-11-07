@@ -76,7 +76,8 @@ export function updateDroppedMahoragaWheels() {
 
     wheel.life--;
     if (wheel.life <= 0) {
-      state.droppedMahoragaWheels.splice(i, 1);
+      state.droppedMahoragaWheels[i] = state.droppedMahoragaWheels[state.droppedMahoragaWheels.length - 1];
+      state.droppedMahoragaWheels.pop();
       continue;
     }
 

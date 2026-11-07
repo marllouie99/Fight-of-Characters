@@ -91,7 +91,8 @@ export function updateTojiImpactEffects() {
 
     if (p.life >= p.maxLife) {
       _returnParticle(p);
-      _activeEffects.splice(i, 1);
+      _activeEffects[i] = _activeEffects[_activeEffects.length - 1];
+      _activeEffects.pop();
     }
   }
 }

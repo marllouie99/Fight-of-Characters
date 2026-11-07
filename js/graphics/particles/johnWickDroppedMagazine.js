@@ -246,7 +246,8 @@ export function updateDroppedMagazines() {
         mag.x += mag.vx;
         mag.life -= mag.decay;
         if (mag.life <= 0) {
-          state.droppedMagazines.splice(i, 1);
+          state.droppedMagazines[i] = state.droppedMagazines[state.droppedMagazines.length - 1];
+          state.droppedMagazines.pop();
         }
       }
     }
@@ -303,7 +304,8 @@ export function updateDroppedMagazines() {
         gun.x += gun.vx;
         gun.life -= gun.decay;
         if (gun.life <= 0) {
-          state.thrownGuns.splice(i, 1);
+          state.thrownGuns[i] = state.thrownGuns[state.thrownGuns.length - 1];
+          state.thrownGuns.pop();
         }
       }
     }
@@ -369,7 +371,8 @@ export function updateDroppedMagazines() {
       }
 
       if (c.life <= 0) {
-        state.spentCasings.splice(i, 1);
+        state.spentCasings[i] = state.spentCasings[state.spentCasings.length - 1];
+        state.spentCasings.pop();
       }
     }
   }

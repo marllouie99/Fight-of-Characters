@@ -35,11 +35,6 @@ export const yutaBossConfig = {
   damage: 12,
   cooldown: 50,
 
-  // ── Backwards-Compatible Flat Audio Aliases ──
-  entranceVoiceline: 'Assets/Sound Effects/Boss Voiceline SFX/yuta-boss-entrance-voiceline.mp3',
-  entranceVoicelineDelay: 70,
-  entranceVoicelineVolume: 1.0,
-
   // ─────────────────────────────────────────────
   // Audio configuration, volume, chance & timing delay adjustments (matching Nanami format)
   // ─────────────────────────────────────────────

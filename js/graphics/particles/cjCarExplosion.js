@@ -217,7 +217,8 @@ export function updateCarExplosions() {
           deb.rot += deb.rotSpeed;
           deb.life--;
           if (deb.life <= 0) {
-            exp.debris.splice(d, 1);
+            exp.debris[d] = exp.debris[exp.debris.length - 1];
+            exp.debris.pop();
           }
         }
       }
@@ -233,13 +234,15 @@ export function updateCarExplosions() {
           smk.radius = Math.min(smk.maxRadius, smk.radius + smk.growth);
           smk.life--;
           if (smk.life <= 0) {
-            exp.smokePuffs.splice(s, 1);
+            exp.smokePuffs[s] = exp.smokePuffs[exp.smokePuffs.length - 1];
+            exp.smokePuffs.pop();
           }
         }
       }
 
       if (exp.timer >= exp.maxTimer && (!exp.debris || exp.debris.length === 0) && (!exp.smokePuffs || exp.smokePuffs.length === 0)) {
-        state.cjCarExplosions.splice(i, 1);
+        state.cjCarExplosions[i] = state.cjCarExplosions[state.cjCarExplosions.length - 1];
+        state.cjCarExplosions.pop();
       }
     }
   }
@@ -251,7 +254,8 @@ export function updateCarExplosions() {
       scorch.life--;
       scorch.alpha = Math.max(0, (scorch.life / scorch.maxLife) * 0.85);
       if (scorch.life <= 0) {
-        state.cjCarScorchMarks.splice(s, 1);
+        state.cjCarScorchMarks[s] = state.cjCarScorchMarks[state.cjCarScorchMarks.length - 1];
+        state.cjCarScorchMarks.pop();
       }
     }
   }

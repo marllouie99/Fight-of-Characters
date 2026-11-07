@@ -1,5 +1,5 @@
 import { state, getProjectiles, isMobileDevice } from '../core/state.js';
-import { FIGHTER_DEFS } from '../core/config.js';
+import { CONFIG, FIGHTER_DEFS } from '../core/config.js';
 import { spatialGrid } from './physics.js';
 import { burnEffectSystem } from '../graphics/particles/burnEffectVisuals.js';
 import { flamewardenFlameSystem } from '../graphics/weapons/flamewardenWeaponGraphics.js';
@@ -13,6 +13,9 @@ import { syncWakeLockWithGameState } from './screenLockSystem.js';
 export const isMobile = isMobileDevice;
 export const TARGET_FPS = 60; // Standard 60 FPS across all devices for consistent combat physics
 export const FRAME_TIME = 1000 / TARGET_FPS;
+const PHYSICS_STEP = 1000 / 60; // 16.6667ms canonical physics step
+let _physicsAccumulator = 0;
+let _recentFastFrameCount = 0;
 let lastFrameTime = 0;
 let isPageVisible = true;
 let _uiScreensCache = null;
@@ -53,12 +56,14 @@ export function animate(timestamp) {
     return;
   }
 
-  // Universal 60 FPS Frame Pacing:
+  // Adaptive High-Refresh Rate & Universal Frame Pacing:
   // On standard 60Hz displays (like iPhone 11 Pro and 60Hz mobile screens), WebKit timer jitter
-  // produces frame intervals between 12ms and 20ms. Lowering the throttle threshold to 10.0ms
-  // ensures high-refresh displays (90Hz / 120Hz / 144Hz with intervals <= 8.3ms) are capped cleanly
-  // at 60 FPS, while ZERO frames are ever dropped on 60Hz screens, eliminating the 30 FPS stutter lock!
+  // produces frame intervals between 12ms and 20ms. Lowering the throttle threshold to 11.5ms
+  // ensures ZERO frames are dropped on 60Hz screens, eliminating the 30 FPS stutter lock.
+  // On 90Hz / 120Hz displays, when high-refresh rate is enabled, frames arrive faster (8.3ms–11.1ms);
+  // we decouple 60Hz fixed physics stepping from native refresh rate rasterization!
   const isMenuState = _MENU_STATES.has(state.gameState);
+  const isHighRefreshEnabled = Boolean(CONFIG?.enableHighRefreshRate ?? state.enableHighRefreshRate ?? true);
 
   // Dynamic Screen Wake Lock synchronization across game state transitions
   if (state && state.gameState !== _lastWakeState) {
@@ -69,13 +74,36 @@ export function animate(timestamp) {
   if (!lastFrameTime) lastFrameTime = timestamp;
   const elapsed = timestamp - lastFrameTime;
 
-  // Throttle only if frame arrives faster than 11.5ms (true high-refresh rate threshold: 90Hz=11.1ms, 120Hz=8.3ms)
-  if (elapsed < 11.5) {
+  // Throttle check: allow sub-11.5ms frames only when high-refresh is enabled (min 5.5ms for up to 144Hz)
+  const minInterval = isHighRefreshEnabled ? 5.5 : 11.5;
+  if (elapsed < minInterval) {
     requestAnimationFrame(animate);
     return;
   }
-  const FRAME_TIME = 1000 / 60;
-  lastFrameTime = elapsed >= FRAME_TIME ? timestamp - (elapsed % FRAME_TIME) : timestamp;
+
+  // Detect display refresh rate dynamically based on frame timing
+  if (elapsed <= 9.5) {
+    _recentFastFrameCount++;
+    if (_recentFastFrameCount >= 8) {
+      state.displayRefreshRate = 120;
+      state.highRefreshActive = isHighRefreshEnabled;
+    }
+  } else if (elapsed <= 12.0) {
+    _recentFastFrameCount++;
+    if (_recentFastFrameCount >= 8) {
+      state.displayRefreshRate = 90;
+      state.highRefreshActive = isHighRefreshEnabled;
+    }
+  } else {
+    _recentFastFrameCount = Math.max(0, _recentFastFrameCount - 1);
+    if (_recentFastFrameCount === 0 && elapsed >= 14.5) {
+      state.displayRefreshRate = 60;
+      state.highRefreshActive = false;
+    }
+  }
+
+  const targetInterval = state.highRefreshActive ? (1000 / (state.displayRefreshRate || 120)) : (1000 / 60);
+  lastFrameTime = elapsed >= targetInterval ? timestamp - (elapsed % targetInterval) : timestamp;
 
   try {
     // FPS calculation
@@ -235,10 +263,30 @@ export function animate(timestamp) {
     resetCachedTime();
     state.frameAudioTime = getAudioCurrentTime();
 
-    // The abstracted core updates and renders in clean 60 FPS lockstep!
     const _t0 = performance.now();
-    updateGame();
-    renderGame();
+
+    if (state.highRefreshActive) {
+      // Decoupled High-Refresh Pipeline: Fixed 60Hz Physics Accumulator + Native 90/120Hz Rasterization
+      const delta = Math.min(elapsed, 50.0); // Clamp to prevent spiral-of-death on background freeze
+      _physicsAccumulator += delta;
+
+      let updates = 0;
+      while (_physicsAccumulator >= PHYSICS_STEP && updates < 3) {
+        updateGame();
+        _physicsAccumulator -= PHYSICS_STEP;
+        updates++;
+      }
+      if (_physicsAccumulator > PHYSICS_STEP * 2) {
+        _physicsAccumulator = 0;
+      }
+      renderGame();
+    } else {
+      // Standard Canonical 60 FPS Lockstep (1 updateGame + 1 renderGame per frame)
+      _physicsAccumulator = 0;
+      updateGame();
+      renderGame();
+    }
+
     const _frameCost = performance.now() - _t0;
     state._frameDurationSum = (state._frameDurationSum || 0) + _frameCost;
     state._frameDurationCount = (state._frameDurationCount || 0) + 1;

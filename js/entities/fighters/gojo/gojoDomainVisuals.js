@@ -4,6 +4,7 @@
 // Supports Gojo (Cosmic Cyan/Blue) & Rubbick (Stolen Arcane Emerald Green)
 // ─────────────────────────────────────────────
 import { state } from '../../../core/state.js';
+import { drawCachedDomainHalo, RUBBICK_EMERALD_NEBULA_STOPS } from '../../../graphics/glowSpriteCache.js';
 
 let _gojoDomainImg = null;
 let _gojoDomainImgLoading = false;
@@ -231,17 +232,11 @@ export function renderGojoDomainBackground(fighter, ctx, isClashSecondary = fals
       ctx.drawImage(img, ax, ay, aw, ah);
     }
   } else if (isRubbick) {
-    // Procedural Emerald Cosmic Nebula fallback while asset initializes
+    // Procedural Emerald Cosmic Nebula fallback while asset initializes (Pre-baked atlas quad)
     const cx = ax + aw / 2;
     const cy = ay + ah / 2;
     const maxR = Math.max(aw, ah) * 0.6;
-    const nebulaGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxR);
-    nebulaGrad.addColorStop(0, 'rgba(0, 255, 100, 0.45)');
-    nebulaGrad.addColorStop(0.3, 'rgba(0, 180, 70, 0.30)');
-    nebulaGrad.addColorStop(0.65, 'rgba(0, 60, 25, 0.20)');
-    nebulaGrad.addColorStop(1, 'rgba(1, 17, 6, 0.0)');
-    ctx.fillStyle = nebulaGrad;
-    ctx.fillRect(ax, ay, aw, ah);
+    drawCachedDomainHalo(ctx, cx, cy, maxR, RUBBICK_EMERALD_NEBULA_STOPS);
   }
 
   // 4. Dark Overlay on top of image

@@ -29,6 +29,8 @@
     "preview:web": "serve -l 8000 dist",
     "mobile:sync": "npm run build:web -- --skip-zip && npx cap sync && node scripts/buildMobileAssets.mjs --prune-android",
     "mobile:apk": "npm run mobile:sync && cd android && gradlew.bat assembleDebug && cd .. && node -e \"import('fs').then(fs => fs.copyFileSync('android/app/build/outputs/apk/debug/app-debug.apk', 'dist/Fight-of-Characters-Mobile.apk'))\"",
+    "mobile:bundle": "npm run mobile:sync && cd android && gradlew.bat bundleDebug && cd .. && node -e \"import('fs').then(fs => fs.copyFileSync('android/app/build/outputs/bundle/debug/app-debug.aab', 'dist/Fight-of-Characters-Mobile.aab'))\"",
+    "mobile:bundle:release": "npm run mobile:sync && cd android && gradlew.bat bundleRelease && cd .. && node -e \"import('fs').then(fs => { const d = 'android/app/build/outputs/bundle/release'; const f = fs.readdirSync(d).find(x => x.endsWith('.aab')); if (f) fs.copyFileSync(d + '/' + f, 'dist/Fight-of-Characters-Mobile-release.aab'); })\"",
     "mobile:run": "node scripts/deployMobile.mjs --build",
     "mobile:install": "node scripts/deployMobile.mjs",
     "mobile:open:ios": "npx cap open ios",

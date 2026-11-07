@@ -6,10 +6,11 @@
 
 import { state } from '../../core/state.js';
 
-// Pre-allocated active shockwave effects array
+// Pre-allocated active shockwave effects array and object pool
 if (typeof state !== 'undefined' && !state.bamEffects) {
   state.bamEffects = [];
 }
+const _bamEffectPool = [];
 
 /**
  * Spawns a clean kinetic shockwave ring at the given coordinates
@@ -21,13 +22,17 @@ export function spawnBamEffect(x, y, scale = 1.0) {
   if (typeof state === 'undefined') return;
   if (!state.bamEffects) state.bamEffects = [];
 
-  state.bamEffects.push({
-    x,
-    y,
-    scale,
-    life: 14,
-    maxLife: 14
-  });
+  let eff = _bamEffectPool.pop();
+  if (!eff) {
+    eff = { x: 0, y: 0, scale: 1.0, life: 14, maxLife: 14 };
+  }
+  eff.x = x;
+  eff.y = y;
+  eff.scale = scale;
+  eff.life = 14;
+  eff.maxLife = 14;
+
+  state.bamEffects.push(eff);
 }
 
 /**
@@ -40,7 +45,9 @@ export function updateBamEffects() {
     const eff = state.bamEffects[i];
     eff.life--;
     if (eff.life <= 0) {
-      state.bamEffects.splice(i, 1);
+      if (_bamEffectPool.length < 32) _bamEffectPool.push(eff);
+      state.bamEffects[i] = state.bamEffects[state.bamEffects.length - 1];
+      state.bamEffects.pop();
     }
   }
 }

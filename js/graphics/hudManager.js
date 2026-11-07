@@ -14,6 +14,7 @@ import { getFighterGrade, getGradeMeta } from '../configs/gradeConfig.js';
 import { drawWingedGradeLetter, getZeusGradeCardTheme } from './ui/CollectorCardRenderer.js';
 import { resolveActiveThemeId, getArenaTopWallBlockThickness } from '../systems/arenaThemeSystem.js';
 import { isBlueLockFighter, getBlueLockEgoBuffs, BLUE_LOCK_EGO_REGISTRY, getFighterDribbleControl } from '../systems/soccerBallSystem.js';
+import { isMobileCanvasHudActive } from './ui/canvasMobileHud.js';
 
 export { syncHudPosition, initHudSync, updateTopHudCameraTracking, updateBottomHudCameraTracking, updateSideHudCameraTracking };
 
@@ -341,7 +342,7 @@ let _cachedBottomRight = null;
 
 
 export function drawHUD() {
-  if (typeof state !== 'undefined' && state.isMobileDevice && state.viewOrientation !== 'horizontal' && CONFIG.mobileCanvasHudEnabled === true) {
+  if (isMobileCanvasHudActive()) {
     return;
   }
   _isHudAlreadyCleared = false;

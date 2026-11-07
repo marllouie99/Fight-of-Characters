@@ -4,6 +4,13 @@ import { worldToScreen } from '../../systems/cameraSystem.js';
 import { isInsideRubbickStolenVoid } from '../../entities/fighters/rubbick/rubbickThemes.js';
 import { isTodoTakadaOverlayActive } from './specialOverlayRenderer.js';
 import { getCachedRadialGradientCanvas } from '../graphicsCache.js';
+import {
+  drawCachedDomainHalo,
+  TOJI_SHADOW_STOPS,
+  TOJI_SHADOW_YUTA_STOPS,
+  TOJI_VIGNETTE_STOPS,
+  TOJI_VIGNETTE_YUTA_STOPS
+} from '../glowSpriteCache.js';
 
 const GOJO_INFINITY_HOLE_STOPS = [
   [0, 'rgba(0, 0, 0, 1.0)'],
@@ -1598,14 +1605,9 @@ export function drawTojiUltimateOverlay() {
     ctx.drawImage(tojiImg, drawX, drawY, drawW, drawH);
     ctx.restore();
   } else {
-    // Procedural Solid Black Shadow fallback while image loads
+    // Procedural Solid Black Shadow fallback while image loads (Pre-baked atlas quad)
     const maxR = Math.max(arenaW, arenaH) * 0.75;
-    const nebulaGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxR);
-    nebulaGrad.addColorStop(0, isYutaDomainActive ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.75)');
-    nebulaGrad.addColorStop(0.35, isYutaDomainActive ? 'rgba(0, 0, 0, 0.65)' : 'rgba(0, 0, 0, 0.85)');
-    nebulaGrad.addColorStop(1.0, isYutaDomainActive ? 'rgba(0, 0, 0, 0.85)' : '#000000');
-    ctx.fillStyle = nebulaGrad;
-    ctx.fillRect(arenaX + wallW, arenaY + wallW, arenaW - wallW * 2, arenaH - wallW * 2);
+    drawCachedDomainHalo(ctx, cx, cy, maxR, isYutaDomainActive ? TOJI_SHADOW_YUTA_STOPS : TOJI_SHADOW_STOPS);
   }
 
   // 2.5. Semi-Transparent Black Overlay Tint on top layer of image
@@ -1616,13 +1618,10 @@ export function drawTojiUltimateOverlay() {
   }
 
   // Atmospheric Solid Black Vignette framing the portrait inside arena perimeter
+  // Pre-baked offscreen atlas quad eliminates per-frame createRadialGradient shader allocations
   const maxR = Math.max(arenaW, arenaH) * 0.75;
-  const vignetteGrad = ctx.createRadialGradient(cx, cy, Math.min(arenaW, arenaH) * 0.25, cx, cy, maxR);
-  vignetteGrad.addColorStop(0.00, 'rgba(0, 0, 0, 0.0)');
-  vignetteGrad.addColorStop(0.65, isYutaDomainActive ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.45)');
-  vignetteGrad.addColorStop(1.00, isYutaDomainActive ? 'rgba(0, 0, 0, 0.65)' : 'rgba(0, 0, 0, 0.95)');
-  ctx.fillStyle = vignetteGrad;
-  ctx.fillRect(arenaX + wallW, arenaY + wallW, arenaW - wallW * 2, arenaH - wallW * 2);
+  const innerRatio = (Math.min(arenaW, arenaH) * 0.25) / maxR;
+  drawCachedDomainHalo(ctx, cx, cy, maxR, isYutaDomainActive ? TOJI_VIGNETTE_YUTA_STOPS : TOJI_VIGNETTE_STOPS, 1.0, innerRatio);
 
   ctx.restore();
 

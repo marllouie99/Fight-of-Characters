@@ -500,6 +500,9 @@ export const state = {
   allFpsLogs: [],
   hideFpsLogs: (typeof localStorage !== 'undefined') && localStorage.getItem('hideFpsLogs') === 'true',
   performanceMode: false,
+  enableHighRefreshRate: true,
+  highRefreshActive: false,
+  displayRefreshRate: 60,
   frameAudioTime: 0,
 
   // Dynamic quality system for performance
@@ -1401,7 +1404,9 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
   // Prune oldest texts when at capacity
   const maxAllowedTexts = (state.isMobileDevice || (typeof window !== 'undefined' && window.innerWidth <= 768)) ? 14 : MAX_FLOATING_TEXTS;
   if (state.floatingTexts.length >= maxAllowedTexts) {
-    const dropped = state.floatingTexts.shift();
+    const dropped = state.floatingTexts[0];
+    state.floatingTexts[0] = state.floatingTexts[state.floatingTexts.length - 1];
+    state.floatingTexts.pop();
     if (dropped) recycleFloatingText(dropped);
   }
 

@@ -4,6 +4,14 @@
 // ─────────────────────────────────────────────
 import { CONFIG } from '../../../core/config.js';
 import { state } from '../../../core/state.js';
+import {
+  drawCachedDomainHalo,
+  drawCachedRadialGlow,
+  YUTA_NEBULA_STOPS,
+  YUTA_VIGNETTE_STOPS,
+  YUTA_VIGNETTE_TOJI_STOPS,
+  RIKA_SURGE_STOPS
+} from '../../../graphics/glowSpriteCache.js';
 
 let _yutaDomainImg = null;
 let _yutaDomainImgLoading = false;
@@ -101,24 +109,15 @@ export function renderYutaDomainBackground(fighter, ctx, isClashSecondary = fals
     ctx.drawImage(img, ax, ay, aw, ah);
     ctx.restore();
   } else {
-    // Procedural Cursed Crimson-Ruby Nebula fallback while asset initializes
-    const nebulaGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxR);
-    nebulaGrad.addColorStop(0, 'rgba(193, 0, 70, 0.50)');
-    nebulaGrad.addColorStop(0.25, 'rgba(151, 3, 54, 0.35)');
-    nebulaGrad.addColorStop(0.55, 'rgba(107, 8, 53, 0.25)');
-    nebulaGrad.addColorStop(0.85, 'rgba(53, 7, 25, 0.15)');
-    nebulaGrad.addColorStop(1, 'rgba(8, 8, 8, 0.0)');
-    ctx.fillStyle = nebulaGrad;
-    ctx.fillRect(ax, ay, aw, ah);
+    // Procedural Cursed Crimson-Ruby Nebula fallback while asset initializes (Pre-baked atlas quad)
+    drawCachedDomainHalo(ctx, cx, cy, maxR, YUTA_NEBULA_STOPS);
   }
 
   // 4. Subtle Atmospheric Edge Vignette to frame the domain inside the arena perimeter
-  const vignetteGrad = ctx.createRadialGradient(cx, cy, Math.min(aw, ah) * 0.20, cx, cy, maxR);
-  vignetteGrad.addColorStop(0.00, 'rgba(0, 0, 0, 0.0)');
-  vignetteGrad.addColorStop(0.60, isTojiActive ? 'rgba(24, 4, 18, 0.08)' : 'rgba(24, 4, 18, 0.15)');
-  vignetteGrad.addColorStop(1.00, isTojiActive ? 'rgba(8, 8, 8, 0.35)' : 'rgba(8, 8, 8, 0.55)');
-  ctx.fillStyle = vignetteGrad;
-  ctx.fillRect(ax, ay, aw, ah);
+  // Pre-baked offscreen atlas quad eliminates per-frame createRadialGradient shader allocations
+  const yutaVignetteStops = isTojiActive ? YUTA_VIGNETTE_TOJI_STOPS : YUTA_VIGNETTE_STOPS;
+  const innerRatio = (Math.min(aw, ah) * 0.20) / maxR;
+  drawCachedDomainHalo(ctx, cx, cy, maxR, yutaVignetteStops, 1.0, innerRatio);
 
   // 5. Domain Clash Energy Effect when clashing with Sukuna
   const isMultiDomain = (state.fighters && state.fighters.filter(f => f && f.domainActive).length > 1);
@@ -243,17 +242,12 @@ export function renderYutaSukunaDomainClashRift(ctx, yutaFighter, sukunaFighter)
     const isGamePlay = Boolean(typeof state !== 'undefined' && ['playing', 'fight', 'countdown', 'paused', 'roundEnd'].includes(state.gameState));
     if (isGamePlay || isLowQuality) {
       ctx.fillStyle = `rgba(255, 20, 147, ${surgeAlpha * 1.2})`;
+      ctx.beginPath();
+      ctx.arc(rk.x, rk.y, surgeRadius, 0, Math.PI * 2);
+      ctx.fill();
     } else {
-      const surgeGrad = ctx.createRadialGradient(rk.x, rk.y, 0, rk.x, rk.y, surgeRadius);
-      surgeGrad.addColorStop(0, `rgba(255, 20, 147, ${surgeAlpha * 1.5})`);
-      surgeGrad.addColorStop(0.3, `rgba(138, 43, 226, ${surgeAlpha})`);
-      surgeGrad.addColorStop(0.6, `rgba(75, 0, 130, ${surgeAlpha * 0.5})`);
-      surgeGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = surgeGrad;
+      drawCachedRadialGlow(ctx, rk.x, rk.y, surgeRadius, RIKA_SURGE_STOPS, surgeAlpha * 1.5);
     }
-    ctx.beginPath();
-    ctx.arc(rk.x, rk.y, surgeRadius, 0, Math.PI * 2);
-    ctx.fill();
 
     if (!isLowQuality) {
       ctx.strokeStyle = `rgba(255, 20, 147, ${surgeAlpha * 2})`;

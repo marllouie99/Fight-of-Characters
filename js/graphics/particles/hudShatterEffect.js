@@ -925,7 +925,10 @@ export function updateHudShatters() {
       cr.y += cr.vy;
       cr.life--;
       cr.alpha = Math.max(0, cr.life / cr.maxLife);
-      if (cr.life <= 0) tns.crumbs.splice(c, 1);
+      if (cr.life <= 0) {
+        tns.crumbs[c] = tns.crumbs[tns.crumbs.length - 1];
+        tns.crumbs.pop();
+      }
     }
   }
 
@@ -965,7 +968,10 @@ export function updateHudShatters() {
         cr.y += cr.vy;
         cr.life--;
         cr.alpha = Math.max(0, cr.life / cr.maxLife);
-        if (cr.life <= 0) bhs.crumbs.splice(c, 1);
+        if (cr.life <= 0) {
+          bhs.crumbs[c] = bhs.crumbs[bhs.crumbs.length - 1];
+          bhs.crumbs.pop();
+        }
       }
     }
   }

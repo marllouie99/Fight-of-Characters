@@ -380,8 +380,9 @@ export function updateGetsugaImpactEffects() {
     }
 
     if (p.life >= p.maxLife) {
-      _activeEffects.splice(i, 1);
       _returnParticle(p);
+      _activeEffects[i] = _activeEffects[_activeEffects.length - 1];
+      _activeEffects.pop();
     }
   }
 }

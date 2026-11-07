@@ -906,7 +906,8 @@ export function updateSaitamaWallShatters() {
       crumb.life--;
       crumb.alpha = Math.max(0, crumb.life / crumb.maxLife);
       if (crumb.life <= 0) {
-        sw.crumbs.splice(c, 1);
+        sw.crumbs[c] = sw.crumbs[sw.crumbs.length - 1];
+        sw.crumbs.pop();
       }
     }
 
@@ -922,7 +923,8 @@ export function updateSaitamaWallShatters() {
       dust.currentRadius = dust.radius + (dust.maxRadius - dust.radius) * Math.sin(p * Math.PI * 0.5);
       dust.currentAlpha = Math.max(0, (dust.life / dust.maxLife) * 0.65);
       if (dust.life <= 0) {
-        sw.dustParticles.splice(d, 1);
+        sw.dustParticles[d] = sw.dustParticles[sw.dustParticles.length - 1];
+        sw.dustParticles.pop();
       }
     }
 
