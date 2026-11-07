@@ -1937,6 +1937,11 @@ setInterval(syncMobileQuickBar, 100);
 // Initialize aspect scaling on initial boot
 updateAspectScaling();
 
+// Mobile GPU In-Canvas HUD: Synchronize zero-DOM HUD visibility on initial boot
+if (typeof document !== 'undefined') {
+  syncMobileDomHudVisibility(isMobileCanvasHudActive());
+}
+
 // Global Arena Decoration System Controls
 if (typeof window !== 'undefined') {
   window.toggleArenaDecorations = toggleArenaDecorations;

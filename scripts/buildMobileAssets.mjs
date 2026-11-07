@@ -52,6 +52,8 @@ function readPngHeader(buf) {
 function decodePngBuffer(buffer) {
   let offset = 8;
   let width = 0, height = 0, colorType = 0, bitDepth = 0;
+  let plteChunk = null;
+  let trnsChunk = null;
   const idatChunks = [];
 
   while (offset < buffer.length) {
@@ -65,6 +67,10 @@ function decodePngBuffer(buffer) {
       height = data.readUInt32BE(4);
       bitDepth = data[8];
       colorType = data[9];
+    } else if (type === 'PLTE') {
+      plteChunk = data;
+    } else if (type === 'tRNS') {
+      trnsChunk = data;
     } else if (type === 'IDAT') {
       idatChunks.push(data);
     } else if (type === 'IEND') {
@@ -72,9 +78,10 @@ function decodePngBuffer(buffer) {
     }
   }
 
-  if (bitDepth !== 8 || (colorType !== 6 && colorType !== 2)) return null;
+  if (bitDepth !== 8 || (colorType !== 6 && colorType !== 2 && colorType !== 3)) return null;
+  if (colorType === 3 && !plteChunk) return null;
 
-  const bpp = colorType === 6 ? 4 : 3;
+  const bpp = colorType === 6 ? 4 : (colorType === 2 ? 3 : 1);
   let decompressed;
   try {
     decompressed = zlib.inflateSync(Buffer.concat(idatChunks));
@@ -117,16 +124,23 @@ function decodePngBuffer(buffer) {
     for (let x = 0; x < width; x++) {
       const outIdx = (y * width + x) * 4;
       const inIdx = x * bpp;
-      if (bpp === 4) {
+      if (colorType === 6) {
         pixels[outIdx] = recon[inIdx];
         pixels[outIdx + 1] = recon[inIdx + 1];
         pixels[outIdx + 2] = recon[inIdx + 2];
         pixels[outIdx + 3] = recon[inIdx + 3];
-      } else {
+      } else if (colorType === 2) {
         pixels[outIdx] = recon[inIdx];
         pixels[outIdx + 1] = recon[inIdx + 1];
         pixels[outIdx + 2] = recon[inIdx + 2];
         pixels[outIdx + 3] = 255;
+      } else if (colorType === 3) {
+        const palIdx = recon[inIdx];
+        const p3 = palIdx * 3;
+        pixels[outIdx] = plteChunk[p3] || 0;
+        pixels[outIdx + 1] = plteChunk[p3 + 1] || 0;
+        pixels[outIdx + 2] = plteChunk[p3 + 2] || 0;
+        pixels[outIdx + 3] = (trnsChunk && palIdx < trnsChunk.length) ? trnsChunk[palIdx] : 255;
       }
     }
     prevRecon.set(recon);
@@ -226,7 +240,8 @@ export function buildMobileAssets(options = {}) {
   const targetDirs = [
     path.join(rootDir, 'Assets', 'model'),
     path.join(rootDir, 'Assets', 'Overlays'),
-    path.join(rootDir, 'Assets', 'effects')
+    path.join(rootDir, 'Assets', 'effects'),
+    path.join(rootDir, 'Assets', 'weapon')
   ];
 
   const candidatePaths = [];
@@ -250,7 +265,7 @@ export function buildMobileAssets(options = {}) {
 
     if (!header) continue;
     if (Math.max(header.width, header.height) < 1024) continue;
-    if (header.bitDepth !== 8 || (header.colorType !== 6 && header.colorType !== 2)) continue;
+    if (header.bitDepth !== 8 || (header.colorType !== 6 && header.colorType !== 2 && header.colorType !== 3)) continue;
 
     // Relative subpath after "Assets/"
     const subpath = relAssetPath.replace(/^Assets\//, '');
@@ -309,6 +324,7 @@ export const MOBILE_ASSET_MANIFEST = ${JSON.stringify(manifest, null, 2)};
   log(`   📄 Manifest written to js/configs/mobileAssetManifest.js\n`);
 
   return {
+    manifest,
     totalAssets: Object.keys(manifest).length,
     newlyGenerated,
     skippedUpToDate,
@@ -317,6 +333,32 @@ export const MOBILE_ASSET_MANIFEST = ${JSON.stringify(manifest, null, 2)};
   };
 }
 
+export function pruneAndroidDuplicate1xAssets(manifest) {
+  const androidPublicDir = path.join(rootDir, 'android', 'app', 'src', 'main', 'assets', 'public');
+  if (!fs.existsSync(androidPublicDir)) return;
+
+  let prunedCount = 0;
+  let prunedBytes = 0;
+
+  for (const relAssetPath of Object.keys(manifest)) {
+    const subpath = relAssetPath.replace(/^Assets\//, '');
+    const mobile05xFile = path.join(androidPublicDir, 'Assets', '_mobile05x', subpath);
+    const redundant1xFile = path.join(androidPublicDir, relAssetPath);
+
+    if (fs.existsSync(mobile05xFile) && fs.existsSync(redundant1xFile)) {
+      const stat1x = fs.statSync(redundant1xFile);
+      fs.unlinkSync(redundant1xFile);
+      prunedCount++;
+      prunedBytes += stat1x.size;
+    }
+  }
+
+  console.log(`   🧹 [Android APK Optimizer] Pruned ${prunedCount} redundant 1x textures from android/app/src/main/assets/public (${(prunedBytes / 1024 / 1024).toFixed(1)} MB stripped from APK).`);
+}
+
 if (process.argv[1] && process.argv[1].endsWith('buildMobileAssets.mjs')) {
-  buildMobileAssets();
+  const res = buildMobileAssets();
+  if (process.argv.includes('--prune-android') && res && res.manifest) {
+    pruneAndroidDuplicate1xAssets(res.manifest);
+  }
 }

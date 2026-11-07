@@ -1,6 +1,47 @@
 import { CONFIG, getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { STATUS_OVERLAY_REGISTRY } from '../statusEffects.js';
+import { drawCachedRadialGlow } from '../glowSpriteCache.js';
+
+const _ZENITSU_DASH_BLOOM_STOPS = [
+  [0, 'rgba(255, 255, 255, 0.96)'],
+  [0.22, 'rgba(224, 242, 254, 0.90)'],
+  [0.50, 'rgba(0, 229, 255, 0.75)'],
+  [0.78, 'rgba(2, 132, 199, 0.35)'],
+  [1, 'rgba(0, 0, 0, 0)']
+];
+
+const _hpTextStampCache = new Map();
+const MAX_HP_STAMP_CACHE = 256;
+
+function _getOrCreateHpStamp(hpText) {
+  let entry = _hpTextStampCache.get(hpText);
+  if (entry) return entry;
+
+  const w = 72;
+  const h = 26;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const bCtx = c.getContext('2d');
+  if (!bCtx) return null;
+
+  bCtx.font = '900 17px "Rajdhani", "Outfit", "Segoe UI", sans-serif';
+  bCtx.textAlign = 'center';
+  bCtx.textBaseline = 'top';
+  bCtx.lineWidth = 4.0;
+  bCtx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+  bCtx.strokeText(hpText, w / 2, 3);
+  bCtx.fillStyle = '#ffffff';
+  bCtx.fillText(hpText, w / 2, 3);
+
+  entry = { canvas: c, halfW: w / 2, offsetY: 3 };
+  if (_hpTextStampCache.size >= MAX_HP_STAMP_CACHE) {
+    _hpTextStampCache.delete(_hpTextStampCache.keys().next().value);
+  }
+  _hpTextStampCache.set(hpText, entry);
+  return entry;
+}
 
 // Cache of pre-computed sketchy circle paths keyed by "radius_seed"
 const _sketchyCircleCache = new Map();
@@ -297,19 +338,9 @@ export class FighterRenderer {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
 
-            // 1. Massive Radial Bloom around the fighter (matches Hyperion's beam bloom radius and intensity)
+            // 1. Massive Radial Bloom around the fighter (pre-baked radial glow sprite, zero per-frame gradient allocation)
             const bloomRadius = baseRadius * 3.0;
-            const hitGlow = ctx.createRadialGradient(0, 0, baseRadius * 0.15, 0, 0, bloomRadius);
-            hitGlow.addColorStop(0, `rgba(255, 255, 255, ${(0.95 + Math.random() * 0.05) * intensity})`);
-            hitGlow.addColorStop(0.22, `rgba(224, 242, 254, ${0.90 * intensity})`);
-            hitGlow.addColorStop(0.50, `rgba(0, 229, 255, ${0.75 * intensity})`);
-            hitGlow.addColorStop(0.78, `rgba(2, 132, 199, ${0.35 * intensity})`);
-            hitGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-            ctx.fillStyle = hitGlow;
-            ctx.beginPath();
-            ctx.arc(0, 0, bloomRadius, 0, Math.PI * 2);
-            ctx.fill();
+            drawCachedRadialGlow(ctx, 0, 0, bloomRadius, _ZENITSU_DASH_BLOOM_STOPS, intensity);
 
             // 2. White-Hot Core High-Voltage Wash
             ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * intensity})`;
@@ -382,10 +413,18 @@ export class FighterRenderer {
       }
     }
 
+    const hpText = Math.floor(fighter.hp).toString();
+    if (typeof HTMLCanvasElement !== 'undefined') {
+      const stamp = _getOrCreateHpStamp(hpText);
+      if (stamp) {
+        ctx.drawImage(stamp.canvas, Math.round(fighter.x - stamp.halfW), Math.round(hpY - stamp.offsetY));
+        ctx.restore();
+        return;
+      }
+    }
     ctx.font = '900 17px "Rajdhani", "Outfit", "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const hpText = Math.floor(fighter.hp).toString();
     ctx.lineWidth = 4.0;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.strokeText(hpText, fighter.x, hpY);

@@ -1,6 +1,7 @@
 import { state } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
 import { getIchigoSwingKinematics, getZangetsuTipWorldPos } from '../fighters/ichigoSkin.js';
+import { getFilteredSpriteCanvas } from '../graphicsCache.js';
 
 const _GETSUGA_CANVAS_SIZE = 228;
 const _GETSUGA_HALF_SIZE = 114;
@@ -2203,13 +2204,6 @@ export function drawIchigoSlashArc(ctx, fighter) {
     const prevAlpha = ctx.globalAlpha;
     ctx.globalAlpha = Math.max(0, Math.min(1.0, prevAlpha * fadeAlpha));
 
-    // Shikai / Bankai palette handling:
-    // Bankai / Hollow Mask uses authentic scarlet & obsidian Kuroi Getsuga palette
-    // Shikai uses hue rotation to electric cyan
-    if (!effect.isBankaiOrMask) {
-      ctx.filter = 'hue-rotate(185deg) saturate(1.2)';
-    }
-
     // Scale calibrated so outer leading tip (100px from pivot in sprite) matches blade reach
     const scale = (bladeReach / 100) * ((effect.step === 3) ? 1.15 : 1.0);
     const drawW = 256 * scale;
@@ -2220,11 +2214,10 @@ export function drawIchigoSlashArc(ctx, fighter) {
     const anchorY = 135 * scale;
 
     if (frameImg && frameImg.complete && ((frameImg.naturalWidth || frameImg.width || 0) > 0)) {
-      ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
-    }
-
-    if (!effect.isBankaiOrMask) {
-      ctx.filter = 'none';
+      const slashImg = !effect.isBankaiOrMask
+        ? getFilteredSpriteCanvas(frameImg, 'hue-rotate(185deg) saturate(1.2)')
+        : frameImg;
+      ctx.drawImage(slashImg, -anchorX, -anchorY, drawW, drawH);
     }
 
     // ── Discrete Reiatsu Stepped Pixel Sparks along crescent span during peak cutting frames (frames 3 to 7) ──

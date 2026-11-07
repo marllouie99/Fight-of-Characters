@@ -12,6 +12,7 @@
 
 import { state } from '../../core/state.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
+import { getFilteredSpriteCanvas } from '../graphicsCache.js';
 
 let _gokuHairImage = null;
 let _gokuHairImageLoading = false;
@@ -68,17 +69,17 @@ export function _drawGokuHair(ctx, r, facingLeft = false, isSuperSaiyan = false)
     if (rot !== 0) ctx.rotate(rot);
     if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
     if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
-      if (isSuperSaiyan) {
-        ctx.filter = 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)';
-      }
-      ctx.drawImage(hairImg, -targetHairWidth / 2, -targetHairHeight / 2, targetHairWidth, targetHairHeight);
+      const srcImg = isSuperSaiyan
+        ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
+        : hairImg;
+      ctx.drawImage(srcImg, -targetHairWidth / 2, -targetHairHeight / 2, targetHairWidth, targetHairHeight);
     }
   } else {
     if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
-      if (isSuperSaiyan) {
-        ctx.filter = 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)';
-      }
-      ctx.drawImage(hairImg, drawX, drawY, targetHairWidth, targetHairHeight);
+      const srcImg = isSuperSaiyan
+        ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
+        : hairImg;
+      ctx.drawImage(srcImg, drawX, drawY, targetHairWidth, targetHairHeight);
     }
   }
 

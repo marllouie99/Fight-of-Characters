@@ -87,7 +87,7 @@ globalThis.document = {
   querySelector: () => null,
   querySelectorAll: () => [],
   createElement: (tag) => {
-    if (tag === 'canvas') return mockCanvas;
+    if (tag === 'canvas') { const c = createMockCtx(); c.canvas.style = {}; c.canvas.getContext = () => c; return c.canvas; }
     const el = { style: {}, classList: { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false }, textContent: '', innerHTML: '', addEventListener: () => {}, appendChild: () => ({}), removeChild: () => ({}), children: [], querySelector: () => null, querySelectorAll: () => [] };
     el.firstElementChild = el;
     return el;

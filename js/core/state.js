@@ -1399,7 +1399,8 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
   }
 
   // Prune oldest texts when at capacity
-  if (state.floatingTexts.length >= MAX_FLOATING_TEXTS) {
+  const maxAllowedTexts = (state.isMobileDevice || (typeof window !== 'undefined' && window.innerWidth <= 768)) ? 14 : MAX_FLOATING_TEXTS;
+  if (state.floatingTexts.length >= maxAllowedTexts) {
     const dropped = state.floatingTexts.shift();
     if (dropped) recycleFloatingText(dropped);
   }

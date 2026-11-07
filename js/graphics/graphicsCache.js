@@ -4,6 +4,37 @@ import { isMobileDevice } from '../core/state.js';
 const _imageCache = new Map();
 let _totalPreloadCount = 0;
 let _loadedPreloadCount = 0;
+let _gpuWarmupCanvas = null;
+let _gpuWarmupCtx = null;
+
+/**
+ * Forces immediate asynchronous bitmap decode and GPU texture upload for a loaded HTMLImageElement
+ * by blitting a 1x1 texel into a persistent offscreen canvas (Rule 35 SceneLoadingCurtain pattern).
+ * Eliminates 100-300ms first-cast lag spikes when domain overlays or ultimate sprite sheets first appear.
+ * @param {HTMLImageElement} img
+ */
+export function warmImageOnGpu(img) {
+  if (!img || typeof document === 'undefined') return;
+  const upload = () => {
+    try {
+      if (!_gpuWarmupCanvas) {
+        _gpuWarmupCanvas = document.createElement('canvas');
+        _gpuWarmupCanvas.width = 16;
+        _gpuWarmupCanvas.height = 16;
+        _gpuWarmupCtx = _gpuWarmupCanvas.getContext('2d');
+      }
+      if (_gpuWarmupCtx && img.complete && img.naturalWidth > 0) {
+        _gpuWarmupCtx.clearRect(0, 0, 2, 2);
+        _gpuWarmupCtx.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+      }
+    } catch (e) {}
+  };
+  if (typeof img.decode === 'function') {
+    img.decode().then(upload).catch(upload);
+  } else {
+    upload();
+  }
+}
 
 const FIGHTER_OVERLAY_MAP = {
   mahito: 'Assets/Overlays/mahitos-de.png',
@@ -22,11 +53,18 @@ const FIGHTER_OVERLAY_MAP = {
 /**
  * Preload an image asset so it's fully resident in memory before combat.
  * @param {string} src
+ * @param {boolean} [warmGpu=false] - Whether to decode and upload a 1x1 GPU texel immediately upon load
  * @returns {HTMLImageElement|undefined}
  */
-export function preloadImage(src) {
+export function preloadImage(src, warmGpu = false) {
   if (!src || typeof Image === 'undefined') return;
-  if (_imageCache.has(src)) return _imageCache.get(src);
+  if (_imageCache.has(src)) {
+    const cached = _imageCache.get(src);
+    if (warmGpu && cached && cached.complete && cached.naturalWidth > 0) {
+      warmImageOnGpu(cached);
+    }
+    return cached;
+  }
 
   _totalPreloadCount++;
   const img = new Image();
@@ -35,6 +73,9 @@ export function preloadImage(src) {
   }
   img.onload = () => {
     _loadedPreloadCount++;
+    if (warmGpu) {
+      warmImageOnGpu(img);
+    }
   };
   img.onerror = () => {
     _loadedPreloadCount++;
@@ -96,7 +137,8 @@ export function initGraphicsCache() {
 }
 
 /**
- * Preloads visual assets and domain overlays specifically for the active match combatants.
+ * Preloads visual assets and domain overlays specifically for the active match combatants,
+ * and decodes/uploads them to the GPU before Round 1 starts (Rule 35 SceneLoadingCurtain pattern).
  * @param {Array<Object>} fighters
  */
 export function preloadActiveMatchFighterVisuals(fighters) {
@@ -109,14 +151,57 @@ export function preloadActiveMatchFighterVisuals(fighters) {
     if (!charId) continue;
 
     if (FIGHTER_OVERLAY_MAP[charId]) {
-      preloadImage(FIGHTER_OVERLAY_MAP[charId]);
+      preloadImage(FIGHTER_OVERLAY_MAP[charId], true);
     }
 
     const cfg = CONFIG[charId] || CONFIG[f.type] || CONFIG[def.id];
     if (cfg && cfg.assets && typeof cfg.assets === 'object') {
       for (const assetPath of Object.values(cfg.assets)) {
         if (typeof assetPath === 'string' && (assetPath.endsWith('.png') || assetPath.endsWith('.jpg') || assetPath.endsWith('.webp'))) {
-          preloadImage(assetPath);
+          preloadImage(assetPath, true);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Uploads 1x1 texels of all loaded active-combatant images directly onto the target 2D canvas context
+ * so the browser's GPU texture cache has every active fighter asset bound before combat begins.
+ * @param {Array<Object>} fighters
+ * @param {CanvasRenderingContext2D} [targetCtx]
+ */
+export function warmActiveFighterTexturesOnGpu(fighters, targetCtx = null) {
+  if (!Array.isArray(fighters) || _imageCache.size === 0) return;
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i];
+    if (!f) continue;
+    const def = f._def || f;
+    const charId = String(f.characterId || f.type || def.type || def.id || '').toLowerCase();
+    if (!charId) continue;
+
+    const paths = [];
+    if (FIGHTER_OVERLAY_MAP[charId]) paths.push(FIGHTER_OVERLAY_MAP[charId]);
+    const cfg = CONFIG[charId] || CONFIG[f.type] || CONFIG[def.id];
+    if (cfg && cfg.assets && typeof cfg.assets === 'object') {
+      for (const p of Object.values(cfg.assets)) {
+        if (typeof p === 'string') paths.push(p);
+      }
+    }
+
+    for (let j = 0; j < paths.length; j++) {
+      const img = _imageCache.get(paths[j]);
+      if (img && img.complete && img.naturalWidth > 0) {
+        warmImageOnGpu(img);
+        if (targetCtx && typeof targetCtx.drawImage === 'function') {
+          try {
+            targetCtx.save();
+            targetCtx.globalAlpha = 0.001;
+            targetCtx.drawImage(img, 0, 0, 1, 1, -10, -10, 1, 1);
+            targetCtx.restore();
+          } catch (e) {
+            try { targetCtx.restore(); } catch (_) {}
+          }
         }
       }
     }
@@ -231,3 +316,48 @@ export function getCachedRadialGradientCanvas(key, size, stops) {
     ctx.fill();
   });
 }
+
+const _filteredSpriteCache = new WeakMap();
+
+/**
+ * Pre-bakes a CSS/Canvas filter (e.g. 'hue-rotate(185deg) saturate(1.2)') onto an offscreen canvas
+ * once per (Image, filterStr) pair so the 60 FPS game loop never sets `ctx.filter` on `state.ctx`
+ * (preventing mobile/desktop Skia FBO pipeline flushes and multi-pass convolution stalls).
+ * @param {HTMLImageElement|HTMLCanvasElement} img
+ * @param {string} filterStr
+ * @returns {HTMLCanvasElement|HTMLImageElement}
+ */
+export function getFilteredSpriteCanvas(img, filterStr) {
+  if (!img || !filterStr || filterStr === 'none') return img;
+  const w = img.naturalWidth || img.width || 0;
+  const h = img.naturalHeight || img.height || 0;
+  if (w <= 0 || h <= 0 || typeof document === 'undefined') return img;
+
+  let byFilter = _filteredSpriteCache.get(img);
+  if (!byFilter) {
+    byFilter = new Map();
+    _filteredSpriteCache.set(img, byFilter);
+  }
+  let cached = byFilter.get(filterStr);
+  if (cached && cached.width === w && cached.height === h) {
+    return cached;
+  }
+
+  try {
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const octx = off.getContext('2d');
+    if (octx) {
+      octx.save();
+      octx.imageSmoothingEnabled = false;
+      octx.filter = filterStr;
+      octx.drawImage(img, 0, 0, w, h);
+      octx.restore();
+      byFilter.set(filterStr, off);
+      return off;
+    }
+  } catch (e) {}
+  return img;
+}
+

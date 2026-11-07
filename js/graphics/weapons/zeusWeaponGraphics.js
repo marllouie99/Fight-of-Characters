@@ -2,6 +2,7 @@ import { state } from '../../core/state.js';
 import { getHandSize, CONFIG } from '../../core/config.js';
 import { zeusConfig } from '../../configs/characters/zeusConfig.js';
 import { drawZeusHand } from '../fighters/zeusSkin.js';
+import { getFilteredSpriteCanvas } from '../graphicsCache.js';
 
 
 export function drawThunderboltShape(ctx, scale = 1, pulse = 1) {
@@ -380,10 +381,8 @@ export function _drawZeusAnimatedThunderstrikeSprite(ctx, scale = 1.15, p = 0, a
   const anchorY = 128 * scale;
 
   if (isGreen) {
-    ctx.save();
-    ctx.filter = 'hue-rotate(280deg)';
-    ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
-    ctx.restore();
+    const greenImg = getFilteredSpriteCanvas(frameImg, 'hue-rotate(280deg)');
+    ctx.drawImage(greenImg, -anchorX, -anchorY, drawW, drawH);
   } else {
     ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
   }

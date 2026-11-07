@@ -1,4 +1,5 @@
 import { drawCachedRadialGlow } from '../glowSpriteCache.js';
+import { getFilteredSpriteCanvas } from '../graphicsCache.js';
 import { getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 
@@ -672,10 +673,8 @@ export function _drawGojoAnimatedPurpleExplosionSprite(ctx, maxR, p, alpha = 1.0
   const anchorY = 128 * scale;
 
   if (isGreen) {
-    ctx.save();
-    ctx.filter = 'hue-rotate(240deg)';
-    ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
-    ctx.restore();
+    const greenImg = getFilteredSpriteCanvas(frameImg, 'hue-rotate(240deg)');
+    ctx.drawImage(greenImg, -anchorX, -anchorY, drawW, drawH);
   } else {
     ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
   }
@@ -859,10 +858,8 @@ export function drawGojoPurpleTravelSprite(ctx, drawR, time = Date.now(), is200 
   const anchorY = drawH / 2;
 
   if (color === 'green') {
-    ctx.save();
-    ctx.filter = 'hue-rotate(240deg)';
-    ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
-    ctx.restore();
+    const greenImg = getFilteredSpriteCanvas(frameImg, 'hue-rotate(240deg)');
+    ctx.drawImage(greenImg, -anchorX, -anchorY, drawW, drawH);
   } else {
     ctx.drawImage(frameImg, -anchorX, -anchorY, drawW, drawH);
   }

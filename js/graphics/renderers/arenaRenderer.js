@@ -1001,27 +1001,66 @@ export function drawArenaWatermark(ctx = state.ctx, alreadyInCameraSpace = false
   const text = watermarkCfg?.text || '@CronosphereFOC';
   const fontSize = watermarkCfg?.fontSize || 14;
   const font = `700 ${fontSize}px ${watermarkCfg?.fontFamily || '"Outfit", "Rajdhani", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'}`;
-  ctx.font = font;
-  if ('letterSpacing' in ctx) {
-    ctx.letterSpacing = watermarkCfg?.letterSpacing || '1px';
-  }
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  const letterSpacing = watermarkCfg?.letterSpacing || '1px';
   const watermarkX = arena.x + arena.width / 2;
   const bottomOffset = watermarkCfg?.bottomOffset || 22;
   const watermarkY = Math.round(arena.y + arena.height - bottomOffset);
+  const strokeWidth = watermarkCfg?.strokeWidth ?? 2.5;
+  const strokeColor = watermarkCfg?.strokeColor || 'rgba(0, 0, 0, 0.75)';
+  const fillColor = watermarkCfg?.color || (isDark ? '#FFFFFF' : '#FFFFFF');
+
+  // Pre-bake static watermark into an offscreen canvas in browser environments (Rule 35: zero per-frame strokeText tessellation)
+  if (typeof HTMLCanvasElement !== 'undefined' && typeof state !== 'undefined') {
+    const wmKey = `${text}_${font}_${letterSpacing}_${strokeWidth}_${strokeColor}_${fillColor}`;
+    if (!state._watermarkStampCanvas || state._watermarkStampCanvas._wmKey !== wmKey) {
+      const wmW = Math.max(220, Math.ceil(text.length * fontSize * 0.9));
+      const wmH = Math.max(28, Math.ceil(fontSize * 2.2));
+      const off = document.createElement('canvas');
+      off.width = wmW;
+      off.height = wmH;
+      const octx = off.getContext('2d');
+      if (octx) {
+        octx.font = font;
+        if ('letterSpacing' in octx) octx.letterSpacing = letterSpacing;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        if (strokeWidth > 0) {
+          octx.strokeStyle = strokeColor;
+          octx.lineWidth = strokeWidth;
+          octx.lineJoin = 'round';
+          octx.strokeText(text, wmW / 2, wmH / 2);
+        }
+        octx.fillStyle = fillColor;
+        octx.fillText(text, wmW / 2, wmH / 2);
+        off._wmKey = wmKey;
+        state._watermarkStampCanvas = off;
+      }
+    }
+    if (state._watermarkStampCanvas) {
+      const stamp = state._watermarkStampCanvas;
+      ctx.drawImage(stamp, Math.round(watermarkX - stamp.width / 2), Math.round(watermarkY - stamp.height / 2));
+      ctx.restore();
+      return;
+    }
+  }
+
+  ctx.font = font;
+  if ('letterSpacing' in ctx) {
+    ctx.letterSpacing = letterSpacing;
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   // Contrast stroke outline so bright font pops clearly against all arena tiles/floors/dim screens
-  const strokeWidth = watermarkCfg?.strokeWidth ?? 2.5;
   if (strokeWidth > 0) {
-    ctx.strokeStyle = watermarkCfg?.strokeColor || 'rgba(0, 0, 0, 0.75)';
+    ctx.strokeStyle = strokeColor;
     ctx.lineWidth = strokeWidth;
     ctx.lineJoin = 'round';
     ctx.strokeText(text, watermarkX, watermarkY);
   }
 
   // Bright font fill color
-  ctx.fillStyle = watermarkCfg?.color || (isDark ? '#FFFFFF' : '#FFFFFF');
+  ctx.fillStyle = fillColor;
   ctx.fillText(text, watermarkX, watermarkY);
 
   ctx.restore();

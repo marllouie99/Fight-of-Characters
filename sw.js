@@ -5,8 +5,8 @@
 // 2. ASSETS_CACHE: Persistent static textures & assets (survives code deploys; invalidated on version bumps)
 // ─────────────────────────────────────────────
 
-const SHELL_CACHE = 'foc-shell-v1.0.7';
-const ASSETS_CACHE = 'foc-assets-v1.0.7';
+const SHELL_CACHE = 'foc-shell-v1.0.11';
+const ASSETS_CACHE = 'foc-assets-v1.0.11';
 
 // Minimal core application shell assets pre-cached on install
 const PRECACHE_SHELL_ASSETS = [

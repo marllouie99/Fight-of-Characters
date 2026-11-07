@@ -63,7 +63,7 @@ export const unarmedConfig = {
   enableMomentumScaling: true,      // Master toggle for Permanent Momentum & Speed Scaling
   enableBallSteering: false,        // Pure natural physical ricochets without artificial steering towards opponent
   maxMomentumStacks: null,          // Uncapped: Momentum stacks scale infinitely with every hit connected (zero cap)
-  speedPerHit: 1.00,                // +1.00 permanent max speed per enemy hit
+  speedPerHit: 0.50,                // +1.00 permanent max speed per enemy hit
   damagePerHit: 1.0,                // +1.0 permanent damage per momentum level
   maxTerminalVelocity: null,        // Uncapped: Speed scales infinitely without terminal velocity limits (zero cap)
   wallBounceMultiplier: 1.0,        // Wall bounces conserve natural velocity without artificial acceleration

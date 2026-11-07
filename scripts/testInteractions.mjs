@@ -80,7 +80,7 @@ globalThis.document = {
   querySelector: () => null,
   querySelectorAll: () => [],
   createElement: (tag) => {
-    if (tag === 'canvas') return mockCanvas;
+    if (tag === 'canvas') { const c = createMockCtx(); c.canvas.getContext = () => c; return c.canvas; }
     const el = {
       id: '',
       tagName: tag.toUpperCase(),
@@ -12362,7 +12362,7 @@ async function runInteractionTests() {
     unarmed.momentumStacks = 45;
     unarmed._syncLiveDamageAndSpeed();
     assert(unarmed.momentumStacks === 45, 'Unarmed momentum stacks must be uncapped');
-    assert(unarmed.speed >= 45.0, 'Unarmed speed must scale with all momentum stacks without being capped');
+    assert(unarmed.speed >= (unarmedConfig.speed || 5.0) + 45 * (unarmedConfig.speedPerHit ?? 0.5) - 0.1, 'Unarmed speed must scale with all momentum stacks without being capped');
     const expectedDmg = (unarmedConfig.baseCollisionDamage || 30) + 45 * (unarmedConfig.damagePerHit || 1.0) +
       Math.max(0, unarmed.speed - unarmed.baseSpeed) * (unarmedConfig.speedDamageScale !== undefined ? unarmedConfig.speedDamageScale : 1.0);
     assert(unarmed.damage >= expectedDmg - 1, 'Unarmed damage must scale with all momentum stacks without being capped');

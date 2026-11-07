@@ -277,10 +277,13 @@ export function drawFloatingTexts() {
     const isCrit = Boolean(t.isCrit);
     ctx.font = isCrit ? FONT_CRIT : FONT_DEFAULT;
 
-    // Single crisp solid black outline (Rule 11 compliant, no CPU blur, no multi-pass)
-    ctx.lineWidth = isCrit ? 4.0 : 3.2;
-    ctx.strokeStyle = '#000000';
-    ctx.strokeText(t.text, 0, 0);
+    // Single crisp solid black outline (Rule 11 compliant, no CPU blur; skip on mobile high-density to avoid rasterizer stalls)
+    const skipStrokeOnMobileDensity = Boolean(state.isMobileDevice && texts.length > 8 && !isCrit);
+    if (!skipStrokeOnMobileDensity) {
+      ctx.lineWidth = isCrit ? 4.0 : 3.2;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeText(t.text, 0, 0);
+    }
 
     // Single vibrant fill
     ctx.fillStyle = t.color || (isCrit ? '#FF3B30' : '#FFFFFF');

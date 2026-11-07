@@ -69,6 +69,18 @@ export const MOBILE_ASSET_MANIFEST = {
     542,
     1207
   ],
+  "Assets/model/avatar/GrabbingShadowHand1.png": [
+    226,
+    1890
+  ],
+  "Assets/model/avatar/GrabbingShadowHand2.png": [
+    216,
+    1890
+  ],
+  "Assets/model/avatar/GrabbingShadowHand3.png": [
+    170,
+    1890
+  ],
   "Assets/model/avatar/MaskHollowEyes.png": [
     186,
     5064
@@ -280,6 +292,14 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/escanor/escanor_ultimate_arena_overlay.png": [
     2400,
     1792
+  ],
+  "Assets/model/exoMech/QuestDraedon.png": [
+    400,
+    1440
+  ],
+  "Assets/model/exoMech/QuestDraedonGlowmask.png": [
+    400,
+    1440
   ],
   "Assets/model/eyeOfCthulhu/eoc-gore-spritesheet.png": [
     1024,
@@ -544,6 +564,10 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/namelessDeity/Nameless-Deity-sprite-sheet.png": [
     1024,
     1024
+  ],
+  "Assets/model/namelessDeity/NamelessDeity-CosmicLightCircleRing.png": [
+    1846,
+    116
   ],
   "Assets/model/namelessDeity/NamelessDeity-LightLaserCamellia.png": [
     740,
@@ -869,7 +893,15 @@ export const MOBILE_ASSET_MANIFEST = {
     1672,
     336
   ],
+  "Assets/effects/Avatar/StolenPlanetoid_CrimsonTrees.png": [
+    1672,
+    336
+  ],
   "Assets/effects/Avatar/StolenPlanetoid_Desert.png": [
+    1672,
+    312
+  ],
+  "Assets/effects/Avatar/StolenPlanetoid_DesertTrees.png": [
     1672,
     312
   ],
@@ -877,7 +909,27 @@ export const MOBILE_ASSET_MANIFEST = {
     1672,
     312
   ],
+  "Assets/effects/Avatar/StolenPlanetoid_ForestTrees.png": [
+    1672,
+    312
+  ],
+  "Assets/effects/Avatar/StolenPlanetoid_Marble.png": [
+    1672,
+    288
+  ],
+  "Assets/effects/Avatar/StolenPlanetoid_Ogscule.png": [
+    1672,
+    312
+  ],
+  "Assets/effects/Avatar/StolenPlanetoid_OgsculeTrees.png": [
+    1672,
+    312
+  ],
   "Assets/effects/Avatar/StolenPlanetoid_Snow.png": [
+    1552,
+    288
+  ],
+  "Assets/effects/Avatar/StolenPlanetoid_SnowTrees.png": [
     1552,
     288
   ],
@@ -936,5 +988,13 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/effects/Static Effect/static-gold-b.png": [
     3072,
     256
+  ],
+  "Assets/weapon/brassknuckle.png": [
+    1065,
+    1531
+  ],
+  "Assets/weapon/Escanor-Weapon.png": [
+    1774,
+    887
   ]
 };

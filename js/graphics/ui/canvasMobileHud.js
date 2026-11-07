@@ -29,6 +29,33 @@ let _lastSyncedHudMode = null;
 
 // Ghost health bar interpolation tracker: fighter -> { ghostHp, holdTimer, lastTargetHp }
 const _ghostHpTrackers = new WeakMap();
+// Throttled skill snapshot cache (Weapon Ball Z BattleHUDManager.refreshInterval pattern): fighter -> { frame, rows }
+const _mobileSkillRowCache = new WeakMap();
+
+function _getThrottledMobileSkillRows(f, themeColor) {
+  const curFrame = typeof state !== 'undefined' ? (state.frameCount || 0) : 0;
+  let cached = _mobileSkillRowCache.get(f);
+  if (cached && (curFrame - cached.frame) >= 0 && (curFrame - cached.frame) < 3) {
+    return cached.rows;
+  }
+  const rawSkills = getSkillDataForFighter(f) || [];
+  const rows = [];
+  for (let i = 0; i < rawSkills.length && rows.length < 4; i++) {
+    const s = rawSkills[i];
+    if (!shouldShowFighterSkill(f, s)) continue;
+    const status = resolveSkillStatus(s, f);
+    const cleanLabel = (cleanSkillLabel(s.label) || 'SKILL').toUpperCase();
+    rows.push({
+      s,
+      status,
+      cleanLabel,
+      sPct: Math.min(100, Math.max(0, s.pct || 0)),
+      fillColor: status.isReady ? (s.color || themeColor) : 'rgba(255, 255, 255, 0.18)'
+    });
+  }
+  _mobileSkillRowCache.set(f, { frame: curFrame, rows });
+  return rows;
+}
 
 export function isMobileCanvasHudActive() {
   if (typeof state === 'undefined') return false;
@@ -340,19 +367,15 @@ function _drawFighterCanvasCard(ctx, x, y, w, h, f, fighterIndex, wins, isRightA
   ctx.fillStyle = '#FFFFFF';
   ctx.fillText(hpText, barX + barW / 2, barY + barH / 2);
 
-  // ── SKILL ROWS (Up to 4 skills) ──
-  const rawSkills = getSkillDataForFighter(f) || [];
-  const skills = rawSkills.filter(s => shouldShowFighterSkill(f, s)).slice(0, 4);
+  // ── SKILL ROWS (Up to 4 skills, throttled via BattleHUDManager.refreshInterval pattern) ──
+  const skillRows = _getThrottledMobileSkillRows(f, themeColor);
 
   let skillY = barY + barH + 8;
   const skillH = 21;
   const skillGap = 4;
 
-  for (let sIdx = 0; sIdx < skills.length; sIdx++) {
-    const s = skills[sIdx];
-    const status = resolveSkillStatus(s, f);
-    const cleanLabel = cleanSkillLabel(s.label) || 'SKILL';
-    const sPct = Math.min(100, Math.max(0, s.pct || 0));
+  for (let sIdx = 0; sIdx < skillRows.length; sIdx++) {
+    const { s, status, cleanLabel, sPct, fillColor } = skillRows[sIdx];
 
     // Skill Box Background
     ctx.fillStyle = 'rgba(18, 22, 34, 0.85)';
@@ -367,7 +390,7 @@ function _drawFighterCanvasCard(ctx, x, y, w, h, f, fighterIndex, wins, isRightA
     // Skill Progress Fill
     if (!s.noFill && sPct > 0) {
       const fillW = Math.round((barW - 2) * (sPct / 100));
-      ctx.fillStyle = status.isReady ? (s.color || themeColor) : 'rgba(255, 255, 255, 0.18)';
+      ctx.fillStyle = fillColor;
       ctx.globalAlpha = status.isReady ? 0.35 : 0.22;
       ctx.fillRect(barX + 1, skillY + 1, fillW, skillH - 2);
       ctx.globalAlpha = 1.0;
@@ -378,7 +401,7 @@ function _drawFighterCanvasCard(ctx, x, y, w, h, f, fighterIndex, wins, isRightA
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#e2e8f0';
-    ctx.fillText(cleanLabel.toUpperCase(), barX + 6, skillY + skillH / 2);
+    ctx.fillText(cleanLabel, barX + 6, skillY + skillH / 2);
 
     // Skill Cooldown Status (Right)
     ctx.font = '900 9.5px "Rajdhani", monospace';

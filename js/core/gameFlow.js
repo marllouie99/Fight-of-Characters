@@ -23,6 +23,7 @@ import { clearHealthHud } from '../graphics/hudManager.js';
 import { clearHudShatters } from '../graphics/particles/hudShatterEffect.js';
 import { resetBlownDecorations } from '../systems/arenaDecorationSystem.js';
 import { AUDIO_CONFIG } from '../configs/audioConfig.js';
+import { syncMobileDomHudVisibility, isMobileCanvasHudActive } from '../graphics/ui/canvasMobileHud.js';
 import { clearDroppedMagazines } from '../graphics/particles/johnWickDroppedMagazine.js';
 import { clearDriveBys } from '../systems/cjDriveBySystem.js';
 import { clearFloatingJetpacks } from '../graphics/particles/cjFloatingJetpack.js';
@@ -1399,6 +1400,8 @@ export function startCountdown() {
 
 export function resetMatch(showFaceOff = true) {
   state._isChampionLayoutActive = false;
+  // Mobile GPU In-Canvas HUD: Ensure zero-DOM HUD state is enforced on match startup
+  syncMobileDomHudVisibility(isMobileCanvasHudActive());
   if (state.mode === GAME_MODES.SURVIVOR || state.mode === 'Survivor') {
     survivorSystem.initMatch(state.fighters[0]);
   } else {

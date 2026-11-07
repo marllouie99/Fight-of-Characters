@@ -5,6 +5,8 @@
 // ─────────────────────────────────────────────
 
 import { MOBILE_ASSET_MANIFEST } from '../configs/mobileAssetManifest.js';
+import { warmActiveFighterTexturesOnGpu } from './graphicsCache.js';
+import { drawPixelHand } from './renderers/fighterRenderer.js';
 
 function normalizeAssetPath(url) {
   if (!url || typeof url !== 'string') return '';
@@ -125,10 +127,14 @@ export function initMobileAssetScaler(isMobileDevice = false) {
           this._mobileScale = 1.0;
         }
 
-        // Defer eager module-boot fighter/weapon/effect image loads until first access or explicit onload listener
+        // Defer eager module-boot fighter/weapon/effect/overlay image loads until first access or explicit onload listener
         const isDeferrableAsset = normalized.startsWith('Assets/model/') ||
           normalized.startsWith('Assets/character/') ||
-          normalized.startsWith('Assets/effects/');
+          normalized.startsWith('Assets/effects/') ||
+          normalized.startsWith('Assets/Overlays/') ||
+          normalized.startsWith('Assets/Sprites/') ||
+          normalized.startsWith('Assets/weapons/') ||
+          normalized.startsWith('Assets/weapon/');
         const hasOnloadHandler = Boolean(this.onload || this._hasLoadListener);
 
         if (isDeferrableAsset && !hasOnloadHandler) {
@@ -392,13 +398,16 @@ export function prewarmMatchAssets(fighters, gameCtx = null) {
       } else if (typeof f.drawSkin === 'function') {
         f.drawSkin(wCtx);
       }
+      // Pre-bake canonical pixel hand cache for this fighter's palette (Rule 20 & Rule 35)
+      drawPixelHand(wCtx, 0, 0, (f.r || 25) * 0.30, f.color || '#FFE0BD', '#000000');
       wCtx.restore();
     } catch (e) {
       try { wCtx.restore(); } catch (_) {}
     }
   }
 
-  // 4. Upload warm canvas texture to GPU via a 1x1 near-zero-alpha blit if gameCtx is available
+  // 4. Upload warm canvas texture & active fighter image textures to GPU via 1x1 near-zero-alpha blit
+  warmActiveFighterTexturesOnGpu(activeList, gameCtx || wCtx);
   if (gameCtx && typeof gameCtx.drawImage === 'function') {
     try {
       gameCtx.save();
