@@ -413,6 +413,99 @@ async function verifyAll() {
     hasErrors = true;
   }
 
+  // 2.63 Audio Subsystem & Mobile Web Audio Fast-Path Integrity Scanner
+  console.log('🔍 [Audio Subsystem & Fast-Path Integrity Scanner] Verifying Web Audio fast-path, voiceline governance & identifier safety...');
+  let audioIntegrityErrors = 0;
+
+  try {
+    const soundSysPath = path.join(process.cwd(), 'js/systems/soundSystem.js');
+    const soundSysContent = fs.readFileSync(soundSysPath, 'utf8');
+
+    // 1. Static AST / Token safety: Check that playSound does not reference undeclared 'key' identifier
+    const playSoundIdx = soundSysContent.indexOf('export function playSound(');
+    if (playSoundIdx !== -1) {
+      const nextFuncIdx = soundSysContent.indexOf('\nexport function ', playSoundIdx + 20);
+      const playSoundBlock = soundSysContent.substring(playSoundIdx, nextFuncIdx !== -1 ? nextFuncIdx : playSoundIdx + 3000);
+      
+      const badKeyMatch = playSoundBlock.match(/\bkey\s*===|\bkey\s*!==|\bkey\s*==|\bkey\s*!=/);
+      if (badKeyMatch) {
+        console.error(`❌ [UNDECLARED IDENTIFIER IN playSound]: Found rogue "${badKeyMatch[0]}" inside playSound() without declaring key!`);
+        hasErrors = true;
+        audioIntegrityErrors++;
+      }
+    }
+
+    // 2. Mobile concurrency and cache safety limits
+    const {
+      isVoicelineAudio,
+      getVoicelinePriority,
+      stopFighterVoice,
+      MAX_ACTIVE_MOBILE_VOICES
+    } = await import('../js/systems/soundSystem.js');
+
+    if (typeof MAX_ACTIVE_MOBILE_VOICES === 'number' && MAX_ACTIVE_MOBILE_VOICES < 16) {
+      console.error(`❌ [INSUFFICIENT MOBILE VOICE CAPACITY]: MAX_ACTIVE_MOBILE_VOICES is ${MAX_ACTIVE_MOBILE_VOICES}, expected >= 16 to prevent combat voice starvation.`);
+      hasErrors = true;
+      audioIntegrityErrors++;
+    }
+
+    // 3. Mechanical Skill SFX must NOT be classified as voicelines
+    const mechanicalSfxList = [
+      'redcharging', 'redchanneling', 'reddeploy', 'redblast',
+      'purpledeploy', 'mixing', 'gojodomaindeploy', 'bang',
+      'thunderclap', 'machinegunblow', 'mahoraga_summon'
+    ];
+    for (const sfx of mechanicalSfxList) {
+      if (isVoicelineAudio(sfx)) {
+        console.error(`❌ [SFX MISCLASSIFIED AS VOICELINE]: "${sfx}" must NOT be classified as a character voiceline (would override speaking channel).`);
+        hasErrors = true;
+        audioIntegrityErrors++;
+      }
+    }
+
+    // 4. True character voice lines must be correctly identified
+    const trueVoiceList = [
+      'gojodomain', 'hollowpurple', 'fuga', 'mybestfriend',
+      'champion', 'ragescream', 'bankai'
+    ];
+    for (const v of trueVoiceList) {
+      if (!isVoicelineAudio(v)) {
+        console.error(`❌ [VOICELINE NOT CLASSIFIED]: "${v}" MUST be classified as a character voiceline.`);
+        hasErrors = true;
+        audioIntegrityErrors++;
+      }
+    }
+
+    // 5. Voiceline priority levels: Domains/Ultimates must be Level 3
+    const priority3List = ['gojodomain', 'hollowpurple', 'fuga', 'purelovebeam', 'seriouspunch', 'universalannihilation'];
+    for (const p3 of priority3List) {
+      const prio = getVoicelinePriority(p3);
+      if (prio !== 3) {
+        console.error(`❌ [INCORRECT VOICELINE PRIORITY]: "${p3}" returned priority ${prio}, expected 3 (Domain/Ultimate).`);
+        hasErrors = true;
+        audioIntegrityErrors++;
+      }
+    }
+
+    // 6. Named technique chants must be Level 2
+    const priority2List = ['bankai', 'getsugatensho', 'thunderclap', 'reze_boom', 'blackflash'];
+    for (const p2 of priority2List) {
+      const prio = getVoicelinePriority(p2);
+      if (prio !== 2) {
+        console.error(`❌ [INCORRECT VOICELINE PRIORITY]: "${p2}" returned priority ${prio}, expected 2 (Technique/Chant).`);
+        hasErrors = true;
+        audioIntegrityErrors++;
+      }
+    }
+
+    if (audioIntegrityErrors === 0) {
+      console.log('✅ Verified Web Audio fast-path integrity, voiceline priority matrix & zero-cutoff rules!');
+    }
+  } catch (err) {
+    console.error('❌ [AUDIO SUBSYSTEM INTEGRITY SCANNER ERROR]:', err);
+    hasErrors = true;
+  }
+
   // 2.65 Fighter Grade Validator (cosmetic B / A / S / SS tiers — js/configs/gradeConfig.js)
   console.log('🔍 [Fighter Grade Validator] Checking grade attributes on character configs & FIGHTER_DEFS...');
   let gradeErrors = 0;

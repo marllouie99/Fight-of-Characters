@@ -161,29 +161,35 @@ globalThis.AudioContext = class {
     this.state = 'running';
     this.currentTime = 0;
     this.destination = {};
-    this.decodeAudioData = async (buffer) => new globalThis.AudioBuffer();
-    this.createBufferSource = () => ({
+  }
+  decodeAudioData(buffer) {
+    return Promise.resolve(new globalThis.AudioBuffer());
+  }
+  createBufferSource() {
+    return {
       buffer: null,
       playbackRate: { value: 1.0 },
       connect: () => {},
       start: () => {},
       stop: () => {},
       disconnect: () => {}
-    });
-    this.createGain = () => ({
+    };
+  }
+  createGain() {
+    return {
       gain: { value: 1.0, setValueAtTime: () => {}, linearRampToValueAtTime: () => {}, cancelScheduledValues: () => {} },
       connect: () => {},
       disconnect: () => {}
-    });
-    this.createBuffer = (channels, length, sampleRate) => {
-      const sRate = sampleRate || 44100;
-      return new globalThis.AudioBuffer({
-        numberOfChannels: channels,
-        length,
-        sampleRate: sRate,
-        duration: length / sRate
-      });
     };
+  }
+  createBuffer(channels, length, sampleRate) {
+    const sRate = sampleRate || 44100;
+    return new globalThis.AudioBuffer({
+      numberOfChannels: channels,
+      length,
+      sampleRate: sRate,
+      duration: length / sRate
+    });
   }
   resume() { return Promise.resolve(); }
 };
@@ -19553,6 +19559,124 @@ async function runInteractionTests() {
     assert(typeof CONFIG.COMMERCIAL_MODE === 'boolean', 'CONFIG.COMMERCIAL_MODE must be a valid boolean');
 
     console.log('      ✅ Unified Settings Modal, Audio Hardware Gain & Post-Match Tactical Standard verified cleanly.');
+  }
+
+  // Test 149: Web Audio Fast-Path Execution, Character Voice Channel Governance & Zero-Cutoff Standard
+  {
+    console.log('   149. Testing Web Audio Fast-Path Execution, Character Voice Channel Governance & Zero-Cutoff Standard...');
+    const {
+      playSound,
+      stopSound,
+      isVoicelineAudio,
+      getVoicelinePriority,
+      stopFighterVoice,
+      MAX_ACTIVE_MOBILE_VOICES
+    } = await import('../js/systems/soundSystem.js');
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const { FIGHTER_DEFS } = await import('../js/core/config.js');
+
+    // 1. Mobile Voice Limiting Budget
+    assert(MAX_ACTIVE_MOBILE_VOICES >= 16, `MAX_ACTIVE_MOBILE_VOICES must be >= 16 (got ${MAX_ACTIVE_MOBILE_VOICES})`);
+
+    // 2. Mechanical Skill SFX vs Voiceline Decoupling Standard
+    const mechanicalSfx = ['redcharging', 'redchanneling', 'reddeploy', 'purpledeploy', 'mixing', 'bang', 'thunderclap', 'machinegunblow'];
+    for (const sfx of mechanicalSfx) {
+      assert(isVoicelineAudio(sfx) === false, `Mechanical skill SFX "${sfx}" must NOT be classified as a voiceline`);
+    }
+
+    const trueVoices = ['gojodomain', 'hollowpurple', 'fuga', 'mybestfriend', 'champion'];
+    for (const v of trueVoices) {
+      assert(isVoicelineAudio(v) === true, `True character voice line "${v}" must be classified as a voiceline`);
+    }
+
+    // 3. Priority Matrix Standard
+    assert(getVoicelinePriority('gojodomain') === 3, 'gojodomain must be Priority 3 (Domain)');
+    assert(getVoicelinePriority('hollowpurple') === 3, 'hollowpurple must be Priority 3 (Ultimate)');
+    assert(getVoicelinePriority('fuga') === 3, 'fuga must be Priority 3 (Ultimate)');
+    assert(getVoicelinePriority('bankai') === 2, 'bankai must be Priority 2 (Chant/Buff)');
+    assert(getVoicelinePriority('grunt_punch') === 1, 'minor grunts must be Priority 1');
+
+    // 4. Web Audio Fast-Path Buffer Playback Execution Standard
+    // When cached as an AudioBuffer, playSound must execute through the native Web Audio hardware path,
+    // creating a BufferSourceNode and GainNode, and NEVER throwing or falling through to HTMLAudioElement.
+    const mockBuffer = new globalThis.AudioBuffer({ duration: 1.2, length: 52920, sampleRate: 44100, numberOfChannels: 2 });
+    const { preloadAudioBufferBatch } = await import('../js/systems/soundSystem.js');
+    
+    // Simulate preloaded AudioBuffer in sound system cache
+    let audioContextUsed = false;
+    let bufferSourceCreated = false;
+    let gainNodeCreated = false;
+
+    const originalCreateBufferSource = globalThis.AudioContext.prototype.createBufferSource;
+    const originalCreateGain = globalThis.AudioContext.prototype.createGain;
+
+    globalThis.AudioContext.prototype.createBufferSource = function() {
+      bufferSourceCreated = true;
+      return {
+        buffer: null,
+        playbackRate: { value: 1.0 },
+        connect: () => {},
+        start: () => {},
+        stop: () => {},
+        disconnect: () => {}
+      };
+    };
+
+    globalThis.AudioContext.prototype.createGain = function() {
+      gainNodeCreated = true;
+      return {
+        gain: { value: 1.0, setValueAtTime: () => {}, linearRampToValueAtTime: () => {}, cancelScheduledValues: () => {} },
+        connect: () => {},
+        disconnect: () => {}
+      };
+    };
+
+    try {
+      // Play a preloaded sound using the Fast Path
+      const soundKey = 'test_fast_path_sound_' + Date.now();
+      await preloadAudioBufferBatch({ [soundKey]: mockBuffer });
+
+      const handle = playSound(soundKey, 0.85);
+      assert(handle !== null, 'playSound with AudioBuffer must return an active handle');
+      assert(handle.source !== undefined, 'Handle must contain Web Audio source node (not HTMLAudio fallback)');
+      assert(handle.gainNode !== undefined, 'Handle must contain Web Audio gain node (not HTMLAudio fallback)');
+      assert(typeof handle.isPlaying === 'function', 'Handle must implement isPlaying() method');
+      assert(bufferSourceCreated === true, 'AudioContext.createBufferSource must be called on Web Audio fast path');
+      assert(gainNodeCreated === true, 'AudioContext.createGain must be called on Web Audio fast path');
+
+      stopSound(handle);
+    } finally {
+      globalThis.AudioContext.prototype.createBufferSource = originalCreateBufferSource;
+      globalThis.AudioContext.prototype.createGain = originalCreateGain;
+    }
+
+    // 5. Living Fighter Priority 3 Voiceline Preservation Standard
+    const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+    const SukunaClass = FIGHTER_CLASS_MAP['sukuna'];
+    const testGojo = new GojoClass({ ...FIGHTER_DEFS.find(d => d.id === 'gojo'), startX: 200, startY: 200 });
+    const testSukuna = new SukunaClass({ ...FIGHTER_DEFS.find(d => d.id === 'sukuna'), startX: 300, startY: 200 });
+    testGojo.hp = 100;
+    testGojo.isDead = false;
+    state.fighters = [testGojo, testSukuna];
+
+    // Trigger Gojo Domain Voiceline (Priority 3)
+    const domainVoiceHandle = playSound({ src: 'Assets/Sound Effects/Skills/gojodomain.mp3', fighter: testGojo });
+    assert(domainVoiceHandle !== null, 'Domain voiceline handle must be active');
+
+    // Simulate non-lethal interrupt (e.g. wall pin or minor knockback)
+    testGojo.interruptAttacks(true);
+    // Voiceline must NOT be killed while Gojo is alive!
+    stopFighterVoice('gojo', 100, false);
+    assert(domainVoiceHandle.isPlaying(), 'Living fighter Priority 3 domain voiceline must survive non-lethal interrupts');
+
+    // Simulate fighter death: force voice cutoff must immediately terminate the voiceline
+    testGojo.hp = 0;
+    testGojo.isDead = true;
+    testGojo.dead = true;
+    stopFighterVoice('gojo', 60, true);
+    assert(!domainVoiceHandle.isPlaying(), 'Death with force=true must cleanly terminate the active voiceline');
+
+    console.log('      ✅ Web Audio Fast-Path Execution, Character Voice Channel Governance & Zero-Cutoff Standard verified cleanly.');
   }
 
 

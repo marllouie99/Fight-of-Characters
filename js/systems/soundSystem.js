@@ -312,10 +312,10 @@ export function stopFighterVoice(characterId, fadeMs = 80, force = false) {
       }
     }
 
-    if (fadeMs > 0) {
-      fadeOutSound(rec.handle, fadeMs);
+    if (force || fadeMs <= 0) {
+      stopSound(rec.handle, true);
     } else {
-      stopSound(rec.handle);
+      fadeOutSound(rec.handle, fadeMs);
     }
     _activeCharacterVoiceHandles.delete(cId);
   }
@@ -724,6 +724,18 @@ export async function preloadAudioBuffer(src, options = {}) {
 }
 
 /**
+ * Directly caches an in-memory decoded AudioBuffer for instant zero-latency playback.
+ * Useful for procedural audio synthesis, tests, and sound assets decoded off-thread.
+ * @param {string} key - Sound key or path
+ * @param {AudioBuffer} audioBuffer - Decoded Web Audio buffer
+ */
+export function registerSoundAudioBuffer(key, audioBuffer) {
+  if (!key || !audioBuffer) return false;
+  _cache.set(key, audioBuffer);
+  return true;
+}
+
+/**
  * Concurrently batch-preloads and decodes an array of audio URLs into Web Audio buffers.
  * Employs a worker pool pattern with bounded concurrency (default 6 parallel workers)
  * to prevent network starvation and audio decoding CPU spikes while ensuring zero-latency
@@ -738,6 +750,16 @@ export async function preloadAudioBuffer(src, options = {}) {
  * @returns {Promise<{ loaded: number, errors: number, total: number }>}
  */
 export async function preloadAudioBufferBatch(urls, options = {}) {
+  if (urls && typeof urls === 'object' && !Array.isArray(urls)) {
+    let loaded = 0;
+    for (const [k, v] of Object.entries(urls)) {
+      if (k && v) {
+        _cache.set(k, v);
+        loaded++;
+      }
+    }
+    return { loaded, errors: 0, total: loaded };
+  }
   if (!Array.isArray(urls) || urls.length === 0) {
     return { loaded: 0, errors: 0, total: 0 };
   }
@@ -1308,17 +1330,24 @@ const SAME_COMBAT_SFX_COOLDOWN_MS = _isMobileSound ? 55 : 35; // HurtSoundConfig
 export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0, onEnded = null) {
   if (!src) return null;
 
-  // Support passing a sound config object directly: playSound({ src: '...', volume: 1.2, delay: -0.1, fighter: this })
+  // Support passing a sound config object or AudioBuffer directly
   let fighterObj = null;
+  let customBuffer = null;
   if (typeof src === 'object' && !Array.isArray(src)) {
-    const obj = src;
-    src = obj.src;
-    if (obj.fighter) fighterObj = obj.fighter;
-    if (obj.volume !== undefined) volume = obj.volume;
-    if (obj.speed !== undefined) speed = obj.speed;
-    if (obj.offset !== undefined) offset = obj.offset;
-    if (obj.delay !== undefined) delay = obj.delay;
-    if (obj.onEnded !== undefined) onEnded = obj.onEnded;
+    if (isAudioBufferLike(src)) {
+      customBuffer = src;
+      src = 'virtual://inline_buffer';
+    } else {
+      const obj = src;
+      src = obj.src || 'virtual://inline_buffer';
+      if (obj.buffer && isAudioBufferLike(obj.buffer)) customBuffer = obj.buffer;
+      if (obj.fighter) fighterObj = obj.fighter;
+      if (obj.volume !== undefined) volume = obj.volume;
+      if (obj.speed !== undefined) speed = obj.speed;
+      if (obj.offset !== undefined) offset = obj.offset;
+      if (obj.delay !== undefined) delay = obj.delay;
+      if (obj.onEnded !== undefined) onEnded = obj.onEnded;
+    }
   }
 
   // Strict Mute Check: If volume is zero, immediately abort playback
@@ -1435,7 +1464,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   }
 
   const spriteAudio = soundSpriteManager.getSpriteAudio(resolvedSrc) || soundSpriteManager.getSpriteAudio(rawSrc);
-  const cached = spriteAudio ? spriteAudio.buffer : (_touchCacheKey(resolvedSrc) || _touchCacheKey(rawSrc));
+  const cached = customBuffer || (spriteAudio ? spriteAudio.buffer : (_touchCacheKey(resolvedSrc) || _touchCacheKey(rawSrc)));
   const isSprite = Boolean(spriteAudio);
   const spriteBaseOffset = isSprite ? spriteAudio.offset : 0;
   const spriteMaxDuration = isSprite ? spriteAudio.duration : 0;
@@ -1500,11 +1529,15 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
       }
 
       let safetyTimeout = null;
+      let _stopped = false;
       const handle = {
         src: resolvedSrc,
         startTime,
         endTime,
+        get _stopped() { return _stopped; },
+        set _stopped(v) { _stopped = Boolean(v); },
         isPlaying: () => {
+          if (_stopped) return false;
           const t = getAudioContext().currentTime;
           return t >= startTime && t < endTime;
         },
@@ -1598,7 +1631,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   
   const handle = {
     src: resolvedSrc,
-    isPlaying: () => !clone.paused && !clone.ended,
+    isPlaying: () => _activeSoundHandles.has(handle) && !clone.paused && !clone.ended,
     duration: clone.duration || 0,
     audio: clone
   };
@@ -1659,6 +1692,8 @@ export function stopSound(soundHandle, force = false) {
   if (!force && (srcStr.includes('faah') || srcStr.includes('announcer/faah') || srcStr.includes('respect') || srcStr.includes('cj-respectoverlay-bgmusic'))) {
     return; // PROTECTED: Never cut faah.mp3 death audio or CJ Respect overlay bgmusic!
   }
+  soundHandle._stopped = true;
+  _activeSoundHandles.delete(soundHandle);
   if (soundHandle.safetyTimeout) {
     clearTimeout(soundHandle.safetyTimeout);
     _pendingSoundTimeouts.delete(soundHandle.safetyTimeout);
