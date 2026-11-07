@@ -978,8 +978,8 @@ function drawMatchEndScreen() {
     }
   });
 
-  // Dedicated Post-Match Tactical Action Buttons
-  if (delayedTimer >= 20) {
+  // Dedicated Post-Match Tactical Action Buttons (Mobile Only — Hidden on PC to keep bottom HUD cards unobstructed)
+  if (state.isMobileDevice && delayedTimer >= 20) {
     const btnAlpha = Math.min(1.0, (delayedTimer - 20) / 15);
     ctx.save();
     ctx.globalAlpha = btnAlpha;
