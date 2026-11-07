@@ -267,7 +267,11 @@ export function drawFighters() {
     if (aPunching && !bPunching) return 1;
     if (!aPunching && bPunching) return -1;
 
-    return a.f.y - b.f.y;
+    // Prevent 30Hz Z-order strobing during horizontal clashes where dy oscillates near 0:
+    // only sort by Y depth when vertical separation exceeds 4px; otherwise preserve stable slot order.
+    const dy = a.f.y - b.f.y;
+    if (Math.abs(dy) < 4.0) return a.i - b.i;
+    return dy;
   });
 
   // ── BOTTOM LAYER PASS: Underfoot Team Indicator Rings & Ground Floor Grids ──

@@ -143,7 +143,7 @@ export function renderGame() {
     // PixiJS will render this transparent canvas over its own background/particle layers
     state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
 
-    if (state.topLevelUiCtx && state._topLevelUiDirty !== false) {
+    if (state.topLevelUiCtx && (!state.isMobileDevice || state._topLevelUiDirty !== false)) {
       state.topLevelUiCtx.clearRect(0, 0, state.topLevelUiCanvas.width, state.topLevelUiCanvas.height);
       state._topLevelUiDirty = false;
     }
@@ -689,7 +689,8 @@ export function renderGame() {
         } else if (isMobileCanvasHudActive()) {
           state._topLevelUiDirty = true;
           drawMobileCanvasHud(state.topLevelUiCtx || state.ctx);
-        } else if (state.gameState === 'playing' || state.gameState === 'countdown') {
+        } else {
+          state._topLevelUiDirty = true;
           drawHUD();
         }
       }

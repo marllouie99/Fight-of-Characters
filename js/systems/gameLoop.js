@@ -60,12 +60,13 @@ export function animate(timestamp) {
   if (!lastFrameTime) lastFrameTime = timestamp;
   const elapsed = timestamp - lastFrameTime;
 
-  // Throttle only if frame arrives faster than 10.0ms (true high-refresh rate threshold)
-  if (elapsed < 10.0) {
+  // Throttle only if frame arrives faster than 11.5ms (true high-refresh rate threshold: 90Hz=11.1ms, 120Hz=8.3ms)
+  if (elapsed < 11.5) {
     requestAnimationFrame(animate);
     return;
   }
-  lastFrameTime = timestamp - (elapsed % (1000 / 60));
+  const FRAME_TIME = 1000 / 60;
+  lastFrameTime = elapsed >= FRAME_TIME ? timestamp - (elapsed % FRAME_TIME) : timestamp;
 
   try {
     // FPS calculation

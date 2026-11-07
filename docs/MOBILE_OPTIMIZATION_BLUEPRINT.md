@@ -622,6 +622,8 @@ When inspecting `assets/bin/Data/sharedassets0.assets` in both *Weapon Ball Z* a
 - **Why This Matters**:
   - In WebGL (`pixiOverlay.js`) and Canvas 2D GPU backends, binding a different `<img src="...">` or offscreen `<canvas>` for every particle/weapon forces the GPU driver to flush its current draw batch and switch texture bindings (`gl.bindTexture`).
   - Packing common hit sparks, slash crescents, and projectile orbs onto shared sprite strips or pre-baked offscreen atlas canvases allows the GPU to batch dozens of sprites in a single draw call with zero texture state switches.
+- **The Fix Implemented in [`js/graphics/glowSpriteCache.js`](file:///c:/Users/asus/OneDrive/Desktop/Circle%20Mini-Battle/js/graphics/glowSpriteCache.js)**:
+  - Packed up to 64 unique radial glow `128×128` quads into a single shared `1024×1024` offscreen Sprite Atlas `<canvas>` (`8×8` grid via `getCachedRadialGlowAtlasSlot`), so `drawCachedRadialGlow()` blits sub-rectangles (`ctx.drawImage(slot.canvas, slot.sx, slot.sy, 128, 128, ...)`) from a single GPU texture backing store without per-particle texture state switches.
 
 ---
 
@@ -636,6 +638,7 @@ When inspecting `assets/bin/Data/sharedassets0.assets` in both *Weapon Ball Z* a
 | **Phase 3** | Strip multi-pass CSS `drop-shadow` & `backdrop-filter` under `body.mobile-device` in [`css/style.css`](file:///c:/Users/asus/OneDrive/Desktop/Circle%20Mini-Battle/css/style.css) | **COMPLETED & VERIFIED** | **~2.0 ms / frame** in browser/WebView tile compositor pass |
 | **Phase 4A** | **Pre-Battle Loading Curtain & GPU Texture Pre-Warming** (`prewarmMatchAssets` in [`mobileAssetScaler.js`](file:///c:/Users/asus/OneDrive/Desktop/Circle%20Mini-Battle/js/graphics/mobileAssetScaler.js) + 8-bit `srgb` canvas context) | **COMPLETED & VERIFIED** | Eliminates **100–300 ms first-skill lag spikes** & halves framebuffer memory bandwidth |
 | **Phase 4B** | **Object Pooling & Crowd-Control Density Scaling** (`SimplePool` + `DamagePopupPool` + `GhostTrail2D` velocity gate) | **COMPLETED & VERIFIED** | Eliminates **30–80 ms Garbage Collection freezes** during multi-hit ultimates |
+| **Sections 5.9–5.14** | **PC & Mobile Clash Anti-Flicker, VSync Modulo Fix, Zero-Filter HUD Hit-Glow, 4px Z-Order Hysteresis, Same-SFX Cooldown Gate & Shared 1024×1024 Glow Atlas** | **COMPLETED & VERIFIED** | Eliminates **PC clash flickering**, **VSync double-frame strobing**, **30 Hz circle depth-fighting**, and **audio comb-filtering** |
 | **Phase 5** | Downscale 3 MB+ outlier sprite sheets (`Assets/_mobile05x/`) & wrap into a native Android `.apk` via **Capacitor** | Ready for Native APK Packaging | Eliminates HTTP latency and unlocks native **60 FPS** mobile execution |
 
 

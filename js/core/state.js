@@ -14,7 +14,7 @@ export function registerProjectileSystem(ps) { _projectileSystem = ps; }
 const canvas = document.getElementById('arena');
 canvas.width = CONFIG.canvasWidth || 540;
 canvas.height = CONFIG.canvasHeight || 960;
-const ctx    = canvas.getContext('2d', { desynchronized: true });
+const ctx    = canvas.getContext('2d');
 
 // --- PIXI.JS SETUP ---
 // We initialize a Pixi Application that will replace the 2D canvas in the DOM.

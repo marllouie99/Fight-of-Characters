@@ -2231,6 +2231,8 @@ canvas {
   align-items: center;
   min-height: 20px;
   margin-top: 1px;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .hud-top-player.hud-top-p1 .hud-top-header {
@@ -2257,6 +2259,8 @@ canvas {
   line-height: 1.1 !important;
   white-space: nowrap;
   overflow: visible;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .hud-top-player.hud-top-p2 .hud-top-name {

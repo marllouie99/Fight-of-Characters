@@ -441,7 +441,8 @@ export function drawHUD() {
   if (topContainer) {
     const showTop = Boolean((isBossBattleMode || isDuelTopHud) && topHudOpacity > 0 && !CONFIG.hudHideAll && !CONFIG.hudHideHealthBars);
     const topStateKey = `${showTop ? 1 : 0}_${isRegular1v2 ? 1 : 0}_${isBombermanTheme ? 1 : 0}_${topHudOpacity}`;
-    if (topContainer._hudStateKey !== topStateKey) {
+    const displayMismatch = showTop ? (topContainer.style.display !== 'flex') : (topContainer.style.display !== 'none');
+    if (topContainer._hudStateKey !== topStateKey || displayMismatch) {
       topContainer._hudStateKey = topStateKey;
       if (topContainer.classList && typeof topContainer.classList.toggle === 'function') {
         topContainer.classList.toggle('hud-top-1v2', Boolean(isRegular1v2));
@@ -461,7 +462,7 @@ export function drawHUD() {
       updateTopHudCameraTracking(topContainer);
     }
   }
-  if (bottomContainer && bottomContainer._hudHiddenKey !== 1) {
+  if (bottomContainer && (bottomContainer._hudHiddenKey !== 1 || bottomContainer.style.display !== 'none')) {
     bottomContainer._hudHiddenKey = 1;
     bottomContainer.style.display = 'none';
     bottomContainer.style.visibility = 'hidden';
@@ -486,7 +487,8 @@ export function drawHUD() {
     const hideBottom = Boolean(isSideHud1v1 || (isHorizontal && isDuelTopHud) || bottomHudOpacity <= 0);
     const isSingleColMode = (!isTactical && (is1v1Mode || isStandOffMode || (isFfaMode && !isHorizontal))) || (isCameraTracking && isTeamMode && !isTactical);
     const botStateKey = `${hideBottom ? 0 : 1}_${isFfaMode && !isTactical ? 1 : 0}_${isTactical ? 1 : 0}_${isClassicHudLayout ? 1 : 0}_${isBombermanTheme ? 1 : 0}_${isSingleColMode ? 1 : 0}_${bottomHudOpacity}`;
-    if (containerBottom._hudStateKey !== botStateKey) {
+    const botDisplayMismatch = hideBottom ? (containerBottom.style.display !== 'none') : (containerBottom.style.display !== 'flex');
+    if (containerBottom._hudStateKey !== botStateKey || botDisplayMismatch) {
       containerBottom._hudStateKey = botStateKey;
       containerBottom.classList.toggle('ffa-hud', isFfaMode && !isTactical);
       containerBottom.classList.toggle('tactical-hud', isTactical);
@@ -1551,6 +1553,7 @@ export function clearHealthHud(force = false) {
   if (!_cachedBottomContainer) _cachedBottomContainer = document.getElementById('hudBottomContainer');
 
   if (_cachedContainerBottom) {
+    _cachedContainerBottom._hudStateKey = null;
     _cachedContainerBottom.innerHTML = '';
     _cachedContainerBottom.style.display = 'none';
     _cachedContainerBottom.style.visibility = 'hidden';
@@ -1559,16 +1562,19 @@ export function clearHealthHud(force = false) {
     }
   }
   if (_cachedContainerLeft) {
+    _cachedContainerLeft._hudStateKey = null;
     _cachedContainerLeft.innerHTML = '';
     _cachedContainerLeft.style.display = 'none';
     _cachedContainerLeft.style.visibility = 'hidden';
   }
   if (_cachedContainerRight) {
+    _cachedContainerRight._hudStateKey = null;
     _cachedContainerRight.innerHTML = '';
     _cachedContainerRight.style.display = 'none';
     _cachedContainerRight.style.visibility = 'hidden';
   }
   if (_cachedTopContainer) {
+    _cachedTopContainer._hudStateKey = null;
     _cachedTopContainer.innerHTML = '';
     _cachedTopContainer.style.display = 'none';
     _cachedTopContainer.style.visibility = 'hidden';
@@ -1577,6 +1583,7 @@ export function clearHealthHud(force = false) {
     }
   }
   if (_cachedBottomContainer) {
+    _cachedBottomContainer._hudHiddenKey = null;
     _cachedBottomContainer.innerHTML = '';
     _cachedBottomContainer.style.display = 'none';
     _cachedBottomContainer.style.visibility = 'hidden';
@@ -3969,22 +3976,20 @@ function updateHealthHud() {
 
     if (hitTimer > 0) {
       const alpha = (hitTimer / 14).toFixed(2);
-      const intensity = (1 + 0.35 * (hitTimer / 14)).toFixed(2);
       return {
-        glowStyle: `box-shadow: 0 0 14px 2px rgba(255, 30, 30, ${alpha}), inset 0 0 8px 2px rgba(255, 255, 255, ${alpha}); filter: brightness(${intensity});`,
+        glowStyle: `box-shadow: 0 0 14px 2px rgba(255, 30, 30, ${alpha}), inset 0 0 12px 3px rgba(255, 255, 255, ${alpha});`,
         glowClass: ' hit-glow',
-        boxShadow: `0 0 14px 2px rgba(255, 30, 30, ${alpha}), inset 0 0 8px 2px rgba(255, 255, 255, ${alpha})`,
-        filter: `brightness(${intensity})`,
+        boxShadow: `0 0 14px 2px rgba(255, 30, 30, ${alpha}), inset 0 0 12px 3px rgba(255, 255, 255, ${alpha})`,
+        filter: '',
         className: 'health-card__fill hit-glow'
       };
     } else if (healTimer > 0) {
       const alpha = (healTimer / 14).toFixed(2);
-      const intensity = (1 + 0.35 * (healTimer / 14)).toFixed(2);
       return {
-        glowStyle: `box-shadow: 0 0 14px 2px rgba(34, 197, 94, ${alpha}), inset 0 0 8px 2px rgba(255, 255, 255, ${alpha}); filter: brightness(${intensity});`,
+        glowStyle: `box-shadow: 0 0 14px 2px rgba(34, 197, 94, ${alpha}), inset 0 0 12px 3px rgba(255, 255, 255, ${alpha});`,
         glowClass: ' heal-glow',
-        boxShadow: `0 0 14px 2px rgba(34, 197, 94, ${alpha}), inset 0 0 8px 2px rgba(255, 255, 255, ${alpha})`,
-        filter: `brightness(${intensity})`,
+        boxShadow: `0 0 14px 2px rgba(34, 197, 94, ${alpha}), inset 0 0 12px 3px rgba(255, 255, 255, ${alpha})`,
+        filter: '',
         className: 'health-card__fill heal-glow'
       };
     }
@@ -5584,7 +5589,8 @@ function updateHealthHud() {
 
       if (cachedCard.topPlayerEl || cachedCard.topProfileEl || cachedCard.topGradeCanvas) {
         const curGrade = getFighterGrade(fighter);
-        if (cachedCard.lastGrade !== curGrade) {
+        const gradeChanged = cachedCard.lastGrade !== curGrade;
+        if (gradeChanged) {
           const meta = getGradeMeta(curGrade);
           if (cachedCard.topPlayerEl) {
             cachedCard.topPlayerEl.setAttribute('data-grade', curGrade);
@@ -5599,7 +5605,7 @@ function updateHealthHud() {
           cachedCard.lastGrade = curGrade;
         }
 
-        if (cachedCard.topGradeCanvas) {
+        if (cachedCard.topGradeCanvas && (gradeChanged || !cachedCard._topGradeRendered)) {
           if (!cachedCard.topGradeCtx) {
             cachedCard.topGradeCtx = cachedCard.topGradeCanvas.getContext('2d');
           }
@@ -5615,6 +5621,7 @@ function updateHealthHud() {
               2.8,
               true
             );
+            cachedCard._topGradeRendered = true;
           }
         }
       }

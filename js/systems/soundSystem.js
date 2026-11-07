@@ -29,7 +29,8 @@ const _isMobileSound = typeof navigator !== 'undefined' && (
 const MAX_CACHE_SIZE = _isMobileSound ? 60 : 1000;
 
 // ── CONCURRENT SOUND LIMITING (prevents audio bus overload → crackling & mobile thermal heating) ──
-const MAX_CONCURRENT_SOUNDS = _isMobileSound ? 6 : 40; // Hard cap on simultaneous Web Audio sources (6 on mobile to protect audio DSP)
+export const MAX_ACTIVE_MOBILE_VOICES = 8; // Section 5.13: Mobile active voice cap
+const MAX_CONCURRENT_SOUNDS = _isMobileSound ? MAX_ACTIVE_MOBILE_VOICES : 40; // Hard cap on simultaneous Web Audio sources (8 on mobile to protect audio DSP)
 // Micro-fade duration in seconds to prevent click/pop artifacts on start/stop without delaying attack transient
 const MICRO_FADE_IN = 0.002;  // 2ms fade-in (preserves crisp punch/slash attack snap)
 const MICRO_FADE_OUT = 0.015; // 15ms fade-out
@@ -981,7 +982,8 @@ function _evictOldestSound() {
  * @returns {HTMLAudioElement|null} The audio element (null for Web Audio playback)
  */
 const _lastPlayTimes = new Map();
-const SOUND_THROTTLE_MS = 15; // Prevent identical audio file from double-playing within same frame (15ms)
+const SOUND_THROTTLE_MS = 18; // Prevent identical non-combat audio file from double-playing within same frame
+const SAME_COMBAT_SFX_COOLDOWN_MS = _isMobileSound ? 45 : 35; // HurtSoundConfig / Clash polyphony gate (Rule 35 Section 5.13)
 
 export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0, onEnded = null) {
   if (!src) return null;
@@ -1018,11 +1020,13 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   // performance.now() drifts relative to audioCtx.currentTime under heavy CPU load (recording),
   // causing sounds to be incorrectly throttled or double-played.
   const audioCtx = getAudioContext();
-  const now = audioCtx ? audioCtx.currentTime * 1000 : performance.now();
-  const lastTime = _lastPlayTimes.get(src) || 0;
+  const hasLiveAudioClock = Boolean(audioCtx && audioCtx.currentTime > 0);
+  const now = hasLiveAudioClock ? audioCtx.currentTime * 1000 : performance.now();
+  const lastTime = _lastPlayTimes.get(src) ?? -Infinity;
   
-  // Frequent combat sounds (hits, swings, slashes, summons) enforce a 20ms minimum gap (just over 1 frame at 60fps)
-  // to avoid same-frame audio doubling while guaranteeing rapid consecutive strikes play instantly
+  // Frequent combat & clash sounds (hits, swings, slashes, parries, bumps, impacts) enforce a
+  // minimum retrigger cooldown (35ms PC / 45ms Mobile, matching Weapon Ball Z's HurtSoundConfig)
+  // to prevent audio comb-filtering and AudioBufferSourceNode spam during rapid multi-hit clashes.
   const srcLower = String(src).toLowerCase();
 
   // Single-instance deduplication: strictly only 1 instance of Shiro troop buff voiceline can play at a time (avoid dupes)
@@ -1037,12 +1041,19 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
     }
   }
 
-  const isCombatSound = srcLower.includes('fleshhit') || srcLower.includes('sword') || srcLower.includes('slash') || srcLower.includes('illusion') || srcLower.includes('hit') || srcLower.includes('punch') || srcLower.includes('smash');
+  const isCombatSound = srcLower.includes('fleshhit') || srcLower.includes('sword') || srcLower.includes('slash') ||
+    srcLower.includes('illusion') || srcLower.includes('hit') || srcLower.includes('punch') ||
+    srcLower.includes('smash') || srcLower.includes('parry') || srcLower.includes('clash') ||
+    srcLower.includes('bump') || srcLower.includes('impact') || srcLower.includes('block') ||
+    srcLower.includes('slap') || srcLower.includes('chainsaw') || srcLower.includes('cleave');
   const isUltimate = isUltimateVoiceline(src);
-  const minInterval = isUltimate ? 0 : (isCombatSound ? 20 : 15);
+  const minInterval = isUltimate ? 0 : (isCombatSound ? SAME_COMBAT_SFX_COOLDOWN_MS : SOUND_THROTTLE_MS);
 
-  if (minInterval > 0 && now - lastTime < minInterval) {
+  if (hasLiveAudioClock && minInterval > 0 && now - lastTime < minInterval) {
     return null;
+  }
+  if (_lastPlayTimes.size > 256) {
+    _lastPlayTimes.clear();
   }
   _lastPlayTimes.set(src, now);
 
