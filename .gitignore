@@ -12,6 +12,8 @@ screenshots/
 error_log.txt
 *.log
 Assets/_mobile05x/
+release-web/
+*.zip
 
 # Native Mobile Build Artifacts (populated by cap sync)
 ios/App/App/public/

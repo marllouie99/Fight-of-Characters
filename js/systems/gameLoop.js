@@ -8,6 +8,7 @@ import { resetCachedTime } from '../graphics/draw.js';
 import { updateGame } from './updateSystem.js';
 import { renderGame } from './renderSystem.js';
 import { getAudioCurrentTime } from './soundSystem.js';
+import { syncWakeLockWithGameState } from './screenLockSystem.js';
 
 export const isMobile = isMobileDevice;
 export const TARGET_FPS = 60; // Standard 60 FPS across all devices for consistent combat physics
@@ -16,6 +17,7 @@ let lastFrameTime = 0;
 let isPageVisible = true;
 let _uiScreensCache = null;
 let _uiLayerCache = null;
+let _lastWakeState = null;
 const _MENU_STATES = new Set([
   'title',
   'select',
@@ -56,6 +58,12 @@ export function animate(timestamp) {
   // ensures high-refresh displays (90Hz / 120Hz / 144Hz with intervals <= 8.3ms) are capped cleanly
   // at 60 FPS, while ZERO frames are ever dropped on 60Hz screens, eliminating the 30 FPS stutter lock!
   const isMenuState = _MENU_STATES.has(state.gameState);
+
+  // Dynamic Screen Wake Lock synchronization across game state transitions
+  if (state && state.gameState !== _lastWakeState) {
+    _lastWakeState = state.gameState;
+    syncWakeLockWithGameState(state.gameState);
+  }
 
   if (!lastFrameTime) lastFrameTime = timestamp;
   const elapsed = timestamp - lastFrameTime;

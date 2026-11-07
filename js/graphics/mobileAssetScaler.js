@@ -113,7 +113,11 @@ export function initMobileAssetScaler(isMobileDevice = false) {
         let targetUrl = value;
 
         if (dims && !this._fallbackTo1x) {
-          const mobileSubpath = normalized.replace(/^Assets\//, 'Assets/_mobile05x/');
+          const hasWebp = dims[2] === 1;
+          let mobileSubpath = normalized.replace(/^Assets\//, 'Assets/_mobile05x/');
+          if (hasWebp) {
+            mobileSubpath = mobileSubpath.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+          }
           const queryIdx = value.indexOf('?');
           targetUrl = mobileSubpath + (queryIdx !== -1 ? value.slice(queryIdx) : '');
 

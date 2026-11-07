@@ -25,6 +25,7 @@ import { initHorizontalTeamSelectScreen, handleHorizontalTeamSelectClick } from 
 import { toggleArenaDecorations, setArenaDecorationsEnabled, setArenaDecorationTheme, isArenaDecorationsEnabled } from '../systems/arenaDecorationSystem.js';
 import { initPwaInstallManager, promptPwaInstall } from '../systems/pwaInstallManager.js';
 import { syncMobileDomHudVisibility, isMobileCanvasHudActive } from '../graphics/ui/canvasMobileHud.js';
+import { initScreenLockSystem } from '../systems/screenLockSystem.js';
 // ─────────────────────────────────────────────
 // FLAME CANVAS INITIALIZATION
 // ─────────────────────────────────────────────
@@ -1941,6 +1942,9 @@ updateAspectScaling();
 if (typeof document !== 'undefined') {
   syncMobileDomHudVisibility(isMobileCanvasHudActive());
 }
+
+// Dynamic Screen Lock & Keep-Awake System (Native Android Capacitor & W3C WakeLock API)
+initScreenLockSystem();
 
 // Global Arena Decoration System Controls
 if (typeof window !== 'undefined') {

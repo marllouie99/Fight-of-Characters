@@ -7,6 +7,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
+let sharp = null;
+try {
+  const sharpModule = await import('sharp');
+  sharp = sharpModule.default || sharpModule;
+} catch (e) {
+  sharp = null;
+}
+
 const CRC_TABLE = new Uint32Array(256);
 for (let i = 0; i < 256; i++) {
   let c = i;
@@ -216,6 +224,19 @@ function encodePngRgba(width, height, pixels) {
   return Buffer.concat([sig, ihdrChunk, idatChunk, iendChunk]);
 }
 
+function isPixelArtAsset(relPath) {
+  const lower = relPath.toLowerCase();
+  // Overlays, backgrounds, and photographic textures are continuous-tone
+  if (lower.includes('assets/overlays/') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+    return false;
+  }
+  if (lower.includes('texture') || lower.includes('nebula') || lower.includes('cosmic') || lower.includes('arena_overlay')) {
+    return false;
+  }
+  // Sprite sheets, character models, pixel hands, hair, and weapons are strictly pixel art
+  return true;
+}
+
 function walkDir(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -224,24 +245,26 @@ function walkDir(dir, out = []) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       walkDir(full, out);
-    } else if (entry.name.endsWith('.png')) {
+    } else if (/\.(png|jpg|jpeg)$/i.test(entry.name)) {
       out.push(full);
     }
   }
   return out;
 }
 
-export function buildMobileAssets(options = {}) {
+export async function buildMobileAssets(options = {}) {
   const silent = Boolean(options.silent);
   const log = silent ? () => {} : console.log;
 
-  log('📱 [Mobile Asset Pipeline] Scanning for large sprite sheets (>= 1024px)...');
+  log(`📱 [Mobile Asset Pipeline] Scanning for large assets (>= 1024px or > 500KB) with ${sharp ? 'Sharp WebP/PNG engine' : 'pure-JS PNG engine'}...`);
 
   const targetDirs = [
     path.join(rootDir, 'Assets', 'model'),
     path.join(rootDir, 'Assets', 'Overlays'),
     path.join(rootDir, 'Assets', 'effects'),
-    path.join(rootDir, 'Assets', 'weapon')
+    path.join(rootDir, 'Assets', 'weapon'),
+    path.join(rootDir, 'Assets', 'character'),
+    path.join(rootDir, 'Assets', 'Sprites')
   ];
 
   const candidatePaths = [];
@@ -260,46 +283,100 @@ export function buildMobileAssets(options = {}) {
 
   for (const fullPath of candidatePaths) {
     const relAssetPath = path.relative(rootDir, fullPath).replace(/\\/g, '/');
-    const buf = fs.readFileSync(fullPath);
-    const header = readPngHeader(buf);
+    const srcStat = fs.statSync(fullPath);
 
-    if (!header) continue;
-    if (Math.max(header.width, header.height) < 1024) continue;
-    if (header.bitDepth !== 8 || (header.colorType !== 6 && header.colorType !== 2 && header.colorType !== 3)) continue;
+    let width = 0;
+    let height = 0;
+
+    if (sharp) {
+      try {
+        const meta = await sharp(fullPath).metadata();
+        width = meta.width || 0;
+        height = meta.height || 0;
+      } catch (e) {
+        continue;
+      }
+    } else {
+      const buf = fs.readFileSync(fullPath);
+      const header = readPngHeader(buf);
+      if (!header) continue;
+      width = header.width;
+      height = header.height;
+    }
+
+    if (width === 0 || height === 0) continue;
+    if (Math.max(width, height) < 1024 && srcStat.size < 500 * 1024) continue;
 
     // Relative subpath after "Assets/"
     const subpath = relAssetPath.replace(/^Assets\//, '');
-    const destPath = path.join(outputBaseDir, subpath);
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    const destPathBase = path.join(outputBaseDir, subpath);
+    const destDir = path.dirname(destPathBase);
+    fs.mkdirSync(destDir, { recursive: true });
 
-    manifest[relAssetPath] = [header.width, header.height];
-
-    const srcStat = fs.statSync(fullPath);
-    const destExists = fs.existsSync(destPath);
-    const isUpToDate = destExists && fs.statSync(destPath).mtimeMs >= srcStat.mtimeMs;
-
-    const origDecoded = header.width * header.height * 4;
-    const halfWidth = Math.max(1, Math.floor(header.width / 2));
-    const halfHeight = Math.max(1, Math.floor(header.height / 2));
+    const isPixel = isPixelArtAsset(relAssetPath);
+    const origDecoded = width * height * 4;
+    const halfWidth = Math.max(1, Math.floor(width / 2));
+    const halfHeight = Math.max(1, Math.floor(height / 2));
     const downDecoded = halfWidth * halfHeight * 4;
     totalDecodedRamSaved += (origDecoded - downDecoded);
 
-    if (isUpToDate) {
+    const destWebpPath = destPathBase.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+    const destPngPath = destPathBase.replace(/\.(jpg|jpeg)$/i, '.png');
+
+    const webpExists = fs.existsSync(destWebpPath);
+    const pngExists = fs.existsSync(destPngPath);
+    const isWebpUpToDate = webpExists && fs.statSync(destWebpPath).mtimeMs >= srcStat.mtimeMs;
+    const isPngUpToDate = pngExists && fs.statSync(destPngPath).mtimeMs >= srcStat.mtimeMs;
+
+    const hasWebp = sharp !== null;
+    manifest[relAssetPath] = [width, height, hasWebp ? 1 : 0];
+
+    if (isWebpUpToDate && isPngUpToDate) {
       skippedUpToDate++;
-      totalSavedBytes += Math.max(0, buf.length - fs.statSync(destPath).size);
+      const saved = srcStat.size - (webpExists ? fs.statSync(destWebpPath).size : fs.statSync(destPngPath).size);
+      totalSavedBytes += Math.max(0, saved);
       continue;
     }
 
     try {
-      const decoded = decodePngBuffer(buf);
-      if (!decoded) continue;
+      if (sharp) {
+        const pipeline = sharp(fullPath);
 
-      const downsampled = downsample05x(decoded.width, decoded.height, decoded.pixels);
-      const encoded = encodePngRgba(downsampled.width, downsampled.height, downsampled.pixels);
+        // 1. Generate crisp @0.5x downscaled variant
+        // For pixel art (sprites/weapons): use 'nearest' neighbor to preserve 100% sharp pixel grids
+        // For backdrops/overlays: use smooth bicubic scaling
+        const resized = pipeline.clone().resize(halfWidth, halfHeight, {
+          kernel: isPixel ? sharp.kernel.nearest : sharp.kernel.lanczos3
+        });
 
-      fs.writeFileSync(destPath, encoded);
-      newlyGenerated++;
-      totalSavedBytes += Math.max(0, buf.length - encoded.length);
+        // 2. Encode WebP variant
+        // Pixel art: 100% bit-exact lossless WebP
+        // Backdrops: high-fidelity quality 90 WebP with 100% alpha quality
+        if (isPixel) {
+          await resized.clone().webp({ lossless: true, effort: 4 }).toFile(destWebpPath);
+        } else {
+          await resized.clone().webp({ quality: 90, effort: 4, alphaQuality: 100 }).toFile(destWebpPath);
+        }
+
+        // 3. Encode fallback @0.5x PNG variant
+        await resized.clone().png({ compressionLevel: 6 }).toFile(destPngPath);
+
+        newlyGenerated++;
+        const finalSize = fs.statSync(destWebpPath).size;
+        totalSavedBytes += Math.max(0, srcStat.size - finalSize);
+      } else {
+        // Pure-JS PNG fallback
+        const buf = fs.readFileSync(fullPath);
+        const decoded = decodePngBuffer(buf);
+        if (!decoded) continue;
+
+        const downsampled = downsample05x(decoded.width, decoded.height, decoded.pixels);
+        const encoded = encodePngRgba(downsampled.width, downsampled.height, downsampled.pixels);
+
+        fs.writeFileSync(destPngPath, encoded);
+        newlyGenerated++;
+        totalSavedBytes += Math.max(0, buf.length - encoded.length);
+      }
     } catch (err) {
       console.warn(`⚠️ [Mobile Asset Pipeline] Failed to process ${relAssetPath}:`, err.message);
     }
@@ -308,9 +385,9 @@ export function buildMobileAssets(options = {}) {
   // Write mobileAssetManifest.js
   const manifestPath = path.join(rootDir, 'js', 'configs', 'mobileAssetManifest.js');
   const manifestContent = `// ─────────────────────────────────────────────
-// AUTO-GENERATED MOBILE ASSET MANIFEST (@0.5x Pipeline)
+// AUTO-GENERATED MOBILE ASSET MANIFEST (@0.5x WebP Pipeline)
 // Generated by scripts/buildMobileAssets.mjs
-// Maps 1x asset paths to original [width, height] dimensions.
+// Maps 1x asset paths to original [width, height, hasWebp] dimensions.
 // ─────────────────────────────────────────────
 
 export const MOBILE_ASSET_MANIFEST = ${JSON.stringify(manifest, null, 2)};
@@ -339,13 +416,34 @@ export function pruneAndroidDuplicate1xAssets(manifest) {
 
   let prunedCount = 0;
   let prunedBytes = 0;
+  let strippedZipCount = 0;
+  let strippedZipBytes = 0;
 
+  // 1. Purge any lingering .zip release archives from Android assets
+  try {
+    for (const f of fs.readdirSync(androidPublicDir)) {
+      if (f.endsWith('.zip')) {
+        const zipFile = path.join(androidPublicDir, f);
+        const sz = fs.statSync(zipFile).size;
+        fs.unlinkSync(zipFile);
+        strippedZipCount++;
+        strippedZipBytes += sz;
+      }
+    }
+  } catch (e) {}
+
+  if (strippedZipCount > 0) {
+    console.log(`   🧹 [Android APK Optimizer] Purged ${strippedZipCount} stale distribution ZIPs from APK assets (${(strippedZipBytes / 1024 / 1024).toFixed(1)} MB reclaimed).`);
+  }
+
+  // 2. Prune redundant 1x assets when mobile variant exists
   for (const relAssetPath of Object.keys(manifest)) {
     const subpath = relAssetPath.replace(/^Assets\//, '');
-    const mobile05xFile = path.join(androidPublicDir, 'Assets', '_mobile05x', subpath);
+    const mobile05xPng = path.join(androidPublicDir, 'Assets', '_mobile05x', subpath.replace(/\.(jpg|jpeg)$/i, '.png'));
+    const mobile05xWebp = path.join(androidPublicDir, 'Assets', '_mobile05x', subpath.replace(/\.(png|jpg|jpeg)$/i, '.webp'));
     const redundant1xFile = path.join(androidPublicDir, relAssetPath);
 
-    if (fs.existsSync(mobile05xFile) && fs.existsSync(redundant1xFile)) {
+    if ((fs.existsSync(mobile05xPng) || fs.existsSync(mobile05xWebp)) && fs.existsSync(redundant1xFile)) {
       const stat1x = fs.statSync(redundant1xFile);
       fs.unlinkSync(redundant1xFile);
       prunedCount++;
@@ -357,7 +455,7 @@ export function pruneAndroidDuplicate1xAssets(manifest) {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('buildMobileAssets.mjs')) {
-  const res = buildMobileAssets();
+  const res = await buildMobileAssets();
   if (process.argv.includes('--prune-android') && res && res.manifest) {
     pruneAndroidDuplicate1xAssets(res.manifest);
   }

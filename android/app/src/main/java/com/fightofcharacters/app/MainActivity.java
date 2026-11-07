@@ -3,6 +3,7 @@ package com.fightofcharacters.app;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.view.WindowCompat;
@@ -15,7 +16,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Keep screen awake during AI vs AI simulation and active matches
+        // Keep screen awake during initial boot & match startup
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         applyImmersiveGameMode();
 
@@ -29,6 +30,56 @@ public class MainActivity extends BridgeActivity {
                 settings.setMediaPlaybackRequiresUserGesture(false);
                 settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             }
+
+            // Expose native screen control bridge for dynamic Keep-Awake & Screen Pinning
+            webView.addJavascriptInterface(new ScreenControlBridge(), "NativeScreenControl");
+        }
+    }
+
+    public class ScreenControlBridge {
+        @JavascriptInterface
+        public void setKeepScreenAwake(final boolean awake) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (awake) {
+                            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                        } else {
+                            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                        }
+                    } catch (Exception e) {}
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void startScreenPinning() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        startLockTask();
+                    } catch (Exception e) {}
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopScreenPinning() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        stopLockTask();
+                    } catch (Exception e) {}
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean isScreenPinningSupported() {
+            return true;
         }
     }
 

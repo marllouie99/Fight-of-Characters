@@ -293,21 +293,24 @@ function createZipArchive(sourceDir, outZipPath) {
 }
 
 if (!skipZip) {
-  const outZip = path.join(distDir, 'fight-of-characters-web.zip');
+  const releaseDir = path.join(rootDir, 'release-web');
+  fs.mkdirSync(releaseDir, { recursive: true });
+  const outZip = path.join(releaseDir, 'fight-of-characters-web.zip');
   const zipStats = createZipArchive(distDir, outZip);
-  const legacyZip = path.join(distDir, 'ramball-fight-simulator-web.zip');
+  const legacyZip = path.join(releaseDir, 'ramball-fight-simulator-web.zip');
   fs.copyFileSync(outZip, legacyZip);
   const zipSizeMB = (zipStats.zipSize / (1024 * 1024)).toFixed(2);
-  console.log(`   ✅ Release ZIP generated: dist/fight-of-characters-web.zip & dist/ramball-fight-simulator-web.zip (${zipSizeMB} MB, ${zipStats.filesCount} compressed files).`);
+  console.log(`   ✅ Release ZIP generated: release-web/fight-of-characters-web.zip & release-web/ramball-fight-simulator-web.zip (${zipSizeMB} MB, ${zipStats.filesCount} compressed files).`);
 } else {
   console.log('   ⏩ Skipping distribution ZIP archive generation (--skip-zip).');
-  // Ensure no stale zip files linger in distDir
-  if (fs.existsSync(distDir)) {
-    const list = fs.readdirSync(distDir);
-    for (const f of list) {
-      if (f.endsWith('.zip')) {
-        fs.unlinkSync(path.join(distDir, f));
-      }
+}
+
+// Always ensure no stale zip files linger in distDir so mobile Capacitor sync remains lightweight
+if (fs.existsSync(distDir)) {
+  const list = fs.readdirSync(distDir);
+  for (const f of list) {
+    if (f.endsWith('.zip')) {
+      fs.unlinkSync(path.join(distDir, f));
     }
   }
 }
