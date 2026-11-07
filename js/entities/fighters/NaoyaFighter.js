@@ -19,6 +19,7 @@ import {
   drawShutterGlassBreaks,
   clearShutterGlassBreaks,
   drawCursedWombCocoonVFX,
+  drawNaoyaTransformationDebris,
   drawCurseNaoyaMachRamjetVFX,
   drawCurseTurbineCannonVFX,
   drawCurseAirCompressionBursts,
@@ -59,6 +60,10 @@ export class NaoyaFighter extends Fighter {
     this.hasCurseReborn = false;
     this.isCurseWomb = false;
     this.curseWombTimer = 0;
+    this.curseTransformationShockwaves = [];
+    this.curseShellFragments = [];
+    this.curseTurbineSoundPlayed = false;
+    this.curseHatchTriggered = false;
     this.curseWombMaxTimer = cfg.curseWombDurationFrames || 60;
     this.isCurseForm = Boolean(cfg.startInCurseForm);
     this.machGauge = 0;
@@ -264,6 +269,10 @@ export class NaoyaFighter extends Fighter {
     this.hasCurseReborn = false;
     this.isCurseWomb = false;
     this.curseWombTimer = 0;
+    this.curseTransformationShockwaves = [];
+    this.curseShellFragments = [];
+    this.curseTurbineSoundPlayed = false;
+    this.curseHatchTriggered = false;
     this.isCurseForm = Boolean(cfg.startInCurseForm);
     if (this.isCurseForm) {
       const initDomCd = cfg.curseDomainInitialCooldown !== undefined ? cfg.curseDomainInitialCooldown : 240;
@@ -419,6 +428,12 @@ export class NaoyaFighter extends Fighter {
       this.statusEffects.isFrozen = false;
     }
 
+    // Initialize transformation VFX arrays and flags
+    this.curseTransformationShockwaves = [];
+    this.curseShellFragments = [];
+    this.curseTurbineSoundPlayed = false;
+    this.curseHatchTriggered = false;
+
     // Radial concussive repulsion pulse repelling nearby entities
     const repelForce = cfg.curseWombRepelForce || 9.5;
     const allTargets = [...(state.fighters || []), ...(state.illusions || [])];
@@ -439,7 +454,13 @@ export class NaoyaFighter extends Fighter {
     spawnImpactFlash(this.x, this.y, 45, '#76E042');
     spawnSparks(this.x, this.y, 20, '#00F2FE');
     triggerGlobalScreenShake(8, 16);
-    spawnFloatingText(this.x, this.y - this.r - 28, 'VENGEFUL CURSE REBIRTH!', '#76E042');
+    spawnFloatingText(this.x, this.y - this.r - 28, 'VENGEFUL CURSE TRANSFORMATION!', '#76E042');
+
+    // Play fatal collapse blood spurt & cursed energy surge SFX
+    const collapseSnd = cfg.sounds?.curseCollapse || 'Assets/Sound Effects/Skills/nanami-bloodsplash.mp3';
+    const collapseVol = cfg.soundVolumes?.curseCollapse ?? 1.10;
+    audioSystem.playSFX(collapseSnd, collapseVol);
+
     const pulseSnd = cfg.sounds?.curseWombPulse || 'Assets/Sound Effects/Skills/enhance.mp3';
     const pulseVol = cfg.soundVolumes?.curseWombPulse ?? 0.95;
     audioSystem.playSFX(pulseSnd, pulseVol);
@@ -447,6 +468,11 @@ export class NaoyaFighter extends Fighter {
 
   /**
    * Advances Cursed Womb cocoon timer and executes hatching into Curse Naoya.
+   * Choreographs the 4 distinct transformation stages:
+   * - Stage 1 (0.00 -> 0.28): Fatal Collapse, Grudge Blood Pool & Cursed Flames
+   * - Stage 2 (0.28 -> 0.65): Chrysalis Encasement & Heartbeat Pulses
+   * - Stage 3 (0.65 -> 0.88): Ramjet Air Intake Vortex & Shell Fractures
+   * - Stage 4 (0.88 -> 1.00): Cataclysmic Detonation & Jet Curse Emergence
    */
   _updateCurseWomb() {
     if (!this.isCurseWomb) return;
@@ -457,8 +483,118 @@ export class NaoyaFighter extends Fighter {
     this.knockbackVx = 0;
     this.knockbackVy = 0;
 
-    if (this.curseWombTimer % 6 === 0) {
-      spawnSparks(this.x + (Math.random() - 0.5) * 20, this.y + (Math.random() - 0.5) * 20, 3, '#76E042');
+    const maxTimer = this.curseWombMaxTimer || 60;
+    const progress = Math.max(0, Math.min(1.0, 1.0 - (this.curseWombTimer / maxTimer)));
+
+    if (!this.curseTransformationShockwaves) this.curseTransformationShockwaves = [];
+    if (!this.curseShellFragments) this.curseShellFragments = [];
+
+    // Stage 1: Fatal Collapse (0.00 <= progress <= 0.28)
+    if (progress <= 0.28) {
+      if (this.curseWombTimer % 5 === 0) {
+        spawnSparks(this.x + (Math.random() - 0.5) * 20, this.y + (Math.random() - 0.5) * 16, 2, '#76E042');
+      }
+    }
+    // Stage 2: Chrysalis Gestation & Heartbeat Pulses (0.28 < progress <= 0.65)
+    else if (progress <= 0.65) {
+      const isBeat1 = (this.curseWombTimer === Math.round(maxTimer * (1.0 - 0.38)));
+      const isBeat2 = (this.curseWombTimer === Math.round(maxTimer * (1.0 - 0.52)));
+      if (isBeat1 || isBeat2) {
+        const hbSnd = cfg.sounds?.curseHeartbeat || 'Assets/Sound Effects/Attacks/heavypunch1.mp3';
+        const hbVol = cfg.soundVolumes?.curseHeartbeat ?? 0.90;
+        audioSystem.playSFX(hbSnd, hbVol);
+        triggerGlobalScreenShake(4, 8);
+        this.curseTransformationShockwaves.push({
+          x: this.x,
+          y: this.y,
+          currentRadius: this.r * 0.8,
+          maxRadius: this.r * 2.8,
+          timer: 18,
+          maxTimer: 18,
+          color: '#76E042',
+          innerWash: 'rgba(118, 224, 66, 0.18)'
+        });
+      }
+      if (this.curseWombTimer % 6 === 0) {
+        spawnSparks(this.x + (Math.random() - 0.5) * 20, this.y + (Math.random() - 0.5) * 20, 2, '#76E042');
+      }
+    }
+    // Stage 3: Ramjet Turbine Spool-Up & Stress Fractures (0.65 < progress <= 0.88)
+    else if (progress <= 0.88) {
+      if (!this.curseTurbineSoundPlayed) {
+        this.curseTurbineSoundPlayed = true;
+        const spoolSnd = cfg.sounds?.turbineInhale || 'Assets/Sound Effects/Skills/woosh.mp3';
+        const spoolVol = cfg.soundVolumes?.turbineInhale ?? 0.95;
+        audioSystem.playSFX(spoolSnd, spoolVol);
+      }
+      if (this.curseWombTimer % 3 === 0) {
+        spawnSparks(this.x + (Math.random() - 0.5) * 26, this.y + (Math.random() - 0.5) * 26, 3, '#00F2FE');
+      }
+    }
+    // Stage 4: Cataclysmic Detonation & Shell Shatter (progress > 0.88)
+    else {
+      if (!this.curseHatchTriggered) {
+        this.curseHatchTriggered = true;
+
+        const shatterSnd = cfg.sounds?.glassBreak || 'Assets/Sound Effects/NaoyaSFX/Naoya_glass_break.mp3';
+        const blastSnd = cfg.sounds?.ramjetBlast || 'Assets/Sound Effects/Attacks/explosion.mp3';
+        const roarSnd = cfg.sounds?.curseHatchRoar || 'Assets/Sound Effects/Skills/ragescream.mp3';
+        audioSystem.playSFX(shatterSnd, 1.25);
+        audioSystem.playSFX(blastSnd, 1.20);
+        audioSystem.playSFX(roarSnd, 1.15);
+
+        spawnImpactFlash(this.x, this.y, 90, '#FFFFFF');
+        spawnSparks(this.x, this.y, 35, '#76E042');
+        spawnSparks(this.x, this.y, 25, '#00F2FE');
+        triggerGlobalScreenShake(18, 24);
+
+        // Repel nearby opponents with radial blast force
+        const blastForce = 12.0;
+        const allTargets = [...(state.fighters || []), ...(state.illusions || [])];
+        for (const t of allTargets) {
+          if (t && t !== this && !t.isDead) {
+            const dx = t.x - this.x;
+            const dy = t.y - this.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            if (dist < 280) {
+              const repelAngle = Math.atan2(dy, dx);
+              if (typeof t.applyKnockback === 'function') {
+                t.applyKnockback(Math.cos(repelAngle) * blastForce, Math.sin(repelAngle) * blastForce, 18);
+              }
+            }
+          }
+        }
+
+        // Spawn 22 flying polygonal obsidian carapace shards in 360°
+        for (let i = 0; i < 22; i++) {
+          const ang = (i / 22) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+          const spd = 3.2 + Math.random() * 5.8;
+          this.curseShellFragments.push({
+            x: this.x,
+            y: this.y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            rot: Math.random() * Math.PI * 2,
+            vRot: (Math.random() - 0.5) * 0.35,
+            size: 6 + Math.random() * 8,
+            alpha: 1.0,
+            life: 30,
+            maxLife: 30
+          });
+        }
+
+        // Supersonic concentric Mach blast shockwave (Rule 26 compliant)
+        this.curseTransformationShockwaves.push({
+          x: this.x,
+          y: this.y,
+          currentRadius: this.r * 1.0,
+          maxRadius: this.r * 5.2,
+          timer: 24,
+          maxTimer: 24,
+          color: '#FFFFFF',
+          innerWash: 'rgba(118, 224, 66, 0.22)'
+        });
+      }
     }
 
     if (this.curseWombTimer <= 0) {
@@ -500,16 +636,7 @@ export class NaoyaFighter extends Fighter {
       this.shootCooldown = 0;
       this.frameFreezeCooldownTimer = 0;
 
-      // Organic Cursed Womb shell hatching burst
-      spawnImpactFlash(this.x, this.y, 80, '#FFFFFF');
-      spawnSparks(this.x, this.y, 35, '#76E042');
-      spawnSparks(this.x, this.y, 25, '#00F2FE');
-      triggerGlobalScreenShake(16, 22);
-
-      spawnFloatingText(this.x, this.y - this.r - 30, `+${targetHp} (AWAKENED JET CURSE!)`, '#00FF66');
-      const screamSnd = cfg.sounds?.curseRebirthScream || 'Assets/Sound Effects/NaoyaSFX/Naoya_glass_break.mp3';
-      const screamVol = cfg.soundVolumes?.curseRebirthScream ?? 1.25;
-      audioSystem.playSFX(screamSnd, screamVol);
+      spawnFloatingText(this.x, this.y - this.r - 30, `+${targetHp} (AWAKENED JET CURSED SPIRIT!)`, '#00FF66');
     }
   }
 
@@ -2755,6 +2882,36 @@ export class NaoyaFighter extends Fighter {
         }
       }
     }
+
+    // Decay active transformation shockwaves (Rule 25)
+    if (this.curseTransformationShockwaves && this.curseTransformationShockwaves.length > 0) {
+      for (let i = this.curseTransformationShockwaves.length - 1; i >= 0; i--) {
+        const sw = this.curseTransformationShockwaves[i];
+        sw.timer--;
+        const p = Math.max(0, Math.min(1.0, 1.0 - (sw.timer / sw.maxTimer)));
+        sw.currentRadius = sw.maxRadius * Math.pow(p, 0.75);
+        if (sw.timer <= 0) {
+          this.curseTransformationShockwaves.splice(i, 1);
+        }
+      }
+    }
+
+    // Decay active transformation shell fragments (Rule 25)
+    if (this.curseShellFragments && this.curseShellFragments.length > 0) {
+      for (let i = this.curseShellFragments.length - 1; i >= 0; i--) {
+        const frag = this.curseShellFragments[i];
+        frag.x += frag.vx;
+        frag.y += frag.vy;
+        frag.vx *= 0.94;
+        frag.vy *= 0.94;
+        frag.rot += frag.vRot;
+        frag.life--;
+        frag.alpha = Math.max(0, frag.life / frag.maxLife);
+        if (frag.life <= 0 || frag.alpha <= 0.01) {
+          this.curseShellFragments.splice(i, 1);
+        }
+      }
+    }
   }
 
   /**
@@ -3248,9 +3405,9 @@ export class NaoyaFighter extends Fighter {
       drawCurseAirCompressionBursts(ctx, this);
     }
 
-    // 1. Draw Cocoon if in Womb Phase
-    if (this.isCurseWomb) {
-      drawCursedWombCocoonVFX(ctx, this);
+    // 1. Draw Transformation Residual Debris & Shockwaves if active post-emergence
+    if (!this.isCurseWomb) {
+      drawNaoyaTransformationDebris(ctx, this);
     }
 
     // 2. Draw Projection Sorcery Forward-Projected 24 FPS Ghost Frames & Flurry Stepped Afterimages (Human form)

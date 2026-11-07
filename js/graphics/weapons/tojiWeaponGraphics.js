@@ -693,8 +693,8 @@ function _keyTojiPistolBackground(img) {
   if (typeof document === 'undefined') return img;
   try {
     const c = document.createElement('canvas');
-    c.width = img.naturalWidth;
-    c.height = img.naturalHeight;
+    c.width = img.naturalWidth || img.width || 800;
+    c.height = img.naturalHeight || img.height || 517;
     const kCtx = c.getContext('2d', { willReadFrequently: true });
     kCtx.drawImage(img, 0, 0);
     const imgData = kCtx.getImageData(0, 0, c.width, c.height);
@@ -723,7 +723,7 @@ function _keyTojiPistolBackground(img) {
  */
 export function _getTojiPistolGunImage() {
   if (_tojiPistolKeyedCanvas) return _tojiPistolKeyedCanvas;
-  if (_tojiPistolGunImage && _tojiPistolGunImage.complete && _tojiPistolGunImage.naturalWidth > 0) {
+  if (_tojiPistolGunImage && _tojiPistolGunImage.complete && (_tojiPistolGunImage.naturalWidth > 0 || _tojiPistolGunImage.width > 0)) {
     return _tojiPistolGunImage;
   }
   if (!_tojiPistolGunLoading && typeof Image !== 'undefined') {
@@ -737,7 +737,7 @@ export function _getTojiPistolGunImage() {
       }
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/toji/toji_pistol.jpg?v=1';
       } else {
         _tojiPistolGunLoading = false;
@@ -809,10 +809,12 @@ export function drawTojiPistol(ctx, cx, cy, angle, r = 25, handColor = '#E8BD9B'
   let fx = 49 + recoilKickX;
   let fy = -9.5;
 
-  if (renderSource && renderSource.complete !== false && ((renderSource.naturalWidth && renderSource.naturalWidth > 0) || renderSource.width > 0)) {
-    const isFullJpg = (renderSource.naturalWidth || renderSource.width) >= 2000;
-    const imgW = renderSource.naturalWidth || renderSource.width || (isFullJpg ? 2752 : 800);
-    const imgH = renderSource.naturalHeight || renderSource.height || (isFullJpg ? 1536 : 517);
+  if (renderSource && renderSource.complete !== false && ((renderSource.naturalWidth && renderSource.naturalWidth > 0) || (renderSource.width && renderSource.width > 0))) {
+    const rawW = renderSource.naturalWidth || renderSource.width || 800;
+    const rawH = renderSource.naturalHeight || renderSource.height || 517;
+    const isFullJpg = rawW >= 2000;
+    const imgW = rawW || (isFullJpg ? 2752 : 800);
+    const imgH = rawH || (isFullJpg ? 1536 : 517);
     const gripX = isFullJpg ? 1897 : 635;
     const gripY = isFullJpg ? 850 : 320;
     const muzzleX = isFullJpg ? 336 : 8;

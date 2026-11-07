@@ -18,7 +18,7 @@ let _spartanCrestImage = null;
 let _spartanCrestLoading = false;
 
 export function _getSpartanCrestImage() {
-  if (_spartanCrestImage && _spartanCrestImage.complete && _spartanCrestImage.naturalWidth > 0) {
+  if (_spartanCrestImage && _spartanCrestImage.complete && (_spartanCrestImage.naturalWidth > 0 || _spartanCrestImage.width > 0)) {
     return _spartanCrestImage;
   }
   if (!_spartanCrestLoading && typeof Image !== 'undefined') {
@@ -29,7 +29,7 @@ export function _getSpartanCrestImage() {
       _spartanCrestLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/spartan/spartan_helmet.jpg?v=1';
       } else {
         _spartanCrestLoading = false;

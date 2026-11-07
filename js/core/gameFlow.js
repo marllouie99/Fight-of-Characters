@@ -1129,15 +1129,15 @@ export function launchMatchOrBossEntrance() {
     return;
   }
 
-  // Pre-Battle VS Loading Curtain for Tag Match & Survivor Modes (SceneLoadingCurtain Standard)
+  // Pre-Battle VS Loading Curtain (SceneLoadingCurtain Standard)
+  // Masks asset decode, offscreen quad caching, GPU texture uploads (1x1 warm-up),
+  // and audio buffer pre-warming before Round 1 starts across all match modes (1v1, 2v2, 1v2, Tag Match, Survivor).
   const isCurtainMode = (
-    state.mode === GAME_MODES.TAG_MATCH ||
-    state.mode === 'Tag Match' ||
-    state.mode === GAME_MODES.SURVIVOR ||
-    state.mode === 'Survivor'
+    (state.roundNum || 1) === 1 &&
+    typeof showPreBattleCurtain === 'function'
   );
 
-  if (isCurtainMode && (state.roundNum || 1) === 1 && typeof showPreBattleCurtain === 'function') {
+  if (isCurtainMode) {
     state.gameState = 'curtain';
     const shown = showPreBattleCurtain(() => {
       startCountdown();

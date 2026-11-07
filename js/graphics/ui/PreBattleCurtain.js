@@ -17,6 +17,7 @@ import { audioSystem } from '../../systems/audioSystem.js';
 import { getFighterPreview } from './FighterPreviewCache.js';
 import { getFighterSkillSoundPaths } from '../../soundEffects/skillSounds.js';
 import { getFighterBasicAttackSoundPaths } from '../../soundEffects/basicAttackSounds.js';
+import { getAnnouncerSoundPaths } from '../../soundEffects/announcerSounds.js';
 import { GAME_MODES } from '../../core/modeConfig.js';
 
 let _isCurtainActive = false;
@@ -98,6 +99,8 @@ export function showPreBattleCurtain(onComplete) {
 
   const isTagMatch = (state.mode === GAME_MODES.TAG_MATCH || state.mode === 'Tag Match');
   const isSurvivor = (state.mode === GAME_MODES.SURVIVOR || state.mode === 'Survivor');
+  const is2v2 = (state.mode === GAME_MODES.TWO_VS_TWO || state.mode === '2v2');
+  const is1v2 = (state.mode === GAME_MODES.ONE_VS_TWO || state.mode === '1v2' || state.mode === '1v2 Stand Off' || state.mode === 'Stand Off 1v2');
 
   if (isTagMatch) {
     if (modeBadge) modeBadge.textContent = '3V3 TAG MATCH';
@@ -112,7 +115,7 @@ export function showPreBattleCurtain(onComplete) {
     team0.forEach((idx, i) => {
       const def = FIGHTER_DEFS[idx];
       if (!def || !leftRoster) return;
-      const card = createCurtainCard(def, idx, i === 0 ? 'ACTIVE' : `RESERVE ${i}`, '#FF3344', i === 0);
+      const card = createCurtainCard(def, idx, i === 0 ? 'ACTIVE' : `RESERVE ${i}`, i === 0 ? '#ffffff' : '#000000', i === 0);
       leftRoster.appendChild(card);
     });
 
@@ -120,7 +123,7 @@ export function showPreBattleCurtain(onComplete) {
     team1.forEach((idx, i) => {
       const def = FIGHTER_DEFS[idx];
       if (!def || !rightRoster) return;
-      const card = createCurtainCard(def, idx, i === 0 ? 'ACTIVE' : `RESERVE ${i}`, '#38BDF8', i === 0);
+      const card = createCurtainCard(def, idx, i === 0 ? 'ACTIVE' : `RESERVE ${i}`, i === 0 ? '#ffffff' : '#000000', i === 0);
       rightRoster.appendChild(card);
     });
 
@@ -179,7 +182,7 @@ export function showPreBattleCurtain(onComplete) {
     const playerDef = FIGHTER_DEFS[playerIdx];
 
     if (playerDef && leftRoster) {
-      const card = createCurtainCard(playerDef, playerIdx, 'SURVIVOR', '#22C55E', true);
+      const card = createCurtainCard(playerDef, playerIdx, 'SURVIVOR', '#ffffff', true);
       leftRoster.appendChild(card);
     }
 
@@ -188,11 +191,14 @@ export function showPreBattleCurtain(onComplete) {
       hordeCard.className = 'curtain-fighter-card active-slot';
       hordeCard.innerHTML = `
         <div class="curtain-fighter-thumb horde-thumb">
-          <span class="horde-icon">🧟</span>
+          <svg class="pixel-icon" viewBox="0 0 16 16" width="18" height="18" fill="none" shape-rendering="crispEdges">
+            <path d="M4 2h8v2h2v5h-2v2h-1v3H5v-3H4V9H2V4h2V2z" fill="#ffffff"/>
+            <path d="M5 6h2v2H5V6z M9 6h2v2H9V6z M7 9h2v1H7V9z M6 12h1v2H6v-2z M9 12h1v2H9v-2z" fill="#000000"/>
+          </svg>
         </div>
         <div class="curtain-fighter-info">
           <span class="curtain-fighter-name">ENDLESS HORDE</span>
-          <span class="curtain-fighter-role" style="color: #FF3344;">UNDEAD LEGION</span>
+          <span class="curtain-fighter-role" style="color: #ffffff;">UNDEAD LEGION</span>
         </div>
       `;
       rightRoster.appendChild(hordeCard);
@@ -229,8 +235,127 @@ export function showPreBattleCurtain(onComplete) {
         }, 220);
       }, 200);
     }, 150);
+  } else if (is2v2) {
+    if (modeBadge) modeBadge.textContent = '2V2 TEAM BATTLE';
+    if (subBadge) subBadge.textContent = 'SQUAD ASSET PRE-WARM';
+    if (leftName) leftName.textContent = 'TEAM RED';
+    if (rightName) rightName.textContent = 'TEAM BLUE';
+
+    const p1Idx = state.p1Index ?? 0;
+    const p3Idx = state.p3Index ?? 2;
+    const p2Idx = state.p2Index ?? 1;
+    const p4Idx = state.p4Index ?? 3;
+
+    const p1Def = FIGHTER_DEFS[p1Idx];
+    const p3Def = FIGHTER_DEFS[p3Idx];
+    const p2Def = FIGHTER_DEFS[p2Idx];
+    const p4Def = FIGHTER_DEFS[p4Idx];
+
+    if (p1Def && leftRoster) leftRoster.appendChild(createCurtainCard(p1Def, p1Idx, 'P1 LEADER', '#ffffff', true));
+    if (p3Def && leftRoster) leftRoster.appendChild(createCurtainCard(p3Def, p3Idx, 'P1 PARTNER', '#ffffff', false));
+    if (p2Def && rightRoster) rightRoster.appendChild(createCurtainCard(p2Def, p2Idx, 'P2 LEADER', '#ffffff', true));
+    if (p4Def && rightRoster) rightRoster.appendChild(createCurtainCard(p4Def, p4Idx, 'P2 PARTNER', '#ffffff', false));
+
+    prewarmCombatRoster([p1Idx, p3Idx, p2Idx, p4Idx]);
+
+  } else if (is1v2) {
+    if (modeBadge) modeBadge.textContent = '1V2 HANDICAP MATCH';
+    if (subBadge) subBadge.textContent = 'COMBATANT PRE-WARM';
+    if (leftName) leftName.textContent = 'SOLO FIGHTER';
+    if (rightName) rightName.textContent = 'OPPONENT DUO';
+
+    const p1Idx = state.p1Index ?? 0;
+    const p2Idx = state.p2Index ?? 1;
+    const p3Idx = state.p3Index ?? 2;
+
+    const p1Def = FIGHTER_DEFS[p1Idx];
+    const p2Def = FIGHTER_DEFS[p2Idx];
+    const p3Def = FIGHTER_DEFS[p3Idx];
+
+    if (p1Def && leftRoster) leftRoster.appendChild(createCurtainCard(p1Def, p1Idx, 'CHALLENGER', '#ffffff', true));
+    if (p2Def && rightRoster) rightRoster.appendChild(createCurtainCard(p2Def, p2Idx, 'OPPONENT 1', '#ffffff', true));
+    if (p3Def && rightRoster) rightRoster.appendChild(createCurtainCard(p3Def, p3Idx, 'OPPONENT 2', '#ffffff', false));
+
+    prewarmCombatRoster([p1Idx, p2Idx, p3Idx]);
+
   } else {
-    finishCurtain();
+    // 1v1 Duel, Tournament, or default match
+    const modeName = (state.mode === 'Tournament' || state.mode === GAME_MODES.TOURNAMENT) ? 'TOURNAMENT DUEL' : '1V1 DUEL';
+    if (modeBadge) modeBadge.textContent = modeName;
+    if (subBadge) subBadge.textContent = 'COMBATANT PRE-WARM';
+    if (leftName) leftName.textContent = 'PLAYER 1';
+    if (rightName) rightName.textContent = 'PLAYER 2';
+
+    const p1Idx = state.p1Index ?? 0;
+    const p2Idx = state.p2Index ?? 1;
+
+    const p1Def = FIGHTER_DEFS[p1Idx];
+    const p2Def = FIGHTER_DEFS[p2Idx];
+
+    if (p1Def && leftRoster) leftRoster.appendChild(createCurtainCard(p1Def, p1Idx, 'CHALLENGER', '#ffffff', true));
+    if (p2Def && rightRoster) rightRoster.appendChild(createCurtainCard(p2Def, p2Idx, 'OPPONENT', '#ffffff', true));
+
+    prewarmCombatRoster([p1Idx, p2Idx]);
+  }
+
+  function prewarmCombatRoster(indexes) {
+    setTimeout(() => {
+      if (finished) return;
+      setProgress(35, 'PRE-WARMING GPU SHADERS...');
+
+      const activeFighters = (state.fighters && state.fighters.length > 0)
+        ? state.fighters.filter(Boolean)
+        : [];
+
+      // If state.fighters is not fully initialized, construct dummy fighter instances for pre-warming
+      if (activeFighters.length === 0) {
+        for (const idx of indexes) {
+          const def = FIGHTER_DEFS[idx];
+          if (!def) continue;
+          try {
+            const f = createFighterInstance(def, { x: 100, y: 100, color: def.color, controls: {} });
+            if (f) activeFighters.push(f);
+          } catch (_) {}
+        }
+      }
+
+      // Prewarm GPU textures, hair PNGs, and offscreen body skin canvases (Rule 35)
+      if (activeFighters.length > 0) {
+        prewarmMatchAssets(activeFighters, state.ctx);
+      }
+
+      for (const idx of indexes) {
+        if (typeof idx === 'number') {
+          preloadFighterAssets(idx, true);
+        }
+      }
+
+      setTimeout(() => {
+        if (finished) return;
+        setProgress(75, 'PRELOADING AUDIO BUFFERS...');
+
+        const soundPaths = [...getAnnouncerSoundPaths()];
+        for (const idx of indexes) {
+          const def = FIGHTER_DEFS[idx];
+          if (!def) continue;
+          try {
+            soundPaths.push(...getFighterSkillSoundPaths(def.type));
+            soundPaths.push(...getFighterBasicAttackSoundPaths(def.type));
+          } catch (_) {}
+        }
+
+        const uniqueSounds = [...new Set(soundPaths.filter(Boolean))];
+        if (uniqueSounds.length > 0) {
+          preloadSound(uniqueSounds, { priority: true }).catch(() => {});
+        }
+
+        setTimeout(() => {
+          if (finished) return;
+          setProgress(100, 'COMBAT READY');
+          _curtainTimeoutId = setTimeout(finishCurtain, 180);
+        }, 180);
+      }, 180);
+    }, 120);
   }
 
   return true;

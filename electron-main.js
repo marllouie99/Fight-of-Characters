@@ -308,6 +308,13 @@ try {
   // Use default userData if setting fails
 }
 
+// Ensure single instance lock so multiple processes do not conflict on disk cache
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
 // Force Electron to ignore Windows display scaling (e.g. 125%, 150%)
 // This prevents Windows from blowing up the window size and clamping it to the monitor height!
 app.commandLine.appendSwitch('high-dpi-support', '1');
@@ -342,7 +349,6 @@ function createWindow () {
     frame: false, // Removes the Windows title bar and borders for a perfect 9:16 capture
     autoHideMenuBar: true
   });
-  win.webContents.session.clearCache();
 
   // Track window resizing to keep currentZoomFactor in sync with manual drags
   win.on('resize', () => {
@@ -406,8 +412,21 @@ function createWindow () {
     }
   });
 
+  win.on('closed', () => {
+    app.quit();
+  });
+
   win.loadFile('index.html');
 }
+
+app.on('second-instance', () => {
+  const windows = BrowserWindow.getAllWindows();
+  if (windows.length > 0) {
+    const win = windows[0];
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+});
 
 app.whenReady().then(() => {
   createWindow();

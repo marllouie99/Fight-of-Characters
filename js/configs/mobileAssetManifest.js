@@ -15,6 +15,31 @@ export const MOBILE_ASSET_MANIFEST = {
     724,
     1
   ],
+  "Assets/model/alucard/Hellbound animation/Hellhound_frame1.png": [
+    321,
+    289,
+    1
+  ],
+  "Assets/model/alucard/Hellbound animation/Hellhound_frame2.png": [
+    368,
+    298,
+    1
+  ],
+  "Assets/model/alucard/Hellbound animation/Hellhound_frame3.png": [
+    372,
+    322,
+    1
+  ],
+  "Assets/model/alucard/Hellbound animation/Hellhound_frame4.png": [
+    356,
+    284,
+    1
+  ],
+  "Assets/model/alucard/Hellbound animation/Hellhound_frame5.png": [
+    334,
+    297,
+    1
+  ],
   "Assets/model/alucard/Hellsing_.454_Casull_Pixel_Pistol.png": [
     703,
     355,
@@ -43,6 +68,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/ash/pokemon/charizard/Attack-Anim.png": [
     1120,
     704,
+    1
+  ],
+  "Assets/model/ash/pokemon/charizard/Charge-Anim.png": [
+    480,
+    384,
     1
   ],
   "Assets/model/ash/pokemon/charizard/Flame/12-Frame Pixel Fire Projectile Animation.png": [
@@ -170,14 +200,29 @@ export const MOBILE_ASSET_MANIFEST = {
     768,
     1
   ],
+  "Assets/model/ash/pokemon/charizard/mega/Charge-Anim.png": [
+    480,
+    448,
+    1
+  ],
   "Assets/model/ash/pokemon/charizard/mega/Hurt-Anim.png": [
     128,
     512,
     1
   ],
+  "Assets/model/ash/pokemon/charizard/mega/Idle-Anim.png": [
+    192,
+    448,
+    1
+  ],
   "Assets/model/ash/pokemon/charizard/mega/Shoot-Anim.png": [
     616,
     512,
+    1
+  ],
+  "Assets/model/ash/pokemon/charizard/mega/Walk-Anim.png": [
+    192,
+    448,
     1
   ],
   "Assets/model/ash/pokemon/charizard/Shoot-Anim.png": [
@@ -190,9 +235,19 @@ export const MOBILE_ASSET_MANIFEST = {
     576,
     1
   ],
+  "Assets/model/ash/pokemon/greninja/Charge-Anim.png": [
+    320,
+    384,
+    1
+  ],
   "Assets/model/ash/pokemon/greninja/Hurt-Anim.png": [
     80,
     512,
+    1
+  ],
+  "Assets/model/ash/pokemon/greninja/Idle-Anim.png": [
+    224,
+    448,
     1
   ],
   "Assets/model/ash/pokemon/greninja/RearUp-Anim.png": [
@@ -200,9 +255,29 @@ export const MOBILE_ASSET_MANIFEST = {
     384,
     1
   ],
+  "Assets/model/ash/pokemon/greninja/Shoot-Anim.png": [
+    480,
+    448,
+    1
+  ],
   "Assets/model/ash/pokemon/lucario/Attack-Anim.png": [
     960,
     576,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/Charge-Anim.png": [
+    320,
+    320,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/Hurt-Anim.png": [
+    80,
+    448,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/Idle-Anim.png": [
+    192,
+    448,
     1
   ],
   "Assets/model/ash/pokemon/lucario/mega/Attack-Anim.png": [
@@ -210,9 +285,39 @@ export const MOBILE_ASSET_MANIFEST = {
     640,
     1
   ],
+  "Assets/model/ash/pokemon/lucario/mega/Charge-Anim.png": [
+    320,
+    384,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/mega/Hurt-Anim.png": [
+    80,
+    448,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/mega/Idle-Anim.png": [
+    320,
+    384,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/mega/RearUp-Anim.png": [
+    384,
+    448,
+    1
+  ],
+  "Assets/model/ash/pokemon/lucario/RearUp-Anim.png": [
+    384,
+    448,
+    1
+  ],
   "Assets/model/ash/pokemon/pikachu/Attack-Anim.png": [
     800,
     640,
+    1
+  ],
+  "Assets/model/ash/pokemon/pikachu/Charge-Anim.png": [
+    400,
+    320,
     1
   ],
   "Assets/model/ash/pokemon/pikachu/Hurt-Anim.png": [
@@ -220,9 +325,19 @@ export const MOBILE_ASSET_MANIFEST = {
     512,
     1
   ],
+  "Assets/model/ash/pokemon/pikachu/Idle-Anim.png": [
+    240,
+    448,
+    1
+  ],
   "Assets/model/ash/pokemon/pikachu/Shock-Anim.png": [
     624,
     512,
+    1
+  ],
+  "Assets/model/ash/pokemon/pikachu/Shoot-Anim.png": [
+    440,
+    448,
     1
   ],
   "Assets/model/ash/pokemon/pikachu/Thunderbolt/thunderbolt-b.png": [
@@ -253,6 +368,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/avatar/AvatarOfEmptiness.png": [
     186,
     5064,
+    1
+  ],
+  "Assets/model/avatar/AvatarOfEmptiness_BossChecklist.png": [
+    300,
+    312,
     1
   ],
   "Assets/model/avatar/BossBar.png": [
@@ -305,6 +425,11 @@ export const MOBILE_ASSET_MANIFEST = {
     577,
     1
   ],
+  "Assets/model/avatar/Leg2.png": [
+    483,
+    509,
+    1
+  ],
   "Assets/model/avatar/Leg3.png": [
     340,
     539,
@@ -328,6 +453,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/avatar/Neck2.png": [
     735,
     192,
+    1
+  ],
+  "Assets/model/avatar/Neck3.png": [
+    494,
+    154,
     1
   ],
   "Assets/model/avatar/ShadowHand1.png": [
@@ -445,6 +575,11 @@ export const MOBILE_ASSET_MANIFEST = {
     724,
     1
   ],
+  "Assets/model/crazyDave/Sun-economy-sprite.png": [
+    367,
+    357,
+    1
+  ],
   "Assets/model/crazyDave/torchwood-sprite-sheet.png": [
     2086,
     754,
@@ -483,16 +618,6 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/denji/Chainsaw Blade Parts/chainsaw-chain-teeth.png": [
     2172,
     724,
-    1
-  ],
-  "Assets/model/denji/Chainsaw-breakdown-sheet.jpg": [
-    1024,
-    572,
-    1
-  ],
-  "Assets/model/denji/Denji-chainsaw-blade.jpg": [
-    2752,
-    1536,
     1
   ],
   "Assets/model/denji/denji-devilform-model-skin.png": [
@@ -568,11 +693,6 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/enderDragon/Ender-Dragon-Model.png": [
     1362,
     1155,
-    1
-  ],
-  "Assets/model/enderDragon/Enderdragon.jpg": [
-    661,
-    583,
     1
   ],
   "Assets/model/enderDragon/end_crystal/end_crystal-b.png": [
@@ -1000,16 +1120,6 @@ export const MOBILE_ASSET_MANIFEST = {
     384,
     1
   ],
-  "Assets/model/gojo/BattleIntro/BattleIntro.jpg": [
-    1024,
-    765,
-    1
-  ],
-  "Assets/model/gojo/BattleIntro/gojo-battle-intro-pose.jpg": [
-    649,
-    1537,
-    1
-  ],
   "Assets/model/gojo/Blue_projectile/blue_travel-b-12.png": [
     3072,
     256,
@@ -1028,16 +1138,6 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/gojo/Gojo-Skill-icons.png": [
     2048,
     768,
-    1
-  ],
-  "Assets/model/gojo/gojo_domain_arena_overlay.jpg": [
-    1200,
-    1200,
-    1
-  ],
-  "Assets/model/gojo/gojo_domain_expansion_arena_ovelay.jpeg": [
-    2048,
-    2048,
     1
   ],
   "Assets/model/gojo/purple_explosion/explosion-b.png": [
@@ -1075,29 +1175,34 @@ export const MOBILE_ASSET_MANIFEST = {
     256,
     1
   ],
+  "Assets/model/gojo/Saturo Gojo.png": [
+    490,
+    509,
+    1
+  ],
   "Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png": [
     1536,
     1024,
     1
   ],
-  "Assets/model/guts/Guts_heavy_sword.jpg": [
-    2048,
-    2048,
+  "Assets/model/guts/Guts_battle_stance.png": [
+    304,
+    215,
     1
   ],
-  "Assets/model/guts/Guts_heavy_sword_slash_effect.jpg": [
-    2400,
-    1792,
-    1
-  ],
-  "Assets/model/guts/Guts_helmet.jpg": [
-    2048,
-    2048,
+  "Assets/model/guts/Guts_heavy_sword.png": [
+    500,
+    500,
     1
   ],
   "Assets/model/guts/Guts_helmet.png": [
     500,
     500,
+    1
+  ],
+  "Assets/model/guts/Guts_neutral_countdown.png": [
+    250,
+    299,
     1
   ],
   "Assets/model/ichigo/attack/attack-b.png": [
@@ -1190,6 +1295,11 @@ export const MOBILE_ASSET_MANIFEST = {
     887,
     1
   ],
+  "Assets/model/johnWick/Johnwick-pixel-skin.png": [
+    503,
+    496,
+    1
+  ],
   "Assets/model/knight/Knight-shield.png": [
     734,
     1281,
@@ -1200,29 +1310,14 @@ export const MOBILE_ASSET_MANIFEST = {
     1410,
     1
   ],
-  "Assets/model/knight/Knight_hair.jpg": [
-    2752,
-    1536,
-    1
-  ],
   "Assets/model/knight/Knight_hair.png": [
     826,
     1331,
     1
   ],
-  "Assets/model/knight/Knight_shield.jpg": [
-    2752,
-    1536,
-    1
-  ],
   "Assets/model/knight/Knight_shield.png": [
     734,
     1281,
-    1
-  ],
-  "Assets/model/knight/Knight_sword.jpg": [
-    2752,
-    1536,
     1
   ],
   "Assets/model/knight/Knight_sword.png": [
@@ -1255,9 +1350,9 @@ export const MOBILE_ASSET_MANIFEST = {
     1024,
     1
   ],
-  "Assets/model/megumin/megumin-staff.jpg": [
-    1024,
-    1024,
+  "Assets/model/makima/Makima-model-skin.png": [
+    500,
+    500,
     1
   ],
   "Assets/model/namelessDeity/Antlers1.png": [
@@ -1370,9 +1465,24 @@ export const MOBILE_ASSET_MANIFEST = {
     522,
     1
   ],
+  "Assets/model/namelessDeity/Cicada.png": [
+    412,
+    240,
+    1
+  ],
+  "Assets/model/namelessDeity/ClockMinuteHand.png": [
+    488,
+    58,
+    1
+  ],
   "Assets/model/namelessDeity/CosmicLightCircle.png": [
     900,
     900,
+    1
+  ],
+  "Assets/model/namelessDeity/CosmicLightCircleCenter.png": [
+    365,
+    473,
     1
   ],
   "Assets/model/namelessDeity/CosmicLightCircleCenter1.png": [
@@ -1413,6 +1523,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/namelessDeity/Fins1.png": [
     395,
     371,
+    1
+  ],
+  "Assets/model/namelessDeity/Fins2.png": [
+    369,
+    409,
     1
   ],
   "Assets/model/namelessDeity/Fins3.png": [
@@ -1490,6 +1605,31 @@ export const MOBILE_ASSET_MANIFEST = {
     610,
     1
   ],
+  "Assets/model/namelessDeity/Hand1.png": [
+    446,
+    198,
+    1
+  ],
+  "Assets/model/namelessDeity/Hand2.png": [
+    393,
+    262,
+    1
+  ],
+  "Assets/model/namelessDeity/Hand3.png": [
+    453,
+    368,
+    1
+  ],
+  "Assets/model/namelessDeity/Hand4.png": [
+    232,
+    406,
+    1
+  ],
+  "Assets/model/namelessDeity/Hand5.png": [
+    468,
+    319,
+    1
+  ],
   "Assets/model/namelessDeity/hands2-pixel.png": [
     1519,
     1036,
@@ -1530,6 +1670,11 @@ export const MOBILE_ASSET_MANIFEST = {
     710,
     1
   ],
+  "Assets/model/namelessDeity/Nameless-Deity-halo.png": [
+    414,
+    414,
+    1
+  ],
   "Assets/model/namelessDeity/Nameless-Deity-PIXEL-SKIN.png": [
     679,
     604,
@@ -1540,9 +1685,24 @@ export const MOBILE_ASSET_MANIFEST = {
     1024,
     1
   ],
+  "Assets/model/namelessDeity/Nameless-Destroyer.png": [
+    243,
+    409,
+    1
+  ],
+  "Assets/model/namelessDeity/NamelessDeity-ClockMinuteHand.png": [
+    488,
+    58,
+    1
+  ],
   "Assets/model/namelessDeity/NamelessDeity-CosmicLightCircle.png": [
     900,
     900,
+    1
+  ],
+  "Assets/model/namelessDeity/NamelessDeity-CosmicLightCircleCenter.png": [
+    365,
+    473,
     1
   ],
   "Assets/model/namelessDeity/NamelessDeity-CosmicLightCircleRing.png": [
@@ -1575,7 +1735,27 @@ export const MOBILE_ASSET_MANIFEST = {
     512,
     1
   ],
+  "Assets/model/namelessDeity/NamelessDeity-PsychedelicFeather.png": [
+    252,
+    320,
+    1
+  ],
+  "Assets/model/namelessDeity/NamelessDeityWheel1.png": [
+    414,
+    414,
+    1
+  ],
   "Assets/model/namelessDeity/NamelessDeityWheel2.png": [
+    414,
+    414,
+    1
+  ],
+  "Assets/model/namelessDeity/NamelessDeityWheel3.png": [
+    414,
+    414,
+    1
+  ],
+  "Assets/model/namelessDeity/NamelessDeityWheel4.png": [
     414,
     414,
     1
@@ -1628,6 +1808,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/namelessDeity/Neon Cosmic Nebula Texture.png": [
     1254,
     1254,
+    1
+  ],
+  "Assets/model/namelessDeity/PsychedelicFeather.png": [
+    252,
+    320,
     1
   ],
   "Assets/model/namelessDeity/SantaHat.png": [
@@ -1695,9 +1880,44 @@ export const MOBILE_ASSET_MANIFEST = {
     480,
     1
   ],
+  "Assets/model/namelessDeity/SideFlower1.png": [
+    288,
+    288,
+    1
+  ],
   "Assets/model/namelessDeity/sideflower2-pixel.png": [
     1254,
     1254,
+    1
+  ],
+  "Assets/model/namelessDeity/SideFlower2.png": [
+    303,
+    303,
+    1
+  ],
+  "Assets/model/namelessDeity/SideFlower3.png": [
+    322,
+    322,
+    1
+  ],
+  "Assets/model/namelessDeity/SideFlower4.png": [
+    293,
+    293,
+    1
+  ],
+  "Assets/model/namelessDeity/SideFlower5.png": [
+    284,
+    284,
+    1
+  ],
+  "Assets/model/namelessDeity/SideFlower6.png": [
+    308,
+    308,
+    1
+  ],
+  "Assets/model/namelessDeity/SideFlower7.png": [
+    290,
+    294,
     1
   ],
   "Assets/model/namelessDeity/sideflower9.png": [
@@ -1713,6 +1933,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/namelessDeity/StatueBody.png": [
     1024,
     1024,
+    1
+  ],
+  "Assets/model/namelessDeity/TopHat.png": [
+    381,
+    355,
     1
   ],
   "Assets/model/namelessDeity/Vines.png": [
@@ -1755,12 +1980,27 @@ export const MOBILE_ASSET_MANIFEST = {
     326,
     1
   ],
+  "Assets/model/namelessDeity/Wheel1.png": [
+    414,
+    414,
+    1
+  ],
   "Assets/model/namelessDeity/wheel2-pixel.png": [
     1254,
     1254,
     1
   ],
   "Assets/model/namelessDeity/Wheel2.png": [
+    414,
+    414,
+    1
+  ],
+  "Assets/model/namelessDeity/Wheel3.png": [
+    414,
+    414,
+    1
+  ],
+  "Assets/model/namelessDeity/Wheel4.png": [
     414,
     414,
     1
@@ -1855,6 +2095,11 @@ export const MOBILE_ASSET_MANIFEST = {
     256,
     1
   ],
+  "Assets/model/reze/REZE-MODEL-SKIN.png": [
+    508,
+    492,
+    1
+  ],
   "Assets/model/reze/REZE-WEAPON.png": [
     2113,
     744,
@@ -1895,29 +2140,14 @@ export const MOBILE_ASSET_MANIFEST = {
     1024,
     1
   ],
-  "Assets/model/spartan/spartan_helmet.jpg": [
-    2752,
-    1536,
-    1
-  ],
   "Assets/model/spartan/spartan_helmet.png": [
     784,
     1312,
     1
   ],
-  "Assets/model/spartan/spartan_shield.jpg": [
-    2752,
-    1536,
-    1
-  ],
   "Assets/model/spartan/spartan_shield.png": [
     1334,
     1334,
-    1
-  ],
-  "Assets/model/spartan/spartan_spear.jpg": [
-    2752,
-    1536,
     1
   ],
   "Assets/model/spartan/spartan_spear.png": [
@@ -2090,9 +2320,9 @@ export const MOBILE_ASSET_MANIFEST = {
     724,
     1
   ],
-  "Assets/model/sukuna/Sukuna-battle-intro-pose.jpg": [
-    803,
-    1592,
+  "Assets/model/sukuna/Sukuna-hair-black.png": [
+    500,
+    500,
     1
   ],
   "Assets/model/sukuna/sukuna-shrine.png": [
@@ -2140,9 +2370,9 @@ export const MOBILE_ASSET_MANIFEST = {
     256,
     1
   ],
-  "Assets/model/toji/toji_pistol.jpg": [
-    2752,
-    1536,
+  "Assets/model/toji/Toji-skin.png": [
+    500,
+    500,
     1
   ],
   "Assets/model/toji/toji_pistol.png": [
@@ -2188,6 +2418,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/uryu/ISHIDA.png": [
     512,
     512,
+    1
+  ],
+  "Assets/model/uryu/Uryu-ishida.png": [
+    500,
+    511,
     1
   ],
   "Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png": [
@@ -2405,6 +2640,11 @@ export const MOBILE_ASSET_MANIFEST = {
     502,
     1
   ],
+  "Assets/model/yuta/Yuta-Pixel-Skin.png": [
+    500,
+    500,
+    1
+  ],
   "Assets/model/zenitsu/Thunderclap and Flash Six-Frame Attack Sequence.png": [
     1774,
     887,
@@ -2455,6 +2695,66 @@ export const MOBILE_ASSET_MANIFEST = {
     334,
     1
   ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-1-blue.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-1-gold.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-2-blue.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-2-gold.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-3-blue.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-3-gold.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-4-blue.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-4-gold.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-5-blue.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-5-gold.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-6-blue.png": [
+    480,
+    240,
+    1
+  ],
+  "Assets/model/zenitsu/ZenitsuDash/zenitsu-dash-frame-6-gold.png": [
+    480,
+    240,
+    1
+  ],
   "Assets/model/zeus/Clouds/Six Pixel-Art Cloud Sprites in a Row.png": [
     2172,
     724,
@@ -2490,29 +2790,14 @@ export const MOBILE_ASSET_MANIFEST = {
     245,
     1
   ],
-  "Assets/Overlays/Arena Decoration/bones.jpg": [
-    284,
-    255,
-    1
-  ],
   "Assets/Overlays/Arena Decoration/bones.png": [
     284,
     255,
     1
   ],
-  "Assets/Overlays/Arena Decoration/candles.jpg": [
-    181,
-    225,
-    1
-  ],
   "Assets/Overlays/Arena Decoration/candles.png": [
     181,
     225,
-    1
-  ],
-  "Assets/Overlays/Arena Decoration/cobwebs.jpg": [
-    1014,
-    256,
     1
   ],
   "Assets/Overlays/Arena Decoration/cobwebs1.png": [
@@ -2525,16 +2810,6 @@ export const MOBILE_ASSET_MANIFEST = {
     216,
     1
   ],
-  "Assets/Overlays/Arena Decoration/Gemini_Generated_Image_n18hgpn18hgpn18h.jpg": [
-    2752,
-    1536,
-    1
-  ],
-  "Assets/Overlays/Arena Decoration/Ghost.jpg": [
-    161,
-    120,
-    1
-  ],
   "Assets/Overlays/Arena Decoration/Ghost.png": [
     115,
     103,
@@ -2545,11 +2820,6 @@ export const MOBILE_ASSET_MANIFEST = {
     236,
     1
   ],
-  "Assets/Overlays/Arena Decoration/thumbstone.jpg": [
-    185,
-    249,
-    1
-  ],
   "Assets/Overlays/Arena Decoration/thumbstone.png": [
     176,
     228,
@@ -2558,11 +2828,6 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/Overlays/Banners/02716e8a-d565-4dcd-a09e-10359f38da30_removalai_preview.png": [
     600,
     448,
-    1
-  ],
-  "Assets/Overlays/Banners/Gemini_Generated_Image_11w9kf11w9kf11w9.jpg": [
-    2400,
-    1792,
     1
   ],
   "Assets/Overlays/Banners/gradeA.png": [
@@ -2843,6 +3108,136 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/weapon/KnightSword.png": [
     697,
     188,
+    1
+  ],
+  "Assets/model/denji/Chainsaw-breakdown-sheet.jpg": [
+    1024,
+    572,
+    1
+  ],
+  "Assets/model/denji/Denji-chainsaw-blade.jpg": [
+    2752,
+    1536,
+    1
+  ],
+  "Assets/model/enderDragon/Enderdragon.jpg": [
+    661,
+    583,
+    1
+  ],
+  "Assets/model/gojo/BattleIntro/BattleIntro.jpg": [
+    1024,
+    765,
+    1
+  ],
+  "Assets/model/gojo/BattleIntro/gojo-battle-intro-pose.jpg": [
+    649,
+    1537,
+    1
+  ],
+  "Assets/model/gojo/gojo_domain_arena_overlay.jpg": [
+    1200,
+    1200,
+    1
+  ],
+  "Assets/model/gojo/gojo_domain_expansion_arena_ovelay.jpeg": [
+    2048,
+    2048,
+    1
+  ],
+  "Assets/model/guts/Guts_heavy_sword.jpg": [
+    500,
+    500,
+    1
+  ],
+  "Assets/model/guts/Guts_heavy_sword_slash_effect.jpg": [
+    2400,
+    1792,
+    1
+  ],
+  "Assets/model/guts/Guts_helmet.jpg": [
+    500,
+    500,
+    1
+  ],
+  "Assets/model/knight/Knight_hair.jpg": [
+    826,
+    1331,
+    1
+  ],
+  "Assets/model/knight/Knight_shield.jpg": [
+    734,
+    1281,
+    1
+  ],
+  "Assets/model/knight/Knight_sword.jpg": [
+    1430,
+    1410,
+    1
+  ],
+  "Assets/model/megumin/megumin-staff.jpg": [
+    1024,
+    1024,
+    1
+  ],
+  "Assets/model/spartan/spartan_helmet.jpg": [
+    784,
+    1312,
+    1
+  ],
+  "Assets/model/spartan/spartan_shield.jpg": [
+    1334,
+    1334,
+    1
+  ],
+  "Assets/model/spartan/spartan_spear.jpg": [
+    2896,
+    370,
+    1
+  ],
+  "Assets/model/sukuna/Sukuna-battle-intro-pose.jpg": [
+    803,
+    1592,
+    1
+  ],
+  "Assets/model/toji/toji_pistol.jpg": [
+    800,
+    517,
+    1
+  ],
+  "Assets/Overlays/Arena Decoration/bones.jpg": [
+    284,
+    255,
+    1
+  ],
+  "Assets/Overlays/Arena Decoration/candles.jpg": [
+    181,
+    225,
+    1
+  ],
+  "Assets/Overlays/Arena Decoration/cobwebs.jpg": [
+    1014,
+    256,
+    1
+  ],
+  "Assets/Overlays/Arena Decoration/Gemini_Generated_Image_n18hgpn18hgpn18h.jpg": [
+    2752,
+    1536,
+    1
+  ],
+  "Assets/Overlays/Arena Decoration/Ghost.jpg": [
+    115,
+    103,
+    1
+  ],
+  "Assets/Overlays/Arena Decoration/thumbstone.jpg": [
+    176,
+    228,
+    1
+  ],
+  "Assets/Overlays/Banners/Gemini_Generated_Image_11w9kf11w9kf11w9.jpg": [
+    2400,
+    1792,
     1
   ]
 };

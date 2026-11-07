@@ -803,6 +803,78 @@ export function drawNaoyaGhostModel(ctx, x, y, angle, r, alpha = 0.5) {
 }
 
 /**
+ * Renders Naoya's authentic human body model with custom offsets, alpha, and corruption effects
+ * during the Vengeful Curse Transformation sequence when losing all HP.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} angle
+ * @param {number} r
+ * @param {number} [alpha=1.0]
+ * @param {number} [collapseY=0]
+ * @param {number} [shudderX=0]
+ * @param {number} [shudderY=0]
+ * @param {number} [corrupted=0] - 0 to 1 intensity of cursed dark miasma / veins covering the human body
+ */
+export function drawNaoyaHumanModel(ctx, x, y, angle = 0, r = 25, alpha = 1.0, collapseY = 0, shudderX = 0, shudderY = 0, corrupted = 0) {
+  if (!ctx || alpha <= 0.01) return;
+  getNaoyaCachedCanvas(r);
+
+  ctx.save();
+  ctx.translate(x + shudderX, y + collapseY + shudderY);
+  ctx.rotate(angle || 0);
+
+  const facingLeft = Math.abs(angle || 0) > Math.PI / 2;
+  if (facingLeft) {
+    ctx.scale(1, -1);
+  }
+
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.imageSmoothingEnabled = false;
+
+  // 1. Cached Human Body
+  if (_cachedFighterCanvas) {
+    const w = _cachedFighterCanvas.width;
+    const h = _cachedFighterCanvas.height;
+    ctx.drawImage(_cachedFighterCanvas, -w / 2, -h / 2, w, h);
+  } else {
+    _renderNaoyaPixelBodyToCanvas(ctx, r);
+  }
+
+  // 2. Authentic Anime Hair
+  _drawNaoyaHair(ctx, r, facingLeft);
+
+  // 3. Cursed Corruption Overlay (sprawling dark/lime veins spreading across the dying human body)
+  if (corrupted > 0.05) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Darkening shadow wash
+    ctx.fillStyle = `rgba(14, 16, 21, ${Math.min(0.85, corrupted * 0.90)})`;
+    ctx.fill();
+
+    // Spreading cursed veins
+    ctx.strokeStyle = corrupted > 0.5 ? '#76E042' : '#E11D48';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.5);
+    ctx.lineTo(-r * 0.35, -r * 0.1);
+    ctx.lineTo(-r * 0.5, r * 0.35);
+    ctx.moveTo(0, -r * 0.5);
+    ctx.lineTo(r * 0.4, 0);
+    ctx.lineTo(r * 0.3, r * 0.5);
+    ctx.moveTo(-r * 0.2, r * 0.1);
+    ctx.lineTo(r * 0.2, r * 0.2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+/**
  * Procedural fallback for Curse Naoya (Vengeful Cursed Spirit Form) matching
  * the exact upright magenta hooded skull-and-carapace silhouette of Naoya-curse-form.png.
  */
@@ -979,6 +1051,46 @@ export function drawCurseNaoyaGhostModel(ctx, x, y, r = 25, alpha = 0.45) {
 
   ctx.save();
   ctx.translate(x, y);
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.imageSmoothingEnabled = false;
+
+  if (sprite) {
+    ctx.drawImage(sprite, Math.round(-sprite.width / 2), Math.round(-sprite.height / 2));
+  } else {
+    getCurseNaoyaCachedCanvas(r);
+    if (_cachedCurseFighterCanvas) {
+      const w = _cachedCurseFighterCanvas.width;
+      const h = _cachedCurseFighterCanvas.height;
+      ctx.drawImage(_cachedCurseFighterCanvas, Math.round(-w / 2), Math.round(-h / 2), w, h);
+    } else {
+      _renderCurseNaoyaPixelBodyToCanvas(ctx, r);
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Renders the 16-bit pixel art Curse Form model at specified coordinates with custom scale and opacity.
+ * Used during the Cataclysmic Shell Detonation & Jet Curse Emergence phase.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} r
+ * @param {number} [alpha=1.0]
+ * @param {number} [scale=1.0]
+ */
+export function drawCurseNaoyaModelAt(ctx, x, y, r = 25, alpha = 1.0, scale = 1.0) {
+  if (!ctx || alpha <= 0.01) return;
+  const cfg = (typeof CONFIG !== 'undefined' && CONFIG.naoya) ? CONFIG.naoya : {};
+  const modelLength = r * (cfg.curseFormModelLength ?? 5.4);
+  const sprite = _getCurseFormScaledCanvas(modelLength);
+
+  ctx.save();
+  ctx.translate(x, y);
+  if (scale !== 1.0) {
+    ctx.scale(scale, scale);
+  }
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
   ctx.imageSmoothingEnabled = false;
 

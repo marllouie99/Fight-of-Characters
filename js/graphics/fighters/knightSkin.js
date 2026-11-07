@@ -218,7 +218,7 @@ let _knightHairImage = null;
 let _knightHairImageLoading = false;
 
 export function _getKnightHairImage() {
-  if (_knightHairImage && _knightHairImage.complete && _knightHairImage.naturalWidth > 0) {
+  if (_knightHairImage && _knightHairImage.complete && (_knightHairImage.naturalWidth > 0 || _knightHairImage.width > 0)) {
     return _knightHairImage;
   }
   if (!_knightHairImageLoading && typeof Image !== 'undefined') {
@@ -229,7 +229,7 @@ export function _getKnightHairImage() {
       _knightHairImageLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/knight/Knight_hair.jpg?v=1';
       } else {
         _knightHairImageLoading = false;

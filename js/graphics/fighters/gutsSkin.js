@@ -17,7 +17,7 @@ let _gutsHelmetImage = null;
 let _gutsHelmetLoading = false;
 
 export function _getGutsHelmetImage() {
-  if (_gutsHelmetImage && _gutsHelmetImage.complete && _gutsHelmetImage.naturalWidth > 0) {
+  if (_gutsHelmetImage && _gutsHelmetImage.complete && (_gutsHelmetImage.naturalWidth > 0 || _gutsHelmetImage.width > 0)) {
     return _gutsHelmetImage;
   }
   if (!_gutsHelmetLoading && typeof Image !== 'undefined') {
@@ -28,7 +28,7 @@ export function _getGutsHelmetImage() {
       _gutsHelmetLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/guts/Guts_helmet.jpg?v=1';
       } else {
         _gutsHelmetLoading = false;
@@ -44,7 +44,7 @@ let _gutsHairImage = null;
 let _gutsHairLoading = false;
 
 export function _getGutsHairImage() {
-  if (_gutsHairImage && _gutsHairImage.complete && _gutsHairImage.naturalWidth > 0) {
+  if (_gutsHairImage && _gutsHairImage.complete && (_gutsHairImage.naturalWidth > 0 || _gutsHairImage.width > 0)) {
     return _gutsHairImage;
   }
   if (!_gutsHairLoading && typeof Image !== 'undefined') {

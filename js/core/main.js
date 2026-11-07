@@ -12,7 +12,7 @@ import { handleUpgradeMouseMove, handleUpgradeClick, handleUpgradeKeyDown } from
 import { stopAllSounds, stopAllLoopingSounds, unlockAudio } from '../systems/soundSystem.js';
 import { audioSystem } from '../systems/audioSystem.js';
 import { getSelectedArenaBgmTrack, cycleNextArenaBgmTrack } from '../systems/arenaBgmSystem.js';
-import { initGraphicsCache } from '../graphics/graphicsCache.js';
+import { initGraphicsCache, getPreloadStatus } from '../graphics/graphicsCache.js';
 import { syncHudPosition } from '../graphics/ui/hudLayout.js';
 import { clearHealthHud } from '../graphics/hudManager.js';
 import { GAME_MODES } from './modeConfig.js';
@@ -122,10 +122,12 @@ function initStartupSplashScreen() {
   let isLoaded = false;
   let isDismissed = false;
 
+  let currentPct = 10;
   const setProgress = (pct, text) => {
     const clamped = Math.max(0, Math.min(100, Math.round(pct)));
-    if (progressBar) progressBar.style.width = `${clamped}%`;
-    if (statusPct) statusPct.textContent = `${clamped}%`;
+    currentPct = Math.max(currentPct, clamped);
+    if (progressBar) progressBar.style.width = `${currentPct}%`;
+    if (statusPct) statusPct.textContent = `${currentPct}%`;
     if (statusText && text) statusText.textContent = text;
   };
 
@@ -177,31 +179,58 @@ function initStartupSplashScreen() {
     }
   });
 
-  // Smooth loading progression sequence (~800ms)
-  setProgress(15, 'Loading game assets...');
+  // Real-time asset loading progression
+  setProgress(15, 'Loading combat fonts...');
 
-  setTimeout(() => {
-    if (!isDismissed) setProgress(45, 'Pre-warming combat shaders...');
-  }, 220);
-
-  setTimeout(() => {
-    if (!isDismissed) setProgress(75, 'Initializing audio system...');
-  }, 480);
-
-  // When fonts and core resources are ready:
+  // Track fonts
   const fontPromise = (typeof document !== 'undefined' && document.fonts && document.fonts.ready)
     ? document.fonts.ready
     : Promise.resolve();
 
+  // Track essential core audio
+  const audioPromise = preloadEssentialCoreSounds().catch(() => {});
+
+  // Track default fighters assets
+  const p1Promise = (typeof state.p1Index === 'number') ? preloadFighterAssets(state.p1Index) : Promise.resolve();
+  const p2Promise = (typeof state.p2Index === 'number') ? preloadFighterAssets(state.p2Index) : Promise.resolve();
+
   fontPromise.then(() => {
-    setTimeout(() => {
-      if (!isDismissed) markReady();
-    }, 750);
-  }).catch(() => {
-    setTimeout(() => {
-      if (!isDismissed) markReady();
-    }, 750);
+    if (!isLoaded && !isDismissed) {
+      setProgress(35, 'Decoding combat audio...');
+    }
   });
+
+  audioPromise.then(() => {
+    if (!isLoaded && !isDismissed) {
+      setProgress(65, 'Pre-warming combat shaders...');
+    }
+  });
+
+  Promise.allSettled([fontPromise, audioPromise, p1Promise, p2Promise]).then(() => {
+    // Query graphics cache status for accurate completion
+    let attempts = 0;
+    const checkCache = () => {
+      attempts++;
+      const status = (typeof getPreloadStatus === 'function') ? getPreloadStatus() : { ratio: 1 };
+      const targetPct = Math.round(65 + status.ratio * 35);
+      setProgress(targetPct, targetPct >= 99 ? 'Ready' : 'Pre-warming combat shaders...');
+      if (status.ratio >= 0.95 || targetPct >= 100 || attempts > 15) {
+        setTimeout(() => {
+          if (!isDismissed) markReady();
+        }, 120);
+      } else {
+        setTimeout(checkCache, 80);
+      }
+    };
+    checkCache();
+  });
+
+  // Fail-safe safety cap: maximum 2.0s so slow networks/connections NEVER hang startup
+  setTimeout(() => {
+    if (!isDismissed && !isLoaded) {
+      markReady();
+    }
+  }, 2000);
 }
 
 initStartupSplashScreen();

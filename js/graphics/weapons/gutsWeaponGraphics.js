@@ -17,7 +17,7 @@ let _gutsSwordImage = null;
 let _gutsSwordLoading = false;
 
 export function _getGutsSwordImage() {
-  if (_gutsSwordImage && _gutsSwordImage.complete && _gutsSwordImage.naturalWidth > 0) {
+  if (_gutsSwordImage && _gutsSwordImage.complete && (_gutsSwordImage.naturalWidth > 0 || _gutsSwordImage.width > 0)) {
     return _gutsSwordImage;
   }
   if (!_gutsSwordLoading && typeof Image !== 'undefined') {

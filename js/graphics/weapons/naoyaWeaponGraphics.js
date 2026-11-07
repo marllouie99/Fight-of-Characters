@@ -10,7 +10,7 @@ import { state, triggerGlobalScreenShake, spawnFloatingText } from '../../core/s
 import { CONFIG } from '../../core/config.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { spawnImpactFlash, spawnSparks } from '../particles/sparkEffect.js';
-import { getNaoyaCachedCanvas, drawNaoyaGhostModel } from '../fighters/naoyaSkin.js';
+import { getNaoyaCachedCanvas, drawNaoyaGhostModel, drawNaoyaHumanModel, drawCurseNaoyaModelAt } from '../fighters/naoyaSkin.js';
 
 export const NAOYA_WEAPON_GRAPHICS = {
   tanto: {
@@ -1208,8 +1208,22 @@ export function drawNaoyaRunwaySpeedLines(ctx, fighter, points) {
 // ═════════════════════════════════════════════════════════════════════
 
 /**
- * Draws the Cursed Womb cocoon during Naoya's death rebirth awakening.
- * Features an organic pulsing embryo egg with swirling cursed miasma tendrils.
+ * Master renderer for Naoya's Vengeful Curse Transformation animation.
+ * Triggers when Naoya loses all HP in human form, morphing through 4 distinct phases:
+ *
+ * - Stage 1 (Progress 0.00 -> 0.28): Fatal Collapse, Grudge Blood Pool & Cursed Miasma Eruption
+ * - Stage 2 (Progress 0.28 -> 0.65): Cursed Womb Chrysalis Formation, Gestating Silhouette & Heartbeat Pulses
+ * - Stage 3 (Progress 0.65 -> 0.88): Ramjet Air Intake Vortex Suction, High-Frequency Shudder & Glowing Fissures
+ * - Stage 4 (Progress 0.88 -> 1.00): Cataclysmic Shell Detonation, Flying Carapace Shards & Jet Curse Emergence
+ *
+ * Adheres strictly to:
+ * - Rule 11: Zero shadowBlur / shadowColor
+ * - Rule 19: Upright front POV orientation
+ * - Rule 26: Clean concentric shockwave rings (staggered wavefronts, no cobwebs/spokes)
+ * - Rule 35: Mobile 60 FPS pre-baked sprite architecture
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} fighter
  */
 export function drawCursedWombCocoonVFX(ctx, fighter) {
   if (!fighter || !fighter.isCurseWomb) return;
@@ -1217,74 +1231,501 @@ export function drawCursedWombCocoonVFX(ctx, fighter) {
   const timer = fighter.curseWombTimer || 0;
   const maxTimer = fighter.curseWombMaxTimer || 60;
   const progress = Math.max(0, Math.min(1.0, 1.0 - (timer / maxTimer)));
-  const r = (fighter.r || 25) * (1.15 + Math.sin(progress * Math.PI * 6) * 0.08);
+  const r = fighter.r || 25;
+
+  // ── 0. Ground Blood Pool & Splatter Decals ──
+  const bloodP = Math.min(1.0, progress / 0.28);
+  const poolRx = r * (0.65 + bloodP * 0.95);
+  const poolRy = r * (0.32 + bloodP * 0.44);
+
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y + r * 0.45);
+
+  // Dark crimson blood pool with obsidian outer clotting edge
+  ctx.fillStyle = '#1A040C';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, poolRx * 1.08, poolRy * 1.08, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#3E0816';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, poolRx, poolRy, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#5C0D22';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, poolRx * 0.65, poolRy * 0.65, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Satellite blood droplets
+  const dropletCount = 6;
+  ctx.fillStyle = '#3E0816';
+  for (let d = 0; d < dropletCount; d++) {
+    const dAng = (d / dropletCount) * Math.PI * 2 + 0.35;
+    const dDist = poolRx * (1.15 + (d % 3) * 0.18);
+    const dx = Math.cos(dAng) * dDist;
+    const dy = Math.sin(dAng) * (dDist * 0.5);
+    ctx.beginPath();
+    ctx.arc(dx, dy, 2.5 + (d % 2), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Heartbeat ripples across the blood pool during Stage 2
+  if (progress > 0.28 && progress <= 0.65) {
+    const ripBeat = Math.sin(progress * Math.PI * 12);
+    if (ripBeat > 0.2) {
+      const ripRad = poolRx * (0.4 + ripBeat * 0.55);
+      ctx.strokeStyle = `rgba(118, 224, 66, ${Math.min(0.55, ripBeat * 0.55)})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ripRad, ripRad * 0.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // ── 1. Concentric Heartbeat & Blast Shockwave Rings (Rule 26) ──
+  if (fighter.curseTransformationShockwaves && fighter.curseTransformationShockwaves.length > 0) {
+    for (let i = 0; i < fighter.curseTransformationShockwaves.length; i++) {
+      const sw = fighter.curseTransformationShockwaves[i];
+      if (!sw || sw.timer <= 0) continue;
+      const lp = Math.max(0, Math.min(1.0, 1.0 - (sw.timer / sw.maxTimer)));
+      const alpha = Math.sin(lp * Math.PI) * 0.85;
+
+      ctx.save();
+      ctx.translate(sw.x, sw.y);
+
+      // Translucent interior wash
+      ctx.fillStyle = sw.innerWash || `rgba(118, 224, 66, ${alpha * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, sw.currentRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sharp supersonic leading compression band
+      ctx.strokeStyle = sw.color || '#76E042';
+      ctx.lineWidth = Math.max(1.2, 3.2 * (1.0 - lp * 0.6));
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(0, 0, sw.currentRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Outer ionization rim
+      ctx.strokeStyle = '#00F2FE';
+      ctx.lineWidth = 1.0;
+      ctx.globalAlpha = alpha * 0.65;
+      ctx.beginPath();
+      ctx.arc(0, 0, sw.currentRadius + 3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  // ── 2. Stage 1: Fatal Collapse, Grudge Blood & Cursed Flames (Progress 0.00 -> 0.28) ──
+  if (progress <= 0.28) {
+    const p1 = progress / 0.28;
+    const collapseY = Math.pow(p1, 1.4) * (r * 0.35);
+    const shudderX = Math.sin(p1 * Math.PI * 14) * (1.8 * (1.0 - p1 * 0.3));
+
+    // 24-FPS Shutter Cel Pane Glitching around the collapsing body
+    ctx.save();
+    ctx.translate(fighter.x, fighter.y + collapseY);
+
+    const cellW = r * 2.4;
+    const cellH = r * 2.8;
+    const cellAlpha = (1.0 - p1 * 0.6) * 0.65;
+
+    // Translucent film pane wash
+    ctx.fillStyle = `rgba(118, 224, 66, ${cellAlpha * 0.15})`;
+    ctx.fillRect(-cellW / 2, -cellH / 2, cellW, cellH);
+
+    // Film border and sprocket holes
+    ctx.strokeStyle = `rgba(118, 224, 66, ${cellAlpha * 0.75})`;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-cellW / 2, -cellH / 2, cellW, cellH);
+
+    // Film sprockets along left & right edges
+    ctx.fillStyle = '#0E1015';
+    for (let sp = -1; sp <= 1; sp++) {
+      ctx.fillRect(-cellW / 2 + 2, sp * 14 - 3, 4, 6);
+      ctx.fillRect(cellW / 2 - 6, sp * 14 - 3, 4, 6);
+    }
+
+    // Stress cracks on the film
+    if (p1 > 0.4) {
+      const crackAlpha = (p1 - 0.4) / 0.6;
+      ctx.strokeStyle = `rgba(0, 242, 254, ${crackAlpha * 0.85})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-cellW * 0.3, -cellH * 0.25);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(cellW * 0.35, -cellH * 0.1);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(cellW * 0.25, cellH * 0.3);
+      ctx.stroke();
+    }
+
+    // Sinuous rising cursed flame tongues
+    for (let i = 0; i < 5; i++) {
+      const flameOffX = Math.sin(p1 * 8 + i * 1.3) * (r * 0.75);
+      const flameH = (r * 0.8 + i * 4) * p1;
+      const flameY = (r * 0.5) - flameH;
+
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(14, 16, 21, 0.75)' : 'rgba(118, 224, 66, 0.55)';
+      ctx.beginPath();
+      ctx.moveTo(flameOffX - 4, r * 0.4);
+      ctx.quadraticCurveTo(flameOffX + Math.sin(p1 * 6) * 6, flameY, flameOffX, flameY - 8);
+      ctx.quadraticCurveTo(flameOffX + 5, flameY + 4, flameOffX + 4, r * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Render human Naoya collapsing onto knee with pain shudder and spreading cursed corruption
+    drawNaoyaHumanModel(ctx, fighter.x, fighter.y, fighter.gunAngle || 0, r, 1.0, collapseY, shudderX, 0, p1);
+
+    // Floating stage title
+    ctx.save();
+    ctx.translate(fighter.x, fighter.y - r * 1.6);
+    ctx.fillStyle = '#C8E64A';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('VENGEFUL CURSE TRANSFORMATION...', 0, 0);
+    ctx.restore();
+    return;
+  }
+
+  // ── 3. Stage 2: Chrysalis Encasement & Heartbeat Pulses (Progress 0.28 -> 0.65) ──
+  if (progress <= 0.65) {
+    const p2 = (progress - 0.28) / (0.65 - 0.28);
+    const wrapP = Math.min(1.0, p2 * 1.3);
+
+    // Heartbeat contraction calculation (double-beat rhythm)
+    const beat = Math.sin(p2 * Math.PI * 6);
+    const scaleX = 1.0 + beat * 0.09;
+    const scaleY = 1.0 - beat * 0.08;
+    const cocoonW = r * 1.35 * scaleX;
+    const cocoonH = r * 1.65 * scaleY;
+
+    ctx.save();
+    ctx.translate(fighter.x, fighter.y);
+
+    // Muscular tendrils erupting from the ground and wrapping around human Naoya
+    const tendrilCount = 8;
+    for (let t = 0; t < tendrilCount; t++) {
+      const tAng = (t / tendrilCount) * Math.PI * 2;
+      const startDist = r * 1.6;
+      const endDist = cocoonW * 0.85;
+      const curDist = startDist - (startDist - endDist) * wrapP;
+      const tx = Math.cos(tAng) * curDist;
+      const ty = Math.sin(tAng) * (curDist * 1.15);
+
+      ctx.strokeStyle = t % 2 === 0 ? '#1E1B4B' : '#4C0519';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(tAng) * (r * 1.5), r * 0.7);
+      ctx.quadraticCurveTo(Math.cos(tAng) * (r * 1.8), 0, tx, ty);
+      ctx.stroke();
+    }
+
+    // Inside the translucent womb core: human Naoya's silhouette dissolving
+    const humanSilhouetteAlpha = Math.max(0.12, (1.0 - p2 * 0.85) * 0.65);
+    drawNaoyaHumanModel(ctx, 0, 0, fighter.gunAngle || 0, r * 0.95, humanSilhouetteAlpha, r * 0.2, 0, 0, 0.9);
+
+    // The Cursed Chrysalis / Womb Shell
+    ctx.fillStyle = '#090D16';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, cocoonW, cocoonH, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dark ink outer stroke
+    ctx.strokeStyle = '#020617';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Lateral turbine rib plates (3 pairs along flanks)
+    ctx.fillStyle = '#161B26';
+    for (let side of [-1, 1]) {
+      for (let rib = -1; rib <= 1; rib++) {
+        const ry = rib * (cocoonH * 0.32);
+        const rx = side * (cocoonW * 0.82);
+        ctx.beginPath();
+        ctx.ellipse(rx, ry, cocoonW * 0.22, cocoonH * 0.14, side * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    // Central vertical dividing cleft
+    ctx.strokeStyle = '#020617';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -cocoonH * 0.92);
+    ctx.lineTo(0, cocoonH * 0.92);
+    ctx.stroke();
+
+    // Sinuous cursed neural veining
+    const veinColor = (beat > 0.2) ? '#00F2FE' : '#76E042';
+    ctx.strokeStyle = veinColor;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(0, -cocoonH * 0.8);
+    ctx.bezierCurveTo(-cocoonW * 0.6, -cocoonH * 0.35, -cocoonW * 0.7, cocoonH * 0.3, 0, cocoonH * 0.85);
+    ctx.moveTo(0, -cocoonH * 0.8);
+    ctx.bezierCurveTo(cocoonW * 0.6, -cocoonH * 0.35, cocoonW * 0.7, cocoonH * 0.3, 0, cocoonH * 0.85);
+    ctx.stroke();
+
+    // Embryonic curse eyes opening in the upper cavity
+    if (p2 > 0.35) {
+      const eyeAlpha = Math.min(1.0, (p2 - 0.35) / 0.3);
+      ctx.fillStyle = `rgba(255, 255, 255, ${eyeAlpha})`;
+      ctx.fillRect(-cocoonW * 0.22, -cocoonH * 0.38, 3.5, 3.5);
+      ctx.fillRect(cocoonW * 0.22 - 3.5, -cocoonH * 0.38, 3.5, 3.5);
+
+      // Eye streak glint
+      ctx.fillStyle = `rgba(118, 224, 66, ${eyeAlpha * 0.85})`;
+      ctx.fillRect(-cocoonW * 0.22 - 4, -cocoonH * 0.38 + 1, 4, 1.5);
+    }
+
+    // Overhead title
+    ctx.fillStyle = '#76E042';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CURSED WOMB GESTATION...', 0, -cocoonH - 12);
+
+    ctx.restore();
+    return;
+  }
+
+  // ── 4. Stage 3: Ramjet Air Intake Vortex & Shell Fractures (Progress 0.65 -> 0.88) ──
+  if (progress <= 0.88) {
+    const p3 = (progress - 0.65) / (0.88 - 0.65);
+    const shakeX = (Math.random() - 0.5) * (3.5 + p3 * 3.5);
+    const shakeY = (Math.random() - 0.5) * (3.5 + p3 * 3.5);
+    const cocoonW = r * 1.35;
+    const cocoonH = r * 1.65;
+
+    ctx.save();
+    ctx.translate(fighter.x + shakeX, fighter.y + shakeY);
+
+    // Inward aerodynamic turbine intake air speed lines
+    const suctionLines = 10;
+    for (let s = 0; s < suctionLines; s++) {
+      const ang = (s / suctionLines) * Math.PI * 2;
+      const startDist = r * (3.6 - p3 * 1.2);
+      const endDist = cocoonW * 0.75;
+      const curDist = startDist - (startDist - endDist) * ((Date.now() * 0.01 + s * 0.3) % 1.0);
+      const sx = Math.cos(ang) * curDist;
+      const sy = Math.sin(ang) * (curDist * 0.85);
+
+      ctx.strokeStyle = s % 2 === 0 ? 'rgba(0, 242, 254, 0.75)' : 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - Math.cos(ang) * 12, sy - Math.sin(ang) * 10);
+      ctx.stroke();
+    }
+
+    // Cocoon Shell Body
+    ctx.fillStyle = '#090D16';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, cocoonW, cocoonH, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#020617';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Side Ramjet Vent Housings glowing cyan/white under compression
+    ctx.fillStyle = 'rgba(0, 242, 254, 0.45)';
+    for (let side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(side * (cocoonW * 0.85), 0, cocoonW * 0.20, cocoonH * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Glowing white-hot and radiant magenta stress fractures tearing the shell open
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -cocoonH * 0.7);
+    ctx.lineTo(-cocoonW * 0.45, -cocoonH * 0.3);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(cocoonW * 0.5, cocoonH * 0.25);
+    ctx.lineTo(0, cocoonH * 0.75);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#F43F5E';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-cocoonW * 0.75, 0);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(cocoonW * 0.75, -cocoonH * 0.4);
+    ctx.stroke();
+
+    // Piercing light shafts radiating through fissures
+    const shaftCount = 6;
+    for (let sh = 0; sh < shaftCount; sh++) {
+      const shAng = (sh / shaftCount) * Math.PI * 2 + (Date.now() * 0.002);
+      const shLen = cocoonW * (1.2 + p3 * 0.8);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(shAng) * shLen, Math.sin(shAng) * shLen);
+      ctx.stroke();
+    }
+
+    // Overhead title
+    ctx.fillStyle = '#00F2FE';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MACH TURBINE IGNITION...', 0, -cocoonH - 12);
+
+    ctx.restore();
+    return;
+  }
+
+  // ── 5. Stage 4: Cataclysmic Shell Detonation & Jet Curse Emergence (Progress 0.88 -> 1.00) ──
+  const p4 = (progress - 0.88) / (1.00 - 0.88);
+  const surgeY = -r * 0.45 * (1.0 - p4);
+  const curseScale = 0.65 + p4 * 0.35;
 
   ctx.save();
   ctx.translate(fighter.x, fighter.y);
 
-  // 1. Swirling Cursed Miasma Aura (Multi-layer rotating concentric rings)
-  const auraRot = (Date.now() * 0.005) % (Math.PI * 2);
-  ctx.save();
-  ctx.rotate(auraRot);
-  for (let i = 0; i < 4; i++) {
-    const angle = (i * Math.PI) / 2;
-    const dist = r * 1.35;
-    const ax = Math.cos(angle) * dist;
-    const ay = Math.sin(angle) * dist;
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(118, 224, 66, 0.35)' : 'rgba(0, 242, 254, 0.25)';
-    ctx.beginPath();
-    ctx.arc(ax, ay, r * 0.45, 0, Math.PI * 2);
-    ctx.fill();
+  // Flying Carapace Shards from the Detonation
+  if (fighter.curseShellFragments && fighter.curseShellFragments.length > 0) {
+    for (let i = 0; i < fighter.curseShellFragments.length; i++) {
+      const frag = fighter.curseShellFragments[i];
+      if (!frag || frag.alpha <= 0.01) continue;
+
+      ctx.save();
+      ctx.translate(frag.x - fighter.x, frag.y - fighter.y);
+      ctx.rotate(frag.rot || 0);
+      ctx.globalAlpha = frag.alpha;
+
+      // Dark obsidian carapace shard
+      ctx.fillStyle = '#090D16';
+      ctx.beginPath();
+      ctx.moveTo(-frag.size * 0.5, -frag.size * 0.5);
+      ctx.lineTo(frag.size * 0.6, -frag.size * 0.3);
+      ctx.lineTo(frag.size * 0.3, frag.size * 0.6);
+      ctx.lineTo(-frag.size * 0.4, frag.size * 0.4);
+      ctx.closePath();
+      ctx.fill();
+
+      // Magenta fleshy interior rim
+      ctx.strokeStyle = '#E11D48';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.restore();
+    }
   }
-  ctx.restore();
 
-  // 2. Outer Organic Cocoon Shell (Dark Obsidian Cursed Flesh)
-  ctx.fillStyle = '#0F172A';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 1.25, r * 1.45, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 3. Cocoon Edge Ink Outline
-  ctx.strokeStyle = '#020617';
-  ctx.lineWidth = 3.5;
-  ctx.stroke();
-
-  // 4. Pulsing Cursed Veins
-  ctx.strokeStyle = progress > 0.65 ? '#00F2FE' : '#76E042';
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.moveTo(0, -r * 1.1);
-  ctx.bezierCurveTo(-r * 0.6, -r * 0.5, -r * 0.7, r * 0.4, 0, r * 1.1);
-  ctx.moveTo(0, -r * 1.1);
-  ctx.bezierCurveTo(r * 0.6, -r * 0.5, r * 0.7, r * 0.4, 0, r * 1.1);
-  ctx.moveTo(-r * 0.9, 0);
-  ctx.lineTo(r * 0.9, 0);
-  ctx.stroke();
-
-  // 5. Pre-Hatch Fracturing Stress Fissures (Final 20 frames)
-  if (timer <= 20) {
-    const crackAlpha = (20 - timer) / 20;
-    ctx.strokeStyle = `rgba(255, 255, 255, ${crackAlpha * 0.95})`;
-    ctx.lineWidth = 2.2;
+  // Trailing supersonic speed lines behind the emerging Curse Form
+  ctx.strokeStyle = 'rgba(118, 224, 66, 0.75)';
+  ctx.lineWidth = 2.0;
+  for (let sl = -2; sl <= 2; sl++) {
+    const slX = sl * 12;
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-r * 0.7, -r * 0.6);
-    ctx.moveTo(0, 0);
-    ctx.lineTo(r * 0.8, -r * 0.4);
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-r * 0.5, r * 0.8);
-    ctx.moveTo(0, 0);
-    ctx.lineTo(r * 0.6, r * 0.7);
+    ctx.moveTo(slX, r * 1.2);
+    ctx.lineTo(slX, r * 2.4 + p4 * 20);
     ctx.stroke();
   }
 
-  // 6. Overhead Rebirth Text Indicator
-  ctx.fillStyle = '#C8E64A';
-  ctx.font = 'bold 11px sans-serif';
+  // Draw the emerging 16-bit pixel art Awakened Jet Curse Form model!
+  drawCurseNaoyaModelAt(ctx, 0, surgeY, r, 1.0, curseScale);
+
+  // Electric lime eye flare trail
+  ctx.fillStyle = '#76E042';
+  ctx.beginPath();
+  ctx.arc(-r * 0.28 * curseScale, (surgeY - r * 0.95 * curseScale), 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#00F2FE';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.28 * curseScale, surgeY - r * 0.95 * curseScale);
+  ctx.lineTo(-r * 0.75 * curseScale, surgeY - r * 1.35 * curseScale);
+  ctx.stroke();
+
+  // Overhead Banner
+  ctx.fillStyle = '#00FF66';
+  ctx.font = 'bold 12px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('CURSED REBIRTH...', 0, -r * 1.7);
+  ctx.fillText('AWAKENED JET CURSED SPIRIT!', 0, -r * 2.5);
 
   ctx.restore();
+}
+
+/**
+ * Renders any residual flying carapace shards and supersonic blast shockwaves
+ * after Curse Naoya has hatched into active gameplay.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} fighter
+ */
+export function drawNaoyaTransformationDebris(ctx, fighter) {
+  if (!fighter) return;
+  const hasShards = fighter.curseShellFragments && fighter.curseShellFragments.length > 0;
+  const hasWaves = fighter.curseTransformationShockwaves && fighter.curseTransformationShockwaves.length > 0;
+  if (!hasShards && !hasWaves) return;
+
+  // Render shockwaves
+  if (hasWaves) {
+    for (let i = 0; i < fighter.curseTransformationShockwaves.length; i++) {
+      const sw = fighter.curseTransformationShockwaves[i];
+      if (!sw || sw.timer <= 0) continue;
+      const lp = Math.max(0, Math.min(1.0, 1.0 - (sw.timer / sw.maxTimer)));
+      const alpha = Math.sin(lp * Math.PI) * 0.75;
+
+      ctx.save();
+      ctx.translate(sw.x, sw.y);
+      ctx.fillStyle = sw.innerWash || `rgba(118, 224, 66, ${alpha * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, sw.currentRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = sw.color || '#FFFFFF';
+      ctx.lineWidth = Math.max(1.2, 3.0 * (1.0 - lp * 0.6));
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(0, 0, sw.currentRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Render residual shards
+  if (hasShards) {
+    for (let i = 0; i < fighter.curseShellFragments.length; i++) {
+      const frag = fighter.curseShellFragments[i];
+      if (!frag || frag.alpha <= 0.01) continue;
+
+      ctx.save();
+      ctx.translate(frag.x, frag.y);
+      ctx.rotate(frag.rot || 0);
+      ctx.globalAlpha = frag.alpha;
+
+      ctx.fillStyle = '#090D16';
+      ctx.beginPath();
+      ctx.moveTo(-frag.size * 0.5, -frag.size * 0.5);
+      ctx.lineTo(frag.size * 0.6, -frag.size * 0.3);
+      ctx.lineTo(frag.size * 0.3, frag.size * 0.6);
+      ctx.lineTo(-frag.size * 0.4, frag.size * 0.4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#E11D48';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 }
 
 /**

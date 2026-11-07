@@ -154,6 +154,35 @@ Touching an enemy during active Projection Sorcery forces them to abide by the 2
 
 ---
 
+### 🩸💀 Rebirth Passive: Vengeful Curse Transformation (*Jurei Tensei*)
+* **Trigger**: Automatically activates when Naoya loses all of his HP in Human Form (`hp <= 0`).
+* **Duration**: `60 frames` (1.0 second, Rule 35 60 FPS standard).
+* **Kinematic Sequence & 4-Stage Animation**:
+  1. **Stage 1 (Frames 0 -> 16 / Progress 0.00 -> 0.28): Fatal Collapse & Cursed Blood Miasma Eruption**:
+     - Human Naoya staggers and drops onto one knee (`collapseY = r * 0.35`) with high-frequency pain shudder.
+     - Sprawling dark crimson & obsidian cursed blood pool expands beneath him with organic satellite droplets.
+     - Swirling black & electric lime cursed flame tendrils erupt upward.
+     - Disintegrating 24-FPS shutter frames with film sprockets crack and break around his collapsing silhouette.
+     - Plays fatal collapse blood spurt & cursed energy surge SFX.
+  2. **Stage 2 (Frames 16 -> 39 / Progress 0.28 -> 0.65): Chrysalis Encasement & Heartbeat Pulses**:
+     - 8 muscular cursed tendrils erupt from the blood pool, sweeping inward to envelop him in the teardrop **Cursed Womb (Chrysalis)**.
+     - Inside the translucent core, human Naoya's silhouette dissolves as the glowing white eyes of the embryonic curse open.
+     - Two distinct rhythmic heartbeat contractions pulse through the cocoon with concussive audio.
+     - Emits clean concentric water-ripple shockwave rings rippling across the arena floor (Rule 26 compliant).
+  3. **Stage 3 (Frames 39 -> 53 / Progress 0.65 -> 0.88): Ramjet Air Intake Vortex & Shell Fractures**:
+     - Developing Ramjet vents begin spooling up, sucking in speed needle lines and cyan sparks in an aerodynamic intake vortex.
+     - High-frequency mechanical & cursed tremor shakes the cocoon.
+     - White-hot and radiant magenta stress fractures split the shell wide open, projecting piercing light rays.
+  4. **Stage 4 (Frames 53 -> 60 / Progress 0.88 -> 1.00): Cataclysmic Detonation & Jet Curse Emergence**:
+     - The cocoon violently shatters into 22 flying polygonal obsidian carapace shards with magenta interior flesh backing.
+     - Supersonic concentric Mach blast rings expand outward with heavy screen shake.
+     - Layered glass break, blast explosion, and demonic roar audio triggers.
+     - 16-bit pixel art Awakened Jet Curse Spirit surges upward from the explosion core, scaling smoothly from 0.65x to 1.00x with trailing speed lines and eye flare.
+     - Repels nearby opponents with radial concussive blast force (12.0 impulse).
+     - Restores HP to 50% max HP (`+95 HP`) and transitions seamlessly into playable Curse Form!
+
+---
+
 ### 🌑 Awakened Ultimate (Curse Form): Domain Expansion — Time Cell Moon Palace (*時胞月宮殿 - Tokyū Gesshōkyū*)
 * **Type**: Full-Arena Sure-Hit Domain Expansion with Cellular Stasis Constraint & Atmospheric Cosmic Iris Environment
 * **Arena Floor Overlay Image**: `Assets/model/naoya/Naoya_arena_overlay.png`

@@ -2563,6 +2563,22 @@ export const HUD_SKILL_PROVIDERS = {
     const themeColor = f.color || cfg.themeColor || '#76E042';
     const skills = [];
 
+    if (f.isCurseWomb) {
+      const maxWomb = Math.max(1, f.curseWombMaxTimer || cfg.curseWombDurationFrames || 60);
+      const rem = Math.max(0, f.curseWombTimer || 0);
+      const pct = Math.max(0, Math.min(100, (1 - (rem / maxWomb)) * 100));
+      return [{
+        id: 'curse_rebirth',
+        pct,
+        ready: true,
+        color: themeColor,
+        label: `CURSED REBIRTH... (${Math.round(pct)}%)`,
+        isUltimate: true,
+        isSignature: true,
+        signature: true
+      }];
+    }
+
     if (f.isCurseForm) {
       // 1. Mach 3 Propulsion & Flight (Mach Gauge / Overdrive)
       if (isSkillEnabled(cfg.enableMachGauge, true)) {

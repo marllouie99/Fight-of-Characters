@@ -281,6 +281,13 @@ export async function buildMobileAssets(options = {}) {
     candidatePaths.push(...walkDir(dir));
   }
 
+  // Ensure all canonical transparent .png files are processed BEFORE any .jpg concept-art fallbacks
+  candidatePaths.sort((a, b) => {
+    const aIsPng = a.toLowerCase().endsWith('.png') ? 0 : 1;
+    const bIsPng = b.toLowerCase().endsWith('.png') ? 0 : 1;
+    return aIsPng - bIsPng;
+  });
+
   const outputBaseDir = path.join(rootDir, 'Assets', '_mobile05x');
   fs.mkdirSync(outputBaseDir, { recursive: true });
 
@@ -319,9 +326,32 @@ export async function buildMobileAssets(options = {}) {
     const isHair = relAssetPath.toLowerCase().includes('-hair.png');
     if (isHair) continue;
 
-    // Process all full-screen overlays (domains/ultimates) and all textures >= 512px or >= 200KB
+    // Paired JPEG / PNG check: If a transparent .png counterpart exists, the .png is the canonical in-game sprite!
+    // Skip downscaling this unkeyed/opaque .jpg so it does not overwrite the transparent .png/.webp quad.
+    const ext = path.extname(fullPath).toLowerCase();
+    const isJpg = ext === '.jpg' || ext === '.jpeg';
+    const pairedPngPath = isJpg ? fullPath.slice(0, -ext.length) + '.png' : null;
+    const hasPairedPng = Boolean(pairedPngPath && fs.existsSync(pairedPngPath));
+
+    if (hasPairedPng) {
+      const relPngPath = path.relative(rootDir, pairedPngPath).replace(/\\/g, '/');
+      if (manifest[relPngPath]) {
+        manifest[relAssetPath] = manifest[relPngPath];
+      } else {
+        try {
+          const meta = sharp ? await sharp(pairedPngPath).metadata() : readPngHeader(fs.readFileSync(pairedPngPath));
+          if (meta) {
+            manifest[relAssetPath] = [meta.width, meta.height, sharp ? 1 : 0];
+          }
+        } catch (_) {}
+      }
+      continue;
+    }
+
+    // Process all full-screen overlays (domains/ultimates) and all textures >= 400px (weapons/sprites) or >= 80KB
     const isOverlay = relAssetPath.toLowerCase().includes('assets/overlays/');
-    const isCandidate = Math.max(width, height) >= 512 || srcStat.size >= 200 * 1024;
+    const isModelOrWeapon = relAssetPath.toLowerCase().includes('assets/model/') || relAssetPath.toLowerCase().includes('assets/weapon/');
+    const isCandidate = Math.max(width, height) >= (isModelOrWeapon ? 400 : 512) || srcStat.size >= (isModelOrWeapon ? 80 * 1024 : 200 * 1024);
     if (!isOverlay && !isCandidate) continue;
 
     // Relative subpath after "Assets/"
@@ -348,7 +378,8 @@ export async function buildMobileAssets(options = {}) {
     const hasWebp = sharp !== null;
     manifest[relAssetPath] = [width, height, hasWebp ? 1 : 0];
 
-    if (isWebpUpToDate && isPngUpToDate) {
+    const force = Boolean(options.force);
+    if (!force && isWebpUpToDate && isPngUpToDate) {
       skippedUpToDate++;
       const saved = srcStat.size - (webpExists ? fs.statSync(destWebpPath).size : fs.statSync(destPngPath).size);
       totalSavedBytes += Math.max(0, saved);
@@ -615,7 +646,8 @@ export function pruneAndroidDuplicate1xAssets(manifest) {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('buildMobileAssets.mjs')) {
-  const res = await buildMobileAssets();
+  const isForce = process.argv.includes('--force');
+  const res = await buildMobileAssets({ force: isForce });
   if (process.argv.includes('--prune-android') && res && res.manifest) {
     pruneAndroidDuplicate1xAssets(res.manifest);
   }

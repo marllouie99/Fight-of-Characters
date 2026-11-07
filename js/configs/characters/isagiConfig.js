@@ -23,8 +23,8 @@ export const isagiConfig = {
   maxHpRatio: 1.0,
   speed: 5.2,
   moveSpeed: 5.9,
-  r: 25,
-  radius: 25,
+  r: 27,
+  radius: 27,
   color: '#00F0FF', // Electric Ego Cyan
   themeColor: '#00F0FF',
   secondaryColor: '#111827', // Blue Lock Dark Bodysuit

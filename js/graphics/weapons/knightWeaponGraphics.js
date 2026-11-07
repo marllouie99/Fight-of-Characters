@@ -5,7 +5,7 @@ let _knightShieldImage = null;
 let _knightShieldImageLoading = false;
 
 export function _getKnightShieldImage() {
-  if (_knightShieldImage && _knightShieldImage.complete && _knightShieldImage.naturalWidth > 0) {
+  if (_knightShieldImage && _knightShieldImage.complete && (_knightShieldImage.naturalWidth > 0 || _knightShieldImage.width > 0)) {
     return _knightShieldImage;
   }
   if (!_knightShieldImageLoading && typeof Image !== 'undefined') {
@@ -16,7 +16,7 @@ export function _getKnightShieldImage() {
       _knightShieldImageLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/knight/Knight_shield.jpg?v=1';
       } else {
         _knightShieldImageLoading = false;
@@ -32,7 +32,7 @@ let _knightSwordImage = null;
 let _knightSwordImageLoading = false;
 
 export function _getKnightSwordImage() {
-  if (_knightSwordImage && _knightSwordImage.complete && _knightSwordImage.naturalWidth > 0) {
+  if (_knightSwordImage && _knightSwordImage.complete && (_knightSwordImage.naturalWidth > 0 || _knightSwordImage.width > 0)) {
     return _knightSwordImage;
   }
   if (!_knightSwordImageLoading && typeof Image !== 'undefined') {
@@ -43,7 +43,7 @@ export function _getKnightSwordImage() {
       _knightSwordImageLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/knight/Knight_sword.jpg?v=1';
       } else {
         _knightSwordImageLoading = false;

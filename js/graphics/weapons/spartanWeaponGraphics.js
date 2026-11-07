@@ -12,7 +12,7 @@ let _spartanShieldImage = null;
 let _spartanShieldLoading = false;
 
 export function _getSpartanShieldImage() {
-  if (_spartanShieldImage && _spartanShieldImage.complete && _spartanShieldImage.naturalWidth > 0) {
+  if (_spartanShieldImage && _spartanShieldImage.complete && (_spartanShieldImage.naturalWidth > 0 || _spartanShieldImage.width > 0)) {
     return _spartanShieldImage;
   }
   if (!_spartanShieldLoading && typeof Image !== 'undefined') {
@@ -23,7 +23,7 @@ export function _getSpartanShieldImage() {
       _spartanShieldLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/spartan/spartan_shield.jpg?v=1';
       } else {
         _spartanShieldLoading = false;
@@ -39,7 +39,7 @@ let _spartanSpearImage = null;
 let _spartanSpearLoading = false;
 
 export function _getSpartanSpearImage() {
-  if (_spartanSpearImage && _spartanSpearImage.complete && _spartanSpearImage.naturalWidth > 0) {
+  if (_spartanSpearImage && _spartanSpearImage.complete && (_spartanSpearImage.naturalWidth > 0 || _spartanSpearImage.width > 0)) {
     return _spartanSpearImage;
   }
   if (!_spartanSpearLoading && typeof Image !== 'undefined') {
@@ -50,7 +50,7 @@ export function _getSpartanSpearImage() {
       _spartanSpearLoading = false;
     };
     img.onerror = () => {
-      if (!img.src.includes('.jpg')) {
+      if (!img.src.includes('.jpg') && !img.src.includes('.webp')) {
         img.src = 'Assets/model/spartan/spartan_spear.jpg?v=1';
       } else {
         _spartanSpearLoading = false;
