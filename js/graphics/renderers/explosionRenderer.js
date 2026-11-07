@@ -235,16 +235,8 @@ export function drawThermobaricExplosions(ctx) {
         const pW = snap(R * 0.7 * (1 - explosionProgress * 0.4));
         const pillarStep = P * 2;
         if (pH > pillarStep) {
-          for (let gy = 0; gy >= -pH; gy -= pillarStep) {
-            const t = -gy / pH;
-            const profile = Math.sin(t * Math.PI) * (1.1 - t * 0.35) + 0.15 * Math.pow(1 - t, 2);
-            const w = snap(pW * profile);
-            if (w <= 0) continue;
-            const flicker = Math.sin(nowTime * 0.03 + gy * 0.2) * P;
-            const effW = Math.max(P, w + flicker);
-            ctx.fillStyle = `rgba(220, 30, 0, ${0.9 * expAlpha})`;
-            ctx.fillRect(snap(-effW / 2), gy, snap(effW), pillarStep);
-          }
+          ctx.fillStyle = `rgba(220, 30, 0, ${0.9 * expAlpha})`;
+          ctx.fillRect(snap(-pW / 2), -pH, snap(pW), pH);
         }
         if (explosionProgress < 0.5) {
           const coreA = (0.5 - explosionProgress) / 0.5;

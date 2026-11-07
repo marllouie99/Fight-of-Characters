@@ -112,49 +112,7 @@ export function drawMahitoSoulShockwave(ctx, effect) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
 
-  if (effect.color === 'magenta') {
-    ctx.fillStyle = `rgba(217, 70, 239, ${(effect.life * 0.85).toFixed(3)})`;
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const dist = Math.hypot(gx * P, gy * P);
-        if (dist <= radius + P && dist > radius - P * 1.5) {
-          if ((gx + gy) % 2 === 0 || effect.life > 0.5) {
-            ctx.fillRect(effect.x + gx * P, effect.y + gy * P, P, P);
-          }
-        }
-      }
-    }
-
-    ctx.fillStyle = `rgba(15, 5, 20, ${(effect.life * 0.90).toFixed(3)})`;
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const dist = Math.hypot(gx * P, gy * P);
-        if (dist <= radius - P * 1.5 && dist > radius - P * 2.5) {
-          ctx.fillRect(effect.x + gx * P, effect.y + gy * P, P, P);
-        }
-      }
-    }
-  } else {
-    ctx.fillStyle = `rgba(0, 229, 255, ${(effect.life * 0.90).toFixed(3)})`;
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const dist = Math.hypot(gx * P, gy * P);
-        if (dist <= radius + P && dist > radius - P * 1.2) {
-          ctx.fillRect(effect.x + gx * P, effect.y + gy * P, P, P);
-        }
-      }
-    }
-
-    ctx.fillStyle = `rgba(255, 255, 255, ${(effect.life * 0.95).toFixed(3)})`;
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const dist = Math.hypot(gx * P, gy * P);
-        if (dist <= radius && dist > radius - P * 0.8) {
-          ctx.fillRect(effect.x + gx * P, effect.y + gy * P, P, P);
-        }
-      }
-    }
-  }
+  _drawCachedMahitoSoulShockwaveRing(ctx, effect.x, effect.y, radius, P, effect.color === 'magenta', effect.life);
   ctx.restore();
 }
 
@@ -1066,3 +1024,54 @@ export function drawRubbickGroundSigil(ctx, effect) {
   ctx.restore();
 }
 
+
+const _mahitoShockwaveRingCache = new Map();
+function _drawCachedMahitoSoulShockwaveRing(ctx, x, y, radius, P, isMagenta, life) {
+  const qR = Math.max(4, Math.round(radius / 2) * 2);
+  const key = `${qR}_${isMagenta ? 1 : 0}`;
+  let entry = _mahitoShockwaveRingCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const steps = Math.ceil((qR + P * 2) / P);
+    const dim = Math.ceil((steps * 2 + 2) * P);
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let iy = -steps; iy <= steps; iy++) {
+        for (let ix = -steps; ix <= steps; ix++) {
+          const dist = Math.hypot(ix * P, iy * P);
+          if (isMagenta) {
+            if (dist <= qR + P && dist > qR - P * 1.5) {
+              bCtx.fillStyle = 'rgba(217, 70, 239, 0.85)';
+              bCtx.fillRect(ix * P, iy * P, P, P);
+            } else if (dist <= qR - P * 1.5 && dist > qR - P * 2.5) {
+              bCtx.fillStyle = 'rgba(15, 5, 20, 0.90)';
+              bCtx.fillRect(ix * P, iy * P, P, P);
+            }
+          } else {
+            if (dist <= qR && dist > qR - P * 0.8) {
+              bCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+              bCtx.fillRect(ix * P, iy * P, P, P);
+            } else if (dist <= qR + P && dist > qR - P * 1.2) {
+              bCtx.fillStyle = 'rgba(0, 229, 255, 0.90)';
+              bCtx.fillRect(ix * P, iy * P, P, P);
+            }
+          }
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_mahitoShockwaveRingCache.size > 48) _mahitoShockwaveRingCache.delete(_mahitoShockwaveRingCache.keys().next().value);
+      _mahitoShockwaveRingCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, life));
+    ctx.drawImage(entry.canvas, Math.round(x - entry.half), Math.round(y - entry.half));
+  }
+}

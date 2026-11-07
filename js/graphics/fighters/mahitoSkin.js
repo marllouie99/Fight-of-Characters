@@ -1173,7 +1173,41 @@ export function drawMahitoSkin(ctx, fighter) {
  * Uses discrete stepped pixel grid rasterization matching Saitama, Ichigo, Yuji, and Nanami.
  * Minimalist circle brawler aesthetic, upright front POV, faceless with surgical stitches (Rule #19 compliant).
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawMahitoPixelBody(ctx, r, isTransformed = false) {
+  if (typeof document === 'undefined') {
+    _render_drawMahitoPixelBody(ctx, r, isTransformed);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isTransformed ? 1 : 0}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawMahitoPixelBody(cctx, intR, isTransformed);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawMahitoPixelBody(ctx, r, isTransformed = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const P = 2.0;

@@ -31,7 +31,41 @@ const CRONOS_HAIRLINE_GY = [
  * @param {number} r - Character radius
  * @param {boolean} [isSphereActive=false] - Whether Time Stop Sphere is active
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawCronosPixelBody(ctx, r = 25, isSphereActive = false) {
+  if (typeof document === 'undefined') {
+    _render_drawCronosPixelBody(ctx, r, isSphereActive);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isSphereActive ? 1 : 0}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawCronosPixelBody(cctx, intR, isSphereActive);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawCronosPixelBody(ctx, r = 25, isSphereActive = false) {
   const steps = Math.ceil((r + 4) / P);
 
   ctx.save();

@@ -1561,65 +1561,7 @@ export class UryuFighter extends Fighter {
       const beamHeight = snap(this.telegraphBeamHeight || 320);
       const baseR = snap((target.r || 25) * (this.telegraphRadiusMult || 1.6));
 
-      // 1. Pixel-Art Sky-to-Ground Cascading Guidance Columns
-      const colWidth = snap(36);
-      for (let gy = -beamHeight; gy <= 10; gy += P * 2) {
-        const progress = Math.max(0, (gy + beamHeight) / (beamHeight + 10));
-        const alpha = Math.min(0.65, progress * 0.70);
-        ctx.fillStyle = `rgba(0, 229, 255, ${alpha.toFixed(2)})`;
-        const jitter = ((Math.abs(Math.sin(gy * 0.08 + now * 0.01)) * 6) / P | 0) * P;
-        const curW = colWidth + (gy > -50 ? 10 : 0);
-        ctx.fillRect(-curW / 2 + jitter, gy, curW, P);
-      }
-
-      // 2. Pixel-Art Ground Quincy Cross Reticle Under Target's Feet
-      const starR = baseR * 1.25;
-      const cosR = Math.cos(-qRot * 1.5);
-      const sinR = Math.sin(-qRot * 1.5);
-
-      const isInsidePixelReticle = (rx, ry) => {
-        const dist = Math.hypot(rx, ry);
-        // Outer ring test
-        if (Math.abs(dist - baseR) <= P * 1.2) return 'ring';
-        // Inner dashed ring test
-        if (Math.abs(dist - baseR * 0.75) <= P * 0.8) {
-          const a = Math.atan2(ry, rx) + qRot;
-          if ((Math.sin(a * 6) > 0)) return 'dashed';
-        }
-        // 4-Point Quincy Star test (rotated)
-        const unRotX = rx * cosR + ry * sinR;
-        const unRotY = -rx * sinR + ry * cosR;
-        const absX = Math.abs(unRotX);
-        const absY = Math.abs(unRotY);
-        // Star diamond equation: |x|/a + |y|/b <= 1
-        if (absX + absY * 2.8 <= starR || absY + absX * 2.8 <= starR) {
-          if (absX <= P * 1.5 && absY <= P * 1.5) return 'core';
-          return 'star';
-        }
-        return false;
-      };
-
-      const maxExt = Math.ceil((starR + P * 2) / P) * P;
-      for (let gy = -maxExt; gy <= maxExt; gy += P) {
-        for (let gx = -maxExt; gx <= maxExt; gx += P) {
-          const test = isInsidePixelReticle(gx, gy);
-          if (!test) continue;
-
-          const pxX = snap(gx);
-          const pyY = snap(gy);
-
-          if (test === 'core') {
-            ctx.fillStyle = '#FFFFFF';
-          } else if (test === 'star') {
-            ctx.fillStyle = '#00E5FF';
-          } else if (test === 'dashed') {
-            ctx.fillStyle = '#E0F7FA';
-          } else if (test === 'ring') {
-            ctx.fillStyle = '#0099FF';
-          }
-          ctx.fillRect(pxX, pyY, P, P);
-        }
-      }
+      _drawCachedUryuPixelReticle(ctx, baseR, beamHeight, qRot, P, snap);
 
       // 3. Pixel-Art Overhead Downward Chevrons
       const chevronY = snap(-(target.r || 25) - 22 + Math.sin(now * 0.02) * 5);
@@ -1746,5 +1688,50 @@ export class UryuFighter extends Fighter {
       drawUryuSeeleSlashArc(ctx, this);
     }
     drawUryuSkin(ctx, this);
+  }
+}
+
+const _uryuReticleCache = new Map();
+function _drawCachedUryuPixelReticle(ctx, baseR, beamHeight, qRot, P, snap) {
+  ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+  ctx.fillRect(-18, -beamHeight, 36, beamHeight + 10);
+  let entry = _uryuReticleCache.get(baseR);
+  if (!entry && typeof document !== 'undefined') {
+    const starR = baseR * 1.25;
+    const maxExt = Math.ceil((starR + P * 2) / P) * P;
+    const dim = maxExt * 2 + P * 2;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let y = -maxExt; y <= maxExt; y += P) {
+        for (let x = -maxExt; x <= maxExt; x += P) {
+          const dist = Math.hypot(x, y);
+          let test = false;
+          if (Math.abs(dist - baseR) <= P * 1.2) test = 'ring';
+          else if (Math.abs(dist - baseR * 0.75) <= P * 0.8 && Math.sin(Math.atan2(y, x) * 6) > 0) test = 'dashed';
+          else if (Math.abs(x) + Math.abs(y) * 2.8 <= starR || Math.abs(y) + Math.abs(x) * 2.8 <= starR) {
+            test = (Math.abs(x) <= P * 1.5 && Math.abs(y) <= P * 1.5) ? 'core' : 'star';
+          }
+          if (!test) continue;
+          bCtx.fillStyle = test === 'core' ? '#FFFFFF' : (test === 'star' ? '#00E5FF' : (test === 'dashed' ? '#E0F7FA' : '#0099FF'));
+          bCtx.fillRect(snap(x), snap(y), P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _uryuReticleCache.set(baseR, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.rotate(qRot);
+    ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+    ctx.restore();
   }
 }

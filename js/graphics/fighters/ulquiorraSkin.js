@@ -139,7 +139,41 @@ function getRightWingOuterX(ry, r) {
  * Uses discrete stepped pixel grid rasterization matching Saitama, Ichigo, and Nanami.
  * Minimalist circle brawler aesthetic, upright front POV, faceless (Rule #19 compliant).
  */
+let _cachedUlqBodyCanvas = null;
+let _cachedUlqBodyKey = '';
+
 export function drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = false) {
+  if (typeof document === 'undefined') {
+    _render_drawUlquiorraPixelBody(ctx, r, isSegunda, isStage1);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isSegunda ? 1 : 0}_${isStage1 ? 1 : 0}`;
+  if (!_cachedUlqBodyCanvas || _cachedUlqBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedUlqBodyCanvas = document.createElement('canvas');
+    _cachedUlqBodyCanvas.width = size;
+    _cachedUlqBodyCanvas.height = size;
+    const cctx = _cachedUlqBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawUlquiorraPixelBody(cctx, intR, isSegunda, isStage1);
+      cctx.restore();
+    }
+    _cachedUlqBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedUlqBodyCanvas.width;
+  ctx.drawImage(_cachedUlqBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false; // Nearest-neighbor scaling for authentic pixel art
   const P = 2.0;
@@ -307,7 +341,41 @@ export function drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fal
  * In Base Form: Draws single sweeping right horn.
  * In Stage 1 Wings & Segunda Etapa: Draws matching dual sweeping horns!
  */
+let _cachedUlqHornCanvas = null;
+let _cachedUlqHornKey = '';
+
 function _drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
+  if (typeof document === 'undefined') {
+    _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${hasLeftHorn ? 1 : 0}`;
+  if (!_cachedUlqHornCanvas || _cachedUlqHornKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.65 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedUlqHornCanvas = document.createElement('canvas');
+    _cachedUlqHornCanvas.width = size;
+    _cachedUlqHornCanvas.height = size;
+    const cctx = _cachedUlqHornCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render__drawUlquiorraPixelHorn(cctx, intR, hasLeftHorn);
+      cctx.restore();
+    }
+    _cachedUlqHornKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedUlqHornCanvas.width;
+  ctx.drawImage(_cachedUlqHornCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const P = 2.0;

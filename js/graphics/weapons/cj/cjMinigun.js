@@ -465,9 +465,10 @@ export function drawCjPixelMinigun(ctx, x = 0, y = 0, gunAngle = 0, r = 25, opts
   ctx.fillRect(gripX - 6, gripTopY + 6, 6, 18);
 
   ctx.fillStyle = '#282D37'; // Groove divider ribs
-  for (let gy = gripTopY + 8; gy <= gripTopY + 20; gy += 4) {
-    ctx.fillRect(gripX - 7, gy, 7, 1);
-  }
+  ctx.fillRect(gripX - 7, gripTopY + 8, 7, 1);
+  ctx.fillRect(gripX - 7, gripTopY + 12, 7, 1);
+  ctx.fillRect(gripX - 7, gripTopY + 16, 7, 1);
+  ctx.fillRect(gripX - 7, gripTopY + 20, 7, 1);
 
   // Red/Amber Thumb Safety / Fire Toggle Switch on Top Horn
   ctx.fillStyle = '#0B0D12';
@@ -955,12 +956,11 @@ export function drawCjMinigun(ctx, x = 0, y = 0, gunAngle = 0, r = 25, opts = {}
   // Finger groove divide lines
   ctx.strokeStyle = '#282D37';
   ctx.lineWidth = 0.8;
-  for (let gy = gripTopY + 12.0; gy <= gripTopY + 22.0; gy += 4.2) {
-    ctx.beginPath();
-    ctx.moveTo(gripX - 6.5, gy);
-    ctx.lineTo(gripX - 1.5, gy);
-    ctx.stroke();
-  }
+  ctx.beginPath();
+  ctx.moveTo(gripX - 6.5, gripTopY + 12.0); ctx.lineTo(gripX - 1.5, gripTopY + 12.0);
+  ctx.moveTo(gripX - 6.5, gripTopY + 16.2); ctx.lineTo(gripX - 1.5, gripTopY + 16.2);
+  ctx.moveTo(gripX - 6.5, gripTopY + 20.4); ctx.lineTo(gripX - 1.5, gripTopY + 20.4);
+  ctx.stroke();
 
   // Red/Amber Thumb Safety / Fire Toggle Switch on Top Horn
   ctx.fillStyle = '#DC2626';

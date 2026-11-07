@@ -22,6 +22,9 @@ function normalizeAssetPath(url) {
 
 let _isInitialized = false;
 let _previewRefreshTimer = null;
+const _deferredImages = new Set();
+let _triggerDeferredImageLoadRef = null;
+let _warmupCanvas = null;
 
 function scheduleMobilePreviewRefresh() {
   if (_previewRefreshTimer !== null) return;
@@ -60,9 +63,11 @@ export function initMobileAssetScaler(isMobileDevice = false) {
   const heightDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'height');
 
   function triggerDeferredImageLoad(img) {
+    _triggerDeferredImageLoadRef = triggerDeferredImageLoad;
     if (!img || !img._deferredMobileSrc || !srcDescriptor || !srcDescriptor.set) return;
     const targetUrl = img._deferredMobileSrc;
     img._deferredMobileSrc = null;
+    _deferredImages.delete(img);
 
     if (img._isMobile05x && img._originalSrc1x && !img._fallbackListenerAttached) {
       img._fallbackListenerAttached = true;
@@ -128,6 +133,8 @@ export function initMobileAssetScaler(isMobileDevice = false) {
 
         if (isDeferrableAsset && !hasOnloadHandler) {
           this._deferredMobileSrc = targetUrl;
+          this._normalizedAssetPath = normalized.toLowerCase();
+          _deferredImages.add(this);
           return;
         }
 
@@ -325,5 +332,81 @@ export function initMobileAssetScaler(isMobileDevice = false) {
       }
       return origDrawImage.call(this, img, a, b, c, d, e, f, g, h);
     };
+  }
+}
+
+/**
+ * Pre-warms active match combatants' deferred images, offscreen pixel-art skin caches,
+ * and GPU texture bindings before Round 1 begins (Rule 35 Phase 4A — SceneLoadingCurtain pattern).
+ * @param {Array<object>} fighters - Active fighter instances in the match
+ * @param {CanvasRenderingContext2D} [gameCtx] - Main arena 2D context for 1x1 GPU texture upload
+ */
+export function prewarmMatchAssets(fighters, gameCtx = null) {
+  if (typeof document === 'undefined') return;
+  const activeList = Array.isArray(fighters) ? fighters.filter(Boolean) : [];
+  if (activeList.length === 0) return;
+
+  // 1. Collect lowercase character IDs for active combatants
+  const activeIds = new Set();
+  for (let i = 0; i < activeList.length; i++) {
+    const f = activeList[i];
+    const id = String(f.characterId || f.type || f._def?.type || f._def?.id || '').toLowerCase();
+    if (id) activeIds.add(id);
+  }
+
+  // 2. Trigger deferred image loads for active fighters & shared combat effects
+  if (_deferredImages.size > 0 && typeof _triggerDeferredImageLoadRef === 'function') {
+    for (const img of Array.from(_deferredImages)) {
+      const p = img._normalizedAssetPath || '';
+      let shouldLoad = p.startsWith('assets/effects/');
+      if (!shouldLoad) {
+        for (const id of activeIds) {
+          if (p.includes(`/${id}/`) || p.includes(`/${id}-`) || p.includes(`_${id}`)) {
+            shouldLoad = true;
+            break;
+          }
+        }
+      }
+      if (shouldLoad) {
+        _triggerDeferredImageLoadRef(img);
+      }
+    }
+  }
+
+  // 3. Pre-bake offscreen body & hand canvases onto a tiny scratch warmup canvas
+  if (!_warmupCanvas) {
+    _warmupCanvas = document.createElement('canvas');
+    _warmupCanvas.width = 96;
+    _warmupCanvas.height = 96;
+  }
+  const wCtx = _warmupCanvas.getContext('2d');
+  if (!wCtx) return;
+
+  for (let i = 0; i < activeList.length; i++) {
+    const f = activeList[i];
+    try {
+      wCtx.save();
+      wCtx.translate(48, 48);
+      if (typeof f.drawBody === 'function') {
+        f.drawBody(wCtx);
+      } else if (typeof f.drawSkin === 'function') {
+        f.drawSkin(wCtx);
+      }
+      wCtx.restore();
+    } catch (e) {
+      try { wCtx.restore(); } catch (_) {}
+    }
+  }
+
+  // 4. Upload warm canvas texture to GPU via a 1x1 near-zero-alpha blit if gameCtx is available
+  if (gameCtx && typeof gameCtx.drawImage === 'function') {
+    try {
+      gameCtx.save();
+      gameCtx.globalAlpha = 0.001;
+      gameCtx.drawImage(_warmupCanvas, 0, 0, 1, 1, -10, -10, 1, 1);
+      gameCtx.restore();
+    } catch (e) {
+      try { gameCtx.restore(); } catch (_) {}
+    }
   }
 }

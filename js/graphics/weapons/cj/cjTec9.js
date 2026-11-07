@@ -352,19 +352,17 @@ export function drawCjTec9(ctx, x = 0, y = 0, scale = 1.0, recoil = 0, flashTime
   ctx.fill();
   ctx.clip(); // STRICT CLIPPING: Texture lines will NEVER bleed outside this panel!
 
-  // Checkering Grid Lines (Clean 45-degree cross-hatch)
+  // Checkering Grid Lines (Single Batched Path)
   ctx.strokeStyle = '#1E242E';
   ctx.lineWidth = 0.6;
-  for (let gy = 11.0; gy <= 25.0; gy += 1.8) {
-    ctx.beginPath();
-    ctx.moveTo(-16.0, gy);
-    ctx.lineTo(-4.0, gy + 4.0);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-16.0, gy + 4.0);
-    ctx.lineTo(-4.0, gy);
-    ctx.stroke();
+  ctx.beginPath();
+  for (let y = 11.0; y <= 25.0; y += 1.8) {
+    ctx.moveTo(-16.0, y);
+    ctx.lineTo(-4.0, y + 4.0);
+    ctx.moveTo(-16.0, y + 4.0);
+    ctx.lineTo(-4.0, y);
   }
+  ctx.stroke();
   ctx.restore();
 
   // Subtle Border around Checkering Panel

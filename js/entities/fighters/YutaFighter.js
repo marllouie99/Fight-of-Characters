@@ -2983,51 +2983,7 @@ export class YutaFighter extends Fighter {
             const minY = Math.floor((-outerRadius - P * 2) / P) * P;
             const maxY = Math.ceil((outerRadius + P * 2) / P) * P;
 
-            // ── 2D Discrete Crescent Grid with 4-Neighbor Attached Border (Rule 30) ──
-            for (let gy = minY; gy <= maxY; gy += P) {
-              for (let gx = minX; gx <= maxX; gx += P) {
-                if (!isInsideSlash(gx, gy)) continue;
-
-                const pxX = snap(gx);
-                const pyY = snap(gy);
-
-                const isBorder = !isInsideSlash(gx + P, gy) ||
-                                 !isInsideSlash(gx - P, gy) ||
-                                 !isInsideSlash(gx, gy + P) ||
-                                 !isInsideSlash(gx, gy - P);
-
-                if (isBorder) {
-                  ctx.fillStyle = outlineCol;
-                  ctx.fillRect(pxX, pyY, P, P);
-                  continue;
-                }
-
-                const dist = Math.hypot(gx, gy);
-                let ang = Math.atan2(gy, gx);
-                while (ang < minAng - Math.PI) ang += Math.PI * 2;
-                while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
-                const t = (ang - minAng) / span;
-                const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.26 + 0.74 * t);
-                const outR = outerRadius + taper * 2.0;
-                const depthFromApex = outR - dist;
-
-                let col;
-                if (depthFromApex < P * 1.4) {
-                  col = '#FFFFFF'; // Razor-sharp white-hot cutting edge apex
-                } else if (depthFromApex < P * 3.0) {
-                  col = '#FFF0F8'; // Glowing pastel pink highlight rim
-                } else if (depthFromApex < P * 5.2) {
-                  col = '#FF1493'; // Vibrant electric cursed hot-pink
-                } else if (depthFromApex < P * 7.5) {
-                  col = (step === 3) ? '#B80062' : '#D80075'; // Deep saturated magenta layer
-                } else {
-                  col = '#220016'; // Abyssal pitch-black cursed energy void core
-                }
-
-                ctx.fillStyle = col;
-                ctx.fillRect(pxX, pyY, P, P);
-              }
-            }
+            _drawCachedYutaSlashCrescent(ctx, outerRadius, minAng, maxAng, minAng, maxAng, P, snap, isInsideSlash, step === 3, trailAlpha);
 
             // ── Discrete Cursed Energy Stepped Pixel Sparks (Rule 26) ──
             const numEmbers = 10;
@@ -3155,57 +3111,7 @@ export class YutaFighter extends Fighter {
             const minY = Math.floor((-outerRadius - P * 2) / P) * P;
             const maxY = Math.ceil((outerRadius + P * 2) / P) * P;
 
-            // ── 2D Discrete Crescent Grid with 4-Neighbor Attached Border (Rule 30) ──
-            for (let gy = minY; gy <= maxY; gy += P) {
-              for (let gx = minX; gx <= maxX; gx += P) {
-                if (!isInsideSlash(gx, gy)) continue;
-
-                const pxX = snap(gx);
-                const pyY = snap(gy);
-
-                const isBorder = !isInsideSlash(gx + P, gy) ||
-                                 !isInsideSlash(gx - P, gy) ||
-                                 !isInsideSlash(gx, gy + P) ||
-                                 !isInsideSlash(gx, gy - P);
-
-                if (isBorder) {
-                  ctx.fillStyle = outlineCol;
-                  ctx.fillRect(pxX, pyY, P, P);
-                  continue;
-                }
-
-                const dist = Math.hypot(gx, gy);
-                let ang = Math.atan2(gy, gx);
-                while (ang < minAng - Math.PI) ang += Math.PI * 2;
-                while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
-
-                let t = 0.5;
-                if (Math.abs(currentEndAngle - currentStartAngle) >= 0.0001) {
-                  t = (ang - currentStartAngle) / (currentEndAngle - currentStartAngle);
-                }
-                t = Math.max(0, Math.min(1.0, t));
-
-                const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.26 + 0.74 * t);
-                const outR = outerRadius + taper * 2.0;
-                const depthFromApex = outR - dist;
-
-                let col;
-                if (depthFromApex < P * 1.4) {
-                  col = '#FFFFFF'; // Razor-sharp white-hot cutting edge apex
-                } else if (depthFromApex < P * 3.0) {
-                  col = '#FFF0F8'; // Glowing pastel pink highlight rim
-                } else if (depthFromApex < P * 5.2) {
-                  col = '#FF1493'; // Vibrant electric cursed hot-pink
-                } else if (depthFromApex < P * 7.5) {
-                  col = (comboIndex === 2) ? '#B80062' : '#D80075'; // Deep saturated magenta layer
-                } else {
-                  col = '#220016'; // Abyssal pitch-black cursed energy void core
-                }
-
-                ctx.fillStyle = col;
-                ctx.fillRect(pxX, pyY, P, P);
-              }
-            }
+            _drawCachedYutaSlashCrescent(ctx, outerRadius, minAng, maxAng, currentStartAngle, currentEndAngle, P, snap, isInsideSlash, comboIndex === 2, trailAlpha);
 
             // ── Discrete Cursed Energy Stepped Pixel Sparks along crescent span ──
             const numEmbers = 12;
@@ -3530,4 +3436,62 @@ export class YutaFighter extends Fighter {
   _drawYutaCursedEnergyAura(ctx) { YutaRenderer._drawYutaCursedEnergyAura(ctx, this); }
   _drawYutaSwordBag(ctx) { YutaRenderer._drawYutaSwordBag(ctx, this); }
   _drawYutaSwordStrap(ctx) { YutaRenderer._drawYutaSwordStrap(ctx, this); }
+}
+
+const _yutaSlashCrescentCache = new Map();
+function _drawCachedYutaSlashCrescent(ctx, outerRadius, minAng, maxAng, startA, endA, P, snap, isInsideSlash, isDeep, trailAlpha) {
+  const qOut = Math.round(outerRadius);
+  const qStart = Math.round(startA * 8) / 8;
+  const qEnd = Math.round(endA * 8) / 8;
+  const key = `${qOut}_${qStart}_${qEnd}_${isDeep ? 1 : 0}`;
+  let entry = _yutaSlashCrescentCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const ext = Math.ceil((outerRadius + P * 3) / P) * P;
+    const dim = ext * 2 + P * 2;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let y = -ext; y <= ext; y += P) {
+        for (let x = -ext; x <= ext; x += P) {
+          if (!isInsideSlash(x, y)) continue;
+          const pxX = snap(x);
+          const pyY = snap(y);
+          const isBorder = !isInsideSlash(x + P, y) || !isInsideSlash(x - P, y) || !isInsideSlash(x, y + P) || !isInsideSlash(x, y - P);
+          if (isBorder) {
+            bCtx.fillStyle = 'rgb(20, 2, 14)';
+            bCtx.fillRect(pxX, pyY, P, P);
+            continue;
+          }
+          const dist = Math.hypot(x, y);
+          let ang = Math.atan2(y, x);
+          while (ang < minAng - Math.PI) ang += Math.PI * 2;
+          while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
+          let t = 0.5;
+          if (Math.abs(endA - startA) >= 0.0001) t = (ang - startA) / (endA - startA);
+          t = Math.max(0, Math.min(1.0, t));
+          const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.26 + 0.74 * t);
+          const outR = outerRadius + taper * 2.0;
+          const depthFromApex = outR - dist;
+          bCtx.fillStyle = (depthFromApex < P * 1.4) ? '#FFFFFF' : ((depthFromApex < P * 3.0) ? '#FFF0F8' : ((depthFromApex < P * 5.2) ? '#FF1493' : ((depthFromApex < P * 7.5) ? (isDeep ? '#B80062' : '#D80075') : '#220016')));
+          bCtx.fillRect(pxX, pyY, P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_yutaSlashCrescentCache.size > 64) _yutaSlashCrescentCache.delete(_yutaSlashCrescentCache.keys().next().value);
+      _yutaSlashCrescentCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.globalAlpha *= Math.max(0, Math.min(1, trailAlpha));
+    ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+    ctx.restore();
+  }
 }

@@ -78,7 +78,41 @@ export function drawNezukoSkin(ctx, fighter) {
 /**
  * Solid 2D Pixel-Art Body for Nezuko Kamado
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawNezukoPixelBody(ctx, r) {
+  if (typeof document === 'undefined') {
+    _render_drawNezukoPixelBody(ctx, r);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.45 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawNezukoPixelBody(cctx, intR);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawNezukoPixelBody(ctx, r) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const steps = Math.ceil((r + P) / P);

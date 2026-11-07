@@ -1556,14 +1556,7 @@ export function drawTurret(ctx, turret) {
     ctx.fillStyle = 'rgba(14, 165, 233, 0.28)';
     ctx.fillRect(-22, -22, 44, 44);
 
-    // Cyan 16-bit Blueprint Grid
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
-    for (let gx = -20; gx <= 20; gx += 8) {
-      ctx.fillRect(gx, -20, 1, 40);
-    }
-    for (let gy = -20; gy <= 20; gy += 8) {
-      ctx.fillRect(-20, gy, 40, 1);
-    }
+    _drawCachedEngineerBlueprintGrid(ctx, false);
 
     for (let i = 0; i < 6; i++) {
       const a = (now * 0.01 + i * 1.05) % (Math.PI * 2);
@@ -1812,14 +1805,7 @@ export function drawDispenser(ctx, dispenser) {
     ctx.fillStyle = 'rgba(14, 165, 233, 0.28)';
     ctx.fillRect(-22, -34, 44, 60);
 
-    // Cyan 16-bit Blueprint Grid Lines
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
-    for (let gx = -20; gx <= 20; gx += 8) {
-      ctx.fillRect(gx, -32, 1, 56);
-    }
-    for (let gy = -30; gy <= 24; gy += 8) {
-      ctx.fillRect(-20, gy, 40, 1);
-    }
+    _drawCachedEngineerBlueprintGrid(ctx, true);
 
     // Dynamic Welding Sparks
     for (let i = 0; i < 6; i++) {
@@ -2318,4 +2304,27 @@ export function drawDispenserHealingRing(ctx, dispenser) {
   }
 
   ctx.restore();
+}
+
+const _engBlueprintGridCache = new Map();
+function _drawCachedEngineerBlueprintGrid(ctx, isTall) {
+  const key = isTall ? 'tall' : 'sq';
+  let entry = _engBlueprintGridCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const c = document.createElement('canvas');
+    c.width = 48;
+    c.height = isTall ? 68 : 48;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.translate(24, isTall ? 34 : 24);
+      bCtx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+      for (let gx = -20; gx <= 20; gx += 8) bCtx.fillRect(gx, isTall ? -32 : -20, 1, isTall ? 56 : 40);
+      for (let y = isTall ? -30 : -20, maxY = isTall ? 24 : 20; y <= maxY; y += 8) bCtx.fillRect(-20, y, 40, 1);
+      bCtx.restore();
+      entry = { canvas: c, ox: -24, oy: isTall ? -34 : -24 };
+      _engBlueprintGridCache.set(key, entry);
+    }
+  }
+  if (entry) ctx.drawImage(entry.canvas, entry.ox, entry.oy);
 }

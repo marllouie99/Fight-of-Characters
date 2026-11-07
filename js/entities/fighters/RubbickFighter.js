@@ -2612,29 +2612,7 @@ export class RubbickFighter extends Fighter {
       const size = rGrid + 3;
       const reticleTime = performance.now() * 0.005;
 
-      // Pass 1: Solid Dark Obsidian Outline (Thick 1-2px border around ring)
-      ctx.fillStyle = '#05180B';
-      for (let gy = -size; gy <= size; gy++) {
-        for (let gx = -size; gx <= size; gx++) {
-          const d = Math.hypot(gx, gy);
-          if (Math.abs(d - rGrid) <= 1.60) {
-            ctx.fillRect(dropX + gx * P, dropY + gy * P, P, P);
-          }
-        }
-      }
-
-      // Pass 2: Vibrant Emerald / Neon Mint Pixel Ring with rotating glints
-      for (let gy = -size; gy <= size; gy++) {
-        for (let gx = -size; gx <= size; gx++) {
-          const d = Math.hypot(gx, gy);
-          if (Math.abs(d - rGrid) <= 0.65) {
-            const angle = Math.atan2(gy, gx);
-            const isGlint = Math.sin(angle * 4 + reticleTime) > 0.65;
-            ctx.fillStyle = isGlint ? '#FFFFFF' : ((Math.abs(gx + gy) % 2 === 0) ? '#00FF64' : '#60FFB0');
-            ctx.fillRect(dropX + gx * P, dropY + gy * P, P, P);
-          }
-        }
-      }
+      _drawCachedRubbickTkReticle(ctx, dropX, dropY, rGrid, size, P, reticleTime);
 
       // 4 Cardinal Pixel Inward Brackets [ ]
       const bracketDist = snap(dropRadius + P * 4);
@@ -3153,3 +3131,47 @@ export class RubbickFighter extends Fighter {
 
 export const TricksterFighter = RubbickFighter;
 
+
+const _rubbickTkReticleCache = new Map();
+function _drawCachedRubbickTkReticle(ctx, dropX, dropY, rGrid, size, P, reticleTime) {
+  const phase = Math.round(reticleTime * 2) % 6;
+  const key = `${rGrid}_${phase}`;
+  let entry = _rubbickTkReticleCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const dim = (size * 2 + 2) * P;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      bCtx.fillStyle = '#05180B';
+      for (let idx = 0, total = (size * 2 + 1) * (size * 2 + 1); idx < total; idx++) {
+        const gx = (idx % (size * 2 + 1)) - size;
+        const gy = Math.floor(idx / (size * 2 + 1)) - size;
+        const d = Math.hypot(gx, gy);
+        if (Math.abs(d - rGrid) <= 1.60) bCtx.fillRect(gx * P, gy * P, P, P);
+      }
+      for (let idx = 0, total = (size * 2 + 1) * (size * 2 + 1); idx < total; idx++) {
+        const gx = (idx % (size * 2 + 1)) - size;
+        const gy = Math.floor(idx / (size * 2 + 1)) - size;
+        const d = Math.hypot(gx, gy);
+        if (Math.abs(d - rGrid) <= 0.65) {
+          const angle = Math.atan2(gy, gx);
+          const isGlint = Math.sin(angle * 4 + phase * 0.5) > 0.65;
+          bCtx.fillStyle = isGlint ? '#FFFFFF' : ((Math.abs(gx + gy) % 2 === 0) ? '#00FF64' : '#60FFB0');
+          bCtx.fillRect(gx * P, gy * P, P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _rubbickTkReticleCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.drawImage(entry.canvas, Math.round(dropX - entry.half), Math.round(dropY - entry.half));
+  }
+}

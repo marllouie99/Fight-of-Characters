@@ -243,7 +243,43 @@ export function drawNanamiCursedEnergyAura(ctx, fighter) {
 /**
  * Helper to draw a clenched fist with watch and skin tone (Pixel Art Edition)
  */
+const _nanamiFistCache = new Map();
 function _drawFist(ctx, x, y, radius, skinColor, fighter, isFrontHand = false) {
+  if (radius <= 0) return;
+  if (typeof document === 'undefined') {
+    _renderNanamiFist(ctx, x, y, radius, skinColor, fighter, isFrontHand);
+    return;
+  }
+  const qR = Math.round(radius * 2) / 2;
+  const key = `${qR}_${skinColor}_${isFrontHand ? 1 : 0}`;
+  let entry = _nanamiFistCache.get(key);
+  if (!entry) {
+    const P = 2.0;
+    const steps = Math.ceil((qR * 1.5 + P * 2) / P);
+    const size = (steps * 2 + 2) * P;
+    const half = size / 2;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      _renderNanamiFist(bCtx, 0, 0, qR, skinColor, null, isFrontHand);
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _nanamiFistCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(entry.canvas, Math.round(x - entry.half), Math.round(y - entry.half));
+    ctx.restore();
+  }
+}
+function _renderNanamiFist(ctx, x, y, radius, skinColor, fighter, isFrontHand = false) {
   ctx.save();
   ctx.translate(x, y);
   ctx.imageSmoothingEnabled = false;
@@ -533,7 +569,41 @@ export function drawNanamiSkin(ctx, fighter) {
  * Uses discrete stepped pixel grid rasterization matching Saitama, Ichigo, and Yuji.
  * Minimalist circle brawler aesthetic, upright front POV, faceless (Rule #19 compliant).
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawNanamiPixelBody(ctx, r, isOvertime = false) {
+  if (typeof document === 'undefined') {
+    _render_drawNanamiPixelBody(ctx, r, isOvertime);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isOvertime ? 1 : 0}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawNanamiPixelBody(cctx, intR, isOvertime);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawNanamiPixelBody(ctx, r, isOvertime = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const P = 2.0;

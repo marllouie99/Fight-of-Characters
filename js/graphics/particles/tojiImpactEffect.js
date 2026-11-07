@@ -148,46 +148,7 @@ export function drawTojiImpactEffects(ctx) {
       const minY = Math.floor((-maxThick - P * 2) / P) * P;
       const maxY = Math.ceil((maxThick + P * 2) / P) * P;
 
-      for (let gy = minY; gy <= maxY; gy += P) {
-        for (let gx = minX; gx <= maxX; gx += P) {
-          if (!isInsideSlice(gx, gy)) continue;
-
-          const pxX = snap(gx);
-          const pyY = snap(gy);
-
-          const isBorder = !isInsideSlice(gx + P, gy) ||
-                           !isInsideSlice(gx - P, gy) ||
-                           !isInsideSlice(gx, gy + P) ||
-                           !isInsideSlice(gx, gy - P);
-
-          if (isBorder) {
-            ctx.fillStyle = outlineCol;
-            ctx.globalAlpha = p.alpha * 0.95;
-            ctx.fillRect(pxX, pyY, P, P);
-            continue;
-          }
-
-          const norm = (gx + halfLen) / span;
-          const curveOffset = Math.sin(norm * Math.PI) * p.curve * p.length * 0.2;
-          const distFromCore = Math.abs(gy - curveOffset);
-          const taper = Math.sin(norm * Math.PI);
-          const curHalfThick = (maxThick * taper) * 0.5;
-          const relDist = distFromCore / Math.max(0.001, curHalfThick);
-
-          let col;
-          if (relDist < 0.25) {
-            col = p.accentColor; // White-hot diamond core
-          } else if (relDist < 0.60) {
-            col = p.primaryColor; // Radiant soul crimson
-          } else {
-            col = p.auraColor; // Deep cursed violet
-          }
-
-          ctx.fillStyle = col;
-          ctx.globalAlpha = p.alpha;
-          ctx.fillRect(pxX, pyY, P, P);
-        }
-      }
+      _drawCachedTojiSlice(ctx, p, halfLen, maxThick, span, minX, maxX, minY, maxY, P, snap, isInsideSlice);
     } else if (p.type === 'ring') {
       // 2. EXPANDING SPATIAL CLEAVE SHOCKWAVE ARC
       ctx.translate(snap(p.x), snap(p.y));
@@ -260,5 +221,57 @@ export function drawTojiImpactEffects(ctx) {
     }
 
     ctx.restore();
+  }
+}
+
+const _tojiSliceSpriteCache = new Map();
+function _drawCachedTojiSlice(ctx, p, halfLen, maxThick, span, minX, maxX, minY, maxY, P, snap, isInsideSlice) {
+  const qLen = Math.round(p.length / 4) * 4;
+  const qThick = Math.round(maxThick);
+  const qCurve = Math.round((p.curve || 0) * 4) / 4;
+  const key = `${qLen}_${qThick}_${qCurve}_${p.primaryColor}`;
+  let entry = _tojiSliceSpriteCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const w = Math.max(8, Math.ceil((maxX - minX + P * 4)));
+    const h = Math.max(8, Math.ceil((maxY - minY + P * 4)));
+    const hw = w / 2;
+    const hh = h / 2;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(hw, hh);
+      for (let y = minY; y <= maxY; y += P) {
+        for (let x = minX; x <= maxX; x += P) {
+          if (!isInsideSlice(x, y)) continue;
+          const pxX = snap(x), pyY = snap(y);
+          const isBorder = !isInsideSlice(x + P, y) || !isInsideSlice(x - P, y) || !isInsideSlice(x, y + P) || !isInsideSlice(x, y - P);
+          if (isBorder) {
+            bCtx.fillStyle = p.voidColor;
+            bCtx.fillRect(pxX, pyY, P, P);
+            continue;
+          }
+          const norm = (x + halfLen) / span;
+          const curveOffset = Math.sin(norm * Math.PI) * p.curve * p.length * 0.2;
+          const distFromCore = Math.abs(y - curveOffset);
+          const taper = Math.sin(norm * Math.PI);
+          const curHalfThick = (maxThick * taper) * 0.5;
+          const relDist = distFromCore / Math.max(0.001, curHalfThick);
+          bCtx.fillStyle = relDist < 0.25 ? p.accentColor : (relDist < 0.60 ? p.primaryColor : p.auraColor);
+          bCtx.fillRect(pxX, pyY, P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, hw, hh };
+      if (_tojiSliceSpriteCache.size > 48) _tojiSliceSpriteCache.delete(_tojiSliceSpriteCache.keys().next().value);
+      _tojiSliceSpriteCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.globalAlpha = p.alpha;
+    ctx.drawImage(entry.canvas, -entry.hw, -entry.hh);
   }
 }

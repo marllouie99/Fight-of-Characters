@@ -2887,38 +2887,7 @@ export class TojiFighter extends Fighter {
           const minY = Math.floor((-radius - P * 2) / P) * P;
           const maxY = Math.ceil((radius + P * 2) / P) * P;
 
-          for (let gy = minY; gy <= maxY; gy += P) {
-            for (let gx = minX; gx <= maxX; gx += P) {
-              if (!isInsideFlurry(gx, gy)) continue;
-
-              const pxX = snap(gx);
-              const pyY = snap(gy);
-
-              const isBorder = !isInsideFlurry(gx + P, gy) ||
-                               !isInsideFlurry(gx - P, gy) ||
-                               !isInsideFlurry(gx, gy + P) ||
-                               !isInsideFlurry(gx, gy - P);
-
-              if (isBorder) {
-                ctx.fillStyle = outlineCol;
-                ctx.fillRect(pxX, pyY, P, P);
-                continue;
-              }
-
-              const dist = Math.hypot(gx, gy);
-              let ang = Math.atan2(gy, gx);
-              while (ang < minAng - Math.PI) ang += Math.PI * 2;
-              while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
-              const t = (ang - tailAngle) / span;
-              const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.3 + 0.7 * t);
-              const outRad = radius + taper * 1.5;
-              const depthFromApex = outRad - dist;
-
-              let col = (depthFromApex < P * 1.4) ? '#FFFFFF' : ((depthFromApex < P * 3.2) ? `rgb(${color2})` : `rgb(${color1})`);
-              ctx.fillStyle = col;
-              ctx.fillRect(pxX, pyY, P, P);
-            }
-          }
+          _drawCachedTojiFlurryCrescent(ctx, radius, thick, minAng, maxAng, tailAngle, span, P, snap, isInsideFlurry, color1, color2, alpha);
 
           ctx.restore();
         };
@@ -3253,3 +3222,59 @@ export class TojiFighter extends Fighter {
   }
 }
 
+
+const _tojiFlurryCrescentCache = new Map();
+function _drawCachedTojiFlurryCrescent(ctx, radius, thick, minAng, maxAng, tailAngle, span, P, snap, isInsideFlurry, color1, color2, alpha) {
+  const qRad = Math.round(radius / 2) * 2;
+  const qMin = Math.round(minAng * 8) / 8;
+  const qMax = Math.round(maxAng * 8) / 8;
+  const key = `${qRad}_${thick}_${qMin}_${qMax}_${color1}`;
+  let entry = _tojiFlurryCrescentCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const ext = Math.ceil((qRad + P * 3) / P) * P;
+    const dim = ext * 2 + P * 2;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let y = -ext; y <= ext; y += P) {
+        for (let x = -ext; x <= ext; x += P) {
+          if (!isInsideFlurry(x, y)) continue;
+          const pxX = snap(x);
+          const pyY = snap(y);
+          const isBorder = !isInsideFlurry(x + P, y) || !isInsideFlurry(x - P, y) || !isInsideFlurry(x, y + P) || !isInsideFlurry(x, y - P);
+          if (isBorder) {
+            bCtx.fillStyle = 'rgb(12, 4, 20)';
+            bCtx.fillRect(pxX, pyY, P, P);
+            continue;
+          }
+          const dist = Math.hypot(x, y);
+          let ang = Math.atan2(y, x);
+          while (ang < minAng - Math.PI) ang += Math.PI * 2;
+          while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
+          const t = (ang - tailAngle) / span;
+          const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.3 + 0.7 * t);
+          const outRad = radius + taper * 1.5;
+          const depthFromApex = outRad - dist;
+          bCtx.fillStyle = (depthFromApex < P * 1.4) ? '#FFFFFF' : ((depthFromApex < P * 3.2) ? `rgb(${color2})` : `rgb(${color1})`);
+          bCtx.fillRect(pxX, pyY, P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_tojiFlurryCrescentCache.size > 48) _tojiFlurryCrescentCache.delete(_tojiFlurryCrescentCache.keys().next().value);
+      _tojiFlurryCrescentCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.globalAlpha *= Math.max(0, Math.min(1, alpha));
+    ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+    ctx.restore();
+  }
+}

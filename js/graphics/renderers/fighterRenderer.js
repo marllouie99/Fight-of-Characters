@@ -67,7 +67,52 @@ export function drawSketchyCircle(ctx, cx, cy, r, seed, color = '#000000', width
  * Features a stepped dark ink outline shell (#000000), character color fill,
  * deep edge/heel shadow, and subtle specular highlight glint pixel.
  */
+const _pixelHandCache = new Map();
+const MAX_PIXEL_HAND_CACHE = 96;
+
 export function drawPixelHand(ctx, cx = 0, cy = 0, radius = 6.0, color = '#FFE0BD', outlineColor = '#000000') {
+  if (radius <= 0) return;
+  if (typeof document === 'undefined') {
+    _renderPixelHandRaw(ctx, cx, cy, radius, color, outlineColor);
+    return;
+  }
+  const qR = Math.round(radius * 2) / 2;
+  const cFill = color || '#FFE0BD';
+  const cOut = outlineColor || '#000000';
+  const key = `${qR}_${cFill}_${cOut}`;
+
+  let entry = _pixelHandCache.get(key);
+  if (!entry) {
+    const P = 2.0;
+    const steps = Math.ceil((qR + P) / P);
+    const size = (steps * 2 + 2) * P;
+    const half = size / 2;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      _renderPixelHandRaw(bCtx, 0, 0, qR, cFill, cOut);
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_pixelHandCache.size >= MAX_PIXEL_HAND_CACHE) {
+        _pixelHandCache.delete(_pixelHandCache.keys().next().value);
+      }
+      _pixelHandCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(entry.canvas, Math.round(cx - entry.half), Math.round(cy - entry.half));
+    ctx.restore();
+  }
+}
+
+function _renderPixelHandRaw(ctx, cx = 0, cy = 0, radius = 6.0, color = '#FFE0BD', outlineColor = '#000000') {
   if (radius <= 0) return;
   const P = 2.0; // 2.0px pixel art grid
   const steps = Math.ceil((radius + P) / P);

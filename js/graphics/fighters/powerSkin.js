@@ -117,7 +117,41 @@ export function drawPowerSkin(ctx, fighter) {
  * Draws Power's Blood Fiend Body Circle in Authentic 2D Pixel Art
  * Accurately matching the anime color palette, strawberry-peach hair, horns, and sloppy Public Safety hoodie outfit.
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawPowerPixelBody(ctx, r, now) {
+  if (typeof document === 'undefined') {
+    _render_drawPowerPixelBody(ctx, r, now);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.65 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawPowerPixelBody(cctx, intR, now);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawPowerPixelBody(ctx, r, now) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const steps = Math.ceil((r + P) / P);

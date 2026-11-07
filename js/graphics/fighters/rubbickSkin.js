@@ -53,7 +53,41 @@ function quadBezierPt(p0, p1, p2, t) {
  * - Zone C: Ornate gold runic magus sash & brass buckle.
  * - Zone D: Layered wizard robe skirt with shadow folds and emerald edge highlights.
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawRubbickPixelBody(ctx, r, isGhost = false, isAttacking = false) {
+  if (typeof document === 'undefined') {
+    _render_drawRubbickPixelBody(ctx, r, isGhost, isAttacking);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isGhost ? 1 : 0}_${isAttacking ? 1 : 0}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawRubbickPixelBody(cctx, intR, isGhost, isAttacking);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawRubbickPixelBody(ctx, r, isGhost = false, isAttacking = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const steps = Math.ceil((r + P) / P);
@@ -425,7 +459,42 @@ export function drawRubbickPixelCape(ctx, r, inertiaX = 0, inertiaY = 0, gentleS
  * Draws an authentic stepped pixel-art Magus glove/hand for Rubbick.
  * Features dark leather palms, golden magus bracer, and glowing arcane emerald fingertips.
  */
+const _rubbickHandCache = new Map();
 export function drawRubbickPixelHand(ctx, handX, handY, handRadius, alpha = 1.0) {
+  if (handRadius <= 0) return;
+  if (typeof document === 'undefined') {
+    _renderRubbickPixelHand(ctx, handX, handY, handRadius, alpha);
+    return;
+  }
+  const qR = Math.round(handRadius * 2) / 2;
+  let entry = _rubbickHandCache.get(qR);
+  if (!entry) {
+    const steps = Math.ceil((qR + P * 2) / P);
+    const size = (steps * 2 + 2) * P;
+    const half = size / 2;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      _renderRubbickPixelHand(bCtx, 0, 0, qR, 1.0);
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _rubbickHandCache.set(qR, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha *= alpha;
+    ctx.drawImage(entry.canvas, Math.round(handX - entry.half), Math.round(handY - entry.half));
+    ctx.restore();
+  }
+}
+function _renderRubbickPixelHand(ctx, handX, handY, handRadius, alpha = 1.0) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = alpha;
@@ -588,44 +657,7 @@ export function drawRubbickPixelDebrisLayer(ctx, fighter, drawBehind) {
     ctx.translate(snap(px), snap(py));
     ctx.rotate(rotation);
 
-    // 1. Stepped Pixel Dark Ink Outline Shell
-    ctx.fillStyle = isBehind ? 'rgba(8, 18, 11, 0.60)' : '#0A0F0D';
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        if (Math.hypot(gx * P, gy * P) <= s + P * 0.75) {
-          ctx.fillRect(snap(gx * P), snap(gy * P), P, P);
-        }
-      }
-    }
-
-    // 2. Stepped Pixel Basalt Rock Core & Emerald Crystal Facets
-    for (let gy = -steps; gy <= steps; gy++) {
-      for (let gx = -steps; gx <= steps; gx++) {
-        const rx = gx * P;
-        const ry = gy * P;
-        const d = Math.hypot(rx, ry);
-        if (d > s) continue;
-
-        const bx = snap(rx);
-        const by = snap(ry);
-
-        // Specular glint
-        if (rx < -s * 0.25 && ry < -s * 0.25) {
-          ctx.fillStyle = isBehind ? '#B8FFDA' : '#FFFFFF';
-        }
-        // Glowing Emerald Facet
-        else if (Math.abs(rx) <= s * 0.45 && Math.abs(ry) <= s * 0.45) {
-          ctx.fillStyle = '#00FF64';
-        }
-        // Basalt Rock Shading
-        else if (ry > s * 0.30 || rx > s * 0.35) {
-          ctx.fillStyle = '#08120B';
-        } else {
-          ctx.fillStyle = '#112419';
-        }
-        ctx.fillRect(bx, by, P, P);
-      }
-    }
+    _drawCachedRubbickDebrisRock(ctx, s, isBehind);
 
     ctx.restore();
   }
@@ -772,4 +804,50 @@ export function drawRubbickSkin(ctx, fighter) {
   }
 
   ctx.restore();
+}
+
+const _rubbickRockCache = new Map();
+function _drawCachedRubbickDebrisRock(ctx, s, isBehind) {
+  const key = `${s}_${isBehind ? 1 : 0}`;
+  let entry = _rubbickRockCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const steps = Math.ceil((s + P * 2) / P);
+    const size = (steps * 2 + 2) * P;
+    const half = size / 2;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      bCtx.fillStyle = isBehind ? 'rgba(8, 18, 11, 0.60)' : '#0A0F0D';
+      for (let gy = -steps; gy <= steps; gy++) {
+        for (let gx = -steps; gx <= steps; gx++) {
+          if (Math.hypot(gx * P, gy * P) <= s + P * 0.75) {
+            bCtx.fillRect(snap(gx * P), snap(gy * P), P, P);
+          }
+        }
+      }
+      for (let gy = -steps; gy <= steps; gy++) {
+        for (let gx = -steps; gx <= steps; gx++) {
+          const rx = gx * P;
+          const ry = gy * P;
+          if (Math.hypot(rx, ry) > s) continue;
+          if (rx < -s * 0.25 && ry < -s * 0.25) bCtx.fillStyle = isBehind ? '#B8FFDA' : '#FFFFFF';
+          else if (Math.abs(rx) <= s * 0.45 && Math.abs(ry) <= s * 0.45) bCtx.fillStyle = '#00FF64';
+          else if (ry > s * 0.30 || rx > s * 0.35) bCtx.fillStyle = '#08120B';
+          else bCtx.fillStyle = '#112419';
+          bCtx.fillRect(snap(rx), snap(ry), P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _rubbickRockCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+  }
 }

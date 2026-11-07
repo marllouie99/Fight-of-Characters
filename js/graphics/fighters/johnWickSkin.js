@@ -119,7 +119,43 @@ export function _drawJohnWickHair(ctx, r, facingLeft = false) {
 /**
  * Draws a tactical fist with black suit sleeve cuff in authentic Pixel Art Style.
  */
+const _jwHandCache = new Map();
 export function drawJohnWickPixelHand(ctx, x, y, radius, skinColor) {
+  if (radius <= 0) return;
+  if (typeof document === 'undefined') {
+    _renderJohnWickPixelHand(ctx, x, y, radius, skinColor);
+    return;
+  }
+  const qR = Math.round(radius * 2) / 2;
+  const key = `${qR}_${skinColor || '#E8AC8B'}`;
+  let entry = _jwHandCache.get(key);
+  if (!entry) {
+    const P = 2.0;
+    const steps = Math.ceil((qR * 2.0 + P * 2) / P);
+    const size = (steps * 2 + 2) * P;
+    const half = size / 2;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      _renderJohnWickPixelHand(bCtx, 0, 0, qR, skinColor);
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _jwHandCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(entry.canvas, Math.round(x - entry.half), Math.round(y - entry.half));
+    ctx.restore();
+  }
+}
+function _renderJohnWickPixelHand(ctx, x, y, radius, skinColor) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const P = 2.0;
@@ -193,7 +229,41 @@ export function drawJohnWickPixelHand(ctx, x, y, radius, skinColor) {
  * Uses pure discrete 2D grid-scan rasterization loop with zero subpixel bleed (P = 2.0px, Rule #19 & Rule #35 compliant).
  * Exact same tech, grid resolution, and border calculation as Saitama's skin.
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawJohnWickPixelBody(ctx, r) {
+  if (typeof document === 'undefined') {
+    _render_drawJohnWickPixelBody(ctx, r);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawJohnWickPixelBody(cctx, intR);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawJohnWickPixelBody(ctx, r) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const P = 2.0;

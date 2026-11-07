@@ -102,7 +102,43 @@ export function _drawEngineerHair(ctx, r, facingLeft = false) {
  * Draws a standardized, authentic retro pixel art work glove for Engineer.
  * Compact and well-proportioned to the body circle and weapons.
  */
+const _engHandCache = new Map();
 export function drawEngineerPixelHand(ctx, cx = 0, cy = 0, radius = 4.2, gloveColor = '#D97706', isHoldingGun = false) {
+  if (radius <= 0) return;
+  if (typeof document === 'undefined') {
+    _renderEngineerPixelHand(ctx, cx, cy, radius, gloveColor, isHoldingGun);
+    return;
+  }
+  const qR = Math.round(radius * 2) / 2;
+  const key = `${qR}_${gloveColor}`;
+  let entry = _engHandCache.get(key);
+  if (!entry) {
+    const P = 2.0;
+    const steps = Math.ceil((qR + P * 2) / P);
+    const size = (steps * 2 + 2) * P;
+    const half = size / 2;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      _renderEngineerPixelHand(bCtx, 0, 0, qR, gloveColor, isHoldingGun);
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _engHandCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(entry.canvas, Math.round(cx - entry.half), Math.round(cy - entry.half));
+    ctx.restore();
+  }
+}
+function _renderEngineerPixelHand(ctx, cx = 0, cy = 0, radius = 4.2, gloveColor = '#D97706', isHoldingGun = false) {
   if (radius <= 0) return;
   const P = 2.0;
   const snap = (v) => Math.round(v / P) * P;
@@ -163,7 +199,41 @@ export function drawEngineerPixelHand(ctx, cx = 0, cy = 0, radius = 4.2, gloveCo
  * Draws Engineer's entire body circle model in authentic Pixel Art Style.
  * Minimalist circle brawler aesthetic, upright front POV, faceless (Rule #19 compliant).
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawEngineerPixelBody(ctx, r) {
+  if (typeof document === 'undefined') {
+    _render_drawEngineerPixelBody(ctx, r);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawEngineerPixelBody(cctx, intR);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawEngineerPixelBody(ctx, r) {
   ctx.save();
   const P = 2.0;
   const snap = (v) => Math.round(v / P) * P;

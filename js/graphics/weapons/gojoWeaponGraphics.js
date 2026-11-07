@@ -1,3 +1,4 @@
+import { drawCachedRadialGlow } from '../glowSpriteCache.js';
 import { getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 
@@ -380,28 +381,7 @@ export function drawGojoOrb(ctx, x, y, r, time, colorType = 'blue', attackFlash 
         ctx.fillRect(bx, by, px, px);
     }
 
-    // ── 3. Multi-Tier Radiant Concentric Plasma Matrix ──
-    const maxGrid = Math.ceil(baseR / px) * px;
-    for (let gy = -maxGrid; gy <= maxGrid; gy += px) {
-        for (let gx = -maxGrid; gx <= maxGrid; gx += px) {
-            const dist = Math.sqrt(gx * gx + gy * gy);
-            if (dist < baseR - px * 0.5) {
-                const ratio = dist / baseR; // 0 (center) to 1 (edge)
-
-                // Multi-tiered radiant color zones
-                if (ratio < 0.38) {
-                    ctx.fillStyle = cWhite; // Blazing white-hot sun core
-                } else if (ratio < 0.56) {
-                    ctx.fillStyle = cTint;  // High-luminosity glowing transition
-                } else if (ratio < 0.76) {
-                    ctx.fillStyle = cBright; // Saturated electric plasma
-                } else {
-                    ctx.fillStyle = cSaturated; // Rich deep energy rim
-                }
-                ctx.fillRect(Math.round(gx), Math.round(gy), px, px);
-            }
-        }
-    }
+    _drawCachedGojoOrbMatrix(ctx, baseR, px, colorType, cWhite, cTint, cBright, cSaturated);
 
     // ── 4. Dynamic Swirling Pixel Spiral Vortex Arms (2 Inward Swirls) ──
     const swirlSpeed = time * 0.006;
@@ -898,3 +878,39 @@ export const drawGojoRedOrbSprite = (ctx, drawR, time, alpha) => drawGojoPurpleT
 export const drawGojoBlueOrbSprite = (ctx, drawR, time, alpha) => drawGojoPurpleTravelSprite(ctx, drawR, time, false, 'blue', alpha);
 export const drawGojoOrbSprite = (ctx, drawR, time, colorType, alpha) => drawGojoPurpleTravelSprite(ctx, drawR, time, false, colorType, alpha);
 
+
+const _gojoOrbMatrixCache = new Map();
+function _drawCachedGojoOrbMatrix(ctx, baseR, px, colorType, cWhite, cTint, cBright, cSaturated) {
+  const qR = Math.round(baseR);
+  const key = `${qR}_${colorType}`;
+  let entry = _gojoOrbMatrixCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const maxGrid = Math.ceil(qR / px) * px;
+    const dim = Math.ceil((maxGrid + px * 2) * 2);
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let y = -maxGrid; y <= maxGrid; y += px) {
+        for (let x = -maxGrid; x <= maxGrid; x += px) {
+          const dist = Math.sqrt(x * x + y * y);
+          if (dist < qR - px * 0.5) {
+            const ratio = dist / qR;
+            bCtx.fillStyle = ratio < 0.38 ? cWhite : (ratio < 0.56 ? cTint : (ratio < 0.76 ? cBright : cSaturated));
+            bCtx.fillRect(Math.round(x), Math.round(y), px, px);
+          }
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_gojoOrbMatrixCache.size > 48) _gojoOrbMatrixCache.delete(_gojoOrbMatrixCache.keys().next().value);
+      _gojoOrbMatrixCache.set(key, entry);
+    }
+  }
+  if (entry) ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+}

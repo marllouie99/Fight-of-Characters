@@ -484,51 +484,7 @@ export function drawNanamiCleaverSlashArc(ctx, fighter) {
   const minY = Math.floor((-outerRadius - P * 2) / P) * P;
   const maxY = Math.ceil((outerRadius + P * 2) / P) * P;
 
-  // ── 2D Discrete Crescent Grid with 4-Neighbor Attached Border ──
-  for (let gy = minY; gy <= maxY; gy += P) {
-    for (let gx = minX; gx <= maxX; gx += P) {
-      if (!isInsideSlash(gx, gy)) continue;
-
-      const pxX = snap(gx);
-      const pyY = snap(gy);
-
-      const isBorder = !isInsideSlash(gx + P, gy) ||
-                       !isInsideSlash(gx - P, gy) ||
-                       !isInsideSlash(gx, gy + P) ||
-                       !isInsideSlash(gx, gy - P);
-
-      if (isBorder) {
-        ctx.fillStyle = outlineCol;
-        ctx.fillRect(pxX, pyY, P, P);
-        continue;
-      }
-
-      const dist = Math.hypot(gx, gy);
-      let ang = Math.atan2(gy, gx);
-      while (ang < minAng - Math.PI) ang += Math.PI * 2;
-      while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
-      const t = (ang - currentTailOffset) / span;
-      const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.28 + 0.72 * t);
-      const outRad = outerRadius + taper * 1.5;
-      const depthFromApex = outRad - dist;
-
-      let col;
-      if (depthFromApex < P * 1.4) {
-        col = '#FFFFFF'; // Searing white apex
-      } else if (depthFromApex < P * 2.8) {
-        col = (isFinalStrike || isBlitz || isOvertime) ? '#FFF8DC' : '#FFF275';
-      } else if (depthFromApex < P * 5.0) {
-        col = (isFinalStrike || isBlitz || isOvertime) ? '#FFD700' : '#E6C200';
-      } else if (depthFromApex < P * 7.5) {
-        col = (isFinalStrike || isBlitz || isOvertime) ? '#D4AF37' : '#B8860B';
-      } else {
-        col = '#382A0A'; // Deep amber shadow
-      }
-
-      ctx.fillStyle = col;
-      ctx.fillRect(pxX, pyY, P, P);
-    }
-  }
+  _drawCachedNanamiSlashCrescent(ctx, outerRadius, minAng, maxAng, currentTailOffset, span, P, snap, isInsideSlash, Boolean(isFinalStrike || isBlitz || isOvertime), trailAlpha);
 
   // Trailing Golden 7:3 Pixel Sparks
   const numEmbers = isFinalStrike ? 10 : 6;
@@ -604,17 +560,8 @@ export function drawRatioGridImpact(ctx, impactX, impactY, impactAngle = 0, scal
       const starR = snap(6.0 * (1.0 + progress * 0.6));
       ctx.fillStyle = `rgba(255, 230, 100, ${0.95 * alpha})`;
 
-      // Stepped Pixel Starburst Cross + Diagonals
-      const gridR = Math.ceil(starR / P);
-      for (let gy = -gridR; gy <= gridR; gy++) {
-        for (let gx = -gridR; gx <= gridR; gx++) {
-          const isCross = (gx === 0 || gy === 0) && (Math.abs(gx) * P <= starR && Math.abs(gy) * P <= starR);
-          const isDiag = (Math.abs(gx) === Math.abs(gy)) && (Math.abs(gx) * P <= starR * 0.6);
-          if (isCross || isDiag) {
-            ctx.fillRect(snap(gx * P) - P * 0.5, snap(gy * P) - P * 0.5, P, P);
-          }
-        }
-      }
+      ctx.fillRect(-starR, -P * 0.5, starR * 2, P);
+      ctx.fillRect(-P * 0.5, -starR, P, starR * 2);
       // Pure white center spark
       ctx.fillStyle = `rgba(255, 255, 255, ${0.98 * alpha})`;
       ctx.fillRect(-P * 0.5, -P * 0.5, P, P);
@@ -879,19 +826,8 @@ export function drawNanamiCollapseShockwaves(ctx, fighter) {
     }
   }
 
-  // Stepped pixel circle helper
   function _pixCircle(cx, cy, rad, color) {
-    const gridR = Math.ceil(rad / P);
-    for (let gy = -gridR; gy <= gridR; gy++) {
-      for (let gx = -gridR; gx <= gridR; gx++) {
-        const dist = Math.sqrt(gx * gx + gy * gy) * P;
-        if (dist > rad + P * 0.25) continue;
-        const px = snap(cx + gx * P);
-        const py = snap(cy + gy * P);
-        ctx.fillStyle = color;
-        ctx.fillRect(px - P * 0.5, py - P * 0.5, P, P);
-      }
-    }
+    _drawCachedNanamiPixCircle(ctx, cx, cy, rad, P, color);
   }
 
   for (let i = 0; i < fighter.collapseShockwaves.length; i++) {
@@ -1014,3 +950,92 @@ function curR(r) {
 
 
 
+
+const _nanamiSlashCache = new Map();
+function _drawCachedNanamiSlashCrescent(ctx, outerRadius, minAng, maxAng, currentTailOffset, span, P, snap, isInsideSlash, isBright, slashAlpha) {
+  const qOut = Math.round(outerRadius);
+  const qMin = Math.round(minAng * 8) / 8;
+  const qMax = Math.round(maxAng * 8) / 8;
+  const key = `${qOut}_${qMin}_${qMax}_${isBright ? 1 : 0}`;
+  let entry = _nanamiSlashCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const ext = Math.ceil((outerRadius + P * 3) / P) * P;
+    const dim = ext * 2 + P * 2;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let y = -ext; y <= ext; y += P) {
+        for (let x = -ext; x <= ext; x += P) {
+          if (!isInsideSlash(x, y)) continue;
+          const pxX = snap(x);
+          const pyY = snap(y);
+          const isBorder = !isInsideSlash(x + P, y) || !isInsideSlash(x - P, y) || !isInsideSlash(x, y + P) || !isInsideSlash(x, y - P);
+          if (isBorder) {
+            bCtx.fillStyle = 'rgb(20, 14, 4)';
+            bCtx.fillRect(pxX, pyY, P, P);
+            continue;
+          }
+          const dist = Math.hypot(x, y);
+          let ang = Math.atan2(y, x);
+          while (ang < minAng - Math.PI) ang += Math.PI * 2;
+          while (ang > maxAng + Math.PI) ang -= Math.PI * 2;
+          const t = (ang - currentTailOffset) / span;
+          const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.28 + 0.72 * t);
+          const outRad = outerRadius + taper * 1.5;
+          const depthFromApex = outRad - dist;
+          bCtx.fillStyle = depthFromApex < P * 1.4 ? '#FFFFFF' : (depthFromApex < P * 2.8 ? (isBright ? '#FFF8DC' : '#FFF275') : (depthFromApex < P * 5.0 ? (isBright ? '#FFD700' : '#E6C200') : (depthFromApex < P * 7.5 ? (isBright ? '#D4AF37' : '#B8860B') : '#382A0A')));
+          bCtx.fillRect(pxX, pyY, P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_nanamiSlashCache.size > 48) _nanamiSlashCache.delete(_nanamiSlashCache.keys().next().value);
+      _nanamiSlashCache.set(key, entry);
+    }
+  }
+  if (entry) {
+    ctx.save();
+    ctx.globalAlpha *= Math.max(0, Math.min(1, slashAlpha));
+    ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+    ctx.restore();
+  }
+}
+const _nanamiCircleCache = new Map();
+function _drawCachedNanamiPixCircle(ctx, cx, cy, rad, P, color) {
+  const qR = Math.max(2, Math.round(rad / P) * P);
+  const key = `${qR}_${color}`;
+  let entry = _nanamiCircleCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const gridR = Math.ceil(qR / P);
+    const dim = (gridR * 2 + 2) * P;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      bCtx.fillStyle = color;
+      for (let y = -gridR; y <= gridR; y++) {
+        for (let x = -gridR; x <= gridR; x++) {
+          if (Math.hypot(x, y) * P <= qR + P * 0.25) {
+            bCtx.fillRect(x * P - P * 0.5, y * P - P * 0.5, P, P);
+          }
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      if (_nanamiCircleCache.size > 64) _nanamiCircleCache.delete(_nanamiCircleCache.keys().next().value);
+      _nanamiCircleCache.set(key, entry);
+    }
+  }
+  if (entry) ctx.drawImage(entry.canvas, Math.round(cx - entry.half), Math.round(cy - entry.half));
+}

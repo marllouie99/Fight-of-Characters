@@ -321,16 +321,7 @@ export function drawRubbickStaff(ctx, fighter) {
     ctx.rotate(sealRot);
     ctx.globalAlpha = sealAlpha;
     
-    // Solid emerald stepped pixel ring
-    ctx.fillStyle = '#00FF64';
-    for (let gy = -sSize; gy <= sSize; gy++) {
-      for (let gx = -sSize; gx <= sSize; gx++) {
-        const d = Math.hypot(gx, gy);
-        if (Math.abs(d - sGrid) <= 0.65) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
+    _drawCachedRubbickSealRing(ctx, sGrid, sSize, P);
     ctx.restore();
 
     if (progress >= 0.35) {
@@ -356,15 +347,7 @@ export function drawRubbickStaff(ctx, fighter) {
     ctx.save();
     ctx.rotate(sealRot);
     ctx.globalAlpha = 0.85 * baseAlpha;
-    ctx.fillStyle = '#00FF64';
-    for (let gy = -sSize; gy <= sSize; gy++) {
-      for (let gx = -sSize; gx <= sSize; gx++) {
-        const d = Math.hypot(gx, gy);
-        if (Math.abs(d - sGrid) <= 0.65) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
+    _drawCachedRubbickSealRing(ctx, sGrid, sSize, P);
     ctx.restore();
 
     drawGojoOrb(ctx, 0, 0, 16 * pulse, time, 'green', 4);
@@ -376,53 +359,9 @@ export function drawRubbickStaff(ctx, fighter) {
   const cryH = 16;
   const cSteps = Math.ceil(cryH / P);
 
-  // Stepped Outer Dark Ink Shell
-  ctx.fillStyle = '#0A0F0D';
-  for (let gy = -cSteps; gy <= cSteps; gy++) {
-    for (let gx = -cSteps; gx <= cSteps; gx++) {
-      const rx = gx * P;
-      const ry = gy * P;
-      const d = (Math.abs(rx) / (cryW * 0.5)) + (Math.abs(ry) / (cryH * 0.5));
-      if (d <= 1.35) {
-        ctx.fillRect(snap(rx), snap(crystalCenterY + ry), P, P);
-      }
-    }
-  }
-
   const isAttacking = fighter.attackSwingTimer > 0;
   const attackProgress = isAttacking ? (fighter.attackSwingTimer / (fighter.attackSwingMaxTimer || 16)) : 0;
-
-  // Stepped Emerald Facets & Specular Highlight
-  for (let gy = -cSteps; gy <= cSteps; gy++) {
-    for (let gx = -cSteps; gx <= cSteps; gx++) {
-      const rx = gx * P;
-      const ry = gy * P;
-      const d = (Math.abs(rx) / (cryW * 0.5)) + (Math.abs(ry) / (cryH * 0.5));
-      if (d > 1.0) continue;
-
-      const px = snap(rx);
-      const py = snap(crystalCenterY + ry);
-
-      // Specular bright white core glint (expands during attack)
-      const coreLimit = isAttacking ? P * 2 : P;
-      if (Math.abs(rx) <= coreLimit && Math.abs(ry + P) <= coreLimit) {
-        ctx.fillStyle = '#FFFFFF';
-      }
-      // Top-left facet highlight
-      else if (rx < 0 && ry < 0) {
-        ctx.fillStyle = isAttacking ? '#E6FFF0' : '#70FFAB';
-      }
-      // Center neon-green crystal body
-      else if (d <= (isAttacking ? 0.80 : 0.65)) {
-        ctx.fillStyle = isAttacking ? '#50FF95' : coreColor;
-      }
-      // Bottom/right shadow facet
-      else {
-        ctx.fillStyle = isAttacking ? '#00A847' : '#007A33';
-      }
-      ctx.fillRect(px, py, P, P);
-    }
-  }
+  _drawCachedRubbickStaffCrystal(ctx, crystalCenterY, P, snap, isAttacking, coreColor);
 
   // ─────────────────────────────────────────────
   // 5. ROTATING DISCRETE PIXEL ENERGY RING AROUND CRYSTAL
@@ -862,3 +801,71 @@ export function getRubbickStaffTip(fighter) {
 export const getTricksterStaffTip = getRubbickStaffTip;
 
 
+
+const _rubbickSealRingCache = new Map();
+function _drawCachedRubbickSealRing(ctx, sGrid, sSize, P) {
+  let entry = _rubbickSealRingCache.get(sGrid);
+  if (!entry && typeof document !== 'undefined') {
+    const dim = (sSize * 2 + 2) * P;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      bCtx.fillStyle = '#00FF64';
+      for (let y = -sSize; y <= sSize; y++) {
+        for (let x = -sSize; x <= sSize; x++) {
+          if (Math.abs(Math.hypot(x, y) - sGrid) <= 0.65) bCtx.fillRect(x * P, y * P, P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _rubbickSealRingCache.set(sGrid, entry);
+    }
+  }
+  if (entry) ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+}
+const _rubbickCrystalCache = new Map();
+function _drawCachedRubbickStaffCrystal(ctx, crystalCenterY, P, snap, isAttacking, coreColor) {
+  const key = `${isAttacking ? 1 : 0}_${coreColor}`;
+  let entry = _rubbickCrystalCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const cryW = 10, cryH = 16, cSteps = Math.ceil(cryH / P);
+    const dim = (cSteps * 2 + 4) * P;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      bCtx.fillStyle = '#0A0F0D';
+      for (let y = -cSteps; y <= cSteps; y++) {
+        for (let x = -cSteps; x <= cSteps; x++) {
+          const rx = x * P, ry = y * P;
+          if ((Math.abs(rx) / (cryW * 0.5)) + (Math.abs(ry) / (cryH * 0.5)) <= 1.35) bCtx.fillRect(snap(rx), snap(ry), P, P);
+        }
+      }
+      const coreLimit = isAttacking ? P * 2 : P;
+      for (let y = -cSteps; y <= cSteps; y++) {
+        for (let x = -cSteps; x <= cSteps; x++) {
+          const rx = x * P, ry = y * P;
+          const d = (Math.abs(rx) / (cryW * 0.5)) + (Math.abs(ry) / (cryH * 0.5));
+          if (d > 1.0) continue;
+          bCtx.fillStyle = (Math.abs(rx) <= coreLimit && Math.abs(ry + P) <= coreLimit) ? '#FFFFFF' : ((rx < 0 && ry < 0) ? (isAttacking ? '#E6FFF0' : '#70FFAB') : (d <= (isAttacking ? 0.80 : 0.65) ? (isAttacking ? '#50FF95' : coreColor) : (isAttacking ? '#00A847' : '#007A33')));
+          bCtx.fillRect(snap(rx), snap(ry), P, P);
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _rubbickCrystalCache.set(key, entry);
+    }
+  }
+  if (entry) ctx.drawImage(entry.canvas, -entry.half, Math.round(crystalCenterY - entry.half));
+}

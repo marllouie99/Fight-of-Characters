@@ -658,40 +658,7 @@ function drawMaceMorphArm(ctx, r, lungeX, isTransformed, progress, isRightPunch)
   // B. Main Deformed Spiked Head Sphere in Pixel Art
   const maceSteps = Math.ceil(maceR / P);
 
-  // Outer dark ink rim
-  ctx.fillStyle = '#0E0F14';
-  for (let gy = -maceSteps; gy <= maceSteps; gy++) {
-    for (let gx = -maceSteps; gx <= maceSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= maceR + P * 0.5 && dist > maceR - P * 0.8) {
-        ctx.fillRect(gx * P, gy * P, P, P);
-      }
-    }
-  }
-
-  // Flesh body fill
-  ctx.fillStyle = isTransformed ? '#0E1322' : '#EEF3F7';
-  for (let gy = -maceSteps; gy <= maceSteps; gy++) {
-    for (let gx = -maceSteps; gx <= maceSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= maceR - P * 0.4) {
-        ctx.fillRect(gx * P, gy * P, P, P);
-      }
-    }
-  }
-
-  // Shadow bottom-right dither
-  ctx.fillStyle = isTransformed ? '#581C87' : '#94A3B8';
-  for (let gy = 0; gy <= maceSteps; gy++) {
-    for (let gx = 0; gx <= maceSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= maceR - P * 0.8 && dist > maceR * 0.4) {
-        if ((gx + gy) % 2 === 0 || dist > maceR * 0.7) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
-  }
+  _drawCachedMahitoSphere(ctx, maceR, P, isTransformed ? '#0E1322' : '#EEF3F7', isTransformed ? '#581C87' : '#94A3B8');
 
   // Top-left square specular highlight
   ctx.fillStyle = '#FFFFFF';
@@ -716,16 +683,7 @@ function drawMaceMorphArm(ctx, r, lungeX, isTransformed, progress, isRightPunch)
       ? `rgba(217, 70, 239, ${(0.85 * impactAlpha).toFixed(3)})`
       : `rgba(192, 38, 211, ${(0.75 * impactAlpha).toFixed(3)})`;
 
-    for (let gy = -impSteps; gy <= impSteps; gy++) {
-      for (let gx = 0; gx <= impSteps; gx++) {
-        const dist = Math.hypot(gx * P, gy * P);
-        if (dist <= impactR + P && dist > impactR - P * 1.5) {
-          if ((gx + gy) % 2 === 0 || impactAlpha > 0.6) {
-            ctx.fillRect(gx * P, gy * P, P, P);
-          }
-        }
-      }
-    }
+    _drawCachedMahitoArcRing(ctx, impactR, P, true);
 
     ctx.restore();
   }
@@ -1153,52 +1111,8 @@ function drawArticulatedFist(ctx, x, y, handRadius, isTransformed, angle = 0, is
   const pulse = Math.sin(now * 3.5) * 0.5 + 0.5;
 
   ctx.fillStyle = isTransformed ? `rgba(217, 70, 239, ${(0.40 + pulse * 0.25).toFixed(3)})` : `rgba(147, 51, 234, ${(0.35 + pulse * 0.25).toFixed(3)})`;
-  for (let gy = -ceSteps; gy <= ceSteps; gy++) {
-    for (let gx = -ceSteps; gx <= ceSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= ceR && dist > hr) {
-        if ((gx + gy) % 2 === 0 || pulse > 0.6) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
-  }
-
-  // 2. Physical Hand Structure in Pixel Art
-  // Outer dark ink rim
-  ctx.fillStyle = '#0E0F14';
-  for (let gy = -hrSteps; gy <= hrSteps; gy++) {
-    for (let gx = -hrSteps; gx <= hrSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= hr + P * 0.5 && dist > hr - P * 0.8) {
-        ctx.fillRect(gx * P, gy * P, P, P);
-      }
-    }
-  }
-
-  // Body fill
-  ctx.fillStyle = isTransformed ? '#0E1322' : '#EEF3F7';
-  for (let gy = -hrSteps; gy <= hrSteps; gy++) {
-    for (let gx = -hrSteps; gx <= hrSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= hr - P * 0.4) {
-        ctx.fillRect(gx * P, gy * P, P, P);
-      }
-    }
-  }
-
-  // Shadow bottom-right dither
-  ctx.fillStyle = isTransformed ? '#581C87' : '#94A3B8';
-  for (let gy = 0; gy <= hrSteps; gy++) {
-    for (let gx = 0; gx <= hrSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= hr - P * 0.8 && dist > hr * 0.4) {
-        if ((gx + gy) % 2 === 0 || dist > hr * 0.7) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
-  }
+  _drawCachedMahitoAuraRing(ctx, hr, ceR, P, ctx.fillStyle);
+  _drawCachedMahitoSphere(ctx, hr, P, isTransformed ? '#0E1322' : '#EEF3F7', isTransformed ? '#581C87' : '#94A3B8');
 
   // Top-left square specular highlight
   ctx.fillStyle = '#FFFFFF';
@@ -2712,40 +2626,7 @@ export function drawMahitoBodyRepelProjectile(ctx, p) {
 
   const rSteps = Math.ceil(r / P);
 
-  // Outer dark ink rim
-  ctx.fillStyle = '#0E0F14';
-  for (let gy = -rSteps; gy <= rSteps; gy++) {
-    for (let gx = -rSteps; gx <= rSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= r + P * 0.5 && dist > r - P * 0.8) {
-        ctx.fillRect(gx * P, gy * P, P, P);
-      }
-    }
-  }
-
-  // Sickly blue/grey flesh body fill
-  ctx.fillStyle = '#CBD5E1';
-  for (let gy = -rSteps; gy <= rSteps; gy++) {
-    for (let gx = -rSteps; gx <= rSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= r - P * 0.4) {
-        ctx.fillRect(gx * P, gy * P, P, P);
-      }
-    }
-  }
-
-  // Bottom-right shadow dither
-  ctx.fillStyle = '#64748B';
-  for (let gy = 0; gy <= rSteps; gy++) {
-    for (let gx = 0; gx <= rSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= r - P * 0.8 && dist > r * 0.4) {
-        if ((gx + gy) % 2 === 0 || dist > r * 0.7) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
-  }
+  _drawCachedMahitoSphere(ctx, r, P, '#CBD5E1', '#64748B');
 
   // Pixel-art cross-stitch sutures across the lumps
   drawSuture(ctx, -r * 0.5, -r * 0.2, r * 0.5, r * 0.2, 3, 2.5, '#0E0F14');
@@ -2769,18 +2650,62 @@ export function drawMahitoBodyRepelProjectile(ctx, p) {
   const auraR = r * (1.15 + pulse * 0.15);
   const auraSteps = Math.ceil(auraR / P);
 
-  ctx.fillStyle = `rgba(192, 38, 211, ${(0.45 + pulse * 0.25).toFixed(3)})`;
-  for (let gy = -auraSteps; gy <= auraSteps; gy++) {
-    for (let gx = -auraSteps; gx <= auraSteps; gx++) {
-      const dist = Math.hypot(gx * P, gy * P);
-      if (dist <= auraR && dist > r) {
-        if ((gx + gy) % 2 === 0 || pulse > 0.6) {
-          ctx.fillRect(gx * P, gy * P, P, P);
-        }
-      }
-    }
-  }
+  _drawCachedMahitoAuraRing(ctx, r, auraR, P, `rgba(192, 38, 211, ${(0.45 + pulse * 0.25).toFixed(3)})`);
 
   ctx.restore();
 }
 
+
+const _mahitoSphereCache = new Map();
+function _drawCachedMahitoSphere(ctx, rad, P, fillCol, shadCol) {
+  const qR = Math.round(rad * 2) / 2;
+  const key = `${qR}_${fillCol}_${shadCol}`;
+  let entry = _mahitoSphereCache.get(key);
+  if (!entry && typeof document !== 'undefined') {
+    const steps = Math.ceil((qR + P * 2) / P);
+    const dim = (steps * 2 + 2) * P;
+    const half = dim / 2;
+    const c = document.createElement('canvas');
+    c.width = dim;
+    c.height = dim;
+    const bCtx = c.getContext('2d');
+    if (bCtx) {
+      bCtx.save();
+      bCtx.imageSmoothingEnabled = false;
+      bCtx.translate(half, half);
+      for (let y = -steps; y <= steps; y++) {
+        for (let x = -steps; x <= steps; x++) {
+          const dist = Math.hypot(x * P, y * P);
+          if (dist <= qR + P * 0.5 && dist > qR - P * 0.8) {
+            bCtx.fillStyle = '#0E0F14';
+            bCtx.fillRect(x * P, y * P, P, P);
+          } else if (dist <= qR - P * 0.4) {
+            const isShad = x >= 0 && y >= 0 && dist <= qR - P * 0.8 && dist > qR * 0.4 && ((x + y) % 2 === 0 || dist > qR * 0.7);
+            bCtx.fillStyle = isShad ? shadCol : fillCol;
+            bCtx.fillRect(x * P, y * P, P, P);
+          }
+        }
+      }
+      bCtx.restore();
+      entry = { canvas: c, half };
+      _mahitoSphereCache.set(key, entry);
+    }
+  }
+  if (entry) ctx.drawImage(entry.canvas, -entry.half, -entry.half);
+}
+function _drawCachedMahitoArcRing(ctx, impactR, P) {
+  ctx.beginPath();
+  ctx.arc(0, 0, impactR, -Math.PI * 0.5, Math.PI * 0.5);
+  ctx.lineWidth = P * 1.5;
+  ctx.strokeStyle = ctx.fillStyle;
+  ctx.stroke();
+}
+function _drawCachedMahitoAuraRing(ctx, inR, outR, P, color) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, (inR + outR) * 0.5, 0, Math.PI * 2);
+  ctx.lineWidth = Math.max(P, outR - inR);
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.restore();
+}

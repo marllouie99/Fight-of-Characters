@@ -5,7 +5,41 @@ import { state } from '../../core/state.js';
  * Royal Paladin (Knight) Pixel Art Engine (P = 2.0px discrete grid)
  * Upright Front POV, Faceless Minimalist Aesthetic (Rule 19 & 35)
  */
+let _cachedBodyCanvas = null;
+let _cachedBodyKey = '';
+
 export function drawKnightPixelBody(ctx, r, isGhost = false) {
+  if (typeof document === 'undefined') {
+    _render_drawKnightPixelBody(ctx, r, isGhost);
+    return;
+  }
+  const intR = Math.round(r || 25);
+  const key = `${intR}_${isGhost ? 1 : 0}`;
+  if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
+    const P = 2.0;
+    const steps = Math.ceil((intR * 1.25 + P) / P);
+    const size = (steps * 2 + 2) * P;
+    _cachedBodyCanvas = document.createElement('canvas');
+    _cachedBodyCanvas.width = size;
+    _cachedBodyCanvas.height = size;
+    const cctx = _cachedBodyCanvas.getContext('2d');
+    if (cctx) {
+      cctx.save();
+      cctx.imageSmoothingEnabled = false;
+      cctx.translate(size / 2, size / 2);
+      _render_drawKnightPixelBody(cctx, intR, isGhost);
+      cctx.restore();
+    }
+    _cachedBodyKey = key;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const size = _cachedBodyCanvas.width;
+  ctx.drawImage(_cachedBodyCanvas, -size / 2, -size / 2);
+  ctx.restore();
+}
+
+function _render_drawKnightPixelBody(ctx, r, isGhost = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
 
