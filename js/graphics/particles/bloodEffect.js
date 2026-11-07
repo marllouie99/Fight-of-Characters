@@ -116,7 +116,8 @@ function releaseBloodSprite(s) {
 }
 
 function addOrOverwriteBloodParticle(particleData, maxParticles = 300) {
-  if (state.bloodEffects.length >= maxParticles) {
+  const effectiveMax = (typeof state !== 'undefined' && state.isMobileDevice) ? 60 : maxParticles;
+  if (state.bloodEffects.length >= effectiveMax) {
     // Smart priority: Overwrite an existing particle that is ALREADY on the ground
     let bestIdx = -1;
     let lowestLife = Infinity;
@@ -284,6 +285,20 @@ export function spawnBloodEffect(arg0, arg1 = 10, arg2 = null, arg3 = null, arg4
   let dmgAmount = 10;
   let angle = null;
   let opts = null;
+
+  // Early boundary frustum culling: discard out-of-bounds blood
+  let posX = null;
+  let posY = null;
+  if (typeof arg0 === 'number' && typeof arg1 === 'number') {
+    posX = arg0;
+    posY = arg1;
+  } else if (arg0 && typeof arg0 === 'object' && typeof arg0.x === 'number' && typeof arg0.y === 'number') {
+    posX = arg0.x;
+    posY = arg0.y;
+  }
+  if (posX !== null && posY !== null && state && state.arena && (posX < state.arena.x - 45 || posX > state.arena.x + state.arena.width + 45 || posY < state.arena.y - 45 || posY > state.arena.y + state.arena.height + 45)) {
+    return;
+  }
 
   // Pattern 1: Coordinate call spawnBloodEffect(x, y, ...)
   if (typeof arg0 === 'number' && typeof arg1 === 'number') {

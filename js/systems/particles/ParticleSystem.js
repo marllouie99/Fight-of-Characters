@@ -134,6 +134,11 @@ export class ParticleSystem {
   static spawn(x, y, count = 8, type = 'crimson', overrideProps = {}) {
     if (!state.sparkEffects) state.sparkEffects = [];
 
+    // Early frustum culling: discard out-of-bounds sparks before pool allocation
+    if (state.arena && (x < state.arena.x - 45 || x > state.arena.x + state.arena.width + 45 || y < state.arena.y - 45 || y > state.arena.y + state.arena.height + 45)) {
+      return;
+    }
+
     const isStandOff = this.isStandOffMode();
     const isMulti = typeof state !== 'undefined' && state.mode && state.mode !== '1v1' && state.mode !== 'Training';
     const is1v2 = typeof state !== 'undefined' && state.mode && (state.mode === '1v2' || state.mode.includes('1v2'));

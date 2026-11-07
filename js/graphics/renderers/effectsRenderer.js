@@ -6,6 +6,7 @@ import { drawShurikenProjectile } from '../weaponVisuals.js';
 import { projectileSystem } from '../../systems/projectileSystem.js';
 import { fastCleanArray } from '../particles/visualTrailSystem.js';
 import { applyCameraToCtx } from '../../systems/cameraSystem.js';
+import { drawBitmapCombatText } from './bitmapDamageFont.js';
 
 export {
   drawGenosSpeedLines,
@@ -275,19 +276,20 @@ export function drawFloatingTexts() {
     }
 
     const isCrit = Boolean(t.isCrit);
-    ctx.font = isCrit ? FONT_CRIT : FONT_DEFAULT;
+    const renderedViaAtlas = drawBitmapCombatText(ctx, t.text, 0, 0, t.color, isCrit, 1.0);
 
-    // Single crisp solid black outline (Rule 11 compliant, no CPU blur; skip on mobile high-density to avoid rasterizer stalls)
-    const skipStrokeOnMobileDensity = Boolean(state.isMobileDevice && texts.length > 8 && !isCrit);
-    if (!skipStrokeOnMobileDensity) {
-      ctx.lineWidth = isCrit ? 4.0 : 3.2;
-      ctx.strokeStyle = '#000000';
-      ctx.strokeText(t.text, 0, 0);
+    if (!renderedViaAtlas) {
+      // Fallback to standard CPU font rendering for complex / Unicode announcement text
+      ctx.font = isCrit ? FONT_CRIT : FONT_DEFAULT;
+      const skipStrokeOnMobileDensity = Boolean(state.isMobileDevice && texts.length > 8 && !isCrit);
+      if (!skipStrokeOnMobileDensity) {
+        ctx.lineWidth = isCrit ? 4.0 : 3.2;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText(t.text, 0, 0);
+      }
+      ctx.fillStyle = t.color || (isCrit ? '#FF3B30' : '#FFFFFF');
+      ctx.fillText(t.text, 0, 0);
     }
-
-    // Single vibrant fill
-    ctx.fillStyle = t.color || (isCrit ? '#FF3B30' : '#FFFFFF');
-    ctx.fillText(t.text, 0, 0);
 
     ctx.restore();
     return true; // Keep active

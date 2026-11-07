@@ -29,8 +29,8 @@ const _isMobileSound = typeof navigator !== 'undefined' && (
 const MAX_CACHE_SIZE = _isMobileSound ? 60 : 1000;
 
 // ── CONCURRENT SOUND LIMITING (prevents audio bus overload → crackling & mobile thermal heating) ──
-export const MAX_ACTIVE_MOBILE_VOICES = 8; // Section 5.13: Mobile active voice cap
-const MAX_CONCURRENT_SOUNDS = _isMobileSound ? MAX_ACTIVE_MOBILE_VOICES : 40; // Hard cap on simultaneous Web Audio sources (8 on mobile to protect audio DSP)
+export const MAX_ACTIVE_MOBILE_VOICES = 6; // Section 5.13: Mobile active voice cap (6 voices for low-latency DSP)
+const MAX_CONCURRENT_SOUNDS = _isMobileSound ? MAX_ACTIVE_MOBILE_VOICES : 40; // Hard cap on simultaneous Web Audio sources (6 on mobile to protect audio DSP)
 // Micro-fade duration in seconds to prevent click/pop artifacts on start/stop without delaying attack transient
 const MICRO_FADE_IN = 0.002;  // 2ms fade-in (preserves crisp punch/slash attack snap)
 const MICRO_FADE_OUT = 0.015; // 15ms fade-out
@@ -983,7 +983,7 @@ function _evictOldestSound() {
  */
 const _lastPlayTimes = new Map();
 const SOUND_THROTTLE_MS = 18; // Prevent identical non-combat audio file from double-playing within same frame
-const SAME_COMBAT_SFX_COOLDOWN_MS = _isMobileSound ? 45 : 35; // HurtSoundConfig / Clash polyphony gate (Rule 35 Section 5.13)
+const SAME_COMBAT_SFX_COOLDOWN_MS = _isMobileSound ? 55 : 35; // HurtSoundConfig / Clash polyphony gate (Rule 35 Section 5.13)
 
 export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0, onEnded = null) {
   if (!src) return null;
