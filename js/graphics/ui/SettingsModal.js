@@ -7,7 +7,7 @@
 
 import { state } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
-import { drawChamferedRect, drawPanel, drawButton, _registerButton, _clearButtons } from './uiFramework.js';
+import { drawChamferedRect, _registerButton, _clearButtons } from './uiFramework.js';
 import { drawScreentoneModalBackdrop } from './mangaScreentone.js';
 import { getMasterVolume, setMasterVolume, getSfxVolume, setSfxVolume } from '../../systems/soundSystem.js';
 import { getArenaBgmVolume, setArenaBgmVolume } from '../../systems/arenaBgmSystem.js';
@@ -170,8 +170,13 @@ export function drawSettingsModal(ctx) {
   // 1. Full-screen dark screentone backdrop
   drawScreentoneModalBackdrop(ctx, canvasW, canvasH, 0.75);
 
+  // Backdrop click to dismiss modal when tapping outside
+  _registerButton(0, 0, canvasW, canvasH, () => {
+    closeSettingsModal();
+  });
+
   const panelW = Math.min(canvasW - 36, 360);
-  const panelH = Math.min(canvasH - 40, 520);
+  const panelH = 475;
   const cx = canvasW / 2;
   const cy = canvasH / 2;
   const x = cx - panelW / 2;
@@ -179,8 +184,19 @@ export function drawSettingsModal(ctx) {
 
   ctx.save();
 
-  // 2. Main Panel Window Box (Authentic Manga Ink Frame)
-  drawPanel(x, y, panelW, panelH, 0.96, 4, '#0E0F14');
+  // 2. Main Panel Window Box (Authentic Manga Ink Chassis directly on active ctx)
+  ctx.fillStyle = 'rgba(12, 14, 20, 0.98)';
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2.0;
+  drawChamferedRect(ctx, x, y, panelW, panelH, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner subtle cyan border accent
+  ctx.strokeStyle = 'rgba(0, 245, 212, 0.30)';
+  ctx.lineWidth = 1.0;
+  drawChamferedRect(ctx, x + 3, y + 3, panelW - 6, panelH - 6, 4);
+  ctx.stroke();
 
   // Title Header
   ctx.fillStyle = '#FFFFFF';
@@ -190,6 +206,29 @@ export function drawSettingsModal(ctx) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('⚙️ SYSTEM SETTINGS', Math.round(cx), Math.round(y + 26));
+
+  // Top-Right Close Button [ ✕ ]
+  const closeSize = 24;
+  const closeX = x + panelW - closeSize - 12;
+  const closeY = y + 14;
+  ctx.save();
+  ctx.fillStyle = '#1A1D26';
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.4;
+  drawChamferedRect(ctx, closeX, closeY, closeSize, closeSize, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '900 12px "Outfit", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✕', closeX + closeSize / 2, closeY + closeSize / 2);
+  ctx.restore();
+
+  _registerButton(closeX, closeY, closeSize, closeSize, () => {
+    closeSettingsModal();
+  });
 
   // Section 1: Audio Mixer Heading
   ctx.fillStyle = '#00F5D4';
@@ -229,7 +268,7 @@ export function drawSettingsModal(ctx) {
 
   // Toggle 2: High Refresh Rate (120 FPS)
   const highRefreshActive = state.enableHighRefreshRate !== false;
-  _drawToggleRow(ctx, 'HIGH REFRESH RATE', highRefreshActive ? '120 FPS' : '60 FPS', highRefreshActive, x + 24, y + 256, panelW - 48, () => {
+  _drawToggleRow(ctx, 'HIGH REFRESH RATE', highRefreshActive ? '120 FPS' : '60 FPS', highRefreshActive, x + 24, y + 254, panelW - 48, () => {
     state.enableHighRefreshRate = !highRefreshActive;
     CONFIG.enableHighRefreshRate = state.enableHighRefreshRate;
     triggerHaptic('selection');
@@ -238,7 +277,7 @@ export function drawSettingsModal(ctx) {
 
   // Toggle 3: Combat Blessings / Perks
   const perksActive = Boolean(CONFIG.enableMatchPerks);
-  _drawToggleRow(ctx, 'COMBAT BLESSINGS', perksActive ? 'ON' : 'OFF', perksActive, x + 24, y + 294, panelW - 48, () => {
+  _drawToggleRow(ctx, 'COMBAT BLESSINGS', perksActive ? 'ON' : 'OFF', perksActive, x + 24, y + 290, panelW - 48, () => {
     CONFIG.enableMatchPerks = !perksActive;
     triggerHaptic('selection');
     saveSettingsToStorage();
@@ -246,7 +285,7 @@ export function drawSettingsModal(ctx) {
 
   // Toggle 4: Commercial Parody Mode
   const commercialActive = Boolean(CONFIG.COMMERCIAL_MODE);
-  _drawToggleRow(ctx, 'STORE PARODY MODE', commercialActive ? 'LEGAL SAFE' : 'FAN ANIME', commercialActive, x + 24, y + 332, panelW - 48, () => {
+  _drawToggleRow(ctx, 'STORE PARODY MODE', commercialActive ? 'LEGAL SAFE' : 'FAN ANIME', commercialActive, x + 24, y + 326, panelW - 48, () => {
     CONFIG.COMMERCIAL_MODE = !commercialActive;
     triggerHaptic('selection');
     saveSettingsToStorage();
@@ -254,20 +293,57 @@ export function drawSettingsModal(ctx) {
 
   // Toggle 5: Arena Dark Mode
   const darkModeActive = (state.arenaTheme === 'dark');
-  _drawToggleRow(ctx, 'ARENA THEME', darkModeActive ? 'DARK' : 'LIGHT', darkModeActive, x + 24, y + 370, panelW - 48, () => {
+  _drawToggleRow(ctx, 'ARENA THEME', darkModeActive ? 'DARK' : 'LIGHT', darkModeActive, x + 24, y + 362, panelW - 48, () => {
     state.arenaTheme = darkModeActive ? 'light' : 'dark';
     triggerHaptic('selection');
     saveSettingsToStorage();
   });
 
-  // Close Button at Bottom
-  const btnW = Math.min(panelW - 60, 200);
-  const btnH = 36;
-  drawButton('✓ SAVE & CLOSE', cx, y + panelH - 32, () => {
+  // Back Button at Bottom (prominent tactile button)
+  const btnW = Math.min(panelW - 60, 220);
+  const btnH = 38;
+  _drawSettingsButton(ctx, '◀ BACK', cx, y + 430, btnW, btnH, true, () => {
     closeSettingsModal();
-  }, btnW, btnH, '#00F5D4', 4);
+  });
 
   ctx.restore();
+}
+
+function _drawSettingsButton(ctx, text, cx, cy, w, h, isPrimary, action) {
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+
+  ctx.save();
+  // 3D Drop shadow
+  ctx.fillStyle = '#000000';
+  drawChamferedRect(ctx, x, y + 2.5, w, h, 4);
+  ctx.fill();
+
+  // Button face
+  ctx.fillStyle = isPrimary ? '#00F5D4' : '#1A1D26';
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.6;
+  drawChamferedRect(ctx, x, y, w, h, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  // Top highlight line
+  ctx.strokeStyle = isPrimary ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 4, y + 1.5);
+  ctx.lineTo(x + w - 4, y + 1.5);
+  ctx.stroke();
+
+  // Typography
+  ctx.fillStyle = isPrimary ? '#0E0F14' : '#FFFFFF';
+  ctx.font = '900 13px "Outfit", "Rajdhani", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, Math.round(cx), Math.round(y + h / 2 + 0.5));
+  ctx.restore();
+
+  _registerButton(x, y, w, h + 2, action);
 }
 
 function _drawSliderRow(ctx, title, valLabel, x, y, w, h, ratio, key) {

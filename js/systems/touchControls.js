@@ -341,20 +341,59 @@ function _fireFighterSkill(slot, manualAngle = null) {
   }
 }
 
+let _cachedAutoBtnCanvas = null;
+
+function _getAutoToggleCanvas(w, h) {
+  if (_cachedAutoBtnCanvas) return _cachedAutoBtnCanvas;
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
+  const c = document.createElement('canvas');
+  c.width = w + 4;
+  c.height = h + 4;
+  const cCtx = c.getContext('2d');
+  if (!cCtx) return null;
+
+  cCtx.translate(2, 2);
+  cCtx.fillStyle = 'rgba(10, 15, 24, 0.75)';
+  cCtx.strokeStyle = 'rgba(0, 245, 212, 0.45)';
+  cCtx.lineWidth = 1.4;
+  drawChamferedRect(cCtx, 0, 0, w, h, 4);
+  cCtx.fill();
+  cCtx.stroke();
+
+  cCtx.fillStyle = '#00F5D4';
+  cCtx.font = '900 10px "Outfit", "Rajdhani", sans-serif';
+  cCtx.textAlign = 'center';
+  cCtx.textBaseline = 'middle';
+  cCtx.fillText('⚔️ AUTO', w / 2, h / 2);
+
+  _cachedAutoBtnCanvas = c;
+  return _cachedAutoBtnCanvas;
+}
+
 /**
  * Main draw routine for mobile touch controls
  * @param {CanvasRenderingContext2D} ctx
  */
 export function drawTouchControls(ctx) {
   if (!state || state.gameState !== 'playing') return;
+  const isManual = (state.controlMode === 'manual');
+  if (!isManual && ! _hasReceivedTouch) return;
 
   _updateLayout();
+  const tb = _touchButtons.modeToggle;
+
+  // Fast-path when in AUTO mode after touch: single pre-baked quad blit (Rule 35)
+  if (!isManual) {
+    const autoSprite = _getAutoToggleCanvas(tb.w, tb.h);
+    if (autoSprite) {
+      ctx.drawImage(autoSprite, tb.x - 2, tb.y - 2);
+      return;
+    }
+  }
+
   ctx.save();
 
   // 1. Mode Toggle Button (AUTO / MANUAL)
-  const isManual = (state.controlMode === 'manual');
-  const tb = _touchButtons.modeToggle;
-
   ctx.fillStyle = isManual ? '#00F5D4' : 'rgba(10, 15, 24, 0.75)';
   ctx.strokeStyle = isManual ? '#FFFFFF' : 'rgba(0, 245, 212, 0.45)';
   ctx.lineWidth = 1.4;

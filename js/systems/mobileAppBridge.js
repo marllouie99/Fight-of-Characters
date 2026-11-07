@@ -74,17 +74,19 @@ export async function initMobileAppBridge() {
 import { state } from '../core/state.js';
 
 let _lastLightHapticTime = 0;
+const _hasWebVibrate = (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function');
 
 /**
  * Triggers physical device tactile feedback / vibration.
- * Throttles high-frequency light ticks to prevent continuous motor buzz.
+ * Synchronous fast-path: zero Promise allocation and zero syscall overhead when haptics are unavailable.
  * @param {'light'|'medium'|'heavy'|'impact'|'success'|'warning'|'error'|'selection'} type
  */
-export async function triggerHaptic(type = 'light') {
+export function triggerHaptic(type = 'light') {
+  if (!isNativeApp && !_hasWebVibrate) return;
   if (typeof state !== 'undefined' && state.enableHaptics === false) return;
 
-  const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
   if (type === 'light') {
+    const now = Date.now();
     // 90ms retrigger gate to prevent continuous motor buzzing during rapid flurries
     if (now - _lastLightHapticTime < 90) return;
     _lastLightHapticTime = now;
@@ -98,27 +100,27 @@ export async function triggerHaptic(type = 'light') {
       switch (type) {
         case 'heavy':
         case 'impact':
-          await plugins.Haptics.impact({ style: 'HEAVY' });
+          plugins.Haptics.impact({ style: 'HEAVY' })?.catch?.(() => {});
           break;
         case 'medium':
-          await plugins.Haptics.impact({ style: 'MEDIUM' });
+          plugins.Haptics.impact({ style: 'MEDIUM' })?.catch?.(() => {});
           break;
         case 'light':
-          await plugins.Haptics.impact({ style: 'LIGHT' });
+          plugins.Haptics.impact({ style: 'LIGHT' })?.catch?.(() => {});
           break;
         case 'success':
-          await plugins.Haptics.notification({ type: 'SUCCESS' });
+          plugins.Haptics.notification({ type: 'SUCCESS' })?.catch?.(() => {});
           break;
         case 'error':
-          await plugins.Haptics.notification({ type: 'ERROR' });
+          plugins.Haptics.notification({ type: 'ERROR' })?.catch?.(() => {});
           break;
         case 'selection':
           if (typeof plugins.Haptics.selectionChanged === 'function') {
-            await plugins.Haptics.selectionChanged();
+            plugins.Haptics.selectionChanged()?.catch?.(() => {});
           }
           break;
         default:
-          await plugins.Haptics.impact({ style: 'LIGHT' });
+          plugins.Haptics.impact({ style: 'LIGHT' })?.catch?.(() => {});
           break;
       }
     } catch (e) {}
@@ -126,7 +128,7 @@ export async function triggerHaptic(type = 'light') {
   }
 
   // Graceful fallback for mobile web browsers with Vibration API
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+  if (_hasWebVibrate) {
     try {
       const duration = (type === 'heavy' || type === 'impact') ? 35 : (type === 'medium' ? 20 : (type === 'selection' ? 5 : 10));
       navigator.vibrate(duration);
