@@ -51,6 +51,12 @@ import {
   drawFaceOffThumbnailScreen,
   captureFaceOffScreenshot
 } from './ui/ThumbnailFaceOffScreen.js';
+import {
+  drawSettingsModal,
+  isSettingsModalOpen,
+  openSettingsModal,
+  closeSettingsModal
+} from './ui/SettingsModal.js';
 
 export {
   renderTeamHpCard,
@@ -82,5 +88,9 @@ export {
   drawFaceOffThumbnailScreen,
   captureFaceOffScreenshot,
   drawMissionPassedOverlay,
-  drawWastedOverlay
+  drawWastedOverlay,
+  drawSettingsModal,
+  isSettingsModalOpen,
+  openSettingsModal,
+  closeSettingsModal
 };

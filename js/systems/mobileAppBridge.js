@@ -71,11 +71,25 @@ export async function initMobileAppBridge() {
   }
 }
 
+import { state } from '../core/state.js';
+
+let _lastLightHapticTime = 0;
+
 /**
  * Triggers physical device tactile feedback / vibration.
+ * Throttles high-frequency light ticks to prevent continuous motor buzz.
  * @param {'light'|'medium'|'heavy'|'impact'|'success'|'warning'|'error'|'selection'} type
  */
 export async function triggerHaptic(type = 'light') {
+  if (typeof state !== 'undefined' && state.enableHaptics === false) return;
+
+  const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+  if (type === 'light') {
+    // 90ms retrigger gate to prevent continuous motor buzzing during rapid flurries
+    if (now - _lastLightHapticTime < 90) return;
+    _lastLightHapticTime = now;
+  }
+
   const cap = getCapacitor();
   const plugins = cap?.Plugins || {};
 
@@ -114,7 +128,7 @@ export async function triggerHaptic(type = 'light') {
   // Graceful fallback for mobile web browsers with Vibration API
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
     try {
-      const duration = (type === 'heavy' || type === 'impact') ? 35 : (type === 'medium' ? 20 : 10);
+      const duration = (type === 'heavy' || type === 'impact') ? 35 : (type === 'medium' ? 20 : (type === 'selection' ? 5 : 10));
       navigator.vibrate(duration);
     } catch (e) {}
   }

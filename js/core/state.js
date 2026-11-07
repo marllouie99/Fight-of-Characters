@@ -500,6 +500,7 @@ export const state = {
   allFpsLogs: [],
   hideFpsLogs: (typeof localStorage !== 'undefined') && localStorage.getItem('hideFpsLogs') === 'true',
   performanceMode: false,
+  enableHaptics: true,
   enableHighRefreshRate: true,
   highRefreshActive: false,
   displayRefreshRate: 60,

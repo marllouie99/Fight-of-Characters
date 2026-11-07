@@ -24,6 +24,7 @@ import { spawnFloatingText } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { drawArenaBgmSelector, isArenaBgmModalOpen, drawArenaBgmModal, closeArenaBgmModal } from '../../systems/arenaBgmSystem.js';
 import { drawArenaThemeSelector, isArenaThemeModalOpen, drawArenaThemeModal, closeArenaThemeModal } from '../../systems/arenaThemeSystem.js';
+import { openSettingsModal } from './SettingsModal.js';
 import { GAME_MODES, MODE_SETTINGS } from '../../core/modeConfig.js';
 import { drawScreentoneModalBackdrop, getScreentonePattern, prewarmScreentone } from './mangaScreentone.js';
 import { getBossConfig } from '../../configs/bosses/bossConfigRegistry.js';
@@ -2179,14 +2180,15 @@ function drawSelectScreen() {
   ctx.fillText(`[ ${rawTitle} // DEPLOYMENT ]`, canvas.width / 2, titleY - 1);
   ctx.restore();
 
-  // Sub-Controls (Boss Battle Team Toggle, Arena BGM, Arena Theme)
+  // Sub-Controls (Boss Battle Team Toggle, Arena BGM, Arena Theme, Settings)
   const isBossBattleMode = (mode === 'Boss Battle' || mode === GAME_MODES.BOSS_BATTLE || mode === '1v2 Stand Off' || mode === GAME_MODES.STAND_OFF_1V2 || mode === 'STAND_OFF_1V2');
-  const teamToggleW = isBossBattleMode ? 120 : 0;
-  const bgmW = isBossBattleMode ? 110 : 125;
-  const themeW = isBossBattleMode ? 120 : 135;
+  const teamToggleW = isBossBattleMode ? 110 : 0;
+  const bgmW = isBossBattleMode ? 100 : 115;
+  const themeW = isBossBattleMode ? 105 : 120;
+  const settingsW = 32;
   const ctrlH = 24;
-  const gap = isBossBattleMode ? 8 : 10;
-  const totalCtrlW = (isBossBattleMode ? teamToggleW + gap : 0) + bgmW + gap + themeW;
+  const gap = 8;
+  const totalCtrlW = (isBossBattleMode ? teamToggleW + gap : 0) + bgmW + gap + themeW + gap + settingsW;
   const startCtrlX = canvas.width / 2 - totalCtrlW / 2;
   
   let curCtrlX = startCtrlX;
@@ -2229,6 +2231,31 @@ function drawSelectScreen() {
 
   // Arena Theme Selector Button
   drawArenaThemeSelector(ctx, curCtrlX, tmY, themeW, ctrlH);
+  curCtrlX += themeW + gap;
+
+  // Settings Button
+  ctx.save();
+  ctx.fillStyle = '#000000';
+  drawChamferedRect(ctx, curCtrlX, tmY + 2, settingsW, ctrlH, 3);
+  ctx.fill();
+
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.4;
+  drawChamferedRect(ctx, curCtrlX, tmY, settingsW, ctrlH, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '12px "Outfit", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚙️', curCtrlX + settingsW / 2, tmY + ctrlH / 2);
+  ctx.restore();
+
+  _registerButton(curCtrlX, tmY, settingsW, ctrlH + 2, () => {
+    openSettingsModal('select');
+  });
 
   // ── Main Combatant Grid ──
   const topY = isLandscape ? 88 : 132;

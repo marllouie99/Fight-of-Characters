@@ -962,7 +962,7 @@ function drawMatchEndScreen() {
     drawInArenaChampionLayout(effectiveWinner, delayedTimer, titleText, mode, true);
   }
 
-  // Register Fullscreen Restart Handler
+  // Register Fullscreen Restart Handler (fallback when tapping empty canvas space)
   _registerButton(0, 0, canvas.width, canvas.height, () => {
     if (mode === 'TLFS') {
       resetMatch();
@@ -977,6 +977,82 @@ function drawMatchEndScreen() {
       resetMatch();
     }
   });
+
+  // Dedicated Post-Match Tactical Action Buttons
+  if (delayedTimer >= 20) {
+    const btnAlpha = Math.min(1.0, (delayedTimer - 20) / 15);
+    ctx.save();
+    ctx.globalAlpha = btnAlpha;
+
+    const cx = canvas.width / 2;
+    const isLandscape = canvas.width > 600 || state.viewOrientation === 'horizontal';
+
+    if (isLandscape) {
+      const btnW = 150;
+      const btnH = 36;
+      const gap = 12;
+      const totalW = 3 * btnW + 2 * gap;
+      const startX = cx - totalW / 2;
+      const btnY = canvas.height - 48;
+
+      drawButton('↺ REMATCH', startX + btnW / 2, btnY, () => {
+        if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+          audioSystem.playSFX('skill_dash1', 0.25);
+        }
+        resetMatch();
+      }, btnW, btnH);
+
+      drawButton('🥋 SELECT FIGHTERS', startX + btnW + gap + btnW / 2, btnY, () => {
+        if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+          audioSystem.playSFX('skill_dash1', 0.25);
+        }
+        resetMatch();
+        state.gameState = 'horizontal_select';
+      }, btnW, btnH);
+
+      drawButton('🏠 MAIN MENU', startX + (btnW + gap) * 2 + btnW / 2, btnY, () => {
+        if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+          audioSystem.playSFX('skill_dash1', 0.25);
+        }
+        resetMatch();
+        goToTitle();
+      }, btnW, btnH);
+    } else {
+      // Portrait layout
+      const mainBtnW = 250;
+      const mainBtnH = 42;
+      const subBtnW = 120;
+      const subBtnH = 38;
+      const gap = 10;
+      const row1Y = 745;
+      const row2Y = 800;
+
+      drawButton('↺ REMATCH', cx, row1Y, () => {
+        if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+          audioSystem.playSFX('skill_dash1', 0.25);
+        }
+        resetMatch();
+      }, mainBtnW, mainBtnH);
+
+      drawButton('🥋 SELECT', cx - (subBtnW / 2 + gap / 2), row2Y, () => {
+        if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+          audioSystem.playSFX('skill_dash1', 0.25);
+        }
+        resetMatch();
+        state.gameState = 'select';
+      }, subBtnW, subBtnH);
+
+      drawButton('🏠 MAIN MENU', cx + (subBtnW / 2 + gap / 2), row2Y, () => {
+        if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+          audioSystem.playSFX('skill_dash1', 0.25);
+        }
+        resetMatch();
+        goToTitle();
+      }, subBtnW, subBtnH);
+    }
+
+    ctx.restore();
+  }
 }
 
 const drawMatchWinnerReveal = drawWinnerReveal;

@@ -7,6 +7,7 @@ import { initFlameCanvas, resizeFlameCanvas } from '../graphics/canvasManager.js
 import { startGame, startNextRound, resetMatchWithRandom1v1Fighters, resetMatchWithRandom1v2Fighters, startRandomStandoffBattle, restartCurrentRound, resetMatch, proceedFromFaceOffToCountdown, preloadEssentialCoreSounds, preloadFighterAssets, goToTitle } from './gameFlow.js';
 import { FIGHTER_DEFS, CONFIG } from './config.js';
 import { handleUIClick, handleUIMove, getHoveredButton, captureFaceOffScreenshot } from '../graphics/ui.js';
+import { handleSettingsMouseDown, handleSettingsMouseMove, handleSettingsMouseUp, isSettingsModalOpen, openSettingsModal, closeSettingsModal } from '../graphics/ui/SettingsModal.js';
 import { survivorSystem } from '../systems/survivorSystem.js';
 import { handleUpgradeMouseMove, handleUpgradeClick, handleUpgradeKeyDown } from '../graphics/ui/SurvivorUpgradeModal.js';
 import { stopAllSounds, stopAllLoopingSounds, unlockAudio } from '../systems/soundSystem.js';
@@ -27,6 +28,8 @@ import { toggleArenaDecorations, setArenaDecorationsEnabled, setArenaDecorationT
 import { initPwaInstallManager, promptPwaInstall } from '../systems/pwaInstallManager.js';
 import { syncMobileDomHudVisibility, isMobileCanvasHudActive } from '../graphics/ui/canvasMobileHud.js';
 import { initScreenLockSystem } from '../systems/screenLockSystem.js';
+import { handleTouchStart, handleTouchMove, handleTouchEnd } from '../systems/touchControls.js';
+import { isPerkDraftModalOpen, handlePerkDraftClick, handlePerkDraftMouseMove } from '../graphics/ui/PerkDraftModal.js';
 // ─────────────────────────────────────────────
 // FLAME CANVAS INITIALIZATION
 // ─────────────────────────────────────────────
@@ -348,6 +351,14 @@ inputTarget?.addEventListener('mousedown', (e) => {
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top) * scaleY;
 
+  if (isSettingsModalOpen()) {
+    if (handleSettingsMouseDown(mx, my)) return;
+  }
+
+  if (isPerkDraftModalOpen()) {
+    if (handlePerkDraftClick(mx, my)) return;
+  }
+
   if (state.survivorState && state.survivorState.isPausedForUpgrade) {
     if (handleUpgradeClick(mx, my, survivorSystem)) return;
   }
@@ -394,6 +405,16 @@ inputTarget?.addEventListener('mousemove', (e) => {
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top) * scaleY;
 
+  if (isSettingsModalOpen()) {
+    handleSettingsMouseMove(mx, my);
+    return;
+  }
+
+  if (isPerkDraftModalOpen()) {
+    handlePerkDraftMouseMove(mx, my);
+    return;
+  }
+
   if (state.isDraggingPauseMenu && state.gameState === 'paused') {
     const offsetX = state.pauseMenuDragOffset ? state.pauseMenuDragOffset.x : 0;
     const offsetY = state.pauseMenuDragOffset ? state.pauseMenuDragOffset.y : 0;
@@ -424,6 +445,9 @@ inputTarget?.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+  if (isSettingsModalOpen()) {
+    handleSettingsMouseUp();
+  }
   state.isDraggingPauseMenu = false;
   _isDraggingAppWindow = false;
 });
@@ -435,10 +459,32 @@ let _touchStartTime = 0;
 
 inputTarget?.addEventListener('touchstart', (e) => {
   unlockAudio();
+
+  if (state.gameState === 'playing' && e.changedTouches) {
+    const rect = inputTarget.getBoundingClientRect();
+    const scaleX = state.canvas.width / rect.width;
+    const scaleY = state.canvas.height / rect.height;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (handleTouchStart(e.changedTouches[i], rect, scaleX, scaleY)) {
+        if (e.cancelable) e.preventDefault();
+      }
+    }
+  }
+
   if (e.touches && e.touches.length === 1) {
     _touchStartX = e.touches[0].clientX;
     _touchStartY = e.touches[0].clientY;
     _touchStartTime = Date.now();
+
+    if (isSettingsModalOpen()) {
+      const rect = inputTarget.getBoundingClientRect();
+      const scaleX = state.canvas.width / rect.width;
+      const scaleY = state.canvas.height / rect.height;
+      const mx = (_touchStartX - rect.left) * scaleX;
+      const my = (_touchStartY - rect.top) * scaleY;
+      handleSettingsMouseDown(mx, my);
+      return;
+    }
 
     if (state.gameState === 'paused') {
       const rect = inputTarget.getBoundingClientRect();
@@ -462,12 +508,27 @@ inputTarget?.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 inputTarget?.addEventListener('touchmove', (e) => {
+  if (state.gameState === 'playing' && e.changedTouches) {
+    const rect = inputTarget.getBoundingClientRect();
+    const scaleX = state.canvas.width / rect.width;
+    const scaleY = state.canvas.height / rect.height;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      handleTouchMove(e.changedTouches[i], rect, scaleX, scaleY);
+    }
+  }
+
   if (e.touches && e.touches.length === 1) {
     const rect = inputTarget.getBoundingClientRect();
     const scaleX = state.canvas.width / rect.width;
     const scaleY = state.canvas.height / rect.height;
     const mx = (e.touches[0].clientX - rect.left) * scaleX;
     const my = (e.touches[0].clientY - rect.top) * scaleY;
+
+    if (isSettingsModalOpen()) {
+      if (e.cancelable) e.preventDefault();
+      handleSettingsMouseMove(mx, my);
+      return;
+    }
 
     if (state.isDraggingPauseMenu && state.gameState === 'paused') {
       if (e.cancelable) e.preventDefault();
@@ -481,6 +542,12 @@ inputTarget?.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 inputTarget?.addEventListener('touchend', (e) => {
+  if (e.changedTouches) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      handleTouchEnd(e.changedTouches[i]);
+    }
+  }
+
   if (state.isDraggingPauseMenu) {
     state.isDraggingPauseMenu = false;
     return;
@@ -508,6 +575,14 @@ inputTarget?.addEventListener('touchend', (e) => {
       const my = (touch.clientY - rect.top) * scaleY;
 
       _lastTouchTapTime = Date.now();
+      if (isSettingsModalOpen()) {
+        handleSettingsMouseUp();
+        handleUIClick(mx, my);
+        return;
+      }
+      if (isPerkDraftModalOpen()) {
+        if (handlePerkDraftClick(mx, my)) return;
+      }
       if (state.gameState === 'horizontal_select') {
         const modalHandled = handleUIClick(mx, my);
         if (modalHandled) return;
@@ -542,6 +617,15 @@ inputTarget?.addEventListener('click', (e) => {
   const scaleY = state.canvas.height / rect.height;
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top) * scaleY;
+
+  if (isSettingsModalOpen()) {
+    handleUIClick(mx, my);
+    return;
+  }
+
+  if (isPerkDraftModalOpen()) {
+    if (handlePerkDraftClick(mx, my)) return;
+  }
 
   if (BossEntranceSequence.isActive) {
     // Mouse clicks on PC do not skip entrance animation

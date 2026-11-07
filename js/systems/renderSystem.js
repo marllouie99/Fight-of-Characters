@@ -5,7 +5,7 @@ import { GAME_MODES } from '../core/modeConfig.js';
 import {
   drawTitleScreen, drawSelectScreen, drawIndexScreen, drawIndexDetailScreen, 
   drawLeaderboardScreen, drawWeaponMenu, drawWeaponDetailScreen, drawWeaponStudioScreen, drawSkinStudioScreen, drawSurvivorStudioScreen, drawFaceOffThumbnailScreen, drawHUD, 
-  drawPauseScreen, drawRoundEndScreen, drawMatchEndScreen, drawCountdown, drawMissionPassedOverlay, drawWastedOverlay
+  drawPauseScreen, drawRoundEndScreen, drawMatchEndScreen, drawCountdown, drawMissionPassedOverlay, drawWastedOverlay, drawSettingsModal, isSettingsModalOpen
 } from '../graphics/ui.js';
 import {
   drawArena, drawArenaBorder, drawArenaWatermark, drawArenaMatchNames, drawProjectiles, drawFuelPickups, drawFighters, drawFloatingTexts, drawUltimateChannelingTexts,
@@ -47,6 +47,9 @@ import { getAudioLatencyMs } from './soundSystem.js';
 import { syncPixiCanvasTextureSize } from '../core/viewportManager.js';
 import { BossAuraRenderer, BossPhaseTransitionVfx, BossEntranceSequence, YutaBushEntrance, EyeOfCthulhuEntrance } from '../bosses/index.js';
 import { drawFocMap, getActiveFocMap } from '../maps/index.js';
+import { drawCinematicKo } from '../graphics/renderers/cinematicKoRenderer.js';
+import { drawTouchControls } from './touchControls.js';
+import { drawPerkDraftModal, isPerkDraftModalOpen } from '../graphics/ui/PerkDraftModal.js';
 // Cached DOM elements to adhere strictly to Rule 13 (UI & DOM Query Caching Requirement)
 let _cachedHudTop = null;
 let _cachedHudBot = null;
@@ -272,6 +275,8 @@ export function renderGame() {
       drawSkinStudioScreen();
     } else if (state.gameState === 'survivorStudio') {
       drawSurvivorStudioScreen();
+    } else if (state.gameState === 'settings') {
+      drawSettingsModal(state.topLevelUiCtx || state.ctx);
     } else if (state.gameState === 'horizontal_select') {
       drawHorizontalTeamSelectScreen(state.ctx);
     } else if (state.gameState === 'faceoff') {
@@ -585,6 +590,7 @@ export function renderGame() {
         drawTojiImpactEffects(state.ctx); // Draw Toji Split Soul Katana spatial soul cleave impact effects
         updateRhittaSlashCutImpacts();
         drawRhittaSlashCutImpacts(state.ctx); // Draw Escanor Rhitta Holy Solar Slash Cut impacts on target bodies
+        drawCinematicKo(state.ctx); // Cinematic Slow-Motion K.O. Mach shockwave & Comic Ink Stamp
 
         // Nanami 7:3 Ratio Ruler & Blood Rupture overlay renders ON TOP of all fighters & entities
         if (!state.disableDimEffects) {
@@ -697,6 +703,8 @@ export function renderGame() {
           state._topLevelUiDirty = true;
           drawHUD();
         }
+        state._topLevelUiDirty = true;
+        drawTouchControls(targetUiCtx);
       }
 
       // ── Super-Beam Absolute Top Layer (Rendered ON TOP of World Entities & In-Game HUD, behind Match-End Overlays) ──
@@ -780,6 +788,16 @@ export function renderGame() {
 
       // Render Camera Mode Toggle Notification Banner
       drawCameraToast(targetUiCtx);
+
+      if (isSettingsModalOpen()) {
+        state._topLevelUiDirty = true;
+        drawSettingsModal(targetUiCtx);
+      }
+
+      if (isPerkDraftModalOpen()) {
+        state._topLevelUiDirty = true;
+        drawPerkDraftModal(targetUiCtx);
+      }
 
       } finally {
         // Restore original context and canvas

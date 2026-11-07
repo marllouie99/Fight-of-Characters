@@ -499,10 +499,61 @@ export function getAudioCurrentTime() {
   return _sharedAudioCtx.currentTime;
 }
 
+let _masterGainNode = null;
+let _masterVolume = 0.85;
+let _sfxVolume = 0.85;
+
+try {
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem('foc_settings');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (typeof parsed.masterVolume === 'number') _masterVolume = Math.max(0, Math.min(1.0, parsed.masterVolume));
+      if (typeof parsed.sfxVolume === 'number') _sfxVolume = Math.max(0, Math.min(1.0, parsed.sfxVolume));
+    }
+  }
+} catch (_) {}
+
+export function getMasterVolume() {
+  return _masterVolume;
+}
+
+export function setMasterVolume(val) {
+  _masterVolume = Math.max(0.0, Math.min(1.0, Math.round(val * 100) / 100));
+  const audioCtx = getAudioContext();
+  if (_masterGainNode && audioCtx) {
+    try {
+      _masterGainNode.gain.setValueAtTime(_masterVolume, audioCtx.currentTime);
+    } catch (_) {}
+  }
+  return _masterVolume;
+}
+
+export function getSfxVolume() {
+  return _sfxVolume;
+}
+
+export function setSfxVolume(val) {
+  _sfxVolume = Math.max(0.0, Math.min(1.0, Math.round(val * 100) / 100));
+  return _sfxVolume;
+}
+
 /** Get or create a master DynamicsCompressor limiter to prevent digital clipping / crackling. */
 function getMasterAudioDestination() {
   const audioCtx = getAudioContext();
-  if (!_masterLimiterNode && audioCtx) {
+  if (!audioCtx) return null;
+
+  if (!_masterGainNode) {
+    try {
+      _masterGainNode = audioCtx.createGain();
+      _masterGainNode.gain.setValueAtTime(_masterVolume, audioCtx.currentTime);
+      _masterGainNode.connect(audioCtx.destination);
+    } catch (e) {
+      _masterGainNode = null;
+    }
+  }
+
+  if (!_masterLimiterNode) {
     try {
       _masterLimiterNode = audioCtx.createDynamicsCompressor();
       // Relaxed limiter settings to prevent pumping artifacts while still clamping peaks
@@ -511,12 +562,12 @@ function getMasterAudioDestination() {
       _masterLimiterNode.ratio.setValueAtTime(12.0, audioCtx.currentTime);
       _masterLimiterNode.attack.setValueAtTime(0.003, audioCtx.currentTime);
       _masterLimiterNode.release.setValueAtTime(0.15, audioCtx.currentTime);
-      _masterLimiterNode.connect(audioCtx.destination);
+      _masterLimiterNode.connect(_masterGainNode || audioCtx.destination);
     } catch (e) {
       _masterLimiterNode = null;
     }
   }
-  return _masterLimiterNode || audioCtx.destination;
+  return _masterLimiterNode || _masterGainNode || audioCtx.destination;
 }
 
 /**
@@ -837,7 +888,8 @@ export function playLoopingSound(key, src, volume = 1.0, speed = 1.0, fadeMs = 0
       const source = audioCtx.createBufferSource();
       source.buffer = cached;
       const gainNode = audioCtx.createGain();
-      const targetGain = Math.max(0, Math.min(25.0, volume));
+      const isBgm = (key === 'arena_bgm_loop' || key === 'arena_bgm_preview');
+      const targetGain = Math.max(0, Math.min(25.0, isBgm ? volume : volume * _sfxVolume));
       const rampTime = fadeMs > 0 ? (fadeMs / 1000) : MICRO_FADE_IN;
       const targetDest = getMasterAudioDestination();
 
@@ -1370,7 +1422,8 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
       const source = audioCtx.createBufferSource();
       source.buffer = cached;
       const gainNode = audioCtx.createGain();
-      const targetGain = Math.max(0, Math.min(25.0, volume));
+      const isBgm = (key === 'arena_bgm_loop' || key === 'arena_bgm_preview');
+      const targetGain = Math.max(0, Math.min(25.0, isBgm ? volume : volume * _sfxVolume));
 
       // Calculate hardware timeline start timestamp (delay is scheduled on audio card clock, not CPU JS loop)
       const delaySec = delay > 0 ? (delay < 10 ? delay : delay / 1000) : 0;
@@ -1511,7 +1564,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   }
   clone.src = resolvedSrc;
 
-  clone.volume = Math.max(0, Math.min(1, volume));
+  clone.volume = Math.max(0, Math.min(1, volume * _sfxVolume * _masterVolume));
   clone.playbackRate = Math.max(0.1, speed);
   clone.currentTime = Math.max(0, offset);
   

@@ -3,6 +3,7 @@ import { spawnSparks } from '../graphics/particles/sparkEffect.js';
 import { clearDomainSlashLines } from '../entities/fighters/sukuna/sukunaDomainVisuals.js';
 import { projectileSystem } from './projectileSystem.js';
 import { CONFIG } from '../core/config.js';
+import { triggerHaptic } from './mobileAppBridge.js';
 
 /**
  * Checks if a fighter is immune to Domain Expansions (e.g. Toji Heavenly Restriction / Zero Cursed Energy).
@@ -75,6 +76,8 @@ export function isAnyFighterChannelingDomain(state) {
  */
 export function applyDomainTrapToEnemies(owner, state, hitStunFrames = 20, trapText = 'TRAPPED IN DOMAIN!', textColor = '#FF69B4') {
   if (!owner || !state || !state.fighters) return;
+
+  triggerHaptic('heavy');
 
   const ownerIdx = state.fighters.indexOf(owner);
   const myTeam = state.getFighterTeam ? state.getFighterTeam(ownerIdx) : null;

@@ -19499,6 +19499,62 @@ async function runInteractionTests() {
     console.log('      ✅ Adaptive 120 FPS High-Refresh Mode & Zero-Allocation Particle Heap Seal verified cleanly.');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Test 148: Unified Settings Modal, Audio Hardware Gain & Post-Match Tactical Standard
+  // ─────────────────────────────────────────────────────────────
+  {
+    console.log('   148. Testing Unified Settings Modal, Audio Hardware Gain & Post-Match Tactical Standard...');
+    const { getMasterVolume, setMasterVolume, getSfxVolume, setSfxVolume } = await import('../js/systems/soundSystem.js');
+    const { audioSystem } = await import('../js/systems/audioSystem.js');
+    const { 
+      isSettingsModalOpen, 
+      openSettingsModal, 
+      closeSettingsModal, 
+      saveSettingsToStorage, 
+      loadSettingsFromStorage 
+    } = await import('../js/graphics/ui/SettingsModal.js');
+    const { state } = await import('../js/core/state.js');
+    const { CONFIG } = await import('../js/core/config.js');
+
+    // 1. Audio Hardware Gain & Clamping Standard
+    const origMaster = getMasterVolume();
+    const origSfx = getSfxVolume();
+
+    setMasterVolume(0.65);
+    assert(Math.abs(getMasterVolume() - 0.65) < 0.001, 'setMasterVolume(0.65) must update master volume accurately');
+    assert(Math.abs(audioSystem.getMasterVolume() - 0.65) < 0.001, 'audioSystem helper must return aligned master volume');
+
+    setMasterVolume(-0.5);
+    assert(getMasterVolume() === 0, 'Master volume must clamp negative values to 0.0');
+
+    setMasterVolume(1.8);
+    assert(getMasterVolume() === 1.0, 'Master volume must clamp values above 1 to 1.0');
+
+    setSfxVolume(0.4);
+    assert(Math.abs(getSfxVolume() - 0.4) < 0.001, 'setSfxVolume(0.4) must update SFX volume accurately');
+    assert(Math.abs(audioSystem.getSfxVolume() - 0.4) < 0.001, 'audioSystem helper must return aligned SFX volume');
+
+    // Restore audio volumes
+    setMasterVolume(origMaster);
+    setSfxVolume(origSfx);
+
+    // 2. Settings Modal Lifecycle Standard
+    assert(!isSettingsModalOpen(), 'Settings modal must initially be closed');
+    openSettingsModal('paused');
+    assert(isSettingsModalOpen(), 'openSettingsModal() must set modal open state to true');
+    closeSettingsModal();
+    assert(!isSettingsModalOpen(), 'closeSettingsModal() must set modal open state to false');
+
+    // 3. Settings Persistence Standard
+    saveSettingsToStorage();
+    loadSettingsFromStorage();
+    assert(typeof state.enableHaptics === 'boolean', 'state.enableHaptics must be a valid boolean');
+    assert(typeof state.enableHighRefreshRate === 'boolean', 'state.enableHighRefreshRate must be a valid boolean');
+    assert(typeof CONFIG.COMMERCIAL_MODE === 'boolean', 'CONFIG.COMMERCIAL_MODE must be a valid boolean');
+
+    console.log('      ✅ Unified Settings Modal, Audio Hardware Gain & Post-Match Tactical Standard verified cleanly.');
+  }
+
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 

@@ -8,6 +8,7 @@ import { startGame, goToTitle } from '../../core/gameFlow.js';
 import { GAME_MODES, MODE_ROUNDS, MODE_SETTINGS } from '../../core/modeConfig.js';
 
 import { getPreloadStatus } from '../graphicsCache.js';
+import { openSettingsModal } from './SettingsModal.js';
 
 let _preloadFadeAlpha = 1.0;
 
@@ -96,7 +97,67 @@ function drawTitleScreen() {
 
   // Animated background particles
   updatePreviewBalls();
-  
+
+  const cx = canvas.width / 2;
+  const isLandscape = canvas.width > 600 || state.viewOrientation === 'horizontal';
+  const titleY = isLandscape ? 100 : 210;
+
+  // Title Logo Typography
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Title shadow + core text
+  ctx.font = '900 30px "Outfit", "Press Start 2P", sans-serif';
+  ctx.fillStyle = '#000000';
+  ctx.fillText('CIRCLE MINI-BATTLE', cx + 2, titleY + 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText('CIRCLE MINI-BATTLE', cx, titleY);
+
+  // Subtitle
+  ctx.font = '900 11.5px "Rajdhani", monospace, sans-serif';
+  ctx.fillStyle = '#00F5D4';
+  ctx.fillText('⚡ FIGHT OF CHARACTERS // 60 FPS COMBAT ⚡', cx, titleY + 30);
+  ctx.restore();
+
+  // Menu Action Buttons
+  const btnStartY = titleY + (isLandscape ? 68 : 96);
+  const btnGap = isLandscape ? 44 : 52;
+  const btnW = isLandscape ? 220 : 240;
+  const btnH = isLandscape ? 38 : 42;
+
+  // 1. Start Battle
+  drawButton('⚔️ START BATTLE', cx, btnStartY, () => {
+    if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+      audioSystem.playSFX('skill_dash1', 0.25);
+    }
+    state.gameState = isLandscape ? 'horizontal_select' : 'select';
+  }, btnW, btnH);
+
+  // 2. Settings Modal
+  drawButton('⚙️ SETTINGS', cx, btnStartY + btnGap, () => {
+    openSettingsModal('title');
+  }, btnW, btnH);
+
+  // 3. Leaderboard
+  drawButton('🏆 LEADERBOARD', cx, btnStartY + btnGap * 2, () => {
+    clearHealthHud();
+    state.gameState = 'leaderboard';
+  }, btnW, btnH);
+
+  // 4. Fighter Index
+  drawButton('📖 FIGHTER INDEX', cx, btnStartY + btnGap * 3, () => {
+    state.gameState = 'index';
+  }, btnW, btnH);
+
+  // Footer prompt
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
+  ctx.font = 'bold 9.5px "Rajdhani", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('PRESS ANY BUTTON OR TAP TO PLAY', cx, canvas.height - 24);
+  ctx.restore();
+
   // Render asset preload progress bar if warming up
   drawPreloadProgressBar(ctx, canvas);
 }

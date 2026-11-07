@@ -234,6 +234,8 @@ export const CONFIG = {
     afterimageDecayMultiplier: 1.5,
   },
   enableHighRefreshRate: true,   // Adaptive 90Hz / 120Hz high-refresh rate render unlock on supported mobile displays
+  COMMERCIAL_MODE: false,        // Google Play legal compliance mode (replaces copyrighted IPs with parody archetypes)
+  enableMatchPerks: false,       // Roguelite 3-card blessing draft between rounds (default: off for esports, on for roguelite)
   blackFlash: blackFlashConfig,
   hudShowFighterDescription: true, // Set to true to display fighter description in HUD card instead of skill progress bars
   mobileCanvasHudEnabled: 'auto', // 'auto' = direct 60 FPS canvas HUD on mobile; true = force canvas; false = HTML DOM

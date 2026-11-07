@@ -1,7 +1,8 @@
 import { state } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
 import { GAME_MODES } from '../../core/modeConfig.js';
-import { drawChamferedRect } from './uiFramework.js';
+import { drawChamferedRect, _registerButton, _clearButtons } from './uiFramework.js';
+import { openSettingsModal } from './SettingsModal.js';
 import { getSkillDataForFighter, shouldShowFighterSkill } from './hudSkillProviders.js';
 import {
   getFighterDisplayName,
@@ -203,6 +204,9 @@ export function drawMobileCanvasHud(ctx) {
   }
 
   syncMobileDomHudVisibility(true);
+  if (gameState === 'playing') {
+    _clearButtons();
+  }
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -270,6 +274,24 @@ function _drawCenterTopTimer(ctx) {
   ctx.fillStyle = '#FFFFFF';
   const roundPrefix = (state.roundNum && state.roundNum > 1) ? `R${state.roundNum} • ` : '';
   ctx.fillText(`${roundPrefix}${timeStr}`, cx, topY + pillH / 2);
+
+  // Settings Button Pill next to Timer
+  const gearX = pillX + pillW + 8;
+  const gearW = 28;
+  ctx.fillStyle = 'rgba(8, 10, 16, 0.88)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.lineWidth = 1.2;
+  drawChamferedRect(ctx, gearX, topY, gearW, pillH, 5);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = '12px "Segoe UI Emoji", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚙️', gearX + gearW / 2, topY + pillH / 2);
+  _registerButton(gearX, topY, gearW, pillH, () => {
+    openSettingsModal('paused');
+  });
 }
 
 function _drawFighterCanvasCard(ctx, x, y, w, h, f, fighterIndex, wins, isRightAlign) {

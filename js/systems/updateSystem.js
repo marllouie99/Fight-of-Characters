@@ -24,6 +24,8 @@ import { BossManager, BossEntranceSequence } from '../bosses/index.js';
 import { audioSystem } from './audioSystem.js';
 import { updateFocMap, getActiveFocMap, resetFocMapState } from '../maps/index.js';
 import { isFfaMode } from '../core/viewportManager.js';
+import { CONFIG } from '../core/config.js';
+import { openPerkDraftModal, isPerkDraftModalOpen } from '../graphics/ui/PerkDraftModal.js';
 
 export function updateGame() {
     // Increment global frame count on EVERY frame across all game states
@@ -227,7 +229,14 @@ export function updateGame() {
         (((f.destroyerFireTimer || 0) > 0) || ((f.destroyerWindupTimer || 0) > 0) || ((f.destroyerRecoveryTimer || 0) > 0))
       ));
       if (state.roundEndTimer >= autoDelay && !state._isRespectMusicPlaying && !isTodoUltPlaying && !isNamelessBeamActive) {
-        startNextRound();
+        if (CONFIG.enableMatchPerks && !isPerkDraftModalOpen()) {
+          const winner = state.fighters && (state.roundWinner !== null ? state.fighters[state.roundWinner] : state.fighters[0]);
+          openPerkDraftModal(winner, () => {
+            startNextRound();
+          });
+        } else if (!isPerkDraftModalOpen()) {
+          startNextRound();
+        }
       }
     } else if (state.gameState === 'matchEnd') {
       stopArenaBgm(true);

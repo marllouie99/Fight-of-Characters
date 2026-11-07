@@ -8,6 +8,7 @@ import { GAME_MODES } from '../../core/modeConfig.js';
 import { drawSmallFighterBadge } from './CharacterSelectScreen.js';
 import { _clearButtons, _registerButton, handleUIMove, handleUIClick, drawPanel, drawButton, wrapText, drawPremiumStatBar, drawStatBar } from './uiFramework.js';
 import { drawScreentoneModalBackdrop } from './mangaScreentone.js';
+import { openSettingsModal } from './SettingsModal.js';
 
 
 function drawHpPanel(fighter, x, y, alignRight, fighterIndex) {
@@ -185,7 +186,7 @@ function drawPauseScreen() {
   const cy = state.pauseMenuY;
 
   const panelW = 260;
-  const panelH = 320;
+  const panelH = 360;
   drawPanel(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
 
   // Drag handle grip bar indicator at top of panel
@@ -200,22 +201,26 @@ function drawPauseScreen() {
   ctx.font = '900 22px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('PAUSED', Math.round(cx), Math.round(cy - 110));
+  ctx.fillText('PAUSED', Math.round(cx), Math.round(cy - 130));
 
   const btnW = 200;
-  const btnH = 34;
+  const btnH = 32;
 
-  drawButton('▶ RESUME', cx, cy - 65, () => {
+  drawButton('▶ RESUME', cx, cy - 90, () => {
     state.gameState = state.previousGameState || 'playing';
   }, btnW, btnH);
 
   const isCamDynamic = Boolean(state.camera && state.camera.mode === 'dynamic');
   const camBtnLabel = isCamDynamic ? 'CAM: DYNAMIC' : 'CAM: FIXED';
-  drawButton(camBtnLabel, cx, cy - 20, () => {
+  drawButton(camBtnLabel, cx, cy - 50, () => {
     toggleCameraMode();
   }, btnW, btnH);
 
-  drawButton('↺ RESTART ROUND', cx, cy + 25, () => {
+  drawButton('⚙️ SETTINGS', cx, cy - 10, () => {
+    openSettingsModal('paused');
+  }, btnW, btnH);
+
+  drawButton('↺ RESTART ROUND', cx, cy + 30, () => {
     restartCurrentRound();
   }, btnW, btnH);
 
@@ -224,7 +229,7 @@ function drawPauseScreen() {
     state.gameState = 'leaderboard';
   }, btnW, btnH);
 
-  drawButton('MAIN MENU', cx, cy + 115, () => {
+  drawButton('MAIN MENU', cx, cy + 110, () => {
     goToTitle();
   }, btnW, btnH);
 }

@@ -30,6 +30,10 @@ import { clearFighterDomain } from '../systems/domainSystem.js';
 import { isInsideRubbickStolenVoid } from './fighters/rubbick/rubbickThemes.js';
 import { BalanceManager } from '../configs/balanceManager.js';
 import { resolveEntityPlusObstacleCollision, getArenaCenterObstacle, isPointInsidePlusObstacle, isLineOfSightBlockedByObstacle } from '../systems/arenaObstacleSystem.js';
+import { triggerHaptic } from '../systems/mobileAppBridge.js';
+import { triggerCinematicKo } from '../graphics/renderers/cinematicKoRenderer.js';
+import { isJoystickActive, getJoystickVector } from '../systems/touchControls.js';
+import { triggerKineticShockWave } from '../systems/perkSystem.js';
 
 /**
  * Returns true if the entity is currently hit by, dragged by, or suppressed by Getsuga Tensho.
@@ -2352,6 +2356,9 @@ export class Fighter {
       const isFrozen = Boolean(this.timeStopTimer > 0 || this.isTimeStopped || (this.statusEffects && this.statusEffects.isTimeStopped));
       if (!isFrozen) {
         this.skillManager.update(false);
+        if (this.perkAeroHaste && (currentFrame % 4 === 0)) {
+          this.skillManager.update(false); // Aero Haste: -20% skill cooldowns
+        }
       }
     }
 
@@ -3188,6 +3195,9 @@ export class Fighter {
     }
 
     recordKill();
+    if (state && state.gameState === 'playing') {
+      triggerCinematicKo(this.x, this.y, realAttacker, this);
+    }
     this.checkRoundOrMatchEnd(realAttacker);
   }
 
@@ -3229,6 +3239,10 @@ export class Fighter {
       amount = 0;
     }
 
+    if (attacker && attacker.perkTitansMight) {
+      amount *= 1.15;
+    }
+
     const prevHp = currentHp;
     this.hp = Math.max(0, Math.min(this.maxHp || 200, Number((currentHp - amount).toFixed(2))));
     const actualDamage = prevHp - this.hp;
@@ -3241,6 +3255,12 @@ export class Fighter {
         }
         if (actualAttacker && typeof actualAttacker === 'object') {
           actualAttacker.damageDealt = (actualAttacker.damageDealt || 0) + actualDamage;
+          // Roguelite Vampiric Touch Blessing (Rule 27: Healthbar-only feedback, no floating text)
+          if (actualAttacker.perkVampiricTouch && actualAttacker.hp > 0 && !actualAttacker.dead) {
+            const vampHeal = Math.max(1, Math.round(actualDamage * 0.06));
+            actualAttacker.hp = Math.min(actualAttacker.maxHp, actualAttacker.hp + vampHeal);
+            actualAttacker._healthBarHealTimer = 16;
+          }
           // Combo counter: only real HP damage extends a chain (immunity/evade already filtered above)
           if (!isNonFighterComboTarget(this)) registerComboHit(actualAttacker, this, actualDamage);
         }
@@ -3254,6 +3274,15 @@ export class Fighter {
     }
 
     this._applyDamageHitEffects(amount, attacker, opts, prevHp, isSecondTurretHit);
+
+    // Hardware tactile haptic feedback
+    if (this.hp === 0) {
+      triggerHaptic('heavy');
+    } else if (opts && (opts.isCrit || opts.isRatioCrit || opts.isBlackFlash || opts.isSaitamaCounter || opts.isParry || opts.isSureKill)) {
+      triggerHaptic('heavy');
+    } else {
+      triggerHaptic('light');
+    }
 
     if (this.hp === 0 && !this._hasDied) {
       this._processFighterDeath(attacker, opts);
@@ -3707,6 +3736,16 @@ export class Fighter {
       bounced = true;
     }
 
+    if (bounced) {
+      const currentSpeed = Math.hypot(this.vx, this.vy);
+      if (currentSpeed > 12) {
+        triggerHaptic('medium');
+      }
+      if (this.perkKineticShock) {
+        triggerKineticShockWave(this, arena);
+      }
+    }
+
     return bounced;
   }
 
@@ -4113,6 +4152,9 @@ export class Fighter {
     if (this.soulSwapActive) {
       targetSpeed *= (CONFIG.yuji?.soulSwapSpeedMultiplier ?? 1.30); // noticeable speed boost during Soul Swap
     }
+    if (this.perkOverdriveZone && (this.hp / this.maxHp) <= 0.30) {
+      targetSpeed *= 1.35; // Overdrive Zone +35% move speed when below 30% HP
+    }
     if (this.speedMultiplier !== undefined && this.speedMultiplier !== 1) {
       targetSpeed *= this.speedMultiplier;
     }
@@ -4414,15 +4456,24 @@ export class Fighter {
     const isParalyzed = (this.paralyzeTimer && this.paralyzeTimer > 0) || this.isParalyzed;
     const canAct = (!this.hitStunTimer || this.hitStunTimer <= 0) && !isParalyzed && !this.isCaughtInBeam();
 
-    // Aiming — Keep gunAngle and angle tracked dynamically to the target before shooting
-    if (isTargetAlive && !opponent.isSubmerged && !opponent.isErupting && !this.isTargetOfAmbush && !this.isCaughtInBeam() && !isParalyzed) {
+    // Aiming & Manual Touch Steering
+    const isManualPlayer = Boolean(state && state.controlMode === 'manual' && state.fighters && this === state.fighters[0]);
+    if (isManualPlayer && isJoystickActive()) {
+      const stick = getJoystickVector();
+      if (stick.mag > 0.05) {
+        this.vx = stick.x * this.speed * stick.mag;
+        this.vy = stick.y * this.speed * stick.mag;
+        this.gunAngle = Math.atan2(stick.y, stick.x);
+        this.angle = this.gunAngle;
+      }
+    } else if (isTargetAlive && !opponent.isSubmerged && !opponent.isErupting && !this.isTargetOfAmbush && !this.isCaughtInBeam() && !isParalyzed) {
       this.aim(opponent);
     }
 
     // Shooting
     if (this.shootCooldown > 0) {
       this.shootCooldown--;
-    } else if (this._def.type !== 'orange' && canAct && isTargetAlive && !opponent.isSubmerged && !opponent.isErupting && !isTargetReforming) { // Prevent shooting at submerged/erupting/reforming targets
+    } else if (!isManualPlayer && this._def.type !== 'orange' && canAct && isTargetAlive && !opponent.isSubmerged && !opponent.isErupting && !isTargetReforming) { // Prevent shooting at submerged/erupting/reforming targets
       if (!isEntityOutsideArena(opponent, arena) && this.canPerformBasicAttack(opponent)) {
         this.shoot(ownerIndex);
         this.shootCooldown = this.shootCooldownMax;

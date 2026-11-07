@@ -20,7 +20,11 @@ import {
   soundSpriteManager,
   stopFighterVoice,
   resolveCombatSFX,
-  playCombatSFX
+  playCombatSFX,
+  getMasterVolume,
+  setMasterVolume,
+  getSfxVolume,
+  setSfxVolume
 } from './soundSystem.js';
 import { AUDIO_CONFIG } from '../configs/audioConfig.js';
 
@@ -34,7 +38,11 @@ export {
   isSoundAudioBuffer,
   stopFighterVoice,
   resolveCombatSFX,
-  playCombatSFX
+  playCombatSFX,
+  getMasterVolume,
+  setMasterVolume,
+  getSfxVolume,
+  setSfxVolume
 };
 
 class AudioEventEmitter {
@@ -55,6 +63,22 @@ class AudioEventEmitter {
 
   playCombatSFX(fighterOrDef, soundKey, options) {
     return playCombatSFX(fighterOrDef, soundKey, options);
+  }
+
+  getMasterVolume() {
+    return getMasterVolume();
+  }
+
+  setMasterVolume(val) {
+    return setMasterVolume(val);
+  }
+
+  getSfxVolume() {
+    return getSfxVolume();
+  }
+
+  setSfxVolume(val) {
+    return setSfxVolume(val);
   }
 
   on(event, callback) {
