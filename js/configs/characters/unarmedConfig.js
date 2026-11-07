@@ -124,4 +124,7 @@ export const unarmedConfig = {
   punchDamage: 40,
   punchKnockback: 12,
   punchCooldown: 32,
+
+  // ── 9. Planted Bomb Interaction ──
+  canDestroyPlantedBombs: true,     // Unarmed can destroy planted bombs (e.g. Bomber Man) upon collision
 };

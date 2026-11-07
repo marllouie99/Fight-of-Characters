@@ -575,8 +575,12 @@ export class UnarmedFighter extends Fighter {
     ) {
       return false;
     }
-    if (typeof this.isTeammate === 'function' && this.isTeammate(target)) return false;
-    if (this.team !== undefined && target.team !== undefined && this.team === target.team) return false;
+    const isBomb = Boolean(target.isBomb || target.type === 'bomb');
+    const targetOwner = isBomb ? target.owner : target;
+    if (targetOwner) {
+      if (typeof this.isTeammate === 'function' && this.isTeammate(targetOwner)) return false;
+      if (this.team !== undefined && targetOwner.team !== undefined && this.team === targetOwner.team) return false;
+    }
     return true;
   }
 
@@ -585,7 +589,12 @@ export class UnarmedFighter extends Fighter {
    * Delivers Unarmed's iconic kinetic slam / basic attack body bump!
    */
   onCollide(opponent) {
-    if (!opponent || !this._isValidCombatTarget(opponent)) return;
+    if (!opponent) return;
+    if (opponent.isBomb || opponent.type === 'bomb') {
+      this.destroyPlantedBomb(opponent);
+      return;
+    }
+    if (!this._isValidCombatTarget(opponent)) return;
     if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
     this._handleKineticBumpCollision(opponent);
   }
@@ -597,6 +606,10 @@ export class UnarmedFighter extends Fighter {
    */
   _handleKineticBumpCollision(target) {
     if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
+    if (target && (target.isBomb || target.type === 'bomb')) {
+      this.destroyPlantedBomb(target);
+      return;
+    }
     if (!this.isSkillEnabled(CONFIG.unarmed?.enableKineticBump, true)) return;
     if (this.collisionCooldown > 0) return;
     if (!this._isValidCombatTarget(target)) return;
@@ -881,6 +894,135 @@ export class UnarmedFighter extends Fighter {
   }
 
   /**
+   * Destroys an active planted bomb upon physical collision/strike.
+   * Marks the bomb dead, removes it from activeBombs, awards momentum & evade scaling,
+   * and triggers signature martial arts punch impact audio & visual feedback.
+   */
+  destroyPlantedBomb(bomb) {
+    if (!bomb || bomb.dead || bomb.isDead || (bomb.hp !== undefined && bomb.hp <= 0)) return false;
+
+    // Team / ally guard: Never destroy friendly teammate bombs
+    const bombOwner = bomb.owner;
+    if (bombOwner) {
+      if (bombOwner === this) return false;
+      if (typeof this.isTeammate === 'function' && this.isTeammate(bombOwner)) return false;
+      if (this.team !== undefined && bombOwner.team !== undefined && this.team === bombOwner.team) return false;
+    }
+
+    // 1. Mark bomb as dead / destroyed
+    bomb.hp = 0;
+    bomb.dead = true;
+    bomb.isDead = true;
+
+    // 2. Remove bomb from owner's activeBombs array (and all fighters in state)
+    if (bombOwner && Array.isArray(bombOwner.activeBombs)) {
+      const idx = bombOwner.activeBombs.indexOf(bomb);
+      if (idx !== -1) bombOwner.activeBombs.splice(idx, 1);
+    }
+    if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+      for (let i = 0; i < state.fighters.length; i++) {
+        const fighter = state.fighters[i];
+        if (fighter && Array.isArray(fighter.activeBombs)) {
+          const idx = fighter.activeBombs.indexOf(bomb);
+          if (idx !== -1) fighter.activeBombs.splice(idx, 1);
+        }
+      }
+    }
+
+    // 3. Audio & Visual feedback: Martial arts punch / kinetic slam destroys the bomb!
+    this.punchAnimTimer = this.punchAnimMaxTimer;
+    this.punchHand = this.punchHand === 'right' ? 'left' : 'right';
+
+    // Gains permanent momentum and evade bonus from destroying an enemy object!
+    if (this.isSkillEnabled(CONFIG.unarmed?.enableMomentumScaling, true)) {
+      const maxStacks = (this.maxMomentumStacks && isFinite(this.maxMomentumStacks))
+        ? this.maxMomentumStacks
+        : Infinity;
+      this.momentumStacks = Math.min(maxStacks, this.momentumStacks + 1);
+      this._syncLiveDamageAndSpeed();
+    }
+    this.evadeHits = (this.evadeHits || 0) + 1;
+    this._syncEvadeChance();
+
+    // Floating text feedback
+    spawnFloatingText(bomb.x, bomb.y - 15, 'SMASHED!', '#F4F4F5');
+
+    // Visual sparks, flash and concentric shockwave
+    if (typeof spawnImpactFlash === 'function') {
+      spawnImpactFlash(bomb.x, bomb.y, 36, this.isSuperUnarmed ? '#FFFFFF' : '#E4E4E7');
+    }
+    if (typeof spawnSparks === 'function') {
+      spawnSparks(bomb.x, bomb.y, 12, '#FFFFFF');
+      spawnSparks(bomb.x, bomb.y, 8, '#F59E0B');
+    }
+    if (typeof triggerGlobalScreenShake === 'function') {
+      triggerGlobalScreenShake(Math.min(10, 3 + Math.hypot(this.vx, this.vy) * 0.4), 6);
+    }
+
+    // Concentric Supersonic Shockwave (Rule 26)
+    this._spawnShockwave(bomb.x, bomb.y, 55 + this.momentumStacks * 2, 18, 2, this.isSuperUnarmed ? '#FFFFFF' : '#F4F4F5');
+
+    // Concussive audio: punch smash hit SFX
+    const bumpSound = CONFIG.unarmed?.sounds?.enemyBump || CONFIG.unarmed?.sounds?.slam || 'Assets/Sound Effects/Attacks/heavypunch3.mp3';
+    const bumpVol = CONFIG.unarmed?.soundVolumes?.enemyBump ?? CONFIG.unarmed?.soundVolumes?.slam ?? 1.0;
+    if (audioSystem && typeof audioSystem.playSFX === 'function') {
+      audioSystem.playSFX(bumpSound, bumpVol);
+    }
+
+    return true;
+  }
+
+  /**
+   * Retrieves all active planted bombs belonging to enemy fighters.
+   */
+  _getEnemyPlantedBombs(opponent = null) {
+    const bombs = [];
+    const checkedFighters = new Set();
+    if (typeof state !== 'undefined' && Array.isArray(state.fighters)) {
+      for (const f of state.fighters) checkedFighters.add(f);
+    }
+    if (opponent) checkedFighters.add(opponent);
+
+    for (const f of checkedFighters) {
+      if (!f || f === this || f.dead || f.isDead || (typeof f.hp === 'number' && f.hp <= 0)) continue;
+      if (typeof this.isTeammate === 'function' && this.isTeammate(f)) continue;
+      if (this.team !== undefined && f.team !== undefined && this.team === f.team) continue;
+
+      if (Array.isArray(f.activeBombs)) {
+        for (const bomb of f.activeBombs) {
+          if (!bomb || bomb.dead || bomb.isDead || (bomb.hp !== undefined && bomb.hp <= 0)) continue;
+          bombs.push(bomb);
+        }
+      }
+    }
+    return bombs;
+  }
+
+  /**
+   * Checks for proximity collisions with enemy planted bombs and destroys them.
+   */
+  _checkBombCollisions(opponent = null) {
+    if ((this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) || this.isSwallowedByPacman) return;
+    if (this.isDead || this.dead || this.hp <= 0) return;
+
+    const enemyBombs = this._getEnemyPlantedBombs(opponent);
+    if (!enemyBombs || enemyBombs.length === 0) return;
+
+    for (let i = enemyBombs.length - 1; i >= 0; i--) {
+      const bomb = enemyBombs[i];
+      if (!bomb || bomb.dead || bomb.isDead || (bomb.hp !== undefined && bomb.hp <= 0)) continue;
+
+      const br = bomb.r || 22;
+      const hitDist = this.r + br;
+      const dist = Math.hypot(bomb.x - this.x, bomb.y - this.y);
+
+      if (dist <= hitDist + 4) {
+        this.destroyPlantedBomb(bomb);
+      }
+    }
+  }
+
+  /**
    * Proximity collision check for update() loop (supports multi-target / standalone simulations).
    */
   _checkFighterCollision(opponent) {
@@ -1013,6 +1155,7 @@ export class UnarmedFighter extends Fighter {
     // 7. Movement, Wall Ricochet & Proximity Collision Physics
     this.applyMovementPhysics(1.0);
     this.resolveWallBounce(arena, opponent);
+    this._checkBombCollisions(opponent);
     this._checkFighterCollision(opponent);
 
     // 8. Sleek Earclacks Ghost Afterimage Trail Generation (Reduced count & Anti-Summon Bug Fix)

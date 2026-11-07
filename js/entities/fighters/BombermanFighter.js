@@ -514,6 +514,17 @@ export class BombermanFighter extends Fighter {
       vy: 0,
       hitEnemiesDuringTravel: new Set(),
       initialOverlaps: initialOverlapSet,
+      takeDamage: (amount, attacker = null, opts = {}) => {
+        if (bomb.dead || bomb.isDead || bomb.hp <= 0) return false;
+        bomb.hp = Math.max(0, bomb.hp - (amount || 1));
+        if (bomb.hp <= 0) {
+          bomb.dead = true;
+          bomb.isDead = true;
+          const idx = this.activeBombs.indexOf(bomb);
+          if (idx !== -1) this.activeBombs.splice(idx, 1);
+        }
+        return true;
+      },
     };
 
     this.activeBombs.push(bomb);
@@ -1254,6 +1265,20 @@ export class BombermanFighter extends Fighter {
       }
 
       if (dist < minDist) {
+        // Entities that can destroy planted bombs upon contact (e.g. Unarmed, Lawnmower)
+        const isTeammateWithBomb = Boolean(
+          bomb.owner && (
+            bomb.owner === f ||
+            (typeof f.isTeammate === 'function' && f.isTeammate(bomb.owner)) ||
+            (f.team !== undefined && bomb.owner.team !== undefined && f.team === bomb.owner.team)
+          )
+        );
+
+        if (!isTeammateWithBomb && typeof f.destroyPlantedBomb === 'function') {
+          f.destroyPlantedBomb(bomb);
+          break; // Bomb is destroyed, no longer collides with any further entities
+        }
+
         const nx = dist > 0.001 ? dx / dist : 1;
         const ny = dist > 0.001 ? dy / dist : 0;
         const overlap = minDist - dist;
@@ -1509,6 +1534,10 @@ export class BombermanFighter extends Fighter {
       }
 
       this._resolveBombCollisions(bomb, activeArena);
+
+      if (bomb.hp <= 0 || bomb.dead || bomb.isDead) {
+        continue;
+      }
 
       bomb.fuseTimer--;
       if (bomb.fuseTimer <= 0) {

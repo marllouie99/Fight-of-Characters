@@ -19305,6 +19305,93 @@ async function runInteractionTests() {
     console.log('      ✅ End Crystal Global Hit Effect Suppression Standard verified cleanly.');
   }
 
+  // ── TEST 145: Unarmed Can Destroy Bomber Man\'s Planted Bombs ──
+  {
+    console.log('   145. Testing Unarmed Can Destroy Bomber Man\\\'s Planted Bombs...');
+    const { resolveBombObstacleCollisions } = await import('../js/systems/physics.js');
+    const BombermanClass = FIGHTER_CLASS_MAP['bomberman'];
+    const UnarmedClass = FIGHTER_CLASS_MAP['unarmed'];
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+
+    const bm = new BombermanClass({ x: 100, y: 300, color: '#2563EB', controls: {} });
+    const unarmed = new UnarmedClass({ x: 300, y: 300, color: '#CFCFCF', controls: {} });
+    state.fighters = [bm, unarmed];
+
+    // 1. Plant a stationary bomb at (200, 300)
+    bm.activeBombs.length = 0;
+    bm.plantCooldownTimer = 0;
+    bm.layStepTimer = 0;
+    const bomb = bm.plantBomb(testArena, true, 200, 300);
+    assert(bomb && bm.activeBombs.includes(bomb), 'Bomberman must plant a stationary bomb');
+    const bx = bomb.x;
+    const by = bomb.y;
+    const initialMomentum = unarmed.momentumStacks || 0;
+
+    // 2. Unarmed moves into contact with the planted bomb
+    unarmed.x = bx + 10;
+    unarmed.y = by;
+    unarmed.vx = -6;
+    unarmed.vy = 0;
+
+    // Run global physics body-block resolver
+    resolveBombObstacleCollisions(testArena);
+
+    // Verify bomb is destroyed and Unarmed is not deflected
+    assert(bomb.dead === true && bomb.hp <= 0, 'Planted bomb must be destroyed upon collision with Unarmed');
+    assert(!bm.activeBombs.includes(bomb), 'Destroyed bomb must be removed from Bomberman activeBombs');
+    assert(unarmed.momentumStacks === initialMomentum + 1, 'Unarmed must gain +1 momentum stack from destroying the bomb');
+    assert(unarmed.vx === -6, 'Unarmed forward velocity must NOT be deflected or reversed like a solid wall');
+
+    // 3. Test BombermanFighter._resolveBombCollisions internal handler with a kicked traveling bomb
+    const bomb2 = bm.plantBomb(testArena, true, 150, 300);
+    assert(bomb2 && bm.activeBombs.includes(bomb2), 'Bomberman must plant a second bomb');
+    bomb2.isTraveling = true;
+    bomb2.vx = 9.5;
+    bomb2.vy = 0;
+    bomb2.x = 290;
+    bomb2.y = 300;
+    unarmed.x = 300;
+    unarmed.y = 300;
+    const unarmedHpBefore = unarmed.hp;
+
+    bm._resolveBombCollisions(bomb2, testArena);
+    assert(bomb2.dead === true && bomb2.hp <= 0, 'Traveling bomb must be destroyed upon contact with Unarmed');
+    assert(!bm.activeBombs.includes(bomb2), 'Destroyed traveling bomb must be removed from activeBombs');
+    assert(unarmed.hp === unarmedHpBefore, 'Unarmed must NOT take damage from the destroyed bomb');
+
+    // 4. Friendly fire check: Teammate bombs must NOT be destroyed
+    bm.team = 'blue';
+    unarmed.team = 'blue';
+    const friendlyBomb = bm.plantBomb(testArena, true, 200, 300);
+    assert(friendlyBomb && bm.activeBombs.includes(friendlyBomb), 'Bomberman must plant a friendly bomb');
+    unarmed.x = friendlyBomb.x + 5;
+    unarmed.y = friendlyBomb.y;
+    resolveBombObstacleCollisions(testArena);
+    assert(friendlyBomb.dead !== true && friendlyBomb.hp > 0, 'Unarmed must NOT destroy teammate Bomberman planted bombs');
+    assert(bm.activeBombs.includes(friendlyBomb), 'Friendly bomb must remain in activeBombs');
+
+    // 5. Test UnarmedFighter._checkBombCollisions in update cycle
+    bm.activeBombs.length = 0;
+    bm.plantCooldownTimer = 0;
+    bm.layStepTimer = 0;
+    bm.team = 'blue';
+    unarmed.team = 'red';
+    const bomb3 = bm.plantBomb(testArena, true, 250, 300);
+    assert(bomb3 && bm.activeBombs.includes(bomb3), 'Bomberman must plant third bomb');
+    unarmed.x = bomb3.x + 8;
+    unarmed.y = bomb3.y;
+    unarmed.update(bm, 1, testArena);
+    assert(bomb3.dead === true && bomb3.hp <= 0, 'Enemy bomb must be destroyed during Unarmed update cycle');
+    assert(!bm.activeBombs.includes(bomb3), 'Destroyed bomb must be removed from activeBombs');
+
+    // Clean up
+    bm.activeBombs.length = 0;
+    state.fighters = [];
+    console.log('      ✅ Unarmed Can Destroy Bomber Man\'s Planted Bombs verified cleanly.');
+  }
+
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 

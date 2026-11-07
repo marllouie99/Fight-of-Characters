@@ -1793,6 +1793,22 @@ export function resolveBombObstacleCollisions(arena = state.arena) {
       const dy = ent.y - bomb.y;
       const dist = Math.hypot(dx, dy);
 
+      // Entities that can destroy planted bombs upon contact (e.g. Unarmed, Lawnmower)
+      const isTeammateWithBomb = Boolean(
+        bomb.owner && (
+          bomb.owner === ent ||
+          (typeof ent.isTeammate === 'function' && ent.isTeammate(bomb.owner)) ||
+          (ent.team !== undefined && bomb.owner.team !== undefined && ent.team === bomb.owner.team)
+        )
+      );
+
+      if (!isTeammateWithBomb && typeof ent.destroyPlantedBomb === 'function') {
+        if (dist < minDist) {
+          ent.destroyPlantedBomb(bomb);
+          break; // Bomb is destroyed, no longer collides with any further entities
+        }
+      }
+
       if (dist < minDist) {
         const nx = dist > 0.0001 ? dx / dist : 1;
         const ny = dist > 0.0001 ? dy / dist : 0;
