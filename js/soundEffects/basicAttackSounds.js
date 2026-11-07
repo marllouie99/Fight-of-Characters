@@ -15,7 +15,7 @@
 //   delay = 3   → sound plays 3 frames AFTER the attack fires
 //   delay = 10  → sound plays 10 frames after (good for syncing with projectile travel)
 
-import { CONFIG } from '../core/config.js';
+import { CONFIG, FIGHTER_DEFS } from '../core/config.js';
 
 export const BASIC_ATTACK_SOUNDS = {
   // ── Ranger (aimbot/Jazz) ──────────────────────────
@@ -491,6 +491,27 @@ export const BASIC_ATTACK_SOUNDS = {
       return CONFIG.creeper?.soundVolumes?.headbutt ?? 0.85;
     },
     delay: 0,
+  },
+
+  // ── Naoya Zenin (ID 56) ──────────
+  56: {
+    get src() {
+      return CONFIG.naoya?.sounds?.punchHit || [
+        'Assets/Sound Effects/Attacks/heavypunch1.mp3',
+        'Assets/Sound Effects/Attacks/heavypunch2.mp3'
+      ];
+    },
+    get volume() {
+      return CONFIG.naoya?.soundVolumes?.punchHit !== undefined ? CONFIG.naoya.soundVolumes.punchHit : 0.85;
+    },
+    delay: 0,
+  },
+
+  // ── Maki Zen'in (ID 57) ──────────
+  57: {
+    src: 'Assets/Sound Effects/Attacks/swordswing.mp3',
+    volume: 0.85,
+    delay: 0,
   }
 };
 
@@ -811,17 +832,6 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
     },
     get volume() {
       return CONFIG.nanami?.soundVolumes?.swordSwing !== undefined ? CONFIG.nanami.soundVolumes.swordSwing : 0.75;
-    },
-    delay: 0,
-  },
-
-  // Naoya — Projection Sorcery Concealed Tanto
-  'naoya': {
-    get src() {
-      return CONFIG.naoya?.sounds?.swordSwing || 'Assets/Sound Effects/Attacks/swordswing.mp3';
-    },
-    get volume() {
-      return CONFIG.naoya?.soundVolumes?.swordSwing !== undefined ? CONFIG.naoya.soundVolumes.swordSwing : 0.80;
     },
     delay: 0,
   },
@@ -1411,6 +1421,18 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
   }
 };
 
+// Auto-bind any missing numeric IDs from FIGHTER_DEFS to their matching type sound
+if (typeof FIGHTER_DEFS !== 'undefined' && Array.isArray(FIGHTER_DEFS)) {
+  for (const def of FIGHTER_DEFS) {
+    if (def.id !== undefined && BASIC_ATTACK_SOUNDS[def.id] === undefined && def.type) {
+      const typeKey = String(def.type).toLowerCase();
+      if (BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey] !== undefined) {
+        BASIC_ATTACK_SOUNDS[def.id] = BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey];
+      }
+    }
+  }
+}
+
 /**
  * Get the sound config for a fighter.
  * Lookup order: numeric ID ? fighter type (case-insensitive) ? default.
@@ -1421,20 +1443,42 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
  * @returns {{ src: string, volume: number, delay: number }}
  */
 export function getBasicAttackSound(id, type) {
-  // 1. Try numeric ID lookup
+  // 1. If first argument is a string type name (e.g. 'naoya', 'maki', 'musashi')
+  if (typeof id === 'string') {
+    const idKey = id.toLowerCase();
+    if (BASIC_ATTACK_SOUNDS_BY_TYPE[idKey] !== undefined) {
+      return BASIC_ATTACK_SOUNDS_BY_TYPE[idKey];
+    }
+  }
+
+  // 2. Try numeric / key lookup in BASIC_ATTACK_SOUNDS
   if (id !== undefined && id !== null && BASIC_ATTACK_SOUNDS[id] !== undefined) {
     return BASIC_ATTACK_SOUNDS[id];
   }
 
-  // 2. Try fighter type lookup (case-insensitive)
+  // 3. Try fighter type lookup (case-insensitive)
   if (type !== undefined && type !== null) {
     const typeKey = String(type).toLowerCase();
     if (BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey] !== undefined) {
       return BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey];
     }
+    if (BASIC_ATTACK_SOUNDS[type] !== undefined) {
+      return BASIC_ATTACK_SOUNDS[type];
+    }
   }
 
-  // 3. Fall back to default � warn in dev so it's easy to spot missing entries
+  // 4. Try resolving def.type from numeric id via FIGHTER_DEFS
+  if (typeof id === 'number' && typeof FIGHTER_DEFS !== 'undefined' && Array.isArray(FIGHTER_DEFS)) {
+    const def = FIGHTER_DEFS.find((f) => f && f.id === id);
+    if (def && def.type) {
+      const typeKey = String(def.type).toLowerCase();
+      if (BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey] !== undefined) {
+        return BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey];
+      }
+    }
+  }
+
+  // 5. Fall back to default — warn in dev so it's easy to spot missing entries
   if (typeof console !== 'undefined' && console.warn) {
     console.warn(
       `[SoundSystem] No basic-attack sound for fighter id=${id}, type="${type}". ` +

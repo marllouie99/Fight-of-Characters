@@ -2597,7 +2597,7 @@ class ProjectileSystem {
     // Play explosion sound when grenade detonates
     const ownerFighter = fighters[p.owner];
     if (ownerFighter) {
-      const sound = getBasicAttackSound(ownerFighter._def?.id);
+      const sound = getBasicAttackSound(ownerFighter._def?.id, ownerFighter._def?.type);
       if (sound) playSound(sound.src, sound.volume);
     }
 
@@ -2655,7 +2655,7 @@ class ProjectileSystem {
     // Play explosion sound when C4 detonates
     const ownerFighter = fighters[p.owner];
     if (ownerFighter) {
-      const sound = getBasicAttackSound(ownerFighter._def?.id);
+      const sound = getBasicAttackSound(ownerFighter._def?.id, ownerFighter._def?.type);
       if (sound) playSound(sound.src, sound.volume);
     }
 

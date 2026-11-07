@@ -147,7 +147,7 @@ export function showPreBattleCurtain(onComplete) {
 
         try {
           const skills = getFighterSkillSoundPaths(def.type);
-          const basic = getFighterBasicAttackSoundPaths(def.type);
+          const basic = getFighterBasicAttackSoundPaths(def.id, def.type);
           soundPaths.push(...skills, ...basic);
         } catch (_) {}
       }
@@ -346,7 +346,7 @@ export function showPreBattleCurtain(onComplete) {
           if (!def) continue;
           try {
             soundPaths.push(...getFighterSkillSoundPaths(def.type));
-            soundPaths.push(...getFighterBasicAttackSoundPaths(def.type));
+            soundPaths.push(...getFighterBasicAttackSoundPaths(def.id, def.type));
           } catch (_) {}
         }
 
