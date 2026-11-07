@@ -1633,6 +1633,7 @@ export function drawMahoragaLeftPunch(ctx, fighter) {
   }
 
   // 1. PIXEL ART CLENCHED LEFT FIST (Rule 35: Cached Offscreen Canvas Quad)
+  const fistRadius = 14.0;
   const fistCanvas = _getMahoragaFistCanvas(fistColor);
   if (fistCanvas) {
     ctx.drawImage(fistCanvas, Math.round(-fistCanvas.width / 2), Math.round(-fistCanvas.height / 2));

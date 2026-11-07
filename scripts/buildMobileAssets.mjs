@@ -314,7 +314,15 @@ export async function buildMobileAssets(options = {}) {
     }
 
     if (width === 0 || height === 0) continue;
-    if (Math.max(width, height) < 1024 && srcStat.size < 500 * 1024) continue;
+
+    // Rule 22: Preserve hair assets at bit-exact 1x fidelity
+    const isHair = relAssetPath.toLowerCase().includes('-hair.png');
+    if (isHair) continue;
+
+    // Process all full-screen overlays (domains/ultimates) and all textures >= 512px or >= 200KB
+    const isOverlay = relAssetPath.toLowerCase().includes('assets/overlays/');
+    const isCandidate = Math.max(width, height) >= 512 || srcStat.size >= 200 * 1024;
+    if (!isOverlay && !isCandidate) continue;
 
     // Relative subpath after "Assets/"
     const subpath = relAssetPath.replace(/^Assets\//, '');

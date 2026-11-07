@@ -276,10 +276,14 @@ export function drawFloatingTexts() {
     }
 
     const isCrit = Boolean(t.isCrit);
-    const renderedViaAtlas = drawBitmapCombatText(ctx, t.text, 0, 0, t.color, isCrit, 1.0);
+    const targetColor = isCrit ? '#FF3B30' : (t.color || '#FFFFFF');
+
+    // Only engage pre-baked bitmap font quad blitting on mobile devices (Rule 35) to eliminate tile-based rasterizer stalls;
+    // on desktop PC, use full vector typography for 100% crisp esports visual fidelity and exact fighter theme colors.
+    const renderedViaAtlas = Boolean(state.isMobileDevice) && drawBitmapCombatText(ctx, t.text, 0, 0, targetColor, isCrit, 1.0);
 
     if (!renderedViaAtlas) {
-      // Fallback to standard CPU font rendering for complex / Unicode announcement text
+      // Standard high-fidelity vector typography (PC & non-bitmap fallback)
       ctx.font = isCrit ? FONT_CRIT : FONT_DEFAULT;
       const skipStrokeOnMobileDensity = Boolean(state.isMobileDevice && texts.length > 8 && !isCrit);
       if (!skipStrokeOnMobileDensity) {
@@ -287,7 +291,7 @@ export function drawFloatingTexts() {
         ctx.strokeStyle = '#000000';
         ctx.strokeText(t.text, 0, 0);
       }
-      ctx.fillStyle = t.color || (isCrit ? '#FF3B30' : '#FFFFFF');
+      ctx.fillStyle = targetColor;
       ctx.fillText(t.text, 0, 0);
     }
 

@@ -14,6 +14,8 @@
     "test": "node scripts/testAllFighters.mjs",
     "test:tag": "node scripts/testTagMatch.mjs",
     "test:interactions": "node scripts/testInteractions.mjs",
+    "bench:combat": "node scripts/benchmarkCombat.mjs",
+    "bench:combat:all": "node scripts/benchmarkCombat.mjs --all",
     "scaffold:fighter": "node scripts/scaffoldFighter.mjs",
     "scaffold:boss": "node scripts/scaffoldBossConfig.mjs",
     "patch-notes": "node scripts/generatePatchNotes.mjs",
