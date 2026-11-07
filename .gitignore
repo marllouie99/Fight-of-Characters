@@ -12,6 +12,7 @@ screenshots/
 error_log.txt
 *.log
 Assets/_mobile05x/
+Assets/_mobile_audio/
 release-web/
 *.zip
 

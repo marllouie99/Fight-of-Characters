@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import zlib from 'zlib';
+import { execFileSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +14,14 @@ try {
   sharp = sharpModule.default || sharpModule;
 } catch (e) {
   sharp = null;
+}
+
+let ffmpegPath = null;
+try {
+  const ffmpegModule = await import('ffmpeg-static');
+  ffmpegPath = ffmpegModule.default || ffmpegModule;
+} catch (e) {
+  ffmpegPath = null;
 }
 
 const CRC_TABLE = new Uint32Array(256);
@@ -400,6 +409,9 @@ export const MOBILE_ASSET_MANIFEST = ${JSON.stringify(manifest, null, 2)};
   log(`   💾 Storage savings: ${(totalSavedBytes / 1024 / 1024).toFixed(1)} MB.`);
   log(`   📄 Manifest written to js/configs/mobileAssetManifest.js\n`);
 
+  // Run mobile audio transcoding pipeline (96 kbps cache for APK packaging)
+  await buildMobileAudio();
+
   return {
     manifest,
     totalAssets: Object.keys(manifest).length,
@@ -408,6 +420,101 @@ export const MOBILE_ASSET_MANIFEST = ${JSON.stringify(manifest, null, 2)};
     totalSavedBytes,
     totalDecodedRamSaved
   };
+}
+
+export async function buildMobileAudio() {
+  if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
+    console.log('ℹ️  [Mobile Audio Pipeline] ffmpeg-static not available. Skipping audio transcoding.');
+    return { count: 0, savedBytes: 0 };
+  }
+
+  const soundEffectsDir = path.join(rootDir, 'Assets', 'Sound Effects');
+  const mobileAudioDir = path.join(rootDir, 'Assets', '_mobile_audio');
+  if (!fs.existsSync(soundEffectsDir)) return { count: 0, savedBytes: 0 };
+
+  console.log('🎵 [Mobile Audio Pipeline] Checking 96 kbps transcoded audio cache...');
+
+  function collectAudioFiles(dir) {
+    let results = [];
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        results = results.concat(collectAudioFiles(full));
+      } else {
+        const lower = ent.name.toLowerCase();
+        if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.wav')) {
+          results.push(full);
+        }
+      }
+    }
+    return results;
+  }
+
+  const audioFiles = collectAudioFiles(soundEffectsDir);
+  let newlyTranscoded = 0;
+  let skippedUpToDate = 0;
+  let totalSavedBytes = 0;
+
+  for (const srcFile of audioFiles) {
+    const stat = fs.statSync(srcFile);
+    // Focus on files >= 120 KB (large BGM tracks, heavy ability sound themes, uncompressed WAVs)
+    if (stat.size < 120 * 1024) continue;
+
+    const relSub = path.relative(soundEffectsDir, srcFile);
+    const destFile = path.join(mobileAudioDir, relSub);
+    const destDir = path.dirname(destFile);
+    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+
+    if (fs.existsSync(destFile)) {
+      const destStat = fs.statSync(destFile);
+      if (destStat.mtimeMs >= stat.mtimeMs) {
+        skippedUpToDate++;
+        totalSavedBytes += Math.max(0, stat.size - destStat.size);
+        continue;
+      }
+    }
+
+    const ext = path.extname(srcFile).toLowerCase();
+    const tempOut = destFile + '.tmp' + ext;
+
+    try {
+      let args = ['-i', srcFile];
+      if (ext === '.mp3') {
+        args.push('-b:a', '96k', '-ar', '44100');
+      } else if (ext === '.ogg') {
+        args.push('-c:a', 'libvorbis', '-b:a', '96k');
+      } else if (ext === '.wav') {
+        args.push('-ar', '22050');
+      }
+      args.push('-y', tempOut);
+
+      execFileSync(ffmpegPath, args, { stdio: 'ignore' });
+
+      if (fs.existsSync(tempOut)) {
+        const optStat = fs.statSync(tempOut);
+        if (optStat.size < stat.size) {
+          fs.renameSync(tempOut, destFile);
+          totalSavedBytes += (stat.size - optStat.size);
+          newlyTranscoded++;
+        } else {
+          fs.copyFileSync(srcFile, destFile);
+          fs.unlinkSync(tempOut);
+        }
+      }
+    } catch (err) {
+      if (fs.existsSync(tempOut)) {
+        try { fs.unlinkSync(tempOut); } catch (_) {}
+      }
+    }
+  }
+
+  console.log(`   ✅ Processed mobile audio: ${newlyTranscoded} newly transcoded, ${skippedUpToDate} up to date.`);
+  if (totalSavedBytes > 0) {
+    console.log(`   📉 Mobile audio storage savings pool: ${(totalSavedBytes / 1024 / 1024).toFixed(1)} MB.`);
+  }
+
+  return { newlyTranscoded, skippedUpToDate, totalSavedBytes };
 }
 
 export function pruneAndroidDuplicate1xAssets(manifest) {
@@ -436,6 +543,14 @@ export function pruneAndroidDuplicate1xAssets(manifest) {
     console.log(`   🧹 [Android APK Optimizer] Purged ${strippedZipCount} stale distribution ZIPs from APK assets (${(strippedZipBytes / 1024 / 1024).toFixed(1)} MB reclaimed).`);
   }
 
+  // 1.5. Purge internal audio build cache if copied into Android assets
+  const androidMobileAudioDir = path.join(androidPublicDir, 'Assets', '_mobile_audio');
+  if (fs.existsSync(androidMobileAudioDir)) {
+    try {
+      fs.rmSync(androidMobileAudioDir, { recursive: true, force: true });
+    } catch (e) {}
+  }
+
   // 2. Prune redundant 1x assets when mobile variant exists
   for (const relAssetPath of Object.keys(manifest)) {
     const subpath = relAssetPath.replace(/^Assets\//, '');
@@ -451,7 +566,44 @@ export function pruneAndroidDuplicate1xAssets(manifest) {
     }
   }
 
-  console.log(`   🧹 [Android APK Optimizer] Pruned ${prunedCount} redundant 1x textures from android/app/src/main/assets/public (${(prunedBytes / 1024 / 1024).toFixed(1)} MB stripped from APK).`);
+  if (prunedCount > 0) {
+    console.log(`   🧹 [Android APK Optimizer] Pruned ${prunedCount} redundant 1x textures from android/app/src/main/assets/public (${(prunedBytes / 1024 / 1024).toFixed(1)} MB stripped from APK).`);
+  }
+
+  // 3. Inject transcoded 96 kbps audio assets into Android assets
+  const mobileAudioDir = path.join(rootDir, 'Assets', '_mobile_audio');
+  const androidSoundDir = path.join(androidPublicDir, 'Assets', 'Sound Effects');
+  let audioReplacedCount = 0;
+  let audioSavedBytes = 0;
+
+  if (fs.existsSync(mobileAudioDir) && fs.existsSync(androidSoundDir)) {
+    function applyAudio(dir) {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const ent of entries) {
+        const full = path.join(dir, ent.name);
+        if (ent.isDirectory()) {
+          applyAudio(full);
+        } else {
+          const rel = path.relative(mobileAudioDir, full);
+          const targetInAndroid = path.join(androidSoundDir, rel);
+          if (fs.existsSync(targetInAndroid)) {
+            const origStat = fs.statSync(targetInAndroid);
+            const optStat = fs.statSync(full);
+            if (optStat.size < origStat.size) {
+              fs.copyFileSync(full, targetInAndroid);
+              audioReplacedCount++;
+              audioSavedBytes += (origStat.size - optStat.size);
+            }
+          }
+        }
+      }
+    }
+    applyAudio(mobileAudioDir);
+  }
+
+  if (audioReplacedCount > 0) {
+    console.log(`   🎵 [Android APK Audio Optimizer] Injected ${audioReplacedCount} transcoded 96 kbps audio files (${(audioSavedBytes / 1024 / 1024).toFixed(1)} MB saved in APK).`);
+  }
 }
 
 if (process.argv[1] && process.argv[1].endsWith('buildMobileAssets.mjs')) {

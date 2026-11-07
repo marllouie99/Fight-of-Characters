@@ -23,6 +23,8 @@
     "preview:web": "serve -l 8000 dist",
     "mobile:sync": "npm run build:web -- --skip-zip && npx cap sync && node scripts/buildMobileAssets.mjs --prune-android",
     "mobile:apk": "npm run mobile:sync && cd android && gradlew.bat assembleDebug",
+    "mobile:run": "node scripts/deployMobile.mjs --build",
+    "mobile:install": "node scripts/deployMobile.mjs",
     "mobile:open:ios": "npx cap open ios",
     "mobile:open:android": "npx cap open android",
     "release:tag": "node scripts/createReleaseTag.mjs",
@@ -49,6 +51,7 @@
     "electron": "^43.1.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
+    "ffmpeg-static": "^5.3.0",
     "javascript-obfuscator": "^5.9.0",
     "sharp": "^0.35.5"
   },

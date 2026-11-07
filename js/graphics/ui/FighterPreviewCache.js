@@ -237,6 +237,11 @@ function getFighterStickerPreview(index, category = null) {
 
 export function clearFighterPreviewCache() {
   for (const key in fighterPreviewCache) {
+    const canvas = fighterPreviewCache[key];
+    if (canvas && typeof canvas.width === 'number') {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
     delete fighterPreviewCache[key];
   }
 }

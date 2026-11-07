@@ -216,6 +216,13 @@ export function warmActiveFighterTexturesOnGpu(fighters, targetCtx = null) {
 export function releaseInactiveMatchGraphicsMemory(activeFighters = []) {
   if (!isMobileDevice) return;
 
+  // Evict character select preview canvases from GPU VRAM during match combat (Rule 35 SceneLoadingCurtain pattern)
+  try {
+    if (typeof window !== 'undefined' && typeof window.__clearFighterPreviewCache === 'function') {
+      window.__clearFighterPreviewCache();
+    }
+  } catch (e) {}
+
   const activeOverlays = new Set();
   for (let i = 0; i < activeFighters.length; i++) {
     const f = activeFighters[i];

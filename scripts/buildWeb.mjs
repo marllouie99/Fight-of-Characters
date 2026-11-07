@@ -37,7 +37,8 @@ const JUNK_FILE_PATTERNS = [
   /\.pdf$/i,
   /\.lnk$/i,
   /\.md$/i,
-  /\.txt$/i
+  /\.txt$/i,
+  /^_mobile_audio$/i
 ];
 
 function isJunkFile(filename) {
