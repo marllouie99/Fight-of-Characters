@@ -303,7 +303,7 @@ export function getFighterCollectorTheme(def) {
 /**
  * Draws high-voltage industrial caution / hazard diagonal stripes (////)
  */
-export function drawHazardStripes(ctx, x, y, w, h, stripeW = 6, color1 = '#F5A623', color2 = '#15171F') {
+export function drawHazardStripes(ctx, x, y, w, h, stripeW = 6, color1 = '#FFFFFF', color2 = '#000000') {
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
@@ -324,7 +324,7 @@ export function drawHazardStripes(ctx, x, y, w, h, stripeW = 6, color1 = '#F5A62
   ctx.restore();
 }
 
-export function drawCornerBrackets(ctx, x, y, w, h, len = 8, color = '#F5A623', strokeW = 1.6) {
+export function drawCornerBrackets(ctx, x, y, w, h, len = 8, color = '#FFFFFF', strokeW = 1.6) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = strokeW;
@@ -353,7 +353,7 @@ const _drawCornerBrackets = drawCornerBrackets;
 /**
  * Draws a dark tactical stat gauge with dark recessed track, glowing fill, and numeric readout
  */
-export function drawTacticalStatBar(ctx, label, value, maxValue, x, y, width, color = '#F5A623') {
+export function drawTacticalStatBar(ctx, label, value, maxValue, x, y, width, color = '#FFFFFF') {
   // Label on left
   ctx.fillStyle = '#94A3B8';
   ctx.font = '900 9px "Outfit", "Rajdhani", sans-serif';
@@ -3147,14 +3147,14 @@ export function drawCollectorFighterCard(ctx, def, idx, x, y, w, h, isSelected, 
 export function drawCollectorModalBackdrop(ctx, mx, my, modalW, modalH) {
   ctx.save();
   // Deep tactical shadow
-  ctx.fillStyle = 'rgba(5, 7, 10, 0.78)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
   drawChamferedRect(ctx, mx + 5, my + 6, modalW, modalH, 6);
   ctx.fill();
 
-  // Dark Tactical Carbon Armor Base (Matches Image 2 & 3)
-  ctx.fillStyle = '#12141A';
-  ctx.strokeStyle = '#090A0E';
-  ctx.lineWidth = 3;
+  // Dark Tactical Carbon Armor Base
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2;
   drawChamferedRect(ctx, mx, my, modalW, modalH, 6);
   ctx.fill();
   ctx.stroke();
@@ -3165,7 +3165,7 @@ export function drawCollectorModalBackdrop(ctx, mx, my, modalW, modalH) {
   ctx.clip();
 
   // Subtle industrial blueprint dot grid
-  ctx.fillStyle = 'rgba(245, 166, 35, 0.055)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
   const step = 16;
   for (let py = my + 8; py < my + modalH; py += step) {
     for (let px = mx + 8; px < mx + modalW; px += step) {
@@ -3175,17 +3175,17 @@ export function drawCollectorModalBackdrop(ctx, mx, my, modalW, modalH) {
 
   ctx.restore();
 
-  // Inner Golden Hazard Amber Border Line
-  ctx.strokeStyle = '#F5A623';
-  ctx.lineWidth = 1.6;
+  // Inner White Border Line
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.2;
   drawChamferedRect(ctx, mx + 3, my + 3, modalW - 6, modalH - 6, 5);
   ctx.stroke();
 
-  // Tech Corner Brackets (┌ ┐ └ ┘) in glowing Hazard Amber
-  _drawCornerBrackets(ctx, mx + 6, my + 6, modalW - 12, modalH - 12, 14, '#FFD043', 2.2);
+  // Tech Corner Brackets (┌ ┐ └ ┘) in crisp white
+  _drawCornerBrackets(ctx, mx + 6, my + 6, modalW - 12, modalH - 12, 14, '#FFFFFF', 2.2);
 
   // Technical Marking Text
-  ctx.fillStyle = 'rgba(245, 166, 35, 0.40)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.50)';
   ctx.font = '900 8px "Silkscreen", "Rajdhani", monospace';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
@@ -3201,8 +3201,8 @@ export function drawCollectorShowcaseHeader(ctx, mx, my, modalW, slotLabel, onCl
   ctx.save();
 
   // 1. Slanted Dark Carbon Badge Base
-  ctx.fillStyle = '#161922';
-  ctx.strokeStyle = '#F5A623';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.8;
   ctx.beginPath();
   ctx.moveTo(mx + 6, bannerY);
@@ -3214,8 +3214,8 @@ export function drawCollectorShowcaseHeader(ctx, mx, my, modalW, slotLabel, onCl
   ctx.fill();
   ctx.stroke();
 
-  // Left solid hazard yellow wedge
-  ctx.fillStyle = '#F5A623';
+  // Left solid hazard white wedge
+  ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
   ctx.moveTo(mx + 6, bannerY);
   ctx.lineTo(mx + 14, bannerY);
@@ -3224,13 +3224,13 @@ export function drawCollectorShowcaseHeader(ctx, mx, my, modalW, slotLabel, onCl
   ctx.closePath();
   ctx.fill();
 
-  // 2. Signature Hazard Stripe Bar along the bottom of the header badge (Image 2/3)
-  drawHazardStripes(ctx, mx + 16, bannerY + bannerH - 5, bannerW - 32, 5, 5, '#F5A623', '#111216');
+  // 2. Signature Hazard Stripe Bar along the bottom of the header badge
+  drawHazardStripes(ctx, mx + 16, bannerY + bannerH - 5, bannerW - 32, 5, 5, '#FFFFFF', '#000000');
 
   // 3. Three Industrial Golden Chevrons >>>
   for (let c = 0; c < 3; c++) {
     const cx = mx + bannerW + 6 + c * 11;
-    ctx.fillStyle = '#F5A623';
+    ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
     ctx.moveTo(cx, bannerY + 2);
     ctx.lineTo(cx + 6, bannerY + 2);
@@ -3250,14 +3250,14 @@ export function drawCollectorShowcaseHeader(ctx, mx, my, modalW, slotLabel, onCl
   ctx.fillText(`OPERATOR SELECT // ${slotLabel}`, mx + 22, bannerY + bannerH / 2 - 2);
 
   // Technical Sub-Label
-  ctx.fillStyle = '#F5A623';
+  ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 7.5px "Silkscreen", "Rajdhani", monospace';
   ctx.fillText('SYS.SPEC.09', mx + 22, bannerY + bannerH / 2 + 8);
 
   ctx.restore();
 
   // Close button [✕] at top-right
-  drawButton('✕', mx + modalW - 24, bannerY + bannerH / 2, onClose, 28, 26, '#20242E', 3);
+  drawButton('✕', mx + modalW - 24, bannerY + bannerH / 2, onClose, 28, 26, '#000000', 3);
 }
 
 export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y, w, h) {
@@ -3266,18 +3266,18 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
 
   ctx.save();
   // Tactical Dark Carbon Dossier Container
-  ctx.fillStyle = '#151820';
-  ctx.strokeStyle = '#2B313E';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.6;
   drawChamferedRect(ctx, x, y, w, h, 4);
   ctx.fill();
   ctx.stroke();
 
-  // Left vertical hazard stripe bar (Image 2/3 signature element)
-  drawHazardStripes(ctx, x + 2, y + 4, 6, h - 8, 4, '#F5A623', '#101217');
+  // Left vertical hazard stripe bar
+  drawHazardStripes(ctx, x + 2, y + 4, 6, h - 8, 4, '#FFFFFF', '#000000');
 
   // Tech Corner Brackets on Dossier Bar
-  _drawCornerBrackets(ctx, x + 3, y + 3, w - 6, h - 6, 8, '#F5A623', 1.2);
+  _drawCornerBrackets(ctx, x + 3, y + 3, w - 6, h - 6, 8, '#FFFFFF', 1.2);
   ctx.restore();
 
   // Column 1: Fighter Name, Class Pill, Form Toggle & Tactical Stat Bars
@@ -3297,15 +3297,15 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
   drawGradeBadge(ctx, Math.min(col1X + col1W - 24, col1X + measuredNameW + 6), y + 6, selectedDef.grade, { scale: 0.82 });
 
   // Class Pill
-  ctx.fillStyle = '#1B1E28';
-  ctx.strokeStyle = theme.primary;
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.2;
   const pillW = Math.min(col1W - 24, 96);
   drawChamferedRect(ctx, col1X, y + 23, pillW, 14, 3);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = '#F5A623';
+  ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 8.5px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -3318,40 +3318,37 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
   // Optional form toggle (Reze / Eye of Cthulhu)
   if (selectedDef.type === 'reze') {
     const isHybrid = Boolean(state.showRezeTransformation);
-    drawButton(isHybrid ? '💣 DEVIL' : '🌸 HUMAN', col1X + 140, y + 30, () => {
+    drawButton(isHybrid ? 'DEVIL' : 'HUMAN', col1X + 140, y + 30, () => {
       state.showRezeTransformation = !state.showRezeTransformation;
       try { audioSystem.playSFX('Assets/Sound Effects/Skills/dash1.mp3', 0.85); } catch (e) {}
-    }, 56, 15, isHybrid ? '#B81C3B' : '#20242E', 2);
+    }, 56, 15, '#000000', 2);
   } else if (selectedDef.type === 'eye_of_cthulhu') {
     const isP2 = Boolean(state.showEyeOfCthulhuPhase2);
-    drawButton(isP2 ? '🦷 P2' : '👁️ P1', col1X + 140, y + 30, () => {
+    drawButton(isP2 ? 'P2' : 'P1', col1X + 140, y + 30, () => {
       state.showEyeOfCthulhuPhase2 = !state.showEyeOfCthulhuPhase2;
       try { audioSystem.playSFX('Assets/Sound Effects/Skills/dash1.mp3', 0.85); } catch (e) {}
-    }, 56, 15, isP2 ? '#E11D48' : '#20242E', 2);
+    }, 56, 15, '#000000', 2);
   }
 
   // Tactical Stat Bars
   const statY = y + 43;
-  drawTacticalStatBar(ctx, 'HP', selectedDef.hp, 150, col1X, statY, col1W - 6, '#EF4444');
-  drawTacticalStatBar(ctx, 'DMG', selectedDef.damage, 60, col1X, statY + 15, col1W - 6, '#F5A623');
-  drawTacticalStatBar(ctx, 'SPD', selectedDef.speed || 2, 4, col1X, statY + 30, col1W - 6, theme.primary);
+  drawTacticalStatBar(ctx, 'HP', selectedDef.hp, 150, col1X, statY, col1W - 6, '#FFFFFF');
+  drawTacticalStatBar(ctx, 'DMG', selectedDef.damage, 60, col1X, statY + 15, col1W - 6, '#FFFFFF');
+  drawTacticalStatBar(ctx, 'SPD', selectedDef.speed || 2, 4, col1X, statY + 30, col1W - 6, '#FFFFFF');
 
   // Column 2: Ability & Weapon Description
   const col2X = col1X + col1W + 8;
   const col3W = 92;
   const col2W = w - (col2X - x) - col3W - 10;
 
-  // Red Ability Capsule Pill
+  // Ability Capsule Pill
   const abPillW = 34;
   const abPillH = 12;
-  const redGrad = ctx.createLinearGradient(col2X, y + 6, col2X + abPillW, y + 6 + abPillH);
-  redGrad.addColorStop(0.00, '#DC2626');
-  redGrad.addColorStop(1.00, '#991B1B');
   drawChamferedRect(ctx, col2X, y + 6, abPillW, abPillH, 2.5);
-  ctx.fillStyle = redGrad;
+  ctx.fillStyle = '#000000';
   ctx.fill();
-  ctx.strokeStyle = '#090A0E';
-  ctx.lineWidth = 0.8;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.0;
   ctx.stroke();
 
   ctx.fillStyle = '#FFFFFF';
@@ -3361,7 +3358,7 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
   ctx.fillText('Ability', col2X + abPillW / 2, y + 6 + abPillH / 2 + 0.3);
 
   // Ability Name (NEVER truncated with ellipsis!)
-  ctx.fillStyle = '#F5A623';
+  ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 10px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
@@ -3375,16 +3372,16 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
   // Column 3: Live Weapon Containment Cell
   const col3X = x + w - col3W - 6;
   ctx.save();
-  ctx.fillStyle = '#101217';
-  ctx.strokeStyle = '#2B313E';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.2;
   drawChamferedRect(ctx, col3X, y + 6, col3W, h - 12, 3);
   ctx.fill();
   ctx.stroke();
 
-  _drawCornerBrackets(ctx, col3X + 2, y + 8, col3W - 4, h - 16, 5, '#F5A623', 1.0);
+  _drawCornerBrackets(ctx, col3X + 2, y + 8, col3W - 4, h - 16, 5, '#FFFFFF', 1.0);
 
-  ctx.fillStyle = '#F5A623';
+  ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 8px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -3392,7 +3389,7 @@ export function drawCompactFighterDossierBar(ctx, selectedDef, weaponInfo, x, y,
 
   const wStageX = col3X + col3W / 2;
   const wStageY = y + h / 2 + 8;
-  ctx.fillStyle = 'rgba(245, 166, 35, 0.16)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
   ctx.beginPath();
   ctx.ellipse(wStageX, wStageY + 12, 26, 5, 0, 0, Math.PI * 2);
   ctx.fill();

@@ -818,12 +818,12 @@ export function syncMenuOrientationUI() {
   // 1. Subview Header Orientation Toggle Pills
   const pill = document.getElementById('btn-menu-orientation');
   if (pill) {
-    pill.innerText = isH ? '📱 9:16 VIEW' : '🖥️ 16:9 VIEW';
+    pill.innerText = isH ? '9:16 VIEW' : '16:9 VIEW';
     pill.title = isH ? 'Switch to 9:16 Vertical Portrait View' : 'Switch to 16:9 Horizontal Widescreen View';
   }
   const battlePill = document.getElementById('btn-battle-orientation');
   if (battlePill) {
-    battlePill.innerText = isH ? '📱 9:16 VIEW' : '🖥️ 16:9 VIEW';
+    battlePill.innerText = isH ? '9:16 VIEW' : '16:9 VIEW';
     battlePill.title = isH ? 'Switch to 9:16 Vertical Portrait View' : 'Switch to 16:9 Horizontal Widescreen View';
   }
 
@@ -842,13 +842,13 @@ export function syncMenuOrientationUI() {
     const btn = banner.querySelector('.banner-action-btn');
 
     if (isH) {
-      if (icon) icon.innerText = '📱';
+      if (icon) icon.innerHTML = '<svg class="pixel-icon" viewBox="0 0 16 16" width="22" height="22" fill="none" shape-rendering="crispEdges"><path d="M4 1h8v14H4V1z" fill="#ffffff"/><path d="M5 3h6v9H5V3z" fill="#000000"/><path d="M7 13h2v1H7v-1z" fill="#ffffff"/></svg>';
       if (title) title.innerText = 'SWITCH TO VERTICAL (9:16)';
       if (subtitle) subtitle.innerText = 'PORTRAIT VIEWPORT • CLASSIC RETRO LAYOUT';
       if (btn) btn.innerText = 'SWITCH ➔';
       banner.setAttribute('data-action', 'toggle-viewport-orientation');
     } else {
-      if (icon) icon.innerText = '🖥️';
+      if (icon) icon.innerHTML = '<svg class="pixel-icon" viewBox="0 0 16 16" width="22" height="22" fill="none" shape-rendering="crispEdges"><path d="M1 2h14v9H1V2z" fill="#ffffff"/><path d="M3 4h10v5H3V4z" fill="#000000"/><path d="M6 12h4v1H6v-1z M4 13h8v1H4v-1z" fill="#ffffff"/></svg>';
       if (title) title.innerText = 'HORIZONTAL MODE (16:9)';
       if (subtitle) subtitle.innerText = 'AUTO-ADJUSTS SCREEN • 1V1 WIDESCREEN DUEL';
       if (btn) btn.innerText = 'LAUNCH ➔';

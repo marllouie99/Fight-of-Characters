@@ -14,6 +14,8 @@
  *    sound sprite sheet is missing or sound key is not packed.
  */
 
+import { COMBAT_SOUND_SPRITE_MANIFEST } from '../configs/combatSoundSpriteManifest.js';
+
 export const CORE_COMBAT_SFX_PATHS = [
   'Assets/Sound Effects/Attacks/fleshhit.mp3',
   'Assets/Sound Effects/Attacks/punch.mp3',
@@ -41,7 +43,7 @@ class SoundSpriteManager {
   }
 
   _initDefaultSheets() {
-    // Register default core combat hits virtual sheet descriptor
+    // 1. Register default core combat hits virtual sheet descriptor (fallback)
     this.registerSpriteSheet('core_combat_hits', 'virtual://core_combat_hits', {
       'punch': [0.0, 0.45],
       'Assets/Sound Effects/Attacks/punch.mp3': [0.0, 0.45],
@@ -56,6 +58,16 @@ class SoundSpriteManager {
       'spaceshot': [3.20, 0.65],
       'Assets/Sound Effects/Attacks/spaceshot.mp3': [3.20, 0.65]
     });
+
+    // 2. Register real pre-baked combat sound sprite atlas if available
+    if (typeof COMBAT_SOUND_SPRITE_MANIFEST !== 'undefined' && COMBAT_SOUND_SPRITE_MANIFEST?.sheetId) {
+      this.registerSpriteSheet(
+        COMBAT_SOUND_SPRITE_MANIFEST.sheetId,
+        COMBAT_SOUND_SPRITE_MANIFEST.audioUrl,
+        COMBAT_SOUND_SPRITE_MANIFEST.slices,
+        false
+      );
+    }
   }
 
   /**

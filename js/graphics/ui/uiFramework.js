@@ -72,21 +72,21 @@ function drawPanel(x, y, w, h, alpha = 0.96, radius = 4, borderColor = null) {
 
   ctx.save();
   // 3D Drop shadow underneath panel
-  ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.35})`;
+  ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.4})`;
   drawChamferedRect(ctx, x + 3, y + 3, w, h, radius);
   ctx.fill();
 
-  // Warm cream/parchment panel body
-  ctx.fillStyle = `rgba(245, 238, 220, ${alpha})`;
-  ctx.strokeStyle = borderColor || '#2d080c';
+  // Manga ink white panel body
+  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+  ctx.strokeStyle = borderColor || '#000000';
   ctx.lineWidth = 2;
 
   drawChamferedRect(ctx, x, y, w, h, radius);
   ctx.fill();
   ctx.stroke();
 
-  // Inner subtle highlight line
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  // Inner subtle border line
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
   ctx.lineWidth = 1;
   drawChamferedRect(ctx, x + 1.5, y + 1.5, w - 3, h - 3, Math.max(1, radius - 1));
   ctx.stroke();
@@ -114,45 +114,37 @@ function drawButton(text, cx, cy, action, w = 200, h = 40, customColor = null, r
 
   ctx.save();
 
-  // Draw 3D Bottom Extruded Shadow Block
-  let shadowColor = '#baa88c';
-  let faceColor = '#e8dec8';
-  let textColor = '#2d080c';
-  let strokeColor = '#2d080c';
+  // Draw 3D Bottom Extruded Shadow Block - Manga Ink Monochrome
+  let shadowColor = '#000000';
+  let faceColor = '#ffffff';
+  let textColor = '#000000';
+  let strokeColor = '#000000';
 
   if (customColor) {
-    shadowColor = '#0b0c10';
-    const isAmber = customColor === '#F5A623' || customColor === '#FFB800' || customColor === '#FFD043' || customColor === '#F5B841' || customColor === '#EAB308';
-    const isDarkCarbon = customColor === '#20242E' || customColor === '#181A22' || customColor === '#151820' || customColor === '#1A1D26';
+    shadowColor = '#000000';
+    const isDark = customColor === '#000000' || customColor === '#20242E' || customColor === '#181A22' || customColor === '#151820' || customColor === '#1A1D26' || customColor === '#0b0c10' || customColor === '#12141A';
     
-    if (isAmber) {
-      faceColor = isHovered ? '#FFD043' : customColor;
-      textColor = '#111215';
-      strokeColor = '#0F1014';
-    } else if (isDarkCarbon) {
-      faceColor = isHovered ? '#2D3442' : customColor;
-      textColor = isHovered ? '#FFD043' : '#F1F5F9';
-      strokeColor = '#F5A623';
+    if (isDark) {
+      faceColor = isHovered ? '#ffffff' : '#000000';
+      textColor = isHovered ? '#000000' : '#ffffff';
+      strokeColor = isHovered ? '#000000' : '#ffffff';
     } else {
-      faceColor = customColor;
-      textColor = '#ffffff';
-      strokeColor = '#2d080c';
+      faceColor = isHovered ? '#000000' : '#ffffff';
+      textColor = isHovered ? '#ffffff' : '#000000';
+      strokeColor = isHovered ? '#ffffff' : '#000000';
     }
   } else if (isPrimary) {
-    shadowColor = '#4d0a13';
-    faceColor = isHovered ? '#b51f33' : '#9e1a2b';
-    textColor = '#ffffff';
-    strokeColor = '#2d080c';
+    faceColor = isHovered ? '#000000' : '#ffffff';
+    textColor = isHovered ? '#ffffff' : '#000000';
+    strokeColor = isHovered ? '#ffffff' : '#000000';
   } else if (isSecondary) {
-    shadowColor = '#7c2d37';
-    faceColor = isHovered ? '#f7cad0' : '#f0b6ba';
-    textColor = '#2d080c';
-    strokeColor = '#2d080c';
+    faceColor = isHovered ? '#ffffff' : '#000000';
+    textColor = isHovered ? '#000000' : '#ffffff';
+    strokeColor = isHovered ? '#000000' : '#ffffff';
   } else {
-    shadowColor = '#baa88c';
-    faceColor = isHovered ? '#f2e8d5' : '#e8dec8';
-    textColor = '#2d080c';
-    strokeColor = '#2d080c';
+    faceColor = isHovered ? '#000000' : '#ffffff';
+    textColor = isHovered ? '#ffffff' : '#000000';
+    strokeColor = isHovered ? '#ffffff' : '#000000';
   }
 
   // Shadow bevel rectangle
@@ -168,8 +160,8 @@ function drawButton(text, cx, cy, action, w = 200, h = 40, customColor = null, r
   ctx.fill();
   ctx.stroke();
 
-  // Top highlight gloss line
-  ctx.strokeStyle = isPrimary ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.7)';
+  // Top highlight line
+  ctx.strokeStyle = faceColor === '#000000' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(x + radius + 1, topFaceY + 2);

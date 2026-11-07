@@ -279,7 +279,7 @@ function isAudioBufferLike(value) {
 let _masterLimiterNode = null;
 
 /** Get or create a shared AudioContext with balanced latency to avoid underruns during screen recording. */
-function getAudioContext() {
+export function getAudioContext() {
   if (!_sharedAudioCtx || _sharedAudioCtx.state === 'closed') {
     const AudioContextClass = (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) ||
                               (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));

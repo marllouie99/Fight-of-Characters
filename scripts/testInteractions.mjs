@@ -5727,7 +5727,7 @@ async function runInteractionTests() {
     assert(soundSpriteManager.hasSprite('unknown_sound_never_exists.mp3') === false, 'Unknown sound must not match sprite map');
 
     const punchInfo = soundSpriteManager.getSpriteInfo('punch');
-    assert(punchInfo && punchInfo.sheetId === 'core_combat_hits', 'punch must map to core_combat_hits sheet');
+    assert(punchInfo && (punchInfo.sheetId === 'core_combat_hits' || punchInfo.sheetId === 'combat_core_sfx'), 'punch must map to core_combat_hits or combat_core_sfx sheet');
     assert(typeof punchInfo.offset === 'number' && typeof punchInfo.duration === 'number', 'punch sprite info must contain numeric offset and duration');
 
     // B. Virtual Buffer Stitching

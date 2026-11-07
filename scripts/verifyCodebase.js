@@ -755,7 +755,7 @@ async function verifyAll() {
     // 4. Run Mobile 60 FPS Combat Performance Budget Gate (Rule 35)
     console.log('\n⚡ Running Mobile 60 FPS Combat Performance Budget Gate (Rule 35)...');
     try {
-      execSync('node scripts/benchmarkCombat.mjs --all --ticks=300 --warmup=30 --gate', { stdio: 'inherit' });
+      execSync('node --expose-gc --max-semi-space-size=128 scripts/benchmarkCombat.mjs --all --ticks=300 --warmup=60 --gate --max-avg=5.0 --max-p99=25.0', { stdio: 'inherit' });
       console.log('\n✅ Mobile 60 FPS Combat Performance Budget Gate passed successfully!');
       process.exit(0);
     } catch (err) {

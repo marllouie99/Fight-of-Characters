@@ -1,5 +1,6 @@
 import { survivorSystem } from '../systems/survivorSystem.js';
-import { stopAllSounds, stopAllLoopingSounds, preloadSound, preloadAudioBuffer, preloadAudioBufferBatch, stopSound, unlockAudio, releaseInactiveMatchAudioMemory } from '../systems/soundSystem.js';
+import { stopAllSounds, stopAllLoopingSounds, preloadSound, preloadAudioBuffer, preloadAudioBufferBatch, stopSound, unlockAudio, releaseInactiveMatchAudioMemory, getAudioContext } from '../systems/soundSystem.js';
+import { soundSpriteManager } from '../systems/soundSpriteSystem.js';
 // ─────────────────────────────────────────────
 // GAME FLOW — State transitions and round management
 // Extracted from main.js so that ui.js can import these without
@@ -91,6 +92,15 @@ function extractSoundsFromObject(obj, seen = new Set(), results = []) {
  * without downloading the entire 233+ MB game asset library upfront.
  */
 export function preloadEssentialCoreSounds() {
+  const spritePromise = (async () => {
+    try {
+      const audioCtx = typeof getAudioContext === 'function' ? getAudioContext() : null;
+      if (typeof soundSpriteManager !== 'undefined' && soundSpriteManager.hasSprite('punch')) {
+        await soundSpriteManager.loadSpriteSheet('combat_core_sfx', audioCtx);
+      }
+    } catch (e) {}
+  })();
+
   const corePaths = [
     'Assets/Sound Effects/Attacks/fleshhit.mp3',
     'Assets/Sound Effects/Attacks/punch.mp3',
@@ -104,7 +114,10 @@ export function preloadEssentialCoreSounds() {
     'Assets/Sound Effects/Skills/dash5.mp3',
     ...getAnnouncerSoundPaths()
   ];
-  return preloadSound([...new Set(corePaths.filter(Boolean))], { priority: false, idle: true });
+  return Promise.all([
+    spritePromise,
+    preloadSound([...new Set(corePaths.filter(Boolean))], { priority: false, idle: true })
+  ]);
 }
 
 /**

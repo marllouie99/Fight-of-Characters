@@ -487,23 +487,23 @@ export function drawArenaBgmSelector(ctx, x, y, width, height) {
   const isOff = currentTrack.id === 'off';
 
   ctx.save();
-  ctx.fillStyle = '#0F1116';
+  ctx.fillStyle = '#000000';
   drawChamferedRect(ctx, x, y + 2, width, height, 3);
   ctx.fill();
 
-  ctx.fillStyle = '#181A22';
-  ctx.strokeStyle = !isOff ? '#F5A623' : '#333846';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.4;
   drawChamferedRect(ctx, x, y, width, height, 3);
   ctx.fill();
   ctx.stroke();
 
   if (!isOff) {
-    ctx.fillStyle = '#F5A623';
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(x + 3, y + 2, 2.5, height - 4);
   }
 
-  ctx.fillStyle = !isOff ? '#F5A623' : '#94A3B8';
+  ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 9px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

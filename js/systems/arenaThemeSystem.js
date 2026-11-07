@@ -1614,22 +1614,22 @@ export function drawArenaThemeSelector(ctx, x, y, w, h) {
   if (!ctx) return;
 
   const activeDef = ARENA_THEMES.find(t => t.id === getSelectedArenaTheme()) || ARENA_THEMES[0];
-  const label = `${activeDef.icon} THEME: ${activeDef.shortName}`;
+  const label = `THEME: ${activeDef.shortName}`;
 
   ctx.save();
-  ctx.fillStyle = '#0F1116';
+  ctx.fillStyle = '#000000';
   drawChamferedRect(ctx, x, y + 2, w, h, 3);
   ctx.fill();
 
-  ctx.fillStyle = '#181A22';
-  ctx.strokeStyle = activeDef.themeColor || '#F5A623';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.4;
   drawChamferedRect(ctx, x, y, w, h, 3);
   ctx.fill();
   ctx.stroke();
 
   // Accent Pip
-  ctx.fillStyle = activeDef.themeColor || '#F5A623';
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(x + 3, y + 2, 2.5, h - 4);
 
   // Text

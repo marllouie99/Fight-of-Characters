@@ -867,17 +867,17 @@ function drawDynamicVsClashEmblem(ctx, vsX, vsY, isLandscape) {
     const beamPulse = 0.85 + Math.sin(now * 8.0) * 0.15;
     // Horizontal energy slash across the seam
     const grad = ctx.createLinearGradient(vsX - beamW, vsY, vsX + beamW, vsY);
-    grad.addColorStop(0, 'rgba(245, 166, 35, 0)');
-    grad.addColorStop(0.3, `rgba(245, 166, 35, ${(0.45 * beamPulse).toFixed(3)})`);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    grad.addColorStop(0.3, `rgba(255, 255, 255, ${(0.45 * beamPulse).toFixed(3)})`);
     grad.addColorStop(0.5, `rgba(255, 255, 255, ${(0.95 * beamPulse).toFixed(3)})`);
-    grad.addColorStop(0.7, `rgba(245, 166, 35, ${(0.45 * beamPulse).toFixed(3)})`);
-    grad.addColorStop(1, 'rgba(245, 166, 35, 0)');
+    grad.addColorStop(0.7, `rgba(255, 255, 255, ${(0.45 * beamPulse).toFixed(3)})`);
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = grad;
     ctx.fillRect(vsX - beamW, vsY - 2, beamW * 2, 4);
 
     // Dynamic jagged lightning ticks (Electric Crackle)
     const tickJitter = Math.sin(now * 25) * 2.0;
-    ctx.strokeStyle = Math.sin(now * 16) > 0.0 ? '#FFD043' : '#FFFFFF';
+    ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.moveTo(vsX - 90, vsY - 1);
@@ -898,7 +898,7 @@ function drawDynamicVsClashEmblem(ctx, vsX, vsY, isLandscape) {
   const shieldScale = 1.0 + Math.sin(now * 3.6) * 0.04;
   const shieldJitter = Math.sin(now * 35) * 0.4;
 
-  ctx.fillStyle = '#06070A';
+  ctx.fillStyle = '#000000';
   ctx.beginPath();
   ctx.ellipse(vsX + 2, vsY + 3.5, 25 * shieldScale, 21 * shieldScale, -0.08, 0, Math.PI * 2);
   ctx.fill();
@@ -918,9 +918,9 @@ function drawDynamicVsClashEmblem(ctx, vsX, vsY, isLandscape) {
   ctx.lineTo(-crestW / 2, crestH / 4);
   ctx.lineTo(-crestW / 2, -crestH / 4);
   ctx.closePath();
-  ctx.fillStyle = '#11131C';
+  ctx.fillStyle = '#000000';
   ctx.fill();
-  ctx.strokeStyle = '#F5A623';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 2.4;
   ctx.stroke();
 
@@ -933,7 +933,7 @@ function drawDynamicVsClashEmblem(ctx, vsX, vsY, isLandscape) {
   ctx.lineTo(-crestW / 2 + 3, crestH / 4 - 1.5);
   ctx.lineTo(-crestW / 2 + 3, -crestH / 4 + 1.5);
   ctx.closePath();
-  ctx.strokeStyle = '#FFE169';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -943,11 +943,11 @@ function drawDynamicVsClashEmblem(ctx, vsX, vsY, isLandscape) {
   ctx.textBaseline = 'middle';
 
   // Ink drop shadow
-  ctx.fillStyle = '#05070B';
+  ctx.fillStyle = '#000000';
   ctx.fillText('VS', 1.5, 2);
 
   // Gradient / Dual text fill
-  ctx.fillStyle = Math.sin(now * 12) > 0.6 ? '#FFE145' : '#FFFFFF';
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillText('VS', 0, 0.5);
 
   ctx.restore();
@@ -1730,7 +1730,7 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
   );
 
   const teamTag = isP1 ? 'RED' : 'BLU';
-  const teamColor = isP1 ? '#EF4444' : '#38BDF8';
+  const teamColor = '#FFFFFF';
 
   const cycleFighter = (direction) => {
     if (!isInteractive) return;
@@ -1779,20 +1779,20 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
   // ── 1. Top Tactical Slot Header (Team Badge + Quick Cycle Buttons) ──
   ctx.save();
   // Drop shadow
-  ctx.fillStyle = 'rgba(5, 7, 10, 0.75)';
+  ctx.fillStyle = '#000000';
   drawChamferedRect(ctx, slotX + 2, y + 2, totalSlotW, hdrH, 3);
   ctx.fill();
 
   // Header base
-  ctx.fillStyle = '#12151E';
-  ctx.strokeStyle = teamColor;
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.4;
   drawChamferedRect(ctx, slotX, y, totalSlotW, hdrH, 3);
   ctx.fill();
   ctx.stroke();
 
   // Left team color stripe
-  ctx.fillStyle = teamColor;
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(slotX + 3, y + 3, 4, hdrH - 6);
 
   // Role title text: [P1 // RED] or [BOSS // RED]
@@ -1811,14 +1811,14 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
 
   const drawCycleBtn = (bx, by, label, onClk) => {
     ctx.save();
-    ctx.fillStyle = '#090B10';
-    ctx.strokeStyle = '#282D3C';
+    ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 1.2;
     drawChamferedRect(ctx, bx, by, arrowSize, arrowSize, 2);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#FFE145';
+    ctx.fillStyle = '#FFFFFF';
     ctx.font = '900 9px "Outfit", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1851,13 +1851,13 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
   // ── 3. Bottom "SELECT FIGHTER ⯈" Action Button ──
   ctx.save();
   // Button drop shadow
-  ctx.fillStyle = 'rgba(5, 7, 10, 0.75)';
+  ctx.fillStyle = '#000000';
   drawChamferedRect(ctx, slotX + 2, btnY + 2, totalSlotW, btnH, 3);
   ctx.fill();
 
   // Button body
-  ctx.fillStyle = '#0D1017';
-  ctx.strokeStyle = teamColor;
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.4;
   drawChamferedRect(ctx, slotX, btnY, totalSlotW, btnH, 3);
   ctx.fill();
@@ -1893,7 +1893,7 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
   ctx.fillStyle = '#FFFFFF';
   ctx.fillText(btnTxt, startX, btnY + btnH / 2 + 0.5);
 
-  ctx.fillStyle = '#FFE145';
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillText('⯈', startX + txtW + 8 + arrowSlide, btnY + btnH / 2 + 0.5);
   ctx.restore();
 
@@ -1907,32 +1907,24 @@ function drawTcgFighterSlotCard(slotProp, title, x, y, w, h, isP1, enabled, isMi
 function _drawTeamHeaderBar(ctx, x, y, w, h, title, teamColor, isP1) {
   ctx.save();
   // Drop shadow
-  ctx.fillStyle = 'rgba(5, 7, 10, 0.75)';
+  ctx.fillStyle = '#000000';
   drawChamferedRect(ctx, x + 2, y + 2, w, h, 3);
   ctx.fill();
 
   // Dark tactical carbon base
-  ctx.fillStyle = '#141720';
-  ctx.strokeStyle = teamColor;
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.4;
   drawChamferedRect(ctx, x, y, w, h, 3);
   ctx.fill();
   ctx.stroke();
 
   // Color accent stripe on leading edge
-  ctx.fillStyle = teamColor;
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(isP1 ? x + 4 : x + w - 10, y + 3, 6, h - 6);
 
-  // Subtle interior gradient glow
-  const glowGrad = ctx.createLinearGradient(x, y, x + w, y);
-  if (isP1) {
-    glowGrad.addColorStop(0.0, 'rgba(239, 68, 68, 0.18)');
-    glowGrad.addColorStop(0.35, 'rgba(239, 68, 68, 0.0)');
-  } else {
-    glowGrad.addColorStop(0.65, 'rgba(56, 189, 248, 0.0)');
-    glowGrad.addColorStop(1.0, 'rgba(56, 189, 248, 0.18)');
-  }
-  ctx.fillStyle = glowGrad;
+  // Subtle interior highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
   drawChamferedRect(ctx, x + 1, y + 1, w - 2, h - 2, 2.5);
   ctx.fill();
 
@@ -1944,7 +1936,7 @@ function _drawTeamHeaderBar(ctx, x, y, w, h, title, teamColor, isP1) {
   ctx.fillText(title, x + w / 2, y + h / 2 + 0.5);
 
   // Squad tag on flank
-  ctx.fillStyle = teamColor;
+  ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 9px "Outfit", sans-serif';
   ctx.textAlign = isP1 ? 'right' : 'left';
   ctx.fillText(isP1 ? 'TEAM RED' : 'TEAM BLUE', isP1 ? x + w - 14 : x + 18, y + h / 2 + 0.5);
@@ -1965,7 +1957,7 @@ function _getDotGridPattern(ctx) {
   pCanvas.height = 18;
   const pCtx = pCanvas.getContext('2d');
   if (pCtx) {
-    pCtx.fillStyle = 'rgba(245, 166, 35, 0.035)';
+    pCtx.fillStyle = 'rgba(255, 255, 255, 0.05)';
     pCtx.fillRect(8, 8, 2, 2);
     _cachedDotGridPattern = ctx.createPattern(pCanvas, 'repeat');
   }
@@ -1979,8 +1971,8 @@ function drawSelectScreen() {
   clearHealthHud();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Clean Dark Matte Backdrop (Matching Reference 5 outer canvas)
-  ctx.fillStyle = '#181A22';
+  // Clean Dark Matte Backdrop
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Subtle Dot Grid (Cached Pattern)
@@ -1991,7 +1983,7 @@ function drawSelectScreen() {
   }
 
   // Outer Screen Tech Corner Brackets
-  drawCornerBrackets(ctx, 6, 6, canvas.width - 12, canvas.height - 12, 16, 'rgba(245, 166, 35, 0.35)', 1.8);
+  drawCornerBrackets(ctx, 6, 6, canvas.width - 12, canvas.height - 12, 16, 'rgba(255, 255, 255, 0.4)', 1.8);
 
   updatePreviewBalls();
 
@@ -2000,8 +1992,8 @@ function drawSelectScreen() {
   const titleY = isLandscape ? 30 : 54;
   const tmY = isLandscape ? 56 : 84;
 
-  // ── Unified Top Back Button (Tactical Dark Carbon + Amber border) ──
-  drawButton('◀ BACK', 52, backBtnY, () => { goToTitle(); }, 76, 26, '#20242E', 4);
+  // ── Unified Top Back Button (Manga Ink Monochrome) ──
+  drawButton('◀ BACK', 52, backBtnY, () => { goToTitle(); }, 76, 26, '#000000', 4);
 
   // ── Header Section ──
   const isTag = mode === 'Tag Match' || mode === GAME_MODES.TAG_MATCH || mode === 'TAG_MATCH';
@@ -2017,15 +2009,15 @@ function drawSelectScreen() {
   const titleBoxY = titleY - titleH / 2;
 
   // Chamfered Dark Carbon Badge Base
-  ctx.fillStyle = '#161922';
-  ctx.strokeStyle = '#F5A623';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#FFFFFF';
   ctx.lineWidth = 1.6;
   drawChamferedRect(ctx, titleX, titleBoxY, titleW, titleH, 4);
   ctx.fill();
   ctx.stroke();
 
   // Bottom hazard stripe accent line
-  drawHazardStripes(ctx, titleX + 8, titleBoxY + titleH - 4, titleW - 16, 3, 4, '#F5A623', '#101217');
+  drawHazardStripes(ctx, titleX + 8, titleBoxY + titleH - 4, titleW - 16, 3, 4, '#FFFFFF', '#000000');
 
   // Title typography
   ctx.fillStyle = '#FFFFFF';
@@ -2048,21 +2040,21 @@ function drawSelectScreen() {
   let curCtrlX = startCtrlX;
   if (isBossBattleMode) {
     const isSolo = Boolean(state.bossBattleNoTeammate);
-    const toggleLabel = isSolo ? '👤 SOLO (1v1)' : '👥 DUO (1v2)';
+    const toggleLabel = isSolo ? 'SOLO (1v1)' : 'DUO (1v2)';
 
     ctx.save();
-    ctx.fillStyle = '#0B0C10';
+    ctx.fillStyle = '#000000';
     drawChamferedRect(ctx, curCtrlX, tmY + 2, teamToggleW, ctrlH, 3);
     ctx.fill();
 
-    ctx.fillStyle = isSolo ? '#20242E' : '#181A22';
-    ctx.strokeStyle = '#F5A623';
+    ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 1.4;
     drawChamferedRect(ctx, curCtrlX, tmY, teamToggleW, ctrlH, 3);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = isSolo ? '#FFD043' : '#F5A623';
+    ctx.fillStyle = '#FFFFFF';
     ctx.font = '900 10px "Outfit", "Rajdhani", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -2471,11 +2463,11 @@ function drawBottomCommandDeck(primaryLabel, onStart, onRandomize) {
   const actionRowY = isLandscape ? 498 : 852;
   const btnH = isLandscape ? 38 : 46;
 
-  drawButton(primaryLabel, startBtnX, actionRowY, onStart, startBtnW, btnH, '#F5A623', 6);
-  drawButton('📸 THUMBNAIL', thumbBtnX, actionRowY, () => {
+  drawButton(primaryLabel, startBtnX, actionRowY, onStart, startBtnW, btnH, '#FFFFFF', 6);
+  drawButton('THUMBNAIL', thumbBtnX, actionRowY, () => {
     startFaceOffScreen(true);
-  }, thumbBtnW, btnH, '#D97706', 6);
-  drawButton('RANDOMIZE', randBtnX, actionRowY, onRandomize, randBtnW, btnH, '#20242E', 6);
+  }, thumbBtnW, btnH, '#000000', 6);
+  drawButton('RANDOMIZE', randBtnX, actionRowY, onRandomize, randBtnW, btnH, '#000000', 6);
 }
 
 function randomize1v1Fighters() {
