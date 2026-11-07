@@ -143,7 +143,7 @@ export function renderGame() {
     // PixiJS will render this transparent canvas over its own background/particle layers
     state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
 
-    if (state.topLevelUiCtx && (!state.isMobileDevice || state._topLevelUiDirty !== false)) {
+    if (!state.isMobileDevice && state.topLevelUiCtx && state._topLevelUiDirty !== false) {
       state.topLevelUiCtx.clearRect(0, 0, state.topLevelUiCanvas.width, state.topLevelUiCanvas.height);
       state._topLevelUiDirty = false;
     }
@@ -661,11 +661,15 @@ export function renderGame() {
 
       try {
         // Swap to top-level UI context/canvas for UI rendering
-        state.ctx = state.topLevelUiCtx;
-        state.canvas = state.topLevelUiCanvas;
+        const useDirectMobileUi = state.isMobileDevice && !state.pixiApp;
+        const targetUiCtx = useDirectMobileUi ? originalCtx : (state.topLevelUiCtx || originalCtx);
+        const targetUiCanvas = useDirectMobileUi ? originalCanvas : (state.topLevelUiCanvas || originalCanvas);
 
-      if (state.topLevelUiCtx) {
-        state.topLevelUiCtx.setTransform(1, 0, 0, 1, 0, 0);
+        state.ctx = targetUiCtx;
+        state.canvas = targetUiCanvas;
+
+      if (targetUiCtx) {
+        targetUiCtx.setTransform(1, 0, 0, 1, 0, 0);
       }
 
       if (state.gameState === 'playing' || state.gameState === 'countdown' || state.gameState === 'roundEnd' || state.gameState === 'matchEnd') {
@@ -784,7 +788,7 @@ export function renderGame() {
       }
 
       // Guard against redundant CPU blit when topLevelUiCanvas is already composited by the DOM at z-index: 25
-      if (!state.pixiApp && state.topLevelUiCanvas && !state.topLevelUiCanvas.parentNode && state._topLevelUiDirty) {
+      if (!state.pixiApp && !state.isMobileDevice && state.topLevelUiCanvas && !state.topLevelUiCanvas.parentNode && state._topLevelUiDirty) {
         state.ctx.drawImage(state.topLevelUiCanvas, 0, 0);
       }
     }

@@ -25,8 +25,8 @@ const _isMobileSound = typeof navigator !== 'undefined' && (
   (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) && window.innerWidth < 1024)
 );
 
-// Sound cache management to prevent unbounded memory growth (capped to 60 on mobile to stop uncompressed PCM memory ballooning)
-const MAX_CACHE_SIZE = _isMobileSound ? 60 : 1000;
+// Sound cache management to prevent unbounded memory growth (capped to 24 on mobile to stop uncompressed PCM memory ballooning)
+const MAX_CACHE_SIZE = _isMobileSound ? 24 : 1000;
 
 // ── CONCURRENT SOUND LIMITING (prevents audio bus overload → crackling & mobile thermal heating) ──
 export const MAX_ACTIVE_MOBILE_VOICES = 6; // Section 5.13: Mobile active voice cap (6 voices for low-latency DSP)
@@ -190,11 +190,14 @@ function _pruneSoundCache() {
   if (_cache.size > MAX_CACHE_SIZE) {
     const entriesToRemove = _cache.size - MAX_CACHE_SIZE;
     let removed = 0;
-    for (const key of _cache.keys()) {
+    for (const [key, val] of _cache.entries()) {
       if (removed >= entriesToRemove) break;
       // Protect voice lines / announcer audio and active BGM from premature eviction
       if (isProtectedVoiceOrAnnouncerSound(key) || (typeof state !== 'undefined' && state.activeMatchBgmSrc === key)) {
         continue;
+      }
+      if (val && typeof val.pause === 'function') {
+        try { val.pause(); val.src = ''; val.load(); } catch (e) {}
       }
       _cache.delete(key);
       removed++;
@@ -202,7 +205,66 @@ function _pruneSoundCache() {
     if (_cache.size > MAX_CACHE_SIZE) {
       const remaining = _cache.size - MAX_CACHE_SIZE;
       const oldestKeys = Array.from(_cache.keys()).slice(0, remaining);
-      oldestKeys.forEach(k => _cache.delete(k));
+      oldestKeys.forEach(k => {
+        const val = _cache.get(k);
+        if (val && typeof val.pause === 'function') {
+          try { val.pause(); val.src = ''; val.load(); } catch (e) {}
+        }
+        _cache.delete(k);
+      });
+    }
+  }
+}
+
+/**
+ * Purges audio cache entries for inactive fighters between matches on mobile devices (Rule 35)
+ * to keep Web Audio uncompressed PCM RAM strictly under 25 MB and eliminate Safari GC thrashing.
+ * @param {Array<object>} activeFighters
+ */
+export function releaseInactiveMatchAudioMemory(activeFighters = []) {
+  if (!_isMobileSound && (typeof state === 'undefined' || !state.isMobileDevice)) {
+    return;
+  }
+  if (_cache.size <= 16) return;
+
+  const activeIdentifiers = new Set([
+    'attack', 'dash', 'hit', 'clash', 'parry', 'announcer', 'fight', 'bell', 'whoosh', 'timertick'
+  ]);
+  for (const f of activeFighters) {
+    if (!f) continue;
+    const charId = (f.characterId || f.id || f.type || '').toLowerCase();
+    if (charId) activeIdentifiers.add(charId);
+    const defId = (f._def?.id || f._def?.type || '').toLowerCase();
+    if (defId) activeIdentifiers.add(defId);
+  }
+
+  for (const [key, val] of _cache.entries()) {
+    // Keep active BGM
+    if (typeof state !== 'undefined' && state.activeMatchBgmSrc === key) continue;
+    // Keep sounds currently playing
+    let isCurrentlyPlaying = false;
+    for (const h of _activeSoundHandles) {
+      if (h && h.src === key) {
+        isCurrentlyPlaying = true;
+        break;
+      }
+    }
+    if (isCurrentlyPlaying) continue;
+
+    const lowerKey = String(key).toLowerCase();
+    let matchesActive = false;
+    for (const id of activeIdentifiers) {
+      if (lowerKey.includes(id)) {
+        matchesActive = true;
+        break;
+      }
+    }
+
+    if (!matchesActive) {
+      if (val && typeof val.pause === 'function') {
+        try { val.pause(); val.src = ''; val.load(); } catch (e) {}
+      }
+      _cache.delete(key);
     }
   }
 }

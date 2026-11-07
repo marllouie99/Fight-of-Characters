@@ -1,5 +1,5 @@
 import { survivorSystem } from '../systems/survivorSystem.js';
-import { stopAllSounds, stopAllLoopingSounds, preloadSound, preloadAudioBuffer, preloadAudioBufferBatch, stopSound, unlockAudio } from '../systems/soundSystem.js';
+import { stopAllSounds, stopAllLoopingSounds, preloadSound, preloadAudioBuffer, preloadAudioBufferBatch, stopSound, unlockAudio, releaseInactiveMatchAudioMemory } from '../systems/soundSystem.js';
 // ─────────────────────────────────────────────
 // GAME FLOW — State transitions and round management
 // Extracted from main.js so that ui.js can import these without
@@ -188,8 +188,9 @@ export function preloadActiveMatchSounds(fighters) {
   // Active match Arena BGM: Disabled per mobile performance standard
   state.activeMatchBgmSrc = null;
 
-  // Release unused overlay bitmaps on mobile and preload active combatants' visual assets
+  // Release unused overlay bitmaps and audio buffers on mobile, and preload active combatants' visual assets
   releaseInactiveMatchGraphicsMemory(activeFighters);
+  releaseInactiveMatchAudioMemory(activeFighters);
   preloadActiveMatchFighterVisuals(activeFighters);
   prewarmMatchAssets(activeFighters, state.ctx);
 

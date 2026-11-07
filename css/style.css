@@ -6278,6 +6278,14 @@ body.performance-mode .cinefilm-grain {
   display: none !important;
 }
 
+/* Direct Single-Canvas Optimization (Rule 35):
+   Hide the secondary #topLevelUiCanvas in the DOM on mobile devices so Mobile Safari
+   allocates only ONE primary IOSurface layer, cutting GPU compositor fill-rate in half */
+html.mobile-device #topLevelUiCanvas,
+body.mobile-device #topLevelUiCanvas {
+  display: none !important;
+}
+
 /* Orientation-Agnostic Mobile Combat Touch Lock (No Gestural Latency / Accidental Scroll) */
 html.mobile-device.in-combat-touch-lock,
 body.mobile-device.in-combat-touch-lock,
