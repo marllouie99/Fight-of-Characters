@@ -18,10 +18,14 @@ class SmartCacheHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Expires', '0')
         super().end_headers()
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
 HOST = "0.0.0.0"
 PORT = 8000
 Handler = SmartCacheHTTPRequestHandler
 
-with socketserver.TCPServer((HOST, PORT), Handler) as httpd:
-    print(f"Serving locally at http://localhost:{PORT} and on network at http://192.168.1.158:{PORT} (Smart Media Caching enabled)...")
+with ThreadedTCPServer((HOST, PORT), Handler) as httpd:
+    print(f"Serving locally at http://localhost:{PORT} and on network at http://192.168.1.158:{PORT} (Multi-Threaded + Smart Media Caching enabled)...", flush=True)
     httpd.serve_forever()

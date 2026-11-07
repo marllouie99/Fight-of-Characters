@@ -60,9 +60,7 @@ function _getThrottledMobileSkillRows(f, themeColor) {
 export function isMobileCanvasHudActive() {
   if (typeof state === 'undefined') return false;
   if (state.viewOrientation === 'horizontal') return false;
-  if (CONFIG.mobileCanvasHudEnabled === true) return true;
-  if (CONFIG.mobileCanvasHudEnabled === false) return false;
-  return Boolean(state.isMobileDevice);
+  return Boolean(CONFIG.mobileCanvasHudEnabled === true);
 }
 
 export function syncMobileDomHudVisibility(active) {

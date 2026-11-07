@@ -689,10 +689,10 @@ export function renderGame() {
         ));
         if (isGrandBattle) {
           state._topLevelUiDirty = true;
-          drawHorizontalPanoramicHud(state.topLevelUiCtx || state.ctx);
+          drawHorizontalPanoramicHud(targetUiCtx);
         } else if (isMobileCanvasHudActive()) {
           state._topLevelUiDirty = true;
-          drawMobileCanvasHud(state.topLevelUiCtx || state.ctx);
+          drawMobileCanvasHud(targetUiCtx);
         } else {
           state._topLevelUiDirty = true;
           drawHUD();
@@ -700,7 +700,7 @@ export function renderGame() {
       }
 
       // ── Super-Beam Absolute Top Layer (Rendered ON TOP of World Entities & In-Game HUD, behind Match-End Overlays) ──
-      const topBeamCtx = state.topLevelUiCtx || state.ctx;
+      const topBeamCtx = targetUiCtx;
       if (topBeamCtx && state.fighters) {
         let hasTopBeamFighter = false;
         for (let i = 0; i < state.fighters.length; i++) {
@@ -730,14 +730,14 @@ export function renderGame() {
         // Draw High-Impact FIGHT! Banner during battle start
         if (state.fightBannerTimer && state.fightBannerTimer > 0) {
           state._topLevelUiDirty = true;
-          drawFightBanner(state.topLevelUiCtx || state.ctx, state.canvas.width, state.canvas.height);
+          drawFightBanner(targetUiCtx, state.canvas.width, state.canvas.height);
         }
 
         // Smooth White Flash Veil Dissolve when entering arena from Face-Off Countdown (disabled in Dark Mode)
         if (!isDarkPlaying && state.battleStartFadeTimer && state.battleStartFadeTimer > 0) {
           state._topLevelUiDirty = true;
           state.battleStartFadeTimer--;
-          const uiCtx = state.topLevelUiCtx || state.ctx;
+          const uiCtx = targetUiCtx;
           const flashAlpha = Math.max(0, state.battleStartFadeTimer / 16);
           uiCtx.save();
           uiCtx.fillStyle = `rgba(255, 255, 255, ${flashAlpha * 0.95})`;
@@ -750,11 +750,11 @@ export function renderGame() {
         }
         if (state.mode === GAME_MODES.SURVIVOR || state.mode === 'Survivor') {
           state._topLevelUiDirty = true;
-          survivorSystem.drawScreenSpaceUI(state.topLevelUiCtx || state.ctx);
+          survivorSystem.drawScreenSpaceUI(targetUiCtx);
         }
       } else if (state.gameState === 'boss_intro' || BossEntranceSequence.isActive) {
         state._topLevelUiDirty = true;
-        BossEntranceSequence.draw(state.topLevelUiCtx || state.ctx);
+        BossEntranceSequence.draw(targetUiCtx);
       } else if (state.gameState === 'countdown') {
         state._topLevelUiDirty = true;
         drawCountdown();
@@ -773,13 +773,13 @@ export function renderGame() {
       if (state.missionPassedOverlay && state.missionPassedOverlay.active) state._topLevelUiDirty = true;
       if (state.wastedOverlay && state.wastedOverlay.active) state._topLevelUiDirty = true;
       if (state.cameraToast && state.cameraToast.timer > 0) state._topLevelUiDirty = true;
-      drawMissionPassedOverlay(state.topLevelUiCtx || state.ctx);
-      drawWastedOverlay(state.topLevelUiCtx || state.ctx);
+      drawMissionPassedOverlay(targetUiCtx);
+      drawWastedOverlay(targetUiCtx);
 
 
 
       // Render Camera Mode Toggle Notification Banner
-      drawCameraToast(state.topLevelUiCtx || state.ctx);
+      drawCameraToast(targetUiCtx);
 
       } finally {
         // Restore original context and canvas

@@ -341,7 +341,7 @@ let _cachedBottomRight = null;
 
 
 export function drawHUD() {
-  if (typeof state !== 'undefined' && state.isMobileDevice && state.viewOrientation !== 'horizontal' && CONFIG.mobileCanvasHudEnabled !== false) {
+  if (typeof state !== 'undefined' && state.isMobileDevice && state.viewOrientation !== 'horizontal' && CONFIG.mobileCanvasHudEnabled === true) {
     return;
   }
   _isHudAlreadyCleared = false;
