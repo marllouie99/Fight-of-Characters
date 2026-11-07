@@ -18,6 +18,7 @@ import { getFighterPreview } from './FighterPreviewCache.js';
 import { getFighterSkillSoundPaths } from '../../soundEffects/skillSounds.js';
 import { getFighterBasicAttackSoundPaths } from '../../soundEffects/basicAttackSounds.js';
 import { getAnnouncerSoundPaths } from '../../soundEffects/announcerSounds.js';
+import { clearAllPools } from '../objectPool.js';
 import { GAME_MODES } from '../../core/modeConfig.js';
 
 let _isCurtainActive = false;
@@ -299,9 +300,14 @@ export function showPreBattleCurtain(onComplete) {
   }
 
   function prewarmCombatRoster(indexes) {
+    // Prime object pools to avoid garbage collection allocations during Round 1
+    try {
+      clearAllPools();
+    } catch (_) {}
+
     setTimeout(() => {
       if (finished) return;
-      setProgress(35, 'PRE-WARMING GPU SHADERS...');
+      setProgress(35, 'BAKING SPRITES & GPU SHADERS...');
 
       const activeFighters = (state.fighters && state.fighters.length > 0)
         ? state.fighters.filter(Boolean)
@@ -332,7 +338,7 @@ export function showPreBattleCurtain(onComplete) {
 
       setTimeout(() => {
         if (finished) return;
-        setProgress(75, 'PRELOADING AUDIO BUFFERS...');
+        setProgress(70, 'DECODING COMBAT AUDIO...');
 
         const soundPaths = [...getAnnouncerSoundPaths()];
         for (const idx of indexes) {
@@ -351,7 +357,7 @@ export function showPreBattleCurtain(onComplete) {
 
         setTimeout(() => {
           if (finished) return;
-          setProgress(100, 'COMBAT READY');
+          setProgress(100, 'COMBAT READY • 60 FPS');
           _curtainTimeoutId = setTimeout(finishCurtain, 180);
         }, 180);
       }, 180);
@@ -365,9 +371,19 @@ function createCurtainCard(def, idx, roleText, accentColor, isActive = false) {
   const card = document.createElement('div');
   card.className = `curtain-fighter-card${isActive ? ' active-slot' : ''}`;
 
+  const charColor = def.color || accentColor || '#ffffff';
+  if (isActive) {
+    card.style.borderColor = charColor;
+    card.style.boxShadow = `4px 4px 0px ${charColor}`;
+  }
+
   const thumb = document.createElement('div');
   thumb.className = 'curtain-fighter-thumb';
+  if (isActive) {
+    thumb.style.borderColor = charColor;
+  }
 
+  let previewDrawn = false;
   try {
     const previewCanvas = getFighterPreview(idx);
     if (previewCanvas && previewCanvas.width > 0) {
@@ -379,9 +395,28 @@ function createCurtainCard(def, idx, roleText, accentColor, isActive = false) {
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(previewCanvas, 0, 0, 32, 32);
         thumb.appendChild(c);
+        previewDrawn = true;
       }
     }
   } catch (_) {}
+
+  // If preview thumbnail is not ready yet, render a stylized circular fallback with theme color & initial
+  if (!previewDrawn) {
+    const fallback = document.createElement('div');
+    fallback.style.width = '100%';
+    fallback.style.height = '100%';
+    fallback.style.borderRadius = '50%';
+    fallback.style.backgroundColor = charColor;
+    fallback.style.display = 'flex';
+    fallback.style.alignItems = 'center';
+    fallback.style.justifyContent = 'center';
+    fallback.style.fontFamily = "'Press Start 2P', monospace";
+    fallback.style.fontSize = '12px';
+    fallback.style.fontWeight = 'bold';
+    fallback.style.color = '#000000';
+    fallback.textContent = (def.name || 'F')[0].toUpperCase();
+    thumb.appendChild(fallback);
+  }
 
   const info = document.createElement('div');
   info.className = 'curtain-fighter-info';
@@ -392,7 +427,7 @@ function createCurtainCard(def, idx, roleText, accentColor, isActive = false) {
 
   const role = document.createElement('span');
   role.className = 'curtain-fighter-role';
-  role.style.color = accentColor;
+  role.style.color = charColor;
   role.textContent = roleText;
 
   info.appendChild(name);

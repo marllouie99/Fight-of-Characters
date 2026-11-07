@@ -69,3969 +69,6 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
       ]
     }
   },
-  "gunslinger": {
-    "sheetId": "char_voice_gunslinger",
-    "characterId": "gunslinger",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_gunslinger_sfx.mp3",
-    "totalDuration": 3.21,
-    "sliceCount": 2,
-    "slices": {
-      "Assets/Sound Effects/Attacks/revolvershot.mp3": [
-        0,
-        0.549
-      ],
-      "revolvershot.mp3": [
-        0,
-        0.549
-      ],
-      "revolvershot": [
-        0,
-        0.549
-      ],
-      "Assets/Sound Effects/SkillEffects/pistolreload.mp3": [
-        0.599,
-        2.56
-      ],
-      "pistolreload.mp3": [
-        0.599,
-        2.56
-      ],
-      "pistolreload": [
-        0.599,
-        2.56
-      ]
-    }
-  },
-  "engineer": {
-    "sheetId": "char_voice_engineer",
-    "characterId": "engineer",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_engineer_sfx.mp3",
-    "totalDuration": 13.82,
-    "sliceCount": 10,
-    "slices": {
-      "Assets/Sound Effects/Attacks/shootgunshot.mp3": [
-        0,
-        1.254
-      ],
-      "shootgunshot.mp3": [
-        0,
-        1.254
-      ],
-      "shootgunshot": [
-        0,
-        1.254
-      ],
-      "Assets/Sound Effects/Skills/repair.mp3": [
-        1.304,
-        0.967
-      ],
-      "repair.mp3": [
-        1.304,
-        0.967
-      ],
-      "repair": [
-        1.304,
-        0.967
-      ],
-      "Assets/Sound Effects/Skills/hammer.mp3": [
-        2.32,
-        0.784
-      ],
-      "hammer.mp3": [
-        2.32,
-        0.784
-      ],
-      "hammer": [
-        2.32,
-        0.784
-      ],
-      "Assets/Sound Effects/Skills/johnwick-shotgun-crack.mp3": [
-        3.154,
-        1.045
-      ],
-      "johnwick-shotgun-crack.mp3": [
-        3.154,
-        1.045
-      ],
-      "johnwick-shotgun-crack": [
-        3.154,
-        1.045
-      ],
-      "Assets/Sound Effects/Skills/engineer-sentrygunshot.mp3": [
-        4.249,
-        0.653
-      ],
-      "engineer-sentrygunshot.mp3": [
-        4.249,
-        0.653
-      ],
-      "engineer-sentrygunshot": [
-        4.249,
-        0.653
-      ],
-      "Assets/Sound Effects/Skills/engineer-sentrydetected.mp3": [
-        4.952,
-        0.366
-      ],
-      "engineer-sentrydetected.mp3": [
-        4.952,
-        0.366
-      ],
-      "engineer-sentrydetected": [
-        4.952,
-        0.366
-      ],
-      "Assets/Sound Effects/Skills/engineer-sentryreloading.mp3": [
-        5.368,
-        2.638
-      ],
-      "engineer-sentryreloading.mp3": [
-        5.368,
-        2.638
-      ],
-      "engineer-sentryreloading": [
-        5.368,
-        2.638
-      ],
-      "Assets/Sound Effects/Skills/engineer-sentryreloaded.mp3": [
-        8.056,
-        0.758
-      ],
-      "engineer-sentryreloaded.mp3": [
-        8.056,
-        0.758
-      ],
-      "engineer-sentryreloaded": [
-        8.056,
-        0.758
-      ],
-      "Assets/Sound Effects/Skills/engineer-sentrydestroyed.mp3": [
-        8.864,
-        2.508
-      ],
-      "engineer-sentrydestroyed.mp3": [
-        8.864,
-        2.508
-      ],
-      "engineer-sentrydestroyed": [
-        8.864,
-        2.508
-      ],
-      "Assets/Sound Effects/Skills/machinebroken.mp3": [
-        11.421,
-        2.351
-      ],
-      "machinebroken.mp3": [
-        11.421,
-        2.351
-      ],
-      "machinebroken": [
-        11.421,
-        2.351
-      ]
-    }
-  },
-  "ruby": {
-    "sheetId": "char_voice_ruby",
-    "characterId": "ruby",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ruby_sfx.mp3",
-    "totalDuration": 2.49,
-    "sliceCount": 2,
-    "slices": {
-      "Assets/Sound Effects/Skills/spinslash.mp3": [
-        0,
-        1.646
-      ],
-      "spinslash.mp3": [
-        0,
-        1.646
-      ],
-      "spinslash": [
-        0,
-        1.646
-      ],
-      "Assets/Sound Effects/Skills/hookchain.mp3": [
-        1.696,
-        0.742
-      ],
-      "hookchain.mp3": [
-        1.696,
-        0.742
-      ],
-      "hookchain": [
-        1.696,
-        0.742
-      ]
-    }
-  },
-  "rubbick": {
-    "sheetId": "char_voice_rubbick",
-    "characterId": "rubbick",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_rubbick_sfx.mp3",
-    "totalDuration": 6.51,
-    "sliceCount": 3,
-    "slices": {
-      "Assets/Sound Effects/Skills/rubbick-telekenesis.mp3": [
-        0,
-        2.273
-      ],
-      "rubbick-telekenesis.mp3": [
-        0,
-        2.273
-      ],
-      "rubbick-telekenesis": [
-        0,
-        2.273
-      ],
-      "Assets/Sound Effects/Skills/rubbick-groundsmash.mp3": [
-        2.323,
-        2.168
-      ],
-      "rubbick-groundsmash.mp3": [
-        2.323,
-        2.168
-      ],
-      "rubbick-groundsmash": [
-        2.323,
-        2.168
-      ],
-      "Assets/Sound Effects/Skills/Rubbick-spellsteal.mp3": [
-        4.541,
-        1.916
-      ],
-      "Rubbick-spellsteal.mp3": [
-        4.541,
-        1.916
-      ],
-      "Rubbick-spellsteal": [
-        4.541,
-        1.916
-      ]
-    }
-  },
-  "zeus": {
-    "sheetId": "char_voice_zeus",
-    "characterId": "zeus",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_zeus_sfx.mp3",
-    "totalDuration": 3.13,
-    "sliceCount": 2,
-    "slices": {
-      "Assets/Sound Effects/Attacks/thunderstike.mp3": [
-        0,
-        1.019
-      ],
-      "thunderstike.mp3": [
-        0,
-        1.019
-      ],
-      "thunderstike": [
-        0,
-        1.019
-      ],
-      "Assets/Sound Effects/Skills/stormstrike.mp3": [
-        1.069,
-        2.011
-      ],
-      "stormstrike.mp3": [
-        1.069,
-        2.011
-      ],
-      "stormstrike": [
-        1.069,
-        2.011
-      ]
-    }
-  },
-  "gojo": {
-    "sheetId": "char_voice_gojo",
-    "characterId": "gojo",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_gojo_sfx.mp3",
-    "totalDuration": 16.28,
-    "sliceCount": 11,
-    "slices": {
-      "Assets/Sound Effects/Skills/gojodomain.mp3": [
-        0,
-        1.149
-      ],
-      "gojodomain.mp3": [
-        0,
-        1.149
-      ],
-      "gojodomain": [
-        0,
-        1.149
-      ],
-      "Assets/Sound Effects/Skills/gojodomainexpansion.mp3": [
-        1.199,
-        2.377
-      ],
-      "gojodomainexpansion.mp3": [
-        1.199,
-        2.377
-      ],
-      "gojodomainexpansion": [
-        1.199,
-        2.377
-      ],
-      "Assets/Sound Effects/Skills/gojodomaindeploy.mp3": [
-        3.627,
-        1.515
-      ],
-      "gojodomaindeploy.mp3": [
-        3.627,
-        1.515
-      ],
-      "gojodomaindeploy": [
-        3.627,
-        1.515
-      ],
-      "Assets/Sound Effects/Skills/mixing.mp3": [
-        5.192,
-        1.123
-      ],
-      "mixing.mp3": [
-        5.192,
-        1.123
-      ],
-      "mixing": [
-        5.192,
-        1.123
-      ],
-      "Assets/Sound Effects/Skills/purpledeploy.mp3": [
-        6.365,
-        1.176
-      ],
-      "purpledeploy.mp3": [
-        6.365,
-        1.176
-      ],
-      "purpledeploy": [
-        6.365,
-        1.176
-      ],
-      "Assets/Sound Effects/Skills/redcharging.mp3": [
-        7.59,
-        1.672
-      ],
-      "redcharging.mp3": [
-        7.59,
-        1.672
-      ],
-      "redcharging": [
-        7.59,
-        1.672
-      ],
-      "Assets/Sound Effects/Skills/redchanneling.mp3": [
-        9.312,
-        1.254
-      ],
-      "redchanneling.mp3": [
-        9.312,
-        1.254
-      ],
-      "redchanneling": [
-        9.312,
-        1.254
-      ],
-      "Assets/Sound Effects/Skills/reddeploy.mp3": [
-        10.616,
-        0.627
-      ],
-      "reddeploy.mp3": [
-        10.616,
-        0.627
-      ],
-      "reddeploy": [
-        10.616,
-        0.627
-      ],
-      "Assets/Sound Effects/Skills/redblast.mp3": [
-        11.293,
-        2.717
-      ],
-      "redblast.mp3": [
-        11.293,
-        2.717
-      ],
-      "redblast": [
-        11.293,
-        2.717
-      ],
-      "Assets/Sound Effects/Skills/repair.mp3": [
-        14.06,
-        0.967
-      ],
-      "repair.mp3": [
-        14.06,
-        0.967
-      ],
-      "repair": [
-        14.06,
-        0.967
-      ],
-      "Assets/Sound Effects/SkillEffects/infinity-collide.mp3": [
-        15.076,
-        1.149
-      ],
-      "infinity-collide.mp3": [
-        15.076,
-        1.149
-      ],
-      "infinity-collide": [
-        15.076,
-        1.149
-      ]
-    }
-  },
-  "sukuna": {
-    "sheetId": "char_voice_sukuna",
-    "characterId": "sukuna",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_sukuna_sfx.mp3",
-    "totalDuration": 21.34,
-    "sliceCount": 11,
-    "slices": {
-      "Assets/Sound Effects/Skills/domainexpansion.mp3": [
-        0,
-        3.082
-      ],
-      "domainexpansion.mp3": [
-        0,
-        3.082
-      ],
-      "domainexpansion": [
-        0,
-        3.082
-      ],
-      "Assets/Sound Effects/Skills/shrine.mp3": [
-        3.132,
-        2.22
-      ],
-      "shrine.mp3": [
-        3.132,
-        2.22
-      ],
-      "shrine": [
-        3.132,
-        2.22
-      ],
-      "Assets/Sound Effects/Skills/fugaignite.mp3": [
-        5.403,
-        3.109
-      ],
-      "fugaignite.mp3": [
-        5.403,
-        3.109
-      ],
-      "fugaignite": [
-        5.403,
-        3.109
-      ],
-      "Assets/Sound Effects/Skills/fuga.mp3": [
-        8.561,
-        1.123
-      ],
-      "fuga.mp3": [
-        8.561,
-        1.123
-      ],
-      "fuga": [
-        8.561,
-        1.123
-      ],
-      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
-        9.735,
-        1.698
-      ],
-      "fugaexplode.mp3": [
-        9.735,
-        1.698
-      ],
-      "fugaexplode": [
-        9.735,
-        1.698
-      ],
-      "Assets/Sound Effects/Skills/hookchain.mp3": [
-        11.483,
-        0.742
-      ],
-      "hookchain.mp3": [
-        11.483,
-        0.742
-      ],
-      "hookchain": [
-        11.483,
-        0.742
-      ],
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        12.274,
-        2.038
-      ],
-      "enhance.mp3": [
-        12.274,
-        2.038
-      ],
-      "enhance": [
-        12.274,
-        2.038
-      ],
-      "Assets/Sound Effects/Skills/Sukuna-rapidslash-voiceline.mp3": [
-        14.362,
-        1.744
-      ],
-      "Sukuna-rapidslash-voiceline.mp3": [
-        14.362,
-        1.744
-      ],
-      "Sukuna-rapidslash-voiceline": [
-        14.362,
-        1.744
-      ],
-      "Assets/Sound Effects/Skills/Sukuna-champion-voiceline.mp3": [
-        16.156,
-        1.493
-      ],
-      "Sukuna-champion-voiceline.mp3": [
-        16.156,
-        1.493
-      ],
-      "Sukuna-champion-voiceline": [
-        16.156,
-        1.493
-      ],
-      "Assets/Sound Effects/SukunaSFX/sukuna_mahoraga_summon.mp3": [
-        17.699,
-        1.269
-      ],
-      "sukuna_mahoraga_summon.mp3": [
-        17.699,
-        1.269
-      ],
-      "sukuna_mahoraga_summon": [
-        17.699,
-        1.269
-      ],
-      "Assets/Sound Effects/Skills/mahoraga-wheelclick.mp3": [
-        19.018,
-        2.273
-      ],
-      "mahoraga-wheelclick.mp3": [
-        19.018,
-        2.273
-      ],
-      "mahoraga-wheelclick": [
-        19.018,
-        2.273
-      ]
-    }
-  },
-  "yuta": {
-    "sheetId": "char_voice_yuta",
-    "characterId": "yuta",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_yuta_sfx.mp3",
-    "totalDuration": 28.44,
-    "sliceCount": 14,
-    "slices": {
-      "Assets/Sound Effects/Skills/comerika.mp3": [
-        0,
-        2.56
-      ],
-      "comerika.mp3": [
-        0,
-        2.56
-      ],
-      "comerika": [
-        0,
-        2.56
-      ],
-      "Assets/Sound Effects/Skills/yutadomainexpansion.mp3": [
-        2.61,
-        2.325
-      ],
-      "yutadomainexpansion.mp3": [
-        2.61,
-        2.325
-      ],
-      "yutadomainexpansion": [
-        2.61,
-        2.325
-      ],
-      "Assets/Sound Effects/Skills/gojodomaindeploy.mp3": [
-        4.985,
-        1.515
-      ],
-      "gojodomaindeploy.mp3": [
-        4.985,
-        1.515
-      ],
-      "gojodomaindeploy": [
-        4.985,
-        1.515
-      ],
-      "Assets/Sound Effects/Skills/rikaAppearance1.mp3": [
-        6.55,
-        2.691
-      ],
-      "rikaAppearance1.mp3": [
-        6.55,
-        2.691
-      ],
-      "rikaAppearance1": [
-        6.55,
-        2.691
-      ],
-      "Assets/Sound Effects/Attacks/rikanoise1.mp3": [
-        9.291,
-        1.776
-      ],
-      "rikanoise1.mp3": [
-        9.291,
-        1.776
-      ],
-      "rikanoise1": [
-        9.291,
-        1.776
-      ],
-      "Assets/Sound Effects/Attacks/rikanoise2.mp3": [
-        11.117,
-        0.81
-      ],
-      "rikanoise2.mp3": [
-        11.117,
-        0.81
-      ],
-      "rikanoise2": [
-        11.117,
-        0.81
-      ],
-      "Assets/Sound Effects/Attacks/rikanoise3.mp3": [
-        11.977,
-        2.299
-      ],
-      "rikanoise3.mp3": [
-        11.977,
-        2.299
-      ],
-      "rikanoise3": [
-        11.977,
-        2.299
-      ],
-      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
-        14.326,
-        0.653
-      ],
-      "shieldblock2.mp3": [
-        14.326,
-        0.653
-      ],
-      "shieldblock2": [
-        14.326,
-        0.653
-      ],
-      "Assets/Sound Effects/Skills/thin-ice-breaker.mp3": [
-        15.029,
-        3.605
-      ],
-      "thin-ice-breaker.mp3": [
-        15.029,
-        3.605
-      ],
-      "thin-ice-breaker": [
-        15.029,
-        3.605
-      ],
-      "Assets/Sound Effects/Skills/yuta-thin-ice-breaker-noise.mp3": [
-        18.683,
-        0.549
-      ],
-      "yuta-thin-ice-breaker-noise.mp3": [
-        18.683,
-        0.549
-      ],
-      "yuta-thin-ice-breaker-noise": [
-        18.683,
-        0.549
-      ],
-      "Assets/Sound Effects/Skills/gojodomainexpansion.mp3": [
-        19.282,
-        2.377
-      ],
-      "gojodomainexpansion.mp3": [
-        19.282,
-        2.377
-      ],
-      "gojodomainexpansion": [
-        19.282,
-        2.377
-      ],
-      "Assets/Sound Effects/Skills/yuta-flurry-noise.mp3": [
-        21.709,
-        1.358
-      ],
-      "yuta-flurry-noise.mp3": [
-        21.709,
-        1.358
-      ],
-      "yuta-flurry-noise": [
-        21.709,
-        1.358
-      ],
-      "Assets/Sound Effects/Skills/rikaAppearance.mp3": [
-        23.118,
-        2.194
-      ],
-      "rikaAppearance.mp3": [
-        23.118,
-        2.194
-      ],
-      "rikaAppearance": [
-        23.118,
-        2.194
-      ],
-      "Assets/Sound Effects/Skills/yuta-lovebeam-fires.mp3": [
-        25.362,
-        3.03
-      ],
-      "yuta-lovebeam-fires.mp3": [
-        25.362,
-        3.03
-      ],
-      "yuta-lovebeam-fires": [
-        25.362,
-        3.03
-      ]
-    }
-  },
-  "toji": {
-    "sheetId": "char_voice_toji",
-    "characterId": "toji",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_toji_sfx.mp3",
-    "totalDuration": 13.82,
-    "sliceCount": 9,
-    "slices": {
-      "Assets/Sound Effects/Skills/johnwick-pistol-shot.mp3": [
-        0,
-        1.855
-      ],
-      "johnwick-pistol-shot.mp3": [
-        0,
-        1.855
-      ],
-      "johnwick-pistol-shot": [
-        0,
-        1.855
-      ],
-      "Assets/Sound Effects/Skills/toji-firstseq-teleport.mp3": [
-        1.905,
-        0.836
-      ],
-      "toji-firstseq-teleport.mp3": [
-        1.905,
-        0.836
-      ],
-      "toji-firstseq-teleport": [
-        1.905,
-        0.836
-      ],
-      "Assets/Sound Effects/Skills/toji-backthrust.mp3": [
-        2.791,
-        0.914
-      ],
-      "toji-backthrust.mp3": [
-        2.791,
-        0.914
-      ],
-      "toji-backthrust": [
-        2.791,
-        0.914
-      ],
-      "Assets/Sound Effects/Skills/toji-2stseq-2ndweaponAttack.mp3": [
-        3.755,
-        0.914
-      ],
-      "toji-2stseq-2ndweaponAttack.mp3": [
-        3.755,
-        0.914
-      ],
-      "toji-2stseq-2ndweaponAttack": [
-        3.755,
-        0.914
-      ],
-      "Assets/Sound Effects/Skills/toji-3rdseq-phantomflurry.mp3": [
-        4.719,
-        3.5
-      ],
-      "toji-3rdseq-phantomflurry.mp3": [
-        4.719,
-        3.5
-      ],
-      "toji-3rdseq-phantomflurry": [
-        4.719,
-        3.5
-      ],
-      "Assets/Sound Effects/Skills/toji-ultimatechanneling.mp3": [
-        8.27,
-        1.646
-      ],
-      "toji-ultimatechanneling.mp3": [
-        8.27,
-        1.646
-      ],
-      "toji-ultimatechanneling": [
-        8.27,
-        1.646
-      ],
-      "Assets/Sound Effects/Skills/woosh.mp3": [
-        9.965,
-        0.549
-      ],
-      "woosh.mp3": [
-        9.965,
-        0.549
-      ],
-      "woosh": [
-        9.965,
-        0.549
-      ],
-      "Assets/Sound Effects/Skills/tojo-finalblow-charging.mp3": [
-        10.564,
-        2.299
-      ],
-      "tojo-finalblow-charging.mp3": [
-        10.564,
-        2.299
-      ],
-      "tojo-finalblow-charging": [
-        10.564,
-        2.299
-      ],
-      "Assets/Sound Effects/Skills/toji-ultimate-finalblow.mp3": [
-        12.913,
-        0.862
-      ],
-      "toji-ultimate-finalblow.mp3": [
-        12.913,
-        0.862
-      ],
-      "toji-ultimate-finalblow": [
-        12.913,
-        0.862
-      ]
-    }
-  },
-  "todo": {
-    "sheetId": "char_voice_todo",
-    "characterId": "todo",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_todo_sfx.mp3",
-    "totalDuration": 16.11,
-    "sliceCount": 9,
-    "slices": {
-      "Assets/Sound Effects/Skills/blackflash1.mp3": [
-        0,
-        1.593
-      ],
-      "blackflash1.mp3": [
-        0,
-        1.593
-      ],
-      "blackflash1": [
-        0,
-        1.593
-      ],
-      "Assets/Sound Effects/Skills/todo-punch-noise.mp3": [
-        1.643,
-        0.877
-      ],
-      "todo-punch-noise.mp3": [
-        1.643,
-        0.877
-      ],
-      "todo-punch-noise": [
-        1.643,
-        0.877
-      ],
-      "Assets/Sound Effects/Skills/todo-punch-noise2.mp3": [
-        2.571,
-        0.781
-      ],
-      "todo-punch-noise2.mp3": [
-        2.571,
-        0.781
-      ],
-      "todo-punch-noise2": [
-        2.571,
-        0.781
-      ],
-      "Assets/Sound Effects/Skills/todo-combo-voiceline.mp3": [
-        3.402,
-        1.952
-      ],
-      "todo-combo-voiceline.mp3": [
-        3.402,
-        1.952
-      ],
-      "todo-combo-voiceline": [
-        3.402,
-        1.952
-      ],
-      "Assets/Sound Effects/Skills/todo-combo-voiceline2.mp3": [
-        5.404,
-        1.64
-      ],
-      "todo-combo-voiceline2.mp3": [
-        5.404,
-        1.64
-      ],
-      "todo-combo-voiceline2": [
-        5.404,
-        1.64
-      ],
-      "Assets/Sound Effects/Skills/todo-clap.mp3": [
-        7.094,
-        1.2
-      ],
-      "todo-clap.mp3": [
-        7.094,
-        1.2
-      ],
-      "todo-clap": [
-        7.094,
-        1.2
-      ],
-      "Assets/Sound Effects/Skills/todo-brother-voiceline.mp3": [
-        8.344,
-        0.967
-      ],
-      "todo-brother-voiceline.mp3": [
-        8.344,
-        0.967
-      ],
-      "todo-brother-voiceline": [
-        8.344,
-        0.967
-      ],
-      "Assets/Sound Effects/SkillEffects/todo-voiceline-mybestfriend.mp3": [
-        9.361,
-        2.784
-      ],
-      "todo-voiceline-mybestfriend.mp3": [
-        9.361,
-        2.784
-      ],
-      "todo-voiceline-mybestfriend": [
-        9.361,
-        2.784
-      ],
-      "Assets/Sound Effects/Skills/todo-tadakaimagination-voiceline.mp3": [
-        12.195,
-        3.866
-      ],
-      "todo-tadakaimagination-voiceline.mp3": [
-        12.195,
-        3.866
-      ],
-      "todo-tadakaimagination-voiceline": [
-        12.195,
-        3.866
-      ]
-    }
-  },
-  "yuji": {
-    "sheetId": "char_voice_yuji",
-    "characterId": "yuji",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_yuji_sfx.mp3",
-    "totalDuration": 8.92,
-    "sliceCount": 7,
-    "slices": {
-      "Assets/Sound Effects/Skills/blackflash1.mp3": [
-        0,
-        1.593
-      ],
-      "blackflash1.mp3": [
-        0,
-        1.593
-      ],
-      "blackflash1": [
-        0,
-        1.593
-      ],
-      "Assets/Sound Effects/Attacks/yuji-noise1.mp3": [
-        1.643,
-        0.183
-      ],
-      "yuji-noise1.mp3": [
-        1.643,
-        0.183
-      ],
-      "yuji-noise1": [
-        1.643,
-        0.183
-      ],
-      "Assets/Sound Effects/Attacks/yuji-noise2.mp3": [
-        1.876,
-        0.157
-      ],
-      "yuji-noise2.mp3": [
-        1.876,
-        0.157
-      ],
-      "yuji-noise2": [
-        1.876,
-        0.157
-      ],
-      "Assets/Sound Effects/Attacks/yuji-noise3.mp3": [
-        2.083,
-        0.313
-      ],
-      "yuji-noise3.mp3": [
-        2.083,
-        0.313
-      ],
-      "yuji-noise3": [
-        2.083,
-        0.313
-      ],
-      "Assets/Sound Effects/Skills/yuji-blackflash.mp3": [
-        2.447,
-        0.653
-      ],
-      "yuji-blackflash.mp3": [
-        2.447,
-        0.653
-      ],
-      "yuji-blackflash": [
-        2.447,
-        0.653
-      ],
-      "Assets/Sound Effects/Skills/yuji-transformation.mp3": [
-        3.15,
-        1.829
-      ],
-      "yuji-transformation.mp3": [
-        3.15,
-        1.829
-      ],
-      "yuji-transformation": [
-        3.15,
-        1.829
-      ],
-      "Assets/Sound Effects/SkillEffects/yuji-voiceline-bestfriend.mp3": [
-        5.028,
-        3.84
-      ],
-      "yuji-voiceline-bestfriend.mp3": [
-        5.028,
-        3.84
-      ],
-      "yuji-voiceline-bestfriend": [
-        5.028,
-        3.84
-      ]
-    }
-  },
-  "saitama": {
-    "sheetId": "char_voice_saitama",
-    "characterId": "saitama",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_saitama_sfx.mp3",
-    "totalDuration": 11.19,
-    "sliceCount": 10,
-    "slices": {
-      "Assets/Sound Effects/Attacks/saitama-attack-noise1.mp3": [
-        0,
-        0.894
-      ],
-      "saitama-attack-noise1.mp3": [
-        0,
-        0.894
-      ],
-      "saitama-attack-noise1": [
-        0,
-        0.894
-      ],
-      "Assets/Sound Effects/Attacks/saitama-attack-noise2.mp3": [
-        0.944,
-        0.735
-      ],
-      "saitama-attack-noise2.mp3": [
-        0.944,
-        0.735
-      ],
-      "saitama-attack-noise2": [
-        0.944,
-        0.735
-      ],
-      "Assets/Sound Effects/Attacks/saitama-attack-noise3.mp3": [
-        1.729,
-        1.573
-      ],
-      "saitama-attack-noise3.mp3": [
-        1.729,
-        1.573
-      ],
-      "saitama-attack-noise3": [
-        1.729,
-        1.573
-      ],
-      "Assets/Sound Effects/Skills/saitama-seriouspunch-impact.mp3": [
-        3.352,
-        1.332
-      ],
-      "saitama-seriouspunch-impact.mp3": [
-        3.352,
-        1.332
-      ],
-      "saitama-seriouspunch-impact": [
-        3.352,
-        1.332
-      ],
-      "Assets/Sound Effects/Skills/saitama-dodge-noise1.mp3": [
-        4.734,
-        0.531
-      ],
-      "saitama-dodge-noise1.mp3": [
-        4.734,
-        0.531
-      ],
-      "saitama-dodge-noise1": [
-        4.734,
-        0.531
-      ],
-      "Assets/Sound Effects/Skills/saitama-dodge-noise2.mp3": [
-        5.315,
-        0.4
-      ],
-      "saitama-dodge-noise2.mp3": [
-        5.315,
-        0.4
-      ],
-      "saitama-dodge-noise2": [
-        5.315,
-        0.4
-      ],
-      "Assets/Sound Effects/Skills/saitama-dodge-noise3.mp3": [
-        5.765,
-        0.542
-      ],
-      "saitama-dodge-noise3.mp3": [
-        5.765,
-        0.542
-      ],
-      "saitama-dodge-noise3": [
-        5.765,
-        0.542
-      ],
-      "Assets/Sound Effects/Skills/saitama-seriouspunch-voiceline.mp3": [
-        6.357,
-        0.888
-      ],
-      "saitama-seriouspunch-voiceline.mp3": [
-        6.357,
-        0.888
-      ],
-      "saitama-seriouspunch-voiceline": [
-        6.357,
-        0.888
-      ],
-      "Assets/Sound Effects/Skills/saitama-seriouspunch-charging.mp3": [
-        7.296,
-        2.769
-      ],
-      "saitama-seriouspunch-charging.mp3": [
-        7.296,
-        2.769
-      ],
-      "saitama-seriouspunch-charging": [
-        7.296,
-        2.769
-      ],
-      "Assets/Sound Effects/SkillEffects/saitama-champion-voiceline.mp3": [
-        10.115,
-        1.026
-      ],
-      "saitama-champion-voiceline.mp3": [
-        10.115,
-        1.026
-      ],
-      "saitama-champion-voiceline": [
-        10.115,
-        1.026
-      ]
-    }
-  },
-  "genos": {
-    "sheetId": "char_voice_genos",
-    "characterId": "genos",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_genos_sfx.mp3",
-    "totalDuration": 24.96,
-    "sliceCount": 11,
-    "slices": {
-      "Assets/Sound Effects/Attacks/genos-range-attack.mp3": [
-        0,
-        0.758
-      ],
-      "genos-range-attack.mp3": [
-        0,
-        0.758
-      ],
-      "genos-range-attack": [
-        0,
-        0.758
-      ],
-      "Assets/Sound Effects/Skills/genos-incenerate-blast.mp3": [
-        0.808,
-        2.586
-      ],
-      "genos-incenerate-blast.mp3": [
-        0.808,
-        2.586
-      ],
-      "genos-incenerate-blast": [
-        0.808,
-        2.586
-      ],
-      "Assets/Sound Effects/Skills/genos-incenerate-charging.mp3": [
-        3.444,
-        2.482
-      ],
-      "genos-incenerate-charging.mp3": [
-        3.444,
-        2.482
-      ],
-      "genos-incenerate-charging": [
-        3.444,
-        2.482
-      ],
-      "Assets/Sound Effects/Skills/genos-incenerate-voice.mp3": [
-        5.975,
-        1.149
-      ],
-      "genos-incenerate-voice.mp3": [
-        5.975,
-        1.149
-      ],
-      "genos-incenerate-voice": [
-        5.975,
-        1.149
-      ],
-      "Assets/Sound Effects/Skills/genos-ultimatecharging.mp3": [
-        7.175,
-        2.064
-      ],
-      "genos-ultimatecharging.mp3": [
-        7.175,
-        2.064
-      ],
-      "genos-ultimatecharging": [
-        7.175,
-        2.064
-      ],
-      "Assets/Sound Effects/Skills/genos-ultimateblast.mp3": [
-        9.288,
-        2.926
-      ],
-      "genos-ultimateblast.mp3": [
-        9.288,
-        2.926
-      ],
-      "genos-ultimateblast": [
-        9.288,
-        2.926
-      ],
-      "Assets/Sound Effects/Skills/genos-machinegunblow-voice.mp3": [
-        12.264,
-        1.306
-      ],
-      "genos-machinegunblow-voice.mp3": [
-        12.264,
-        1.306
-      ],
-      "genos-machinegunblow-voice": [
-        12.264,
-        1.306
-      ],
-      "Assets/Sound Effects/Skills/genos-recovery.mp3": [
-        13.62,
-        2.142
-      ],
-      "genos-recovery.mp3": [
-        13.62,
-        2.142
-      ],
-      "genos-recovery": [
-        13.62,
-        2.142
-      ],
-      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
-        15.812,
-        0.872
-      ],
-      "genos-dash-noise.mp3": [
-        15.812,
-        0.872
-      ],
-      "genos-dash-noise": [
-        15.812,
-        0.872
-      ],
-      "Assets/Sound Effects/Skills/genos-selfdestruct-charging.mp3": [
-        16.734,
-        3.788
-      ],
-      "genos-selfdestruct-charging.mp3": [
-        16.734,
-        3.788
-      ],
-      "genos-selfdestruct-charging": [
-        16.734,
-        3.788
-      ],
-      "Assets/Sound Effects/Skills/genos-selfdestruct-explosion.mp3": [
-        20.572,
-        4.336
-      ],
-      "genos-selfdestruct-explosion.mp3": [
-        20.572,
-        4.336
-      ],
-      "genos-selfdestruct-explosion": [
-        20.572,
-        4.336
-      ]
-    }
-  },
-  "ichigo": {
-    "sheetId": "char_voice_ichigo",
-    "characterId": "ichigo",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ichigo_sfx.mp3",
-    "totalDuration": 11.08,
-    "sliceCount": 9,
-    "slices": {
-      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
-        0,
-        0.653
-      ],
-      "shieldblock2.mp3": [
-        0,
-        0.653
-      ],
-      "shieldblock2": [
-        0,
-        0.653
-      ],
-      "Assets/Sound Effects/Skills/ichigo-getsugatensho-bankai.mp3": [
-        0.703,
-        1.855
-      ],
-      "ichigo-getsugatensho-bankai.mp3": [
-        0.703,
-        1.855
-      ],
-      "ichigo-getsugatensho-bankai": [
-        0.703,
-        1.855
-      ],
-      "Assets/Sound Effects/Skills/Ichigo-getsugatensho-hollow-voiceline.mp3": [
-        2.608,
-        2.011
-      ],
-      "Ichigo-getsugatensho-hollow-voiceline.mp3": [
-        2.608,
-        2.011
-      ],
-      "Ichigo-getsugatensho-hollow-voiceline": [
-        2.608,
-        2.011
-      ],
-      "Assets/Sound Effects/Skills/redcharging.mp3": [
-        4.669,
-        1.672
-      ],
-      "redcharging.mp3": [
-        4.669,
-        1.672
-      ],
-      "redcharging": [
-        4.669,
-        1.672
-      ],
-      "Assets/Sound Effects/Skills/Ichigo-getsugatensho-flashstep-voiceline.mp3": [
-        6.391,
-        1.071
-      ],
-      "Ichigo-getsugatensho-flashstep-voiceline.mp3": [
-        6.391,
-        1.071
-      ],
-      "Ichigo-getsugatensho-flashstep-voiceline": [
-        6.391,
-        1.071
-      ],
-      "Assets/Sound Effects/Skills/ichigo-getsugatensho-flashstep-voiceline2.mp3": [
-        7.512,
-        0.496
-      ],
-      "ichigo-getsugatensho-flashstep-voiceline2.mp3": [
-        7.512,
-        0.496
-      ],
-      "ichigo-getsugatensho-flashstep-voiceline2": [
-        7.512,
-        0.496
-      ],
-      "Assets/Sound Effects/Skills/Ichigo-getsugatensho-hollow-voiceline2.mp3": [
-        8.058,
-        0.758
-      ],
-      "Ichigo-getsugatensho-hollow-voiceline2.mp3": [
-        8.058,
-        0.758
-      ],
-      "Ichigo-getsugatensho-hollow-voiceline2": [
-        8.058,
-        0.758
-      ],
-      "Assets/Sound Effects/Attacks/ichigo-attack-hollow-noise.mp3": [
-        8.866,
-        1.019
-      ],
-      "ichigo-attack-hollow-noise.mp3": [
-        8.866,
-        1.019
-      ],
-      "ichigo-attack-hollow-noise": [
-        8.866,
-        1.019
-      ],
-      "Assets/Sound Effects/Skills/Ichigo-bankai-charging-voiceline.mp3": [
-        9.935,
-        1.097
-      ],
-      "Ichigo-bankai-charging-voiceline.mp3": [
-        9.935,
-        1.097
-      ],
-      "Ichigo-bankai-charging-voiceline": [
-        9.935,
-        1.097
-      ]
-    }
-  },
-  "mahito": {
-    "sheetId": "char_voice_mahito",
-    "characterId": "mahito",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_mahito_sfx.mp3",
-    "totalDuration": 19.58,
-    "sliceCount": 16,
-    "slices": {
-      "Assets/Sound Effects/Skills/mahito-stretch-arm.mp3": [
-        0,
-        0.627
-      ],
-      "mahito-stretch-arm.mp3": [
-        0,
-        0.627
-      ],
-      "mahito-stretch-arm": [
-        0,
-        0.627
-      ],
-      "Assets/Sound Effects/Skills/woosh.mp3": [
-        0.677,
-        0.549
-      ],
-      "woosh.mp3": [
-        0.677,
-        0.549
-      ],
-      "woosh": [
-        0.677,
-        0.549
-      ],
-      "Assets/Sound Effects/Skills/mahito-farewell-voiceline.mp3": [
-        1.276,
-        0.922
-      ],
-      "mahito-farewell-voiceline.mp3": [
-        1.276,
-        0.922
-      ],
-      "mahito-farewell-voiceline": [
-        1.276,
-        0.922
-      ],
-      "Assets/Sound Effects/Skills/mahito-body-explode.mp3": [
-        2.247,
-        1.176
-      ],
-      "mahito-body-explode.mp3": [
-        2.247,
-        1.176
-      ],
-      "mahito-body-explode": [
-        2.247,
-        1.176
-      ],
-      "Assets/Sound Effects/Skills/mahito-domainchanneling-voiceline.mp3": [
-        3.473,
-        1.437
-      ],
-      "mahito-domainchanneling-voiceline.mp3": [
-        3.473,
-        1.437
-      ],
-      "mahito-domainchanneling-voiceline": [
-        3.473,
-        1.437
-      ],
-      "Assets/Sound Effects/Skills/mahito-domaindeploy-voiceline.mp3": [
-        4.959,
-        2.429
-      ],
-      "mahito-domaindeploy-voiceline.mp3": [
-        4.959,
-        2.429
-      ],
-      "mahito-domaindeploy-voiceline": [
-        4.959,
-        2.429
-      ],
-      "Assets/Sound Effects/Skills/gojodomainexpansion.mp3": [
-        7.439,
-        2.377
-      ],
-      "gojodomainexpansion.mp3": [
-        7.439,
-        2.377
-      ],
-      "gojodomainexpansion": [
-        7.439,
-        2.377
-      ],
-      "Assets/Sound Effects/Skills/mahito-split-clone2.mp3": [
-        9.866,
-        0.47
-      ],
-      "mahito-split-clone2.mp3": [
-        9.866,
-        0.47
-      ],
-      "mahito-split-clone2": [
-        9.866,
-        0.47
-      ],
-      "Assets/Sound Effects/Skills/mahito-split-clone1.mp3": [
-        10.386,
-        0.94
-      ],
-      "mahito-split-clone1.mp3": [
-        10.386,
-        0.94
-      ],
-      "mahito-split-clone1": [
-        10.386,
-        0.94
-      ],
-      "Assets/Sound Effects/Skills/mahito-transformback-voiceline.mp3": [
-        11.376,
-        1.019
-      ],
-      "mahito-transformback-voiceline.mp3": [
-        11.376,
-        1.019
-      ],
-      "mahito-transformback-voiceline": [
-        11.376,
-        1.019
-      ],
-      "Assets/Sound Effects/Skills/mahito-dash-voiceline.mp3": [
-        12.445,
-        0.603
-      ],
-      "mahito-dash-voiceline.mp3": [
-        12.445,
-        0.603
-      ],
-      "mahito-dash-voiceline": [
-        12.445,
-        0.603
-      ],
-      "Assets/Sound Effects/Skills/mahito-skill2-voiceline.mp3": [
-        13.098,
-        1.256
-      ],
-      "mahito-skill2-voiceline.mp3": [
-        13.098,
-        1.256
-      ],
-      "mahito-skill2-voiceline": [
-        13.098,
-        1.256
-      ],
-      "Assets/Sound Effects/Skills/mahito-minionsthrow-voiceline.mp3": [
-        14.404,
-        1.504
-      ],
-      "mahito-minionsthrow-voiceline.mp3": [
-        14.404,
-        1.504
-      ],
-      "mahito-minionsthrow-voiceline": [
-        14.404,
-        1.504
-      ],
-      "Assets/Sound Effects/Skills/mahito-minion-summon.mp3": [
-        15.958,
-        0.967
-      ],
-      "mahito-minion-summon.mp3": [
-        15.958,
-        0.967
-      ],
-      "mahito-minion-summon": [
-        15.958,
-        0.967
-      ],
-      "Assets/Sound Effects/Skills/mahito-minion-summon1.mp3": [
-        16.975,
-        1.123
-      ],
-      "mahito-minion-summon1.mp3": [
-        16.975,
-        1.123
-      ],
-      "mahito-minion-summon1": [
-        16.975,
-        1.123
-      ],
-      "Assets/Sound Effects/Skills/mahito-minion-summo2.mp3": [
-        18.148,
-        1.384
-      ],
-      "mahito-minion-summo2.mp3": [
-        18.148,
-        1.384
-      ],
-      "mahito-minion-summo2": [
-        18.148,
-        1.384
-      ]
-    }
-  },
-  "nanami": {
-    "sheetId": "char_voice_nanami",
-    "characterId": "nanami",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_nanami_sfx.mp3",
-    "totalDuration": 7.27,
-    "sliceCount": 9,
-    "slices": {
-      "Assets/Sound Effects/Attacks/nanami-attack-noise1.mp3": [
-        0,
-        0.217
-      ],
-      "nanami-attack-noise1.mp3": [
-        0,
-        0.217
-      ],
-      "nanami-attack-noise1": [
-        0,
-        0.217
-      ],
-      "Assets/Sound Effects/Attacks/nanami-attack-noise2.mp3": [
-        0.267,
-        0.258
-      ],
-      "nanami-attack-noise2.mp3": [
-        0.267,
-        0.258
-      ],
-      "nanami-attack-noise2": [
-        0.267,
-        0.258
-      ],
-      "Assets/Sound Effects/Attacks/nanami-attack-noise3.mp3": [
-        0.575,
-        0.183
-      ],
-      "nanami-attack-noise3.mp3": [
-        0.575,
-        0.183
-      ],
-      "nanami-attack-noise3": [
-        0.575,
-        0.183
-      ],
-      "Assets/Sound Effects/Skills/nanami-bloodsplash.mp3": [
-        0.808,
-        1.019
-      ],
-      "nanami-bloodsplash.mp3": [
-        0.808,
-        1.019
-      ],
-      "nanami-bloodsplash": [
-        0.808,
-        1.019
-      ],
-      "Assets/Sound Effects/Skills/nanami-collapse-voiceline.mp3": [
-        1.877,
-        0.348
-      ],
-      "nanami-collapse-voiceline.mp3": [
-        1.877,
-        0.348
-      ],
-      "nanami-collapse-voiceline": [
-        1.877,
-        0.348
-      ],
-      "Assets/Sound Effects/Skills/nanami-collapse-voiceline2.mp3": [
-        2.274,
-        0.594
-      ],
-      "nanami-collapse-voiceline2.mp3": [
-        2.274,
-        0.594
-      ],
-      "nanami-collapse-voiceline2": [
-        2.274,
-        0.594
-      ],
-      "Assets/Sound Effects/Skills/blackflash1.mp3": [
-        2.918,
-        1.593
-      ],
-      "blackflash1.mp3": [
-        2.918,
-        1.593
-      ],
-      "blackflash1": [
-        2.918,
-        1.593
-      ],
-      "Assets/Sound Effects/Skills/nanami-blackflash-voiceline.mp3": [
-        4.562,
-        1.084
-      ],
-      "nanami-blackflash-voiceline.mp3": [
-        4.562,
-        1.084
-      ],
-      "nanami-blackflash-voiceline": [
-        4.562,
-        1.084
-      ],
-      "Assets/Sound Effects/Skills/nanami-overtime-voiceline.mp3": [
-        5.696,
-        1.527
-      ],
-      "nanami-overtime-voiceline.mp3": [
-        5.696,
-        1.527
-      ],
-      "nanami-overtime-voiceline": [
-        5.696,
-        1.527
-      ]
-    }
-  },
-  "john_wick": {
-    "sheetId": "char_voice_john_wick",
-    "characterId": "john_wick",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_john_wick_sfx.mp3",
-    "totalDuration": 17.48,
-    "sliceCount": 14,
-    "slices": {
-      "Assets/Sound Effects/Skills/johnwick-pistol-shot.mp3": [
-        0,
-        1.855
-      ],
-      "johnwick-pistol-shot.mp3": [
-        0,
-        1.855
-      ],
-      "johnwick-pistol-shot": [
-        0,
-        1.855
-      ],
-      "Assets/Sound Effects/Skills/johnwick-pencilstab.mp3": [
-        1.905,
-        0.697
-      ],
-      "johnwick-pencilstab.mp3": [
-        1.905,
-        0.697
-      ],
-      "johnwick-pencilstab": [
-        1.905,
-        0.697
-      ],
-      "Assets/Sound Effects/Skills/johnwick-bulleshell-drop.mp3": [
-        2.652,
-        0.47
-      ],
-      "johnwick-bulleshell-drop.mp3": [
-        2.652,
-        0.47
-      ],
-      "johnwick-bulleshell-drop": [
-        2.652,
-        0.47
-      ],
-      "Assets/Sound Effects/Skills/johnwick-gundrop.mp3": [
-        3.172,
-        2.656
-      ],
-      "johnwick-gundrop.mp3": [
-        3.172,
-        2.656
-      ],
-      "johnwick-gundrop": [
-        3.172,
-        2.656
-      ],
-      "Assets/Sound Effects/Skills/johnwick-gunswitch.mp3": [
-        5.878,
-        0.836
-      ],
-      "johnwick-gunswitch.mp3": [
-        5.878,
-        0.836
-      ],
-      "johnwick-gunswitch": [
-        5.878,
-        0.836
-      ],
-      "Assets/Sound Effects/Skills/johnwick-m4-reload.mp3": [
-        6.764,
-        0.47
-      ],
-      "johnwick-m4-reload.mp3": [
-        6.764,
-        0.47
-      ],
-      "johnwick-m4-reload": [
-        6.764,
-        0.47
-      ],
-      "Assets/Sound Effects/Skills/johnwick-m4-shot.mp3": [
-        7.284,
-        3.323
-      ],
-      "johnwick-m4-shot.mp3": [
-        7.284,
-        3.323
-      ],
-      "johnwick-m4-shot": [
-        7.284,
-        3.323
-      ],
-      "Assets/Sound Effects/Skills/johnwick-pistol-reload.mp3": [
-        10.657,
-        0.301
-      ],
-      "johnwick-pistol-reload.mp3": [
-        10.657,
-        0.301
-      ],
-      "johnwick-pistol-reload": [
-        10.657,
-        0.301
-      ],
-      "Assets/Sound Effects/Skills/johnwick-shotgun-crack.mp3": [
-        11.008,
-        1.045
-      ],
-      "johnwick-shotgun-crack.mp3": [
-        11.008,
-        1.045
-      ],
-      "johnwick-shotgun-crack": [
-        11.008,
-        1.045
-      ],
-      "Assets/Sound Effects/Skills/johnwick-shotgun-reload.mp3": [
-        12.103,
-        0.601
-      ],
-      "johnwick-shotgun-reload.mp3": [
-        12.103,
-        0.601
-      ],
-      "johnwick-shotgun-reload": [
-        12.103,
-        0.601
-      ],
-      "Assets/Sound Effects/Skills/Johnwick-rollback-voiceline.mp3": [
-        12.753,
-        1.254
-      ],
-      "Johnwick-rollback-voiceline.mp3": [
-        12.753,
-        1.254
-      ],
-      "Johnwick-rollback-voiceline": [
-        12.753,
-        1.254
-      ],
-      "Assets/Sound Effects/Skills/johnwick-switchgun-voiceline.mp3": [
-        14.057,
-        1.466
-      ],
-      "johnwick-switchgun-voiceline.mp3": [
-        14.057,
-        1.466
-      ],
-      "johnwick-switchgun-voiceline": [
-        14.057,
-        1.466
-      ],
-      "Assets/Sound Effects/Attacks/shootgunshot.mp3": [
-        15.573,
-        1.254
-      ],
-      "shootgunshot.mp3": [
-        15.573,
-        1.254
-      ],
-      "shootgunshot": [
-        15.573,
-        1.254
-      ],
-      "Assets/Sound Effects/Skills/woosh.mp3": [
-        16.877,
-        0.549
-      ],
-      "woosh.mp3": [
-        16.877,
-        0.549
-      ],
-      "woosh": [
-        16.877,
-        0.549
-      ]
-    }
-  },
-  "cj": {
-    "sheetId": "char_voice_cj",
-    "characterId": "cj",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_cj_sfx.mp3",
-    "totalDuration": 22.48,
-    "sliceCount": 17,
-    "slices": {
-      "Assets/Sound Effects/Skills/cj-typeclick1letter-noise.mp3": [
-        0,
-        0.261
-      ],
-      "cj-typeclick1letter-noise.mp3": [
-        0,
-        0.261
-      ],
-      "cj-typeclick1letter-noise": [
-        0,
-        0.261
-      ],
-      "Assets/Sound Effects/Skills/cj-cheatactivated-banner.mp3": [
-        0.311,
-        0.261
-      ],
-      "cj-cheatactivated-banner.mp3": [
-        0.311,
-        0.261
-      ],
-      "cj-cheatactivated-banner": [
-        0.311,
-        0.261
-      ],
-      "Assets/Sound Effects/Attacks/revolvershot.mp3": [
-        0.622,
-        0.549
-      ],
-      "revolvershot.mp3": [
-        0.622,
-        0.549
-      ],
-      "revolvershot": [
-        0.622,
-        0.549
-      ],
-      "Assets/Sound Effects/Skills/engineer-sentrygunshot.mp3": [
-        1.221,
-        0.653
-      ],
-      "engineer-sentrygunshot.mp3": [
-        1.221,
-        0.653
-      ],
-      "engineer-sentrygunshot": [
-        1.221,
-        0.653
-      ],
-      "Assets/Sound Effects/Skills/johnwick-bulleshell-drop.mp3": [
-        1.924,
-        0.47
-      ],
-      "johnwick-bulleshell-drop.mp3": [
-        1.924,
-        0.47
-      ],
-      "johnwick-bulleshell-drop": [
-        1.924,
-        0.47
-      ],
-      "Assets/Sound Effects/Skills/cj-homiesarrival-voiceline.mp3": [
-        2.444,
-        1.149
-      ],
-      "cj-homiesarrival-voiceline.mp3": [
-        2.444,
-        1.149
-      ],
-      "cj-homiesarrival-voiceline": [
-        2.444,
-        1.149
-      ],
-      "Assets/Sound Effects/Skills/cj-homiearrival-voiceline2.mp3": [
-        3.644,
-        1.698
-      ],
-      "cj-homiearrival-voiceline2.mp3": [
-        3.644,
-        1.698
-      ],
-      "cj-homiearrival-voiceline2": [
-        3.644,
-        1.698
-      ],
-      "Assets/Sound Effects/Skills/cj-homiearrival-voiceline3.mp3": [
-        5.392,
-        1.829
-      ],
-      "cj-homiearrival-voiceline3.mp3": [
-        5.392,
-        1.829
-      ],
-      "cj-homiearrival-voiceline3": [
-        5.392,
-        1.829
-      ],
-      "Assets/Sound Effects/Skills/cj-homiearrival-voiceline4.mp3": [
-        7.27,
-        1.489
-      ],
-      "cj-homiearrival-voiceline4.mp3": [
-        7.27,
-        1.489
-      ],
-      "cj-homiearrival-voiceline4": [
-        7.27,
-        1.489
-      ],
-      "Assets/Sound Effects/Skills/cj-homies-noise1.mp3": [
-        8.809,
-        0.862
-      ],
-      "cj-homies-noise1.mp3": [
-        8.809,
-        0.862
-      ],
-      "cj-homies-noise1": [
-        8.809,
-        0.862
-      ],
-      "Assets/Sound Effects/Skills/cj-homies-noise2.mp3": [
-        9.721,
-        1.045
-      ],
-      "cj-homies-noise2.mp3": [
-        9.721,
-        1.045
-      ],
-      "cj-homies-noise2": [
-        9.721,
-        1.045
-      ],
-      "Assets/Sound Effects/Skills/cj-homie-noise3.mp3": [
-        10.816,
-        1.306
-      ],
-      "cj-homie-noise3.mp3": [
-        10.816,
-        1.306
-      ],
-      "cj-homie-noise3": [
-        10.816,
-        1.306
-      ],
-      "Assets/Sound Effects/Skills/cj-homie-noise4.mp3": [
-        12.172,
-        1.489
-      ],
-      "cj-homie-noise4.mp3": [
-        12.172,
-        1.489
-      ],
-      "cj-homie-noise4": [
-        12.172,
-        1.489
-      ],
-      "Assets/Sound Effects/Skills/cj-homie-noise5.mp3": [
-        13.711,
-        1.202
-      ],
-      "cj-homie-noise5.mp3": [
-        13.711,
-        1.202
-      ],
-      "cj-homie-noise5": [
-        13.711,
-        1.202
-      ],
-      "Assets/Sound Effects/Skills/johnwick-m4-shot.mp3": [
-        14.963,
-        3.323
-      ],
-      "johnwick-m4-shot.mp3": [
-        14.963,
-        3.323
-      ],
-      "johnwick-m4-shot": [
-        14.963,
-        3.323
-      ],
-      "Assets/Sound Effects/Skills/cj-intro-voiceline.mp3": [
-        18.336,
-        3.053
-      ],
-      "cj-intro-voiceline.mp3": [
-        18.336,
-        3.053
-      ],
-      "cj-intro-voiceline": [
-        18.336,
-        3.053
-      ],
-      "Assets/Sound Effects/Skills/cj-GROVESTREET4LIFE-voiceline.mp3": [
-        21.439,
-        0.993
-      ],
-      "cj-GROVESTREET4LIFE-voiceline.mp3": [
-        21.439,
-        0.993
-      ],
-      "cj-GROVESTREET4LIFE-voiceline": [
-        21.439,
-        0.993
-      ]
-    }
-  },
-  "uryu": {
-    "sheetId": "char_voice_uryu",
-    "characterId": "uryu",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_uryu_sfx.mp3",
-    "totalDuration": 5.9,
-    "sliceCount": 2,
-    "slices": {
-      "Assets/Sound Effects/Skills/redblast.mp3": [
-        0,
-        2.717
-      ],
-      "redblast.mp3": [
-        0,
-        2.717
-      ],
-      "redblast": [
-        0,
-        2.717
-      ],
-      "Assets/Sound Effects/Skills/domainexpansion.mp3": [
-        2.767,
-        3.082
-      ],
-      "domainexpansion.mp3": [
-        2.767,
-        3.082
-      ],
-      "domainexpansion": [
-        2.767,
-        3.082
-      ]
-    }
-  },
-  "makima": {
-    "sheetId": "char_voice_makima",
-    "characterId": "makima",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_makima_sfx.mp3",
-    "totalDuration": 24.01,
-    "sliceCount": 16,
-    "slices": {
-      "Assets/Sound Effects/Attacks/desert-eagle-fire.mp3": [
-        0,
-        1.437
-      ],
-      "desert-eagle-fire.mp3": [
-        0,
-        1.437
-      ],
-      "desert-eagle-fire": [
-        0,
-        1.437
-      ],
-      "Assets/Sound Effects/Skills/makima-bang.mp3": [
-        1.487,
-        0.601
-      ],
-      "makima-bang.mp3": [
-        1.487,
-        0.601
-      ],
-      "makima-bang": [
-        1.487,
-        0.601
-      ],
-      "Assets/Sound Effects/Skills/rubbick-groundsmash.mp3": [
-        2.138,
-        2.168
-      ],
-      "rubbick-groundsmash.mp3": [
-        2.138,
-        2.168
-      ],
-      "rubbick-groundsmash": [
-        2.138,
-        2.168
-      ],
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        4.356,
-        2.038
-      ],
-      "enhance.mp3": [
-        4.356,
-        2.038
-      ],
-      "enhance": [
-        4.356,
-        2.038
-      ],
-      "Assets/Sound Effects/Skills/makima-revert-voiceline.mp3": [
-        6.443,
-        0.731
-      ],
-      "makima-revert-voiceline.mp3": [
-        6.443,
-        0.731
-      ],
-      "makima-revert-voiceline": [
-        6.443,
-        0.731
-      ],
-      "Assets/Sound Effects/Skills/makima-revert-voiceline2.mp3": [
-        7.225,
-        1.567
-      ],
-      "makima-revert-voiceline2.mp3": [
-        7.225,
-        1.567
-      ],
-      "makima-revert-voiceline2": [
-        7.225,
-        1.567
-      ],
-      "Assets/Sound Effects/Skills/makima-revert-voiceline3.mp3": [
-        8.842,
-        1.437
-      ],
-      "makima-revert-voiceline3.mp3": [
-        8.842,
-        1.437
-      ],
-      "makima-revert-voiceline3": [
-        8.842,
-        1.437
-      ],
-      "Assets/Sound Effects/Skills/hookchain.mp3": [
-        10.329,
-        0.742
-      ],
-      "hookchain.mp3": [
-        10.329,
-        0.742
-      ],
-      "hookchain": [
-        10.329,
-        0.742
-      ],
-      "Assets/Sound Effects/Skills/gravitypull.mp3": [
-        11.12,
-        3.37
-      ],
-      "gravitypull.mp3": [
-        11.12,
-        3.37
-      ],
-      "gravitypull": [
-        11.12,
-        3.37
-      ],
-      "Assets/Sound Effects/Skills/makima-chain-voiceline1.mp3": [
-        14.54,
-        0.47
-      ],
-      "makima-chain-voiceline1.mp3": [
-        14.54,
-        0.47
-      ],
-      "makima-chain-voiceline1": [
-        14.54,
-        0.47
-      ],
-      "Assets/Sound Effects/Skills/makima-chain-voiceline2.mp3": [
-        15.06,
-        0.679
-      ],
-      "makima-chain-voiceline2.mp3": [
-        15.06,
-        0.679
-      ],
-      "makima-chain-voiceline2": [
-        15.06,
-        0.679
-      ],
-      "Assets/Sound Effects/Skills/makima-chain-voiceline3.mp3": [
-        15.79,
-        2.142
-      ],
-      "makima-chain-voiceline3.mp3": [
-        15.79,
-        2.142
-      ],
-      "makima-chain-voiceline3": [
-        15.79,
-        2.142
-      ],
-      "Assets/Sound Effects/Skills/makima-chain-voiceline4.mp3": [
-        17.982,
-        1.358
-      ],
-      "makima-chain-voiceline4.mp3": [
-        17.982,
-        1.358
-      ],
-      "makima-chain-voiceline4": [
-        17.982,
-        1.358
-      ],
-      "Assets/Sound Effects/Skills/woosh.mp3": [
-        19.39,
-        0.549
-      ],
-      "woosh.mp3": [
-        19.39,
-        0.549
-      ],
-      "woosh": [
-        19.39,
-        0.549
-      ],
-      "Assets/Sound Effects/Skills/shrine.mp3": [
-        19.989,
-        2.22
-      ],
-      "shrine.mp3": [
-        19.989,
-        2.22
-      ],
-      "shrine": [
-        19.989,
-        2.22
-      ],
-      "Assets/Sound Effects/Skills/Makima-crucifix-heavy-impact.mp3": [
-        22.259,
-        1.698
-      ],
-      "Makima-crucifix-heavy-impact.mp3": [
-        22.259,
-        1.698
-      ],
-      "Makima-crucifix-heavy-impact": [
-        22.259,
-        1.698
-      ]
-    }
-  },
-  "reze": {
-    "sheetId": "char_voice_reze",
-    "characterId": "reze",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_reze_sfx.mp3",
-    "totalDuration": 10.12,
-    "sliceCount": 5,
-    "slices": {
-      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
-        0,
-        1.698
-      ],
-      "fugaexplode.mp3": [
-        0,
-        1.698
-      ],
-      "fugaexplode": [
-        0,
-        1.698
-      ],
-      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
-        1.748,
-        0.872
-      ],
-      "genos-dash-noise.mp3": [
-        1.748,
-        0.872
-      ],
-      "genos-dash-noise": [
-        1.748,
-        0.872
-      ],
-      "Assets/Sound Effects/Skills/genos-ultimatecharging.mp3": [
-        2.67,
-        2.064
-      ],
-      "genos-ultimatecharging.mp3": [
-        2.67,
-        2.064
-      ],
-      "genos-ultimatecharging": [
-        2.67,
-        2.064
-      ],
-      "Assets/Sound Effects/Skills/genos-selfdestruct-explosion.mp3": [
-        4.784,
-        4.336
-      ],
-      "genos-selfdestruct-explosion.mp3": [
-        4.784,
-        4.336
-      ],
-      "genos-selfdestruct-explosion": [
-        4.784,
-        4.336
-      ],
-      "Assets/Sound Effects/RezeSFX/reze_boom_voiceline.mp3": [
-        9.17,
-        0.9
-      ],
-      "reze_boom_voiceline.mp3": [
-        9.17,
-        0.9
-      ],
-      "reze_boom_voiceline": [
-        9.17,
-        0.9
-      ]
-    }
-  },
-  "denji": {
-    "sheetId": "char_voice_denji",
-    "characterId": "denji",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_denji_sfx.mp3",
-    "totalDuration": 4.34,
-    "sliceCount": 3,
-    "slices": {
-      "Assets/Sound Effects/DenjiSFX/Denji_chainsaw_dash_noise.mp3": [
-        0,
-        1.75
-      ],
-      "Denji_chainsaw_dash_noise.mp3": [
-        0,
-        1.75
-      ],
-      "Denji_chainsaw_dash_noise": [
-        0,
-        1.75
-      ],
-      "Assets/Sound Effects/DenjiSFX/Denji_dash_vocal_noise.mp3": [
-        1.8,
-        1.567
-      ],
-      "Denji_dash_vocal_noise.mp3": [
-        1.8,
-        1.567
-      ],
-      "Denji_dash_vocal_noise": [
-        1.8,
-        1.567
-      ],
-      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
-        3.418,
-        0.872
-      ],
-      "genos-dash-noise.mp3": [
-        3.418,
-        0.872
-      ],
-      "genos-dash-noise": [
-        3.418,
-        0.872
-      ]
-    }
-  },
-  "zenitsu": {
-    "sheetId": "char_voice_zenitsu",
-    "characterId": "zenitsu",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_zenitsu_sfx.mp3",
-    "totalDuration": 9.83,
-    "sliceCount": 9,
-    "slices": {
-      "Assets/Sound Effects/Skills/Zenitsu-dash2.mp3": [
-        0,
-        2.403
-      ],
-      "Zenitsu-dash2.mp3": [
-        0,
-        2.403
-      ],
-      "Zenitsu-dash2": [
-        0,
-        2.403
-      ],
-      "Assets/Sound Effects/Skills/Zenitsu-dash-noise.mp3": [
-        2.453,
-        1.358
-      ],
-      "Zenitsu-dash-noise.mp3": [
-        2.453,
-        1.358
-      ],
-      "Zenitsu-dash-noise": [
-        2.453,
-        1.358
-      ],
-      "Assets/Sound Effects/Skills/Zenitsu-firstform-voiceline.mp3": [
-        3.862,
-        0.888
-      ],
-      "Zenitsu-firstform-voiceline.mp3": [
-        3.862,
-        0.888
-      ],
-      "Zenitsu-firstform-voiceline": [
-        3.862,
-        0.888
-      ],
-      "Assets/Sound Effects/Skills/Zenitsu-thunderclap&flash-voiceline.mp3": [
-        4.8,
-        1.071
-      ],
-      "Zenitsu-thunderclap&flash-voiceline.mp3": [
-        4.8,
-        1.071
-      ],
-      "Zenitsu-thunderclap&flash-voiceline": [
-        4.8,
-        1.071
-      ],
-      "Assets/Sound Effects/Skills/zenitsu-sixfold-voiceline.mp3": [
-        5.921,
-        0.627
-      ],
-      "zenitsu-sixfold-voiceline.mp3": [
-        5.921,
-        0.627
-      ],
-      "zenitsu-sixfold-voiceline": [
-        5.921,
-        0.627
-      ],
-      "Assets/Sound Effects/Skills/Zenitsu-electric-noise1.mp3": [
-        6.598,
-        0.679
-      ],
-      "Zenitsu-electric-noise1.mp3": [
-        6.598,
-        0.679
-      ],
-      "Zenitsu-electric-noise1": [
-        6.598,
-        0.679
-      ],
-      "Assets/Sound Effects/Skills/Zenitsu-electric-noise2.mp3": [
-        7.327,
-        0.758
-      ],
-      "Zenitsu-electric-noise2.mp3": [
-        7.327,
-        0.758
-      ],
-      "Zenitsu-electric-noise2": [
-        7.327,
-        0.758
-      ],
-      "Assets/Sound Effects/Skills/Zenitsu-electric-noise3.mp3": [
-        8.134,
-        0.575
-      ],
-      "Zenitsu-electric-noise3.mp3": [
-        8.134,
-        0.575
-      ],
-      "Zenitsu-electric-noise3": [
-        8.134,
-        0.575
-      ],
-      "Assets/Sound Effects/Attacks/thunderstrike.mp3": [
-        8.759,
-        1.019
-      ],
-      "thunderstrike.mp3": [
-        8.759,
-        1.019
-      ],
-      "thunderstrike": [
-        8.759,
-        1.019
-      ]
-    }
-  },
-  "escanor": {
-    "sheetId": "char_voice_escanor",
-    "characterId": "escanor",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_escanor_sfx.mp3",
-    "totalDuration": 6.42,
-    "sliceCount": 3,
-    "slices": {
-      "Assets/Sound Effects/Attacks/Escanor-attack.mp3": [
-        0,
-        1.584
-      ],
-      "Escanor-attack.mp3": [
-        0,
-        1.584
-      ],
-      "Escanor-attack": [
-        0,
-        1.584
-      ],
-      "Assets/Sound Effects/SkillEffects/Escanor-weapon-lift.mp3": [
-        1.634,
-        0.792
-      ],
-      "Escanor-weapon-lift.mp3": [
-        1.634,
-        0.792
-      ],
-      "Escanor-weapon-lift": [
-        1.634,
-        0.792
-      ],
-      "Assets/Sound Effects/Attacks/laserbeam.mp3": [
-        2.476,
-        3.892
-      ],
-      "laserbeam.mp3": [
-        2.476,
-        3.892
-      ],
-      "laserbeam": [
-        2.476,
-        3.892
-      ]
-    }
-  },
-  "eye_of_cthulhu": {
-    "sheetId": "char_voice_eye_of_cthulhu",
-    "characterId": "eye_of_cthulhu",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_eye_of_cthulhu_sfx.mp3",
-    "totalDuration": 7.81,
-    "sliceCount": 4,
-    "slices": {
-      "Assets/Sound Effects/SkillEffects/EyeOfCthulhu-noise2.mp3": [
-        0,
-        1.254
-      ],
-      "EyeOfCthulhu-noise2.mp3": [
-        0,
-        1.254
-      ],
-      "EyeOfCthulhu-noise2": [
-        0,
-        1.254
-      ],
-      "Assets/Sound Effects/SkillEffects/EyeOfCthulhu-noise1.mp3": [
-        1.304,
-        2.011
-      ],
-      "EyeOfCthulhu-noise1.mp3": [
-        1.304,
-        2.011
-      ],
-      "EyeOfCthulhu-noise1": [
-        1.304,
-        2.011
-      ],
-      "Assets/Sound Effects/Skills/mahito-body-explode.mp3": [
-        3.365,
-        1.176
-      ],
-      "mahito-body-explode.mp3": [
-        3.365,
-        1.176
-      ],
-      "mahito-body-explode": [
-        3.365,
-        1.176
-      ],
-      "Assets/Sound Effects/SkillEffects/EyeOfCthulhu-noise3.mp3": [
-        4.591,
-        3.168
-      ],
-      "EyeOfCthulhu-noise3.mp3": [
-        4.591,
-        3.168
-      ],
-      "EyeOfCthulhu-noise3": [
-        4.591,
-        3.168
-      ]
-    }
-  },
-  "ender_dragon": {
-    "sheetId": "char_voice_ender_dragon",
-    "characterId": "ender_dragon",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ender_dragon_sfx.mp3",
-    "totalDuration": 20.19,
-    "sliceCount": 12,
-    "slices": {
-      "Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg": [
-        0,
-        0.719
-      ],
-      "Ghast_fireball4.ogg": [
-        0,
-        0.719
-      ],
-      "Ghast_fireball4": [
-        0,
-        0.719
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg": [
-        0.769,
-        2.5
-      ],
-      "Explosion1.ogg": [
-        0.769,
-        2.5
-      ],
-      "Explosion1": [
-        0.769,
-        2.5
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg": [
-        3.319,
-        0.875
-      ],
-      "Ender_dragon_flap2.ogg": [
-        3.319,
-        0.875
-      ],
-      "Ender_dragon_flap2": [
-        3.319,
-        0.875
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg": [
-        4.244,
-        1
-      ],
-      "Ender_dragon_flap5.ogg": [
-        4.244,
-        1
-      ],
-      "Ender_dragon_flap5": [
-        4.244,
-        1
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg": [
-        5.294,
-        3.25
-      ],
-      "Explosion3.ogg": [
-        5.294,
-        3.25
-      ],
-      "Explosion3": [
-        5.294,
-        3.25
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg": [
-        8.594,
-        3.25
-      ],
-      "Explosion2.ogg": [
-        8.594,
-        3.25
-      ],
-      "Explosion2": [
-        8.594,
-        3.25
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1.ogg": [
-        11.894,
-        1
-      ],
-      "Ender_dragon_hurt1.ogg": [
-        11.894,
-        1
-      ],
-      "Ender_dragon_hurt1": [
-        11.894,
-        1
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt2.ogg": [
-        12.944,
-        1
-      ],
-      "Ender_dragon_hurt2.ogg": [
-        12.944,
-        1
-      ],
-      "Ender_dragon_hurt2": [
-        12.944,
-        1
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt3.ogg": [
-        13.994,
-        1
-      ],
-      "Ender_dragon_hurt3.ogg": [
-        13.994,
-        1
-      ],
-      "Ender_dragon_hurt3": [
-        13.994,
-        1
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt4.ogg": [
-        15.044,
-        1
-      ],
-      "Ender_dragon_hurt4.ogg": [
-        15.044,
-        1
-      ],
-      "Ender_dragon_hurt4": [
-        15.044,
-        1
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg": [
-        16.094,
-        3.25
-      ],
-      "Explosion4.ogg": [
-        16.094,
-        3.25
-      ],
-      "Explosion4": [
-        16.094,
-        3.25
-      ],
-      "Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg": [
-        19.394,
-        0.747
-      ],
-      "Successful_hit.ogg": [
-        19.394,
-        0.747
-      ],
-      "Successful_hit": [
-        19.394,
-        0.747
-      ]
-    }
-  },
-  "megumin": {
-    "sheetId": "char_voice_megumin",
-    "characterId": "megumin",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_megumin_sfx.mp3",
-    "totalDuration": 19.25,
-    "sliceCount": 7,
-    "slices": {
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        0,
-        2.038
-      ],
-      "enhance.mp3": [
-        0,
-        2.038
-      ],
-      "enhance": [
-        0,
-        2.038
-      ],
-      "Assets/Sound Effects/Skills/shieldcharge.mp3": [
-        2.088,
-        2.739
-      ],
-      "shieldcharge.mp3": [
-        2.088,
-        2.739
-      ],
-      "shieldcharge": [
-        2.088,
-        2.739
-      ],
-      "Assets/Sound Effects/Skills/genos-ultimatecharging.mp3": [
-        4.876,
-        2.064
-      ],
-      "genos-ultimatecharging.mp3": [
-        4.876,
-        2.064
-      ],
-      "genos-ultimatecharging": [
-        4.876,
-        2.064
-      ],
-      "Assets/Sound Effects/Skills/gravitypull.mp3": [
-        6.99,
-        3.37
-      ],
-      "gravitypull.mp3": [
-        6.99,
-        3.37
-      ],
-      "gravitypull": [
-        6.99,
-        3.37
-      ],
-      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
-        10.41,
-        1.698
-      ],
-      "fugaexplode.mp3": [
-        10.41,
-        1.698
-      ],
-      "fugaexplode": [
-        10.41,
-        1.698
-      ],
-      "Assets/Sound Effects/Skills/genos-selfdestruct-explosion.mp3": [
-        12.157,
-        4.336
-      ],
-      "genos-selfdestruct-explosion.mp3": [
-        12.157,
-        4.336
-      ],
-      "genos-selfdestruct-explosion": [
-        12.157,
-        4.336
-      ],
-      "Assets/Sound Effects/Skills/johnwick-gundrop.mp3": [
-        16.544,
-        2.656
-      ],
-      "johnwick-gundrop.mp3": [
-        16.544,
-        2.656
-      ],
-      "johnwick-gundrop": [
-        16.544,
-        2.656
-      ]
-    }
-  },
-  "crazydave": {
-    "sheetId": "char_voice_crazydave",
-    "characterId": "crazydave",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_crazydave_sfx.mp3",
-    "totalDuration": 16.65,
-    "sliceCount": 12,
-    "slices": {
-      "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (1).ogg": [
-        0,
-        1.169
-      ],
-      "crazydave-noise1 (1).ogg": [
-        0,
-        1.169
-      ],
-      "crazydave-noise1 (1)": [
-        0,
-        1.169
-      ],
-      "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (2).ogg": [
-        1.219,
-        0.907
-      ],
-      "crazydave-noise1 (2).ogg": [
-        1.219,
-        0.907
-      ],
-      "crazydave-noise1 (2)": [
-        1.219,
-        0.907
-      ],
-      "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (3).ogg": [
-        2.176,
-        1.087
-      ],
-      "crazydave-noise1 (3).ogg": [
-        2.176,
-        1.087
-      ],
-      "crazydave-noise1 (3)": [
-        2.176,
-        1.087
-      ],
-      "Assets/Sound Effects/Sprites SFX/crazydave-sun-pickup.mp3": [
-        3.313,
-        1.207
-      ],
-      "crazydave-sun-pickup.mp3": [
-        3.313,
-        1.207
-      ],
-      "crazydave-sun-pickup": [
-        3.313,
-        1.207
-      ],
-      "Assets/Sound Effects/Attacks/crazydave-peashooter-shot.mp3": [
-        4.571,
-        0.802
-      ],
-      "crazydave-peashooter-shot.mp3": [
-        4.571,
-        0.802
-      ],
-      "crazydave-peashooter-shot": [
-        4.571,
-        0.802
-      ],
-      "Assets/Sound Effects/Attacks/crazydave-snow_pea_sparkles.ogg": [
-        5.423,
-        0.557
-      ],
-      "crazydave-snow_pea_sparkles.ogg": [
-        5.423,
-        0.557
-      ],
-      "crazydave-snow_pea_sparkles": [
-        5.423,
-        0.557
-      ],
-      "Assets/Sound Effects/SkillEffects/crazydave-snowpea-freeze.mp3": [
-        6.03,
-        2.717
-      ],
-      "crazydave-snowpea-freeze.mp3": [
-        6.03,
-        2.717
-      ],
-      "crazydave-snowpea-freeze": [
-        6.03,
-        2.717
-      ],
-      "Assets/Sound Effects/SkillEffects/splat3.ogg": [
-        8.797,
-        0.682
-      ],
-      "splat3.ogg": [
-        8.797,
-        0.682
-      ],
-      "splat3": [
-        8.797,
-        0.682
-      ],
-      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
-        9.529,
-        0.653
-      ],
-      "shieldblock2.mp3": [
-        9.529,
-        0.653
-      ],
-      "shieldblock2": [
-        9.529,
-        0.653
-      ],
-      "Assets/Sound Effects/Sprites SFX/Lawn Mower.mp3": [
-        10.232,
-        2.926
-      ],
-      "Lawn Mower.mp3": [
-        10.232,
-        2.926
-      ],
-      "Lawn Mower": [
-        10.232,
-        2.926
-      ],
-      "Assets/Sound Effects/Skills/spinslash.mp3": [
-        13.207,
-        1.646
-      ],
-      "spinslash.mp3": [
-        13.207,
-        1.646
-      ],
-      "spinslash": [
-        13.207,
-        1.646
-      ],
-      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
-        14.903,
-        1.698
-      ],
-      "fugaexplode.mp3": [
-        14.903,
-        1.698
-      ],
-      "fugaexplode": [
-        14.903,
-        1.698
-      ]
-    }
-  },
-  "pekka": {
-    "sheetId": "char_voice_pekka",
-    "characterId": "pekka",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_pekka_sfx.mp3",
-    "totalDuration": 6.49,
-    "sliceCount": 4,
-    "slices": {
-      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
-        0,
-        0.653
-      ],
-      "shieldblock2.mp3": [
-        0,
-        0.653
-      ],
-      "shieldblock2": [
-        0,
-        0.653
-      ],
-      "Assets/Sound Effects/Attacks/Escanor-attack.mp3": [
-        0.703,
-        1.584
-      ],
-      "Escanor-attack.mp3": [
-        0.703,
-        1.584
-      ],
-      "Escanor-attack": [
-        0.703,
-        1.584
-      ],
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        2.337,
-        2.038
-      ],
-      "enhance.mp3": [
-        2.337,
-        2.038
-      ],
-      "enhance": [
-        2.337,
-        2.038
-      ],
-      "Assets/Sound Effects/Skills/stormstrike.mp3": [
-        4.425,
-        2.011
-      ],
-      "stormstrike.mp3": [
-        4.425,
-        2.011
-      ],
-      "stormstrike": [
-        4.425,
-        2.011
-      ]
-    }
-  },
-  "namelessdeity": {
-    "sheetId": "char_voice_namelessdeity",
-    "characterId": "namelessdeity",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_namelessdeity_sfx.mp3",
-    "totalDuration": 46.73,
-    "sliceCount": 24,
-    "slices": {
-      "Assets/Sound Effects/NamelessDeity/SunBeamShoot.ogg": [
-        0,
-        2.261
-      ],
-      "SunBeamShoot.ogg": [
-        0,
-        2.261
-      ],
-      "SunBeamShoot": [
-        0,
-        2.261
-      ],
-      "Assets/Sound Effects/NamelessDeity/WingFlap2.ogg": [
-        2.311,
-        0.896
-      ],
-      "WingFlap2.ogg": [
-        2.311,
-        0.896
-      ],
-      "WingFlap2": [
-        2.311,
-        0.896
-      ],
-      "Assets/Sound Effects/NamelessDeity/CosmicLaserObliteration.ogg": [
-        3.257,
-        3.222
-      ],
-      "CosmicLaserObliteration.ogg": [
-        3.257,
-        3.222
-      ],
-      "CosmicLaserObliteration": [
-        3.257,
-        3.222
-      ],
-      "Assets/Sound Effects/NamelessDeity/RealityTear.ogg": [
-        6.528,
-        2.574
-      ],
-      "RealityTear.ogg": [
-        6.528,
-        2.574
-      ],
-      "RealityTear": [
-        6.528,
-        2.574
-      ],
-      "Assets/Sound Effects/NamelessDeity/StarConvergenceFast.ogg": [
-        9.153,
-        2.211
-      ],
-      "StarConvergenceFast.ogg": [
-        9.153,
-        2.211
-      ],
-      "StarConvergenceFast": [
-        9.153,
-        2.211
-      ],
-      "Assets/Sound Effects/NamelessDeity/Supernova.ogg": [
-        11.413,
-        1.945
-      ],
-      "Supernova.ogg": [
-        11.413,
-        1.945
-      ],
-      "Supernova": [
-        11.413,
-        1.945
-      ],
-      "Assets/Sound Effects/NamelessDeity/SunFireballShootSound.ogg": [
-        13.408,
-        0.897
-      ],
-      "SunFireballShootSound.ogg": [
-        13.408,
-        0.897
-      ],
-      "SunFireballShootSound": [
-        13.408,
-        0.897
-      ],
-      "Assets/Sound Effects/NamelessDeity/GenericBurst.ogg": [
-        14.355,
-        1.623
-      ],
-      "GenericBurst.ogg": [
-        14.355,
-        1.623
-      ],
-      "GenericBurst": [
-        14.355,
-        1.623
-      ],
-      "Assets/Sound Effects/NamelessDeity/DaggerBurst.ogg": [
-        16.027,
-        1.576
-      ],
-      "DaggerBurst.ogg": [
-        16.027,
-        1.576
-      ],
-      "DaggerBurst": [
-        16.027,
-        1.576
-      ],
-      "Assets/Sound Effects/NamelessDeity/DaggerGraze1.ogg": [
-        17.653,
-        1.291
-      ],
-      "DaggerGraze1.ogg": [
-        17.653,
-        1.291
-      ],
-      "DaggerGraze1": [
-        17.653,
-        1.291
-      ],
-      "Assets/Sound Effects/NamelessDeity/DaggerGrazeEcho1.ogg": [
-        18.993,
-        1.715
-      ],
-      "DaggerGrazeEcho1.ogg": [
-        18.993,
-        1.715
-      ],
-      "DaggerGrazeEcho1": [
-        18.993,
-        1.715
-      ],
-      "Assets/Sound Effects/NamelessDeity/SliceTelegraph.ogg": [
-        20.758,
-        0.409
-      ],
-      "SliceTelegraph.ogg": [
-        20.758,
-        0.409
-      ],
-      "SliceTelegraph": [
-        20.758,
-        0.409
-      ],
-      "Assets/Sound Effects/NamelessDeity/BigSupernova.ogg": [
-        21.217,
-        4.459
-      ],
-      "BigSupernova.ogg": [
-        21.217,
-        4.459
-      ],
-      "BigSupernova": [
-        21.217,
-        4.459
-      ],
-      "Assets/Sound Effects/NamelessDeity/StarCrush.ogg": [
-        25.727,
-        3.536
-      ],
-      "StarCrush.ogg": [
-        25.727,
-        3.536
-      ],
-      "StarCrush": [
-        25.727,
-        3.536
-      ],
-      "Assets/Sound Effects/NamelessDeity/ScreenTear.ogg": [
-        29.313,
-        2.682
-      ],
-      "ScreenTear.ogg": [
-        29.313,
-        2.682
-      ],
-      "ScreenTear": [
-        29.313,
-        2.682
-      ],
-      "Assets/Sound Effects/NamelessDeity/FingerSnap.ogg": [
-        32.045,
-        0.353
-      ],
-      "FingerSnap.ogg": [
-        32.045,
-        0.353
-      ],
-      "FingerSnap": [
-        32.045,
-        0.353
-      ],
-      "Assets/Sound Effects/NamelessDeity/SwordSlash.ogg": [
-        32.448,
-        1.76
-      ],
-      "SwordSlash.ogg": [
-        32.448,
-        1.76
-      ],
-      "SwordSlash": [
-        32.448,
-        1.76
-      ],
-      "Assets/Sound Effects/NamelessDeity/PortalLaserShoot.ogg": [
-        34.258,
-        2.347
-      ],
-      "PortalLaserShoot.ogg": [
-        34.258,
-        2.347
-      ],
-      "PortalLaserShoot": [
-        34.258,
-        2.347
-      ],
-      "Assets/Sound Effects/NamelessDeity/MomentOfCreation.ogg": [
-        36.655,
-        3.332
-      ],
-      "MomentOfCreation.ogg": [
-        36.655,
-        3.332
-      ],
-      "MomentOfCreation": [
-        36.655,
-        3.332
-      ],
-      "Assets/Sound Effects/NamelessDeity/Mumble1.ogg": [
-        40.037,
-        1.391
-      ],
-      "Mumble1.ogg": [
-        40.037,
-        1.391
-      ],
-      "Mumble1": [
-        40.037,
-        1.391
-      ],
-      "Assets/Sound Effects/NamelessDeity/Mumble2.ogg": [
-        41.478,
-        1.314
-      ],
-      "Mumble2.ogg": [
-        41.478,
-        1.314
-      ],
-      "Mumble2": [
-        41.478,
-        1.314
-      ],
-      "Assets/Sound Effects/NamelessDeity/Mumble3.ogg": [
-        42.842,
-        1.235
-      ],
-      "Mumble3.ogg": [
-        42.842,
-        1.235
-      ],
-      "Mumble3": [
-        42.842,
-        1.235
-      ],
-      "Assets/Sound Effects/NamelessDeity/Mumble4.ogg": [
-        44.127,
-        1.224
-      ],
-      "Mumble4.ogg": [
-        44.127,
-        1.224
-      ],
-      "Mumble4": [
-        44.127,
-        1.224
-      ],
-      "Assets/Sound Effects/NamelessDeity/Mumble5.ogg": [
-        45.401,
-        1.277
-      ],
-      "Mumble5.ogg": [
-        45.401,
-        1.277
-      ],
-      "Mumble5": [
-        45.401,
-        1.277
-      ]
-    }
-  },
-  "sans": {
-    "sheetId": "char_voice_sans",
-    "characterId": "sans",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_sans_sfx.mp3",
-    "totalDuration": 7.93,
-    "sliceCount": 10,
-    "slices": {
-      "Assets/Sound Effects/Sans/BoneStab.ogg": [
-        0,
-        0.501
-      ],
-      "BoneStab.ogg": [
-        0,
-        0.501
-      ],
-      "BoneStab": [
-        0,
-        0.501
-      ],
-      "Assets/Sound Effects/Sans/GasterBlast.ogg": [
-        0.551,
-        1.9
-      ],
-      "GasterBlast.ogg": [
-        0.551,
-        1.9
-      ],
-      "GasterBlast": [
-        0.551,
-        1.9
-      ],
-      "Assets/Sound Effects/Sans/GasterBlaster.ogg": [
-        2.5,
-        1.058
-      ],
-      "GasterBlaster.ogg": [
-        2.5,
-        1.058
-      ],
-      "GasterBlaster": [
-        2.5,
-        1.058
-      ],
-      "Assets/Sound Effects/Sans/Slam.ogg": [
-        3.608,
-        0.617
-      ],
-      "Slam.ogg": [
-        3.608,
-        0.617
-      ],
-      "Slam": [
-        3.608,
-        0.617
-      ],
-      "Assets/Sound Effects/Sans/Flash.ogg": [
-        4.275,
-        0.07
-      ],
-      "Flash.ogg": [
-        4.275,
-        0.07
-      ],
-      "Flash": [
-        4.275,
-        0.07
-      ],
-      "Assets/Sound Effects/Sans/Ding.ogg": [
-        4.395,
-        0.472
-      ],
-      "Ding.ogg": [
-        4.395,
-        0.472
-      ],
-      "Ding": [
-        4.395,
-        0.472
-      ],
-      "Assets/Sound Effects/Sans/SansSpeak.ogg": [
-        4.916,
-        0.138
-      ],
-      "SansSpeak.ogg": [
-        4.916,
-        0.138
-      ],
-      "SansSpeak": [
-        4.916,
-        0.138
-      ],
-      "Assets/Sound Effects/Sans/Warning.ogg": [
-        5.105,
-        1.257
-      ],
-      "Warning.ogg": [
-        5.105,
-        1.257
-      ],
-      "Warning": [
-        5.105,
-        1.257
-      ],
-      "Assets/Sound Effects/Sans/HeartSplit.ogg": [
-        6.411,
-        0.707
-      ],
-      "HeartSplit.ogg": [
-        6.411,
-        0.707
-      ],
-      "HeartSplit": [
-        6.411,
-        0.707
-      ],
-      "Assets/Sound Effects/Sans/HeartShatter.ogg": [
-        7.168,
-        0.71
-      ],
-      "HeartShatter.ogg": [
-        7.168,
-        0.71
-      ],
-      "HeartShatter": [
-        7.168,
-        0.71
-      ]
-    }
-  },
-  "avatarofemptiness": {
-    "sheetId": "char_voice_avatarofemptiness",
-    "characterId": "avatarofemptiness",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_avatarofemptiness_sfx.mp3",
-    "totalDuration": 6.28,
-    "sliceCount": 4,
-    "slices": {
-      "Assets/Sound Effects/Avatar/RiftShoot1.ogg": [
-        0,
-        0.96
-      ],
-      "RiftShoot1.ogg": [
-        0,
-        0.96
-      ],
-      "RiftShoot1": [
-        0,
-        0.96
-      ],
-      "Assets/Sound Effects/Avatar/UniversalAnnihilationCharge.ogg": [
-        1.01,
-        2.074
-      ],
-      "UniversalAnnihilationCharge.ogg": [
-        1.01,
-        2.074
-      ],
-      "UniversalAnnihilationCharge": [
-        1.01,
-        2.074
-      ],
-      "Assets/Sound Effects/Avatar/RealityImpact.ogg": [
-        3.134,
-        1.283
-      ],
-      "RealityImpact.ogg": [
-        3.134,
-        1.283
-      ],
-      "RealityImpact": [
-        3.134,
-        1.283
-      ],
-      "Assets/Sound Effects/Avatar/PortalPierce1.ogg": [
-        4.467,
-        1.762
-      ],
-      "PortalPierce1.ogg": [
-        4.467,
-        1.762
-      ],
-      "PortalPierce1": [
-        4.467,
-        1.762
-      ]
-    }
-  },
-  "naoya": {
-    "sheetId": "char_voice_naoya",
-    "characterId": "naoya",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_naoya_sfx.mp3",
-    "totalDuration": 11.47,
-    "sliceCount": 10,
-    "slices": {
-      "Assets/Sound Effects/NaoyaSFX/Naoya-pathafterimages-shockwaves.wav": [
-        0,
-        1.663
-      ],
-      "Naoya-pathafterimages-shockwaves.wav": [
-        0,
-        1.663
-      ],
-      "Naoya-pathafterimages-shockwaves": [
-        0,
-        1.663
-      ],
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        1.713,
-        2.038
-      ],
-      "enhance.mp3": [
-        1.713,
-        2.038
-      ],
-      "enhance": [
-        1.713,
-        2.038
-      ],
-      "Assets/Sound Effects/Skills/toji-firstseq-teleport.mp3": [
-        3.8,
-        0.836
-      ],
-      "toji-firstseq-teleport.mp3": [
-        3.8,
-        0.836
-      ],
-      "toji-firstseq-teleport": [
-        3.8,
-        0.836
-      ],
-      "Assets/Sound Effects/Skills/toji-2stseq-2ndweaponAttack.mp3": [
-        4.686,
-        0.914
-      ],
-      "toji-2stseq-2ndweaponAttack.mp3": [
-        4.686,
-        0.914
-      ],
-      "toji-2stseq-2ndweaponAttack": [
-        4.686,
-        0.914
-      ],
-      "Assets/Sound Effects/Skills/yuji-blackflash.mp3": [
-        5.65,
-        0.653
-      ],
-      "yuji-blackflash.mp3": [
-        5.65,
-        0.653
-      ],
-      "yuji-blackflash": [
-        5.65,
-        0.653
-      ],
-      "Assets/Sound Effects/NaoyaSFX/Naoya_glass_break.mp3": [
-        6.353,
-        1.489
-      ],
-      "Naoya_glass_break.mp3": [
-        6.353,
-        1.489
-      ],
-      "Naoya_glass_break": [
-        6.353,
-        1.489
-      ],
-      "Assets/Sound Effects/NaoyaSFX/Naoya_takeoff_knife.mp3": [
-        7.892,
-        0.758
-      ],
-      "Naoya_takeoff_knife.mp3": [
-        7.892,
-        0.758
-      ],
-      "Naoya_takeoff_knife": [
-        7.892,
-        0.758
-      ],
-      "Assets/Sound Effects/NaoyaSFX/Naoya_stabs.mp3": [
-        8.7,
-        1.202
-      ],
-      "Naoya_stabs.mp3": [
-        8.7,
-        1.202
-      ],
-      "Naoya_stabs": [
-        8.7,
-        1.202
-      ],
-      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
-        9.951,
-        0.872
-      ],
-      "genos-dash-noise.mp3": [
-        9.951,
-        0.872
-      ],
-      "genos-dash-noise": [
-        9.951,
-        0.872
-      ],
-      "Assets/Sound Effects/Skills/woosh.mp3": [
-        10.874,
-        0.549
-      ],
-      "woosh.mp3": [
-        10.874,
-        0.549
-      ],
-      "woosh": [
-        10.874,
-        0.549
-      ]
-    }
-  },
-  "shiro": {
-    "sheetId": "char_voice_shiro",
-    "characterId": "shiro",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_shiro_sfx.mp3",
-    "totalDuration": 14.44,
-    "sliceCount": 8,
-    "slices": {
-      "Assets/Sound Effects/Shiro/StarblessedPlatformActivate.ogg": [
-        0,
-        2.608
-      ],
-      "StarblessedPlatformActivate.ogg": [
-        0,
-        2.608
-      ],
-      "StarblessedPlatformActivate": [
-        0,
-        2.608
-      ],
-      "Assets/Sound Effects/Shiro/FingerSnap.ogg": [
-        2.658,
-        0.353
-      ],
-      "FingerSnap.ogg": [
-        2.658,
-        0.353
-      ],
-      "FingerSnap": [
-        2.658,
-        0.353
-      ],
-      "Assets/Sound Effects/Shiro/shiro_chessboard_turnon.mp3": [
-        3.061,
-        2.194
-      ],
-      "shiro_chessboard_turnon.mp3": [
-        3.061,
-        2.194
-      ],
-      "shiro_chessboard_turnon": [
-        3.061,
-        2.194
-      ],
-      "Assets/Sound Effects/Shiro/LightFlickerOff.ogg": [
-        5.305,
-        0.178
-      ],
-      "LightFlickerOff.ogg": [
-        5.305,
-        0.178
-      ],
-      "LightFlickerOff": [
-        5.305,
-        0.178
-      ],
-      "Assets/Sound Effects/Shiro/shiro_chessboard_shutdown_voiceline.mp3": [
-        5.533,
-        2.273
-      ],
-      "shiro_chessboard_shutdown_voiceline.mp3": [
-        5.533,
-        2.273
-      ],
-      "shiro_chessboard_shutdown_voiceline": [
-        5.533,
-        2.273
-      ],
-      "Assets/Sound Effects/Shiro/BookSynthFirstTier.ogg": [
-        7.856,
-        2.963
-      ],
-      "BookSynthFirstTier.ogg": [
-        7.856,
-        2.963
-      ],
-      "BookSynthFirstTier": [
-        7.856,
-        2.963
-      ],
-      "Assets/Sound Effects/Shiro/shiro_troop_buff_voiceline.mp3": [
-        10.869,
-        2.456
-      ],
-      "shiro_troop_buff_voiceline.mp3": [
-        10.869,
-        2.456
-      ],
-      "shiro_troop_buff_voiceline": [
-        10.869,
-        2.456
-      ],
-      "Assets/Sound Effects/Shiro/PermafrostKeepSealMine1.ogg": [
-        13.374,
-        1.016
-      ],
-      "PermafrostKeepSealMine1.ogg": [
-        13.374,
-        1.016
-      ],
-      "PermafrostKeepSealMine1": [
-        13.374,
-        1.016
-      ]
-    }
-  },
-  "choso": {
-    "sheetId": "char_voice_choso",
-    "characterId": "choso",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_choso_sfx.mp3",
-    "totalDuration": 11.09,
-    "sliceCount": 5,
-    "slices": {
-      "Assets/Sound Effects/Skills/spinslash.mp3": [
-        0,
-        1.646
-      ],
-      "spinslash.mp3": [
-        0,
-        1.646
-      ],
-      "spinslash": [
-        0,
-        1.646
-      ],
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        1.696,
-        2.038
-      ],
-      "enhance.mp3": [
-        1.696,
-        2.038
-      ],
-      "enhance": [
-        1.696,
-        2.038
-      ],
-      "Assets/Sound Effects/Skills/woosh.mp3": [
-        3.783,
-        0.549
-      ],
-      "woosh.mp3": [
-        3.783,
-        0.549
-      ],
-      "woosh": [
-        3.783,
-        0.549
-      ],
-      "Assets/Sound Effects/Attacks/laserbeam.mp3": [
-        4.382,
-        3.892
-      ],
-      "laserbeam.mp3": [
-        4.382,
-        3.892
-      ],
-      "laserbeam": [
-        4.382,
-        3.892
-      ],
-      "Assets/Sound Effects/Skills/redblast.mp3": [
-        8.324,
-        2.717
-      ],
-      "redblast.mp3": [
-        8.324,
-        2.717
-      ],
-      "redblast": [
-        8.324,
-        2.717
-      ]
-    }
-  },
   "ash": {
     "sheetId": "char_voice_ash",
     "characterId": "ash",
@@ -4389,141 +426,564 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
       ]
     }
   },
+  "avatarofemptiness": {
+    "sheetId": "char_voice_avatarofemptiness",
+    "characterId": "avatarofemptiness",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_avatarofemptiness_sfx.mp3",
+    "totalDuration": 6.28,
+    "sliceCount": 4,
+    "slices": {
+      "Assets/Sound Effects/Avatar/RiftShoot1.ogg": [
+        0,
+        0.96
+      ],
+      "RiftShoot1.ogg": [
+        0,
+        0.96
+      ],
+      "RiftShoot1": [
+        0,
+        0.96
+      ],
+      "Assets/Sound Effects/Avatar/UniversalAnnihilationCharge.ogg": [
+        1.01,
+        2.074
+      ],
+      "UniversalAnnihilationCharge.ogg": [
+        1.01,
+        2.074
+      ],
+      "UniversalAnnihilationCharge": [
+        1.01,
+        2.074
+      ],
+      "Assets/Sound Effects/Avatar/RealityImpact.ogg": [
+        3.134,
+        1.283
+      ],
+      "RealityImpact.ogg": [
+        3.134,
+        1.283
+      ],
+      "RealityImpact": [
+        3.134,
+        1.283
+      ],
+      "Assets/Sound Effects/Avatar/PortalPierce1.ogg": [
+        4.467,
+        1.762
+      ],
+      "PortalPierce1.ogg": [
+        4.467,
+        1.762
+      ],
+      "PortalPierce1": [
+        4.467,
+        1.762
+      ]
+    }
+  },
   "bomberman": {
     "sheetId": "char_voice_bomberman",
     "characterId": "bomberman",
     "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_bomberman_sfx.mp3",
-    "totalDuration": 4.38,
-    "sliceCount": 3,
+    "totalDuration": 7.17,
+    "sliceCount": 5,
     "slices": {
-      "Assets/Sound Effects/Sprites SFX/crazydave-sun-pickup.mp3": [
+      "Assets/Sound Effects/BombermanSFX/Place Bomb.wav": [
         0,
+        0.8
+      ],
+      "Place Bomb.wav": [
+        0,
+        0.8
+      ],
+      "Place Bomb": [
+        0,
+        0.8
+      ],
+      "Assets/Sound Effects/Sprites SFX/crazydave-sun-pickup.mp3": [
+        0.85,
         1.207
       ],
       "crazydave-sun-pickup.mp3": [
-        0,
+        0.85,
         1.207
       ],
       "crazydave-sun-pickup": [
-        0,
+        0.85,
         1.207
       ],
+      "Assets/Sound Effects/BombermanSFX/era_vera-easter22-gun-melee-summon.wav": [
+        2.107,
+        1.893
+      ],
+      "era_vera-easter22-gun-melee-summon.wav": [
+        2.107,
+        1.893
+      ],
+      "era_vera-easter22-gun-melee-summon": [
+        2.107,
+        1.893
+      ],
       "Assets/Sound Effects/BombermanSFX/Kick - Pressure Block.wav": [
-        1.257,
+        4.051,
         0.28
       ],
       "Kick - Pressure Block.wav": [
-        1.257,
+        4.051,
         0.28
       ],
       "Kick - Pressure Block": [
-        1.257,
+        4.051,
         0.28
       ],
       "Assets/Sound Effects/Skills/shieldcharge.mp3": [
-        1.587,
+        4.38,
         2.739
       ],
       "shieldcharge.mp3": [
-        1.587,
+        4.38,
         2.739
       ],
       "shieldcharge": [
-        1.587,
+        4.38,
         2.739
       ]
     }
   },
-  "pacman": {
-    "sheetId": "char_voice_pacman",
-    "characterId": "pacman",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_pacman_sfx.mp3",
-    "totalDuration": 10.07,
-    "sliceCount": 7,
+  "choso": {
+    "sheetId": "char_voice_choso",
+    "characterId": "choso",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_choso_sfx.mp3",
+    "totalDuration": 11.09,
+    "sliceCount": 5,
     "slices": {
-      "Assets/Sound Effects/PacmanSFX/chomp.wav": [
+      "Assets/Sound Effects/Skills/spinslash.mp3": [
         0,
-        0.35
+        1.646
       ],
-      "chomp.wav": [
+      "spinslash.mp3": [
         0,
-        0.35
+        1.646
       ],
-      "chomp": [
+      "spinslash": [
         0,
-        0.35
+        1.646
       ],
-      "Assets/Sound Effects/PacmanSFX/pac-man_eat_fruits.mp3": [
-        0.4,
-        0.131
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        1.696,
+        2.038
       ],
-      "pac-man_eat_fruits.mp3": [
-        0.4,
-        0.131
+      "enhance.mp3": [
+        1.696,
+        2.038
       ],
-      "pac-man_eat_fruits": [
-        0.4,
-        0.131
+      "enhance": [
+        1.696,
+        2.038
       ],
-      "Assets/Sound Effects/PacmanSFX/pac-man_eat_fruits2.mp3": [
-        0.581,
-        0.131
+      "Assets/Sound Effects/Skills/woosh.mp3": [
+        3.783,
+        0.549
       ],
-      "pac-man_eat_fruits2.mp3": [
-        0.581,
-        0.131
+      "woosh.mp3": [
+        3.783,
+        0.549
       ],
-      "pac-man_eat_fruits2": [
-        0.581,
-        0.131
+      "woosh": [
+        3.783,
+        0.549
       ],
-      "Assets/Sound Effects/PacmanSFX/PAC-MAN - Eating The Big Fruit.mp3": [
-        0.761,
-        4.009
+      "Assets/Sound Effects/Attacks/laserbeam.mp3": [
+        4.382,
+        3.892
       ],
-      "PAC-MAN - Eating The Big Fruit.mp3": [
-        0.761,
-        4.009
+      "laserbeam.mp3": [
+        4.382,
+        3.892
       ],
-      "PAC-MAN - Eating The Big Fruit": [
-        0.761,
-        4.009
+      "laserbeam": [
+        4.382,
+        3.892
       ],
-      "Assets/Sound Effects/PacmanSFX/PAC-MAN - Eating The Ghost.mp3": [
-        4.82,
+      "Assets/Sound Effects/Skills/redblast.mp3": [
+        8.324,
+        2.717
+      ],
+      "redblast.mp3": [
+        8.324,
+        2.717
+      ],
+      "redblast": [
+        8.324,
+        2.717
+      ]
+    }
+  },
+  "cj": {
+    "sheetId": "char_voice_cj",
+    "characterId": "cj",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_cj_sfx.mp3",
+    "totalDuration": 22.48,
+    "sliceCount": 17,
+    "slices": {
+      "Assets/Sound Effects/Skills/cj-typeclick1letter-noise.mp3": [
+        0,
+        0.261
+      ],
+      "cj-typeclick1letter-noise.mp3": [
+        0,
+        0.261
+      ],
+      "cj-typeclick1letter-noise": [
+        0,
+        0.261
+      ],
+      "Assets/Sound Effects/Skills/cj-cheatactivated-banner.mp3": [
+        0.311,
+        0.261
+      ],
+      "cj-cheatactivated-banner.mp3": [
+        0.311,
+        0.261
+      ],
+      "cj-cheatactivated-banner": [
+        0.311,
+        0.261
+      ],
+      "Assets/Sound Effects/Attacks/revolvershot.mp3": [
+        0.622,
+        0.549
+      ],
+      "revolvershot.mp3": [
+        0.622,
+        0.549
+      ],
+      "revolvershot": [
+        0.622,
+        0.549
+      ],
+      "Assets/Sound Effects/Skills/engineer-sentrygunshot.mp3": [
+        1.221,
         0.653
       ],
-      "PAC-MAN - Eating The Ghost.mp3": [
-        4.82,
+      "engineer-sentrygunshot.mp3": [
+        1.221,
         0.653
       ],
-      "PAC-MAN - Eating The Ghost": [
-        4.82,
+      "engineer-sentrygunshot": [
+        1.221,
         0.653
       ],
-      "Assets/Sound Effects/PacmanSFX/pac-man-death-sound.mp3": [
-        5.523,
-        4.132
+      "Assets/Sound Effects/Skills/johnwick-bulleshell-drop.mp3": [
+        1.924,
+        0.47
       ],
-      "pac-man-death-sound.mp3": [
-        5.523,
-        4.132
+      "johnwick-bulleshell-drop.mp3": [
+        1.924,
+        0.47
       ],
-      "pac-man-death-sound": [
-        5.523,
-        4.132
+      "johnwick-bulleshell-drop": [
+        1.924,
+        0.47
       ],
-      "Assets/Sound Effects/PacmanSFX/refill.wav": [
-        9.705,
-        0.32
+      "Assets/Sound Effects/Skills/cj-homiesarrival-voiceline.mp3": [
+        2.444,
+        1.149
       ],
-      "refill.wav": [
-        9.705,
-        0.32
+      "cj-homiesarrival-voiceline.mp3": [
+        2.444,
+        1.149
       ],
-      "refill": [
-        9.705,
-        0.32
+      "cj-homiesarrival-voiceline": [
+        2.444,
+        1.149
+      ],
+      "Assets/Sound Effects/Skills/cj-homiearrival-voiceline2.mp3": [
+        3.644,
+        1.698
+      ],
+      "cj-homiearrival-voiceline2.mp3": [
+        3.644,
+        1.698
+      ],
+      "cj-homiearrival-voiceline2": [
+        3.644,
+        1.698
+      ],
+      "Assets/Sound Effects/Skills/cj-homiearrival-voiceline3.mp3": [
+        5.392,
+        1.829
+      ],
+      "cj-homiearrival-voiceline3.mp3": [
+        5.392,
+        1.829
+      ],
+      "cj-homiearrival-voiceline3": [
+        5.392,
+        1.829
+      ],
+      "Assets/Sound Effects/Skills/cj-homiearrival-voiceline4.mp3": [
+        7.27,
+        1.489
+      ],
+      "cj-homiearrival-voiceline4.mp3": [
+        7.27,
+        1.489
+      ],
+      "cj-homiearrival-voiceline4": [
+        7.27,
+        1.489
+      ],
+      "Assets/Sound Effects/Skills/cj-homies-noise1.mp3": [
+        8.809,
+        0.862
+      ],
+      "cj-homies-noise1.mp3": [
+        8.809,
+        0.862
+      ],
+      "cj-homies-noise1": [
+        8.809,
+        0.862
+      ],
+      "Assets/Sound Effects/Skills/cj-homies-noise2.mp3": [
+        9.721,
+        1.045
+      ],
+      "cj-homies-noise2.mp3": [
+        9.721,
+        1.045
+      ],
+      "cj-homies-noise2": [
+        9.721,
+        1.045
+      ],
+      "Assets/Sound Effects/Skills/cj-homie-noise3.mp3": [
+        10.816,
+        1.306
+      ],
+      "cj-homie-noise3.mp3": [
+        10.816,
+        1.306
+      ],
+      "cj-homie-noise3": [
+        10.816,
+        1.306
+      ],
+      "Assets/Sound Effects/Skills/cj-homie-noise4.mp3": [
+        12.172,
+        1.489
+      ],
+      "cj-homie-noise4.mp3": [
+        12.172,
+        1.489
+      ],
+      "cj-homie-noise4": [
+        12.172,
+        1.489
+      ],
+      "Assets/Sound Effects/Skills/cj-homie-noise5.mp3": [
+        13.711,
+        1.202
+      ],
+      "cj-homie-noise5.mp3": [
+        13.711,
+        1.202
+      ],
+      "cj-homie-noise5": [
+        13.711,
+        1.202
+      ],
+      "Assets/Sound Effects/Skills/johnwick-m4-shot.mp3": [
+        14.963,
+        3.323
+      ],
+      "johnwick-m4-shot.mp3": [
+        14.963,
+        3.323
+      ],
+      "johnwick-m4-shot": [
+        14.963,
+        3.323
+      ],
+      "Assets/Sound Effects/Skills/cj-intro-voiceline.mp3": [
+        18.336,
+        3.053
+      ],
+      "cj-intro-voiceline.mp3": [
+        18.336,
+        3.053
+      ],
+      "cj-intro-voiceline": [
+        18.336,
+        3.053
+      ],
+      "Assets/Sound Effects/Skills/cj-GROVESTREET4LIFE-voiceline.mp3": [
+        21.439,
+        0.993
+      ],
+      "cj-GROVESTREET4LIFE-voiceline.mp3": [
+        21.439,
+        0.993
+      ],
+      "cj-GROVESTREET4LIFE-voiceline": [
+        21.439,
+        0.993
+      ]
+    }
+  },
+  "crazydave": {
+    "sheetId": "char_voice_crazydave",
+    "characterId": "crazydave",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_crazydave_sfx.mp3",
+    "totalDuration": 16.65,
+    "sliceCount": 12,
+    "slices": {
+      "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (1).ogg": [
+        0,
+        1.169
+      ],
+      "crazydave-noise1 (1).ogg": [
+        0,
+        1.169
+      ],
+      "crazydave-noise1 (1)": [
+        0,
+        1.169
+      ],
+      "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (2).ogg": [
+        1.219,
+        0.907
+      ],
+      "crazydave-noise1 (2).ogg": [
+        1.219,
+        0.907
+      ],
+      "crazydave-noise1 (2)": [
+        1.219,
+        0.907
+      ],
+      "Assets/Sound Effects/Boss Voiceline SFX/crazydave-noise1 (3).ogg": [
+        2.176,
+        1.087
+      ],
+      "crazydave-noise1 (3).ogg": [
+        2.176,
+        1.087
+      ],
+      "crazydave-noise1 (3)": [
+        2.176,
+        1.087
+      ],
+      "Assets/Sound Effects/Sprites SFX/crazydave-sun-pickup.mp3": [
+        3.313,
+        1.207
+      ],
+      "crazydave-sun-pickup.mp3": [
+        3.313,
+        1.207
+      ],
+      "crazydave-sun-pickup": [
+        3.313,
+        1.207
+      ],
+      "Assets/Sound Effects/Attacks/crazydave-peashooter-shot.mp3": [
+        4.571,
+        0.802
+      ],
+      "crazydave-peashooter-shot.mp3": [
+        4.571,
+        0.802
+      ],
+      "crazydave-peashooter-shot": [
+        4.571,
+        0.802
+      ],
+      "Assets/Sound Effects/Attacks/crazydave-snow_pea_sparkles.ogg": [
+        5.423,
+        0.557
+      ],
+      "crazydave-snow_pea_sparkles.ogg": [
+        5.423,
+        0.557
+      ],
+      "crazydave-snow_pea_sparkles": [
+        5.423,
+        0.557
+      ],
+      "Assets/Sound Effects/SkillEffects/crazydave-snowpea-freeze.mp3": [
+        6.03,
+        2.717
+      ],
+      "crazydave-snowpea-freeze.mp3": [
+        6.03,
+        2.717
+      ],
+      "crazydave-snowpea-freeze": [
+        6.03,
+        2.717
+      ],
+      "Assets/Sound Effects/SkillEffects/splat3.ogg": [
+        8.797,
+        0.682
+      ],
+      "splat3.ogg": [
+        8.797,
+        0.682
+      ],
+      "splat3": [
+        8.797,
+        0.682
+      ],
+      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
+        9.529,
+        0.653
+      ],
+      "shieldblock2.mp3": [
+        9.529,
+        0.653
+      ],
+      "shieldblock2": [
+        9.529,
+        0.653
+      ],
+      "Assets/Sound Effects/Sprites SFX/Lawn Mower.mp3": [
+        10.232,
+        2.926
+      ],
+      "Lawn Mower.mp3": [
+        10.232,
+        2.926
+      ],
+      "Lawn Mower": [
+        10.232,
+        2.926
+      ],
+      "Assets/Sound Effects/Skills/spinslash.mp3": [
+        13.207,
+        1.646
+      ],
+      "spinslash.mp3": [
+        13.207,
+        1.646
+      ],
+      "spinslash": [
+        13.207,
+        1.646
+      ],
+      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
+        14.903,
+        1.698
+      ],
+      "fugaexplode.mp3": [
+        14.903,
+        1.698
+      ],
+      "fugaexplode": [
+        14.903,
+        1.698
       ]
     }
   },
@@ -4644,6 +1104,717 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
       ]
     }
   },
+  "denji": {
+    "sheetId": "char_voice_denji",
+    "characterId": "denji",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_denji_sfx.mp3",
+    "totalDuration": 4.34,
+    "sliceCount": 3,
+    "slices": {
+      "Assets/Sound Effects/DenjiSFX/Denji_chainsaw_dash_noise.mp3": [
+        0,
+        1.75
+      ],
+      "Denji_chainsaw_dash_noise.mp3": [
+        0,
+        1.75
+      ],
+      "Denji_chainsaw_dash_noise": [
+        0,
+        1.75
+      ],
+      "Assets/Sound Effects/DenjiSFX/Denji_dash_vocal_noise.mp3": [
+        1.8,
+        1.567
+      ],
+      "Denji_dash_vocal_noise.mp3": [
+        1.8,
+        1.567
+      ],
+      "Denji_dash_vocal_noise": [
+        1.8,
+        1.567
+      ],
+      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
+        3.418,
+        0.872
+      ],
+      "genos-dash-noise.mp3": [
+        3.418,
+        0.872
+      ],
+      "genos-dash-noise": [
+        3.418,
+        0.872
+      ]
+    }
+  },
+  "ender_dragon": {
+    "sheetId": "char_voice_ender_dragon",
+    "characterId": "ender_dragon",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ender_dragon_sfx.mp3",
+    "totalDuration": 20.19,
+    "sliceCount": 12,
+    "slices": {
+      "Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg": [
+        0,
+        0.719
+      ],
+      "Ghast_fireball4.ogg": [
+        0,
+        0.719
+      ],
+      "Ghast_fireball4": [
+        0,
+        0.719
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg": [
+        0.769,
+        2.5
+      ],
+      "Explosion1.ogg": [
+        0.769,
+        2.5
+      ],
+      "Explosion1": [
+        0.769,
+        2.5
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap2.ogg": [
+        3.319,
+        0.875
+      ],
+      "Ender_dragon_flap2.ogg": [
+        3.319,
+        0.875
+      ],
+      "Ender_dragon_flap2": [
+        3.319,
+        0.875
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_flap5.ogg": [
+        4.244,
+        1
+      ],
+      "Ender_dragon_flap5.ogg": [
+        4.244,
+        1
+      ],
+      "Ender_dragon_flap5": [
+        4.244,
+        1
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg": [
+        5.294,
+        3.25
+      ],
+      "Explosion3.ogg": [
+        5.294,
+        3.25
+      ],
+      "Explosion3": [
+        5.294,
+        3.25
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg": [
+        8.594,
+        3.25
+      ],
+      "Explosion2.ogg": [
+        8.594,
+        3.25
+      ],
+      "Explosion2": [
+        8.594,
+        3.25
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt1.ogg": [
+        11.894,
+        1
+      ],
+      "Ender_dragon_hurt1.ogg": [
+        11.894,
+        1
+      ],
+      "Ender_dragon_hurt1": [
+        11.894,
+        1
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt2.ogg": [
+        12.944,
+        1
+      ],
+      "Ender_dragon_hurt2.ogg": [
+        12.944,
+        1
+      ],
+      "Ender_dragon_hurt2": [
+        12.944,
+        1
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt3.ogg": [
+        13.994,
+        1
+      ],
+      "Ender_dragon_hurt3.ogg": [
+        13.994,
+        1
+      ],
+      "Ender_dragon_hurt3": [
+        13.994,
+        1
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt4.ogg": [
+        15.044,
+        1
+      ],
+      "Ender_dragon_hurt4.ogg": [
+        15.044,
+        1
+      ],
+      "Ender_dragon_hurt4": [
+        15.044,
+        1
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg": [
+        16.094,
+        3.25
+      ],
+      "Explosion4.ogg": [
+        16.094,
+        3.25
+      ],
+      "Explosion4": [
+        16.094,
+        3.25
+      ],
+      "Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg": [
+        19.394,
+        0.747
+      ],
+      "Successful_hit.ogg": [
+        19.394,
+        0.747
+      ],
+      "Successful_hit": [
+        19.394,
+        0.747
+      ]
+    }
+  },
+  "engineer": {
+    "sheetId": "char_voice_engineer",
+    "characterId": "engineer",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_engineer_sfx.mp3",
+    "totalDuration": 13.82,
+    "sliceCount": 10,
+    "slices": {
+      "Assets/Sound Effects/Attacks/shootgunshot.mp3": [
+        0,
+        1.254
+      ],
+      "shootgunshot.mp3": [
+        0,
+        1.254
+      ],
+      "shootgunshot": [
+        0,
+        1.254
+      ],
+      "Assets/Sound Effects/Skills/repair.mp3": [
+        1.304,
+        0.967
+      ],
+      "repair.mp3": [
+        1.304,
+        0.967
+      ],
+      "repair": [
+        1.304,
+        0.967
+      ],
+      "Assets/Sound Effects/Skills/hammer.mp3": [
+        2.32,
+        0.784
+      ],
+      "hammer.mp3": [
+        2.32,
+        0.784
+      ],
+      "hammer": [
+        2.32,
+        0.784
+      ],
+      "Assets/Sound Effects/Skills/johnwick-shotgun-crack.mp3": [
+        3.154,
+        1.045
+      ],
+      "johnwick-shotgun-crack.mp3": [
+        3.154,
+        1.045
+      ],
+      "johnwick-shotgun-crack": [
+        3.154,
+        1.045
+      ],
+      "Assets/Sound Effects/Skills/engineer-sentrygunshot.mp3": [
+        4.249,
+        0.653
+      ],
+      "engineer-sentrygunshot.mp3": [
+        4.249,
+        0.653
+      ],
+      "engineer-sentrygunshot": [
+        4.249,
+        0.653
+      ],
+      "Assets/Sound Effects/Skills/engineer-sentrydetected.mp3": [
+        4.952,
+        0.366
+      ],
+      "engineer-sentrydetected.mp3": [
+        4.952,
+        0.366
+      ],
+      "engineer-sentrydetected": [
+        4.952,
+        0.366
+      ],
+      "Assets/Sound Effects/Skills/engineer-sentryreloading.mp3": [
+        5.368,
+        2.638
+      ],
+      "engineer-sentryreloading.mp3": [
+        5.368,
+        2.638
+      ],
+      "engineer-sentryreloading": [
+        5.368,
+        2.638
+      ],
+      "Assets/Sound Effects/Skills/engineer-sentryreloaded.mp3": [
+        8.056,
+        0.758
+      ],
+      "engineer-sentryreloaded.mp3": [
+        8.056,
+        0.758
+      ],
+      "engineer-sentryreloaded": [
+        8.056,
+        0.758
+      ],
+      "Assets/Sound Effects/Skills/engineer-sentrydestroyed.mp3": [
+        8.864,
+        2.508
+      ],
+      "engineer-sentrydestroyed.mp3": [
+        8.864,
+        2.508
+      ],
+      "engineer-sentrydestroyed": [
+        8.864,
+        2.508
+      ],
+      "Assets/Sound Effects/Skills/machinebroken.mp3": [
+        11.421,
+        2.351
+      ],
+      "machinebroken.mp3": [
+        11.421,
+        2.351
+      ],
+      "machinebroken": [
+        11.421,
+        2.351
+      ]
+    }
+  },
+  "escanor": {
+    "sheetId": "char_voice_escanor",
+    "characterId": "escanor",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_escanor_sfx.mp3",
+    "totalDuration": 6.42,
+    "sliceCount": 3,
+    "slices": {
+      "Assets/Sound Effects/Attacks/Escanor-attack.mp3": [
+        0,
+        1.584
+      ],
+      "Escanor-attack.mp3": [
+        0,
+        1.584
+      ],
+      "Escanor-attack": [
+        0,
+        1.584
+      ],
+      "Assets/Sound Effects/SkillEffects/Escanor-weapon-lift.mp3": [
+        1.634,
+        0.792
+      ],
+      "Escanor-weapon-lift.mp3": [
+        1.634,
+        0.792
+      ],
+      "Escanor-weapon-lift": [
+        1.634,
+        0.792
+      ],
+      "Assets/Sound Effects/Attacks/laserbeam.mp3": [
+        2.476,
+        3.892
+      ],
+      "laserbeam.mp3": [
+        2.476,
+        3.892
+      ],
+      "laserbeam": [
+        2.476,
+        3.892
+      ]
+    }
+  },
+  "eye_of_cthulhu": {
+    "sheetId": "char_voice_eye_of_cthulhu",
+    "characterId": "eye_of_cthulhu",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_eye_of_cthulhu_sfx.mp3",
+    "totalDuration": 7.81,
+    "sliceCount": 4,
+    "slices": {
+      "Assets/Sound Effects/SkillEffects/EyeOfCthulhu-noise2.mp3": [
+        0,
+        1.254
+      ],
+      "EyeOfCthulhu-noise2.mp3": [
+        0,
+        1.254
+      ],
+      "EyeOfCthulhu-noise2": [
+        0,
+        1.254
+      ],
+      "Assets/Sound Effects/SkillEffects/EyeOfCthulhu-noise1.mp3": [
+        1.304,
+        2.011
+      ],
+      "EyeOfCthulhu-noise1.mp3": [
+        1.304,
+        2.011
+      ],
+      "EyeOfCthulhu-noise1": [
+        1.304,
+        2.011
+      ],
+      "Assets/Sound Effects/Skills/mahito-body-explode.mp3": [
+        3.365,
+        1.176
+      ],
+      "mahito-body-explode.mp3": [
+        3.365,
+        1.176
+      ],
+      "mahito-body-explode": [
+        3.365,
+        1.176
+      ],
+      "Assets/Sound Effects/SkillEffects/EyeOfCthulhu-noise3.mp3": [
+        4.591,
+        3.168
+      ],
+      "EyeOfCthulhu-noise3.mp3": [
+        4.591,
+        3.168
+      ],
+      "EyeOfCthulhu-noise3": [
+        4.591,
+        3.168
+      ]
+    }
+  },
+  "genos": {
+    "sheetId": "char_voice_genos",
+    "characterId": "genos",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_genos_sfx.mp3",
+    "totalDuration": 24.96,
+    "sliceCount": 11,
+    "slices": {
+      "Assets/Sound Effects/Attacks/genos-range-attack.mp3": [
+        0,
+        0.758
+      ],
+      "genos-range-attack.mp3": [
+        0,
+        0.758
+      ],
+      "genos-range-attack": [
+        0,
+        0.758
+      ],
+      "Assets/Sound Effects/Skills/genos-incenerate-blast.mp3": [
+        0.808,
+        2.586
+      ],
+      "genos-incenerate-blast.mp3": [
+        0.808,
+        2.586
+      ],
+      "genos-incenerate-blast": [
+        0.808,
+        2.586
+      ],
+      "Assets/Sound Effects/Skills/genos-incenerate-charging.mp3": [
+        3.444,
+        2.482
+      ],
+      "genos-incenerate-charging.mp3": [
+        3.444,
+        2.482
+      ],
+      "genos-incenerate-charging": [
+        3.444,
+        2.482
+      ],
+      "Assets/Sound Effects/Skills/genos-incenerate-voice.mp3": [
+        5.975,
+        1.149
+      ],
+      "genos-incenerate-voice.mp3": [
+        5.975,
+        1.149
+      ],
+      "genos-incenerate-voice": [
+        5.975,
+        1.149
+      ],
+      "Assets/Sound Effects/Skills/genos-ultimatecharging.mp3": [
+        7.175,
+        2.064
+      ],
+      "genos-ultimatecharging.mp3": [
+        7.175,
+        2.064
+      ],
+      "genos-ultimatecharging": [
+        7.175,
+        2.064
+      ],
+      "Assets/Sound Effects/Skills/genos-ultimateblast.mp3": [
+        9.288,
+        2.926
+      ],
+      "genos-ultimateblast.mp3": [
+        9.288,
+        2.926
+      ],
+      "genos-ultimateblast": [
+        9.288,
+        2.926
+      ],
+      "Assets/Sound Effects/Skills/genos-machinegunblow-voice.mp3": [
+        12.264,
+        1.306
+      ],
+      "genos-machinegunblow-voice.mp3": [
+        12.264,
+        1.306
+      ],
+      "genos-machinegunblow-voice": [
+        12.264,
+        1.306
+      ],
+      "Assets/Sound Effects/Skills/genos-recovery.mp3": [
+        13.62,
+        2.142
+      ],
+      "genos-recovery.mp3": [
+        13.62,
+        2.142
+      ],
+      "genos-recovery": [
+        13.62,
+        2.142
+      ],
+      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
+        15.812,
+        0.872
+      ],
+      "genos-dash-noise.mp3": [
+        15.812,
+        0.872
+      ],
+      "genos-dash-noise": [
+        15.812,
+        0.872
+      ],
+      "Assets/Sound Effects/Skills/genos-selfdestruct-charging.mp3": [
+        16.734,
+        3.788
+      ],
+      "genos-selfdestruct-charging.mp3": [
+        16.734,
+        3.788
+      ],
+      "genos-selfdestruct-charging": [
+        16.734,
+        3.788
+      ],
+      "Assets/Sound Effects/Skills/genos-selfdestruct-explosion.mp3": [
+        20.572,
+        4.336
+      ],
+      "genos-selfdestruct-explosion.mp3": [
+        20.572,
+        4.336
+      ],
+      "genos-selfdestruct-explosion": [
+        20.572,
+        4.336
+      ]
+    }
+  },
+  "gojo": {
+    "sheetId": "char_voice_gojo",
+    "characterId": "gojo",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_gojo_sfx.mp3",
+    "totalDuration": 16.28,
+    "sliceCount": 11,
+    "slices": {
+      "Assets/Sound Effects/Skills/gojodomain.mp3": [
+        0,
+        1.149
+      ],
+      "gojodomain.mp3": [
+        0,
+        1.149
+      ],
+      "gojodomain": [
+        0,
+        1.149
+      ],
+      "Assets/Sound Effects/Skills/gojodomainexpansion.mp3": [
+        1.199,
+        2.377
+      ],
+      "gojodomainexpansion.mp3": [
+        1.199,
+        2.377
+      ],
+      "gojodomainexpansion": [
+        1.199,
+        2.377
+      ],
+      "Assets/Sound Effects/Skills/gojodomaindeploy.mp3": [
+        3.627,
+        1.515
+      ],
+      "gojodomaindeploy.mp3": [
+        3.627,
+        1.515
+      ],
+      "gojodomaindeploy": [
+        3.627,
+        1.515
+      ],
+      "Assets/Sound Effects/Skills/mixing.mp3": [
+        5.192,
+        1.123
+      ],
+      "mixing.mp3": [
+        5.192,
+        1.123
+      ],
+      "mixing": [
+        5.192,
+        1.123
+      ],
+      "Assets/Sound Effects/Skills/purpledeploy.mp3": [
+        6.365,
+        1.176
+      ],
+      "purpledeploy.mp3": [
+        6.365,
+        1.176
+      ],
+      "purpledeploy": [
+        6.365,
+        1.176
+      ],
+      "Assets/Sound Effects/Skills/redcharging.mp3": [
+        7.59,
+        1.672
+      ],
+      "redcharging.mp3": [
+        7.59,
+        1.672
+      ],
+      "redcharging": [
+        7.59,
+        1.672
+      ],
+      "Assets/Sound Effects/Skills/redchanneling.mp3": [
+        9.312,
+        1.254
+      ],
+      "redchanneling.mp3": [
+        9.312,
+        1.254
+      ],
+      "redchanneling": [
+        9.312,
+        1.254
+      ],
+      "Assets/Sound Effects/Skills/reddeploy.mp3": [
+        10.616,
+        0.627
+      ],
+      "reddeploy.mp3": [
+        10.616,
+        0.627
+      ],
+      "reddeploy": [
+        10.616,
+        0.627
+      ],
+      "Assets/Sound Effects/Skills/redblast.mp3": [
+        11.293,
+        2.717
+      ],
+      "redblast.mp3": [
+        11.293,
+        2.717
+      ],
+      "redblast": [
+        11.293,
+        2.717
+      ],
+      "Assets/Sound Effects/Skills/repair.mp3": [
+        14.06,
+        0.967
+      ],
+      "repair.mp3": [
+        14.06,
+        0.967
+      ],
+      "repair": [
+        14.06,
+        0.967
+      ],
+      "Assets/Sound Effects/SkillEffects/infinity-collide.mp3": [
+        15.076,
+        1.149
+      ],
+      "infinity-collide.mp3": [
+        15.076,
+        1.149
+      ],
+      "infinity-collide": [
+        15.076,
+        1.149
+      ]
+    }
+  },
   "goku": {
     "sheetId": "char_voice_goku",
     "characterId": "goku",
@@ -4686,6 +1857,2508 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
       "ragescream": [
         6.03,
         2.194
+      ]
+    }
+  },
+  "gunslinger": {
+    "sheetId": "char_voice_gunslinger",
+    "characterId": "gunslinger",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_gunslinger_sfx.mp3",
+    "totalDuration": 3.21,
+    "sliceCount": 2,
+    "slices": {
+      "Assets/Sound Effects/Attacks/revolvershot.mp3": [
+        0,
+        0.549
+      ],
+      "revolvershot.mp3": [
+        0,
+        0.549
+      ],
+      "revolvershot": [
+        0,
+        0.549
+      ],
+      "Assets/Sound Effects/SkillEffects/pistolreload.mp3": [
+        0.599,
+        2.56
+      ],
+      "pistolreload.mp3": [
+        0.599,
+        2.56
+      ],
+      "pistolreload": [
+        0.599,
+        2.56
+      ]
+    }
+  },
+  "ichigo": {
+    "sheetId": "char_voice_ichigo",
+    "characterId": "ichigo",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ichigo_sfx.mp3",
+    "totalDuration": 11.08,
+    "sliceCount": 9,
+    "slices": {
+      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
+        0,
+        0.653
+      ],
+      "shieldblock2.mp3": [
+        0,
+        0.653
+      ],
+      "shieldblock2": [
+        0,
+        0.653
+      ],
+      "Assets/Sound Effects/Skills/ichigo-getsugatensho-bankai.mp3": [
+        0.703,
+        1.855
+      ],
+      "ichigo-getsugatensho-bankai.mp3": [
+        0.703,
+        1.855
+      ],
+      "ichigo-getsugatensho-bankai": [
+        0.703,
+        1.855
+      ],
+      "Assets/Sound Effects/Skills/Ichigo-getsugatensho-hollow-voiceline.mp3": [
+        2.608,
+        2.011
+      ],
+      "Ichigo-getsugatensho-hollow-voiceline.mp3": [
+        2.608,
+        2.011
+      ],
+      "Ichigo-getsugatensho-hollow-voiceline": [
+        2.608,
+        2.011
+      ],
+      "Assets/Sound Effects/Skills/redcharging.mp3": [
+        4.669,
+        1.672
+      ],
+      "redcharging.mp3": [
+        4.669,
+        1.672
+      ],
+      "redcharging": [
+        4.669,
+        1.672
+      ],
+      "Assets/Sound Effects/Skills/Ichigo-getsugatensho-flashstep-voiceline.mp3": [
+        6.391,
+        1.071
+      ],
+      "Ichigo-getsugatensho-flashstep-voiceline.mp3": [
+        6.391,
+        1.071
+      ],
+      "Ichigo-getsugatensho-flashstep-voiceline": [
+        6.391,
+        1.071
+      ],
+      "Assets/Sound Effects/Skills/ichigo-getsugatensho-flashstep-voiceline2.mp3": [
+        7.512,
+        0.496
+      ],
+      "ichigo-getsugatensho-flashstep-voiceline2.mp3": [
+        7.512,
+        0.496
+      ],
+      "ichigo-getsugatensho-flashstep-voiceline2": [
+        7.512,
+        0.496
+      ],
+      "Assets/Sound Effects/Skills/Ichigo-getsugatensho-hollow-voiceline2.mp3": [
+        8.058,
+        0.758
+      ],
+      "Ichigo-getsugatensho-hollow-voiceline2.mp3": [
+        8.058,
+        0.758
+      ],
+      "Ichigo-getsugatensho-hollow-voiceline2": [
+        8.058,
+        0.758
+      ],
+      "Assets/Sound Effects/Attacks/ichigo-attack-hollow-noise.mp3": [
+        8.866,
+        1.019
+      ],
+      "ichigo-attack-hollow-noise.mp3": [
+        8.866,
+        1.019
+      ],
+      "ichigo-attack-hollow-noise": [
+        8.866,
+        1.019
+      ],
+      "Assets/Sound Effects/Skills/Ichigo-bankai-charging-voiceline.mp3": [
+        9.935,
+        1.097
+      ],
+      "Ichigo-bankai-charging-voiceline.mp3": [
+        9.935,
+        1.097
+      ],
+      "Ichigo-bankai-charging-voiceline": [
+        9.935,
+        1.097
+      ]
+    }
+  },
+  "john_wick": {
+    "sheetId": "char_voice_john_wick",
+    "characterId": "john_wick",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_john_wick_sfx.mp3",
+    "totalDuration": 17.48,
+    "sliceCount": 14,
+    "slices": {
+      "Assets/Sound Effects/Skills/johnwick-pistol-shot.mp3": [
+        0,
+        1.855
+      ],
+      "johnwick-pistol-shot.mp3": [
+        0,
+        1.855
+      ],
+      "johnwick-pistol-shot": [
+        0,
+        1.855
+      ],
+      "Assets/Sound Effects/Skills/johnwick-pencilstab.mp3": [
+        1.905,
+        0.697
+      ],
+      "johnwick-pencilstab.mp3": [
+        1.905,
+        0.697
+      ],
+      "johnwick-pencilstab": [
+        1.905,
+        0.697
+      ],
+      "Assets/Sound Effects/Skills/johnwick-bulleshell-drop.mp3": [
+        2.652,
+        0.47
+      ],
+      "johnwick-bulleshell-drop.mp3": [
+        2.652,
+        0.47
+      ],
+      "johnwick-bulleshell-drop": [
+        2.652,
+        0.47
+      ],
+      "Assets/Sound Effects/Skills/johnwick-gundrop.mp3": [
+        3.172,
+        2.656
+      ],
+      "johnwick-gundrop.mp3": [
+        3.172,
+        2.656
+      ],
+      "johnwick-gundrop": [
+        3.172,
+        2.656
+      ],
+      "Assets/Sound Effects/Skills/johnwick-gunswitch.mp3": [
+        5.878,
+        0.836
+      ],
+      "johnwick-gunswitch.mp3": [
+        5.878,
+        0.836
+      ],
+      "johnwick-gunswitch": [
+        5.878,
+        0.836
+      ],
+      "Assets/Sound Effects/Skills/johnwick-m4-reload.mp3": [
+        6.764,
+        0.47
+      ],
+      "johnwick-m4-reload.mp3": [
+        6.764,
+        0.47
+      ],
+      "johnwick-m4-reload": [
+        6.764,
+        0.47
+      ],
+      "Assets/Sound Effects/Skills/johnwick-m4-shot.mp3": [
+        7.284,
+        3.323
+      ],
+      "johnwick-m4-shot.mp3": [
+        7.284,
+        3.323
+      ],
+      "johnwick-m4-shot": [
+        7.284,
+        3.323
+      ],
+      "Assets/Sound Effects/Skills/johnwick-pistol-reload.mp3": [
+        10.657,
+        0.301
+      ],
+      "johnwick-pistol-reload.mp3": [
+        10.657,
+        0.301
+      ],
+      "johnwick-pistol-reload": [
+        10.657,
+        0.301
+      ],
+      "Assets/Sound Effects/Skills/johnwick-shotgun-crack.mp3": [
+        11.008,
+        1.045
+      ],
+      "johnwick-shotgun-crack.mp3": [
+        11.008,
+        1.045
+      ],
+      "johnwick-shotgun-crack": [
+        11.008,
+        1.045
+      ],
+      "Assets/Sound Effects/Skills/johnwick-shotgun-reload.mp3": [
+        12.103,
+        0.601
+      ],
+      "johnwick-shotgun-reload.mp3": [
+        12.103,
+        0.601
+      ],
+      "johnwick-shotgun-reload": [
+        12.103,
+        0.601
+      ],
+      "Assets/Sound Effects/Skills/Johnwick-rollback-voiceline.mp3": [
+        12.753,
+        1.254
+      ],
+      "Johnwick-rollback-voiceline.mp3": [
+        12.753,
+        1.254
+      ],
+      "Johnwick-rollback-voiceline": [
+        12.753,
+        1.254
+      ],
+      "Assets/Sound Effects/Skills/johnwick-switchgun-voiceline.mp3": [
+        14.057,
+        1.466
+      ],
+      "johnwick-switchgun-voiceline.mp3": [
+        14.057,
+        1.466
+      ],
+      "johnwick-switchgun-voiceline": [
+        14.057,
+        1.466
+      ],
+      "Assets/Sound Effects/Attacks/shootgunshot.mp3": [
+        15.573,
+        1.254
+      ],
+      "shootgunshot.mp3": [
+        15.573,
+        1.254
+      ],
+      "shootgunshot": [
+        15.573,
+        1.254
+      ],
+      "Assets/Sound Effects/Skills/woosh.mp3": [
+        16.877,
+        0.549
+      ],
+      "woosh.mp3": [
+        16.877,
+        0.549
+      ],
+      "woosh": [
+        16.877,
+        0.549
+      ]
+    }
+  },
+  "mahito": {
+    "sheetId": "char_voice_mahito",
+    "characterId": "mahito",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_mahito_sfx.mp3",
+    "totalDuration": 19.58,
+    "sliceCount": 16,
+    "slices": {
+      "Assets/Sound Effects/Skills/mahito-stretch-arm.mp3": [
+        0,
+        0.627
+      ],
+      "mahito-stretch-arm.mp3": [
+        0,
+        0.627
+      ],
+      "mahito-stretch-arm": [
+        0,
+        0.627
+      ],
+      "Assets/Sound Effects/Skills/woosh.mp3": [
+        0.677,
+        0.549
+      ],
+      "woosh.mp3": [
+        0.677,
+        0.549
+      ],
+      "woosh": [
+        0.677,
+        0.549
+      ],
+      "Assets/Sound Effects/Skills/mahito-farewell-voiceline.mp3": [
+        1.276,
+        0.922
+      ],
+      "mahito-farewell-voiceline.mp3": [
+        1.276,
+        0.922
+      ],
+      "mahito-farewell-voiceline": [
+        1.276,
+        0.922
+      ],
+      "Assets/Sound Effects/Skills/mahito-body-explode.mp3": [
+        2.247,
+        1.176
+      ],
+      "mahito-body-explode.mp3": [
+        2.247,
+        1.176
+      ],
+      "mahito-body-explode": [
+        2.247,
+        1.176
+      ],
+      "Assets/Sound Effects/Skills/mahito-domainchanneling-voiceline.mp3": [
+        3.473,
+        1.437
+      ],
+      "mahito-domainchanneling-voiceline.mp3": [
+        3.473,
+        1.437
+      ],
+      "mahito-domainchanneling-voiceline": [
+        3.473,
+        1.437
+      ],
+      "Assets/Sound Effects/Skills/mahito-domaindeploy-voiceline.mp3": [
+        4.959,
+        2.429
+      ],
+      "mahito-domaindeploy-voiceline.mp3": [
+        4.959,
+        2.429
+      ],
+      "mahito-domaindeploy-voiceline": [
+        4.959,
+        2.429
+      ],
+      "Assets/Sound Effects/Skills/gojodomainexpansion.mp3": [
+        7.439,
+        2.377
+      ],
+      "gojodomainexpansion.mp3": [
+        7.439,
+        2.377
+      ],
+      "gojodomainexpansion": [
+        7.439,
+        2.377
+      ],
+      "Assets/Sound Effects/Skills/mahito-split-clone2.mp3": [
+        9.866,
+        0.47
+      ],
+      "mahito-split-clone2.mp3": [
+        9.866,
+        0.47
+      ],
+      "mahito-split-clone2": [
+        9.866,
+        0.47
+      ],
+      "Assets/Sound Effects/Skills/mahito-split-clone1.mp3": [
+        10.386,
+        0.94
+      ],
+      "mahito-split-clone1.mp3": [
+        10.386,
+        0.94
+      ],
+      "mahito-split-clone1": [
+        10.386,
+        0.94
+      ],
+      "Assets/Sound Effects/Skills/mahito-transformback-voiceline.mp3": [
+        11.376,
+        1.019
+      ],
+      "mahito-transformback-voiceline.mp3": [
+        11.376,
+        1.019
+      ],
+      "mahito-transformback-voiceline": [
+        11.376,
+        1.019
+      ],
+      "Assets/Sound Effects/Skills/mahito-dash-voiceline.mp3": [
+        12.445,
+        0.603
+      ],
+      "mahito-dash-voiceline.mp3": [
+        12.445,
+        0.603
+      ],
+      "mahito-dash-voiceline": [
+        12.445,
+        0.603
+      ],
+      "Assets/Sound Effects/Skills/mahito-skill2-voiceline.mp3": [
+        13.098,
+        1.256
+      ],
+      "mahito-skill2-voiceline.mp3": [
+        13.098,
+        1.256
+      ],
+      "mahito-skill2-voiceline": [
+        13.098,
+        1.256
+      ],
+      "Assets/Sound Effects/Skills/mahito-minionsthrow-voiceline.mp3": [
+        14.404,
+        1.504
+      ],
+      "mahito-minionsthrow-voiceline.mp3": [
+        14.404,
+        1.504
+      ],
+      "mahito-minionsthrow-voiceline": [
+        14.404,
+        1.504
+      ],
+      "Assets/Sound Effects/Skills/mahito-minion-summon.mp3": [
+        15.958,
+        0.967
+      ],
+      "mahito-minion-summon.mp3": [
+        15.958,
+        0.967
+      ],
+      "mahito-minion-summon": [
+        15.958,
+        0.967
+      ],
+      "Assets/Sound Effects/Skills/mahito-minion-summon1.mp3": [
+        16.975,
+        1.123
+      ],
+      "mahito-minion-summon1.mp3": [
+        16.975,
+        1.123
+      ],
+      "mahito-minion-summon1": [
+        16.975,
+        1.123
+      ],
+      "Assets/Sound Effects/Skills/mahito-minion-summo2.mp3": [
+        18.148,
+        1.384
+      ],
+      "mahito-minion-summo2.mp3": [
+        18.148,
+        1.384
+      ],
+      "mahito-minion-summo2": [
+        18.148,
+        1.384
+      ]
+    }
+  },
+  "mahoraga": {
+    "sheetId": "char_voice_mahoraga",
+    "characterId": "mahoraga",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_mahoraga_sfx.mp3",
+    "totalDuration": 12.6,
+    "sliceCount": 5,
+    "slices": {
+      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
+        0,
+        0.653
+      ],
+      "shieldblock2.mp3": [
+        0,
+        0.653
+      ],
+      "shieldblock2": [
+        0,
+        0.653
+      ],
+      "Assets/Sound Effects/MahoragaSFX/divine-shout-wind-up-enogc4bcarbonmk2bladeidlestartup.wav": [
+        0.703,
+        3.955
+      ],
+      "divine-shout-wind-up-enogc4bcarbonmk2bladeidlestartup.wav": [
+        0.703,
+        3.955
+      ],
+      "divine-shout-wind-up-enogc4bcarbonmk2bladeidlestartup": [
+        0.703,
+        3.955
+      ],
+      "Assets/Sound Effects/MahoragaSFX/divine-shout-enocarboncswitchpoweredupnew.wav": [
+        4.708,
+        3.429
+      ],
+      "divine-shout-enocarboncswitchpoweredupnew.wav": [
+        4.708,
+        3.429
+      ],
+      "divine-shout-enocarboncswitchpoweredupnew": [
+        4.708,
+        3.429
+      ],
+      "Assets/Sound Effects/Skills/mahoraga-wheelclick.mp3": [
+        8.186,
+        2.273
+      ],
+      "mahoraga-wheelclick.mp3": [
+        8.186,
+        2.273
+      ],
+      "mahoraga-wheelclick": [
+        8.186,
+        2.273
+      ],
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        10.509,
+        2.038
+      ],
+      "enhance.mp3": [
+        10.509,
+        2.038
+      ],
+      "enhance": [
+        10.509,
+        2.038
+      ]
+    }
+  },
+  "makima": {
+    "sheetId": "char_voice_makima",
+    "characterId": "makima",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_makima_sfx.mp3",
+    "totalDuration": 24.01,
+    "sliceCount": 16,
+    "slices": {
+      "Assets/Sound Effects/Attacks/desert-eagle-fire.mp3": [
+        0,
+        1.437
+      ],
+      "desert-eagle-fire.mp3": [
+        0,
+        1.437
+      ],
+      "desert-eagle-fire": [
+        0,
+        1.437
+      ],
+      "Assets/Sound Effects/Skills/makima-bang.mp3": [
+        1.487,
+        0.601
+      ],
+      "makima-bang.mp3": [
+        1.487,
+        0.601
+      ],
+      "makima-bang": [
+        1.487,
+        0.601
+      ],
+      "Assets/Sound Effects/Skills/rubbick-groundsmash.mp3": [
+        2.138,
+        2.168
+      ],
+      "rubbick-groundsmash.mp3": [
+        2.138,
+        2.168
+      ],
+      "rubbick-groundsmash": [
+        2.138,
+        2.168
+      ],
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        4.356,
+        2.038
+      ],
+      "enhance.mp3": [
+        4.356,
+        2.038
+      ],
+      "enhance": [
+        4.356,
+        2.038
+      ],
+      "Assets/Sound Effects/Skills/makima-revert-voiceline.mp3": [
+        6.443,
+        0.731
+      ],
+      "makima-revert-voiceline.mp3": [
+        6.443,
+        0.731
+      ],
+      "makima-revert-voiceline": [
+        6.443,
+        0.731
+      ],
+      "Assets/Sound Effects/Skills/makima-revert-voiceline2.mp3": [
+        7.225,
+        1.567
+      ],
+      "makima-revert-voiceline2.mp3": [
+        7.225,
+        1.567
+      ],
+      "makima-revert-voiceline2": [
+        7.225,
+        1.567
+      ],
+      "Assets/Sound Effects/Skills/makima-revert-voiceline3.mp3": [
+        8.842,
+        1.437
+      ],
+      "makima-revert-voiceline3.mp3": [
+        8.842,
+        1.437
+      ],
+      "makima-revert-voiceline3": [
+        8.842,
+        1.437
+      ],
+      "Assets/Sound Effects/Skills/hookchain.mp3": [
+        10.329,
+        0.742
+      ],
+      "hookchain.mp3": [
+        10.329,
+        0.742
+      ],
+      "hookchain": [
+        10.329,
+        0.742
+      ],
+      "Assets/Sound Effects/Skills/gravitypull.mp3": [
+        11.12,
+        3.37
+      ],
+      "gravitypull.mp3": [
+        11.12,
+        3.37
+      ],
+      "gravitypull": [
+        11.12,
+        3.37
+      ],
+      "Assets/Sound Effects/Skills/makima-chain-voiceline1.mp3": [
+        14.54,
+        0.47
+      ],
+      "makima-chain-voiceline1.mp3": [
+        14.54,
+        0.47
+      ],
+      "makima-chain-voiceline1": [
+        14.54,
+        0.47
+      ],
+      "Assets/Sound Effects/Skills/makima-chain-voiceline2.mp3": [
+        15.06,
+        0.679
+      ],
+      "makima-chain-voiceline2.mp3": [
+        15.06,
+        0.679
+      ],
+      "makima-chain-voiceline2": [
+        15.06,
+        0.679
+      ],
+      "Assets/Sound Effects/Skills/makima-chain-voiceline3.mp3": [
+        15.79,
+        2.142
+      ],
+      "makima-chain-voiceline3.mp3": [
+        15.79,
+        2.142
+      ],
+      "makima-chain-voiceline3": [
+        15.79,
+        2.142
+      ],
+      "Assets/Sound Effects/Skills/makima-chain-voiceline4.mp3": [
+        17.982,
+        1.358
+      ],
+      "makima-chain-voiceline4.mp3": [
+        17.982,
+        1.358
+      ],
+      "makima-chain-voiceline4": [
+        17.982,
+        1.358
+      ],
+      "Assets/Sound Effects/Skills/woosh.mp3": [
+        19.39,
+        0.549
+      ],
+      "woosh.mp3": [
+        19.39,
+        0.549
+      ],
+      "woosh": [
+        19.39,
+        0.549
+      ],
+      "Assets/Sound Effects/Skills/shrine.mp3": [
+        19.989,
+        2.22
+      ],
+      "shrine.mp3": [
+        19.989,
+        2.22
+      ],
+      "shrine": [
+        19.989,
+        2.22
+      ],
+      "Assets/Sound Effects/Skills/Makima-crucifix-heavy-impact.mp3": [
+        22.259,
+        1.698
+      ],
+      "Makima-crucifix-heavy-impact.mp3": [
+        22.259,
+        1.698
+      ],
+      "Makima-crucifix-heavy-impact": [
+        22.259,
+        1.698
+      ]
+    }
+  },
+  "megumin": {
+    "sheetId": "char_voice_megumin",
+    "characterId": "megumin",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_megumin_sfx.mp3",
+    "totalDuration": 19.25,
+    "sliceCount": 7,
+    "slices": {
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        0,
+        2.038
+      ],
+      "enhance.mp3": [
+        0,
+        2.038
+      ],
+      "enhance": [
+        0,
+        2.038
+      ],
+      "Assets/Sound Effects/Skills/shieldcharge.mp3": [
+        2.088,
+        2.739
+      ],
+      "shieldcharge.mp3": [
+        2.088,
+        2.739
+      ],
+      "shieldcharge": [
+        2.088,
+        2.739
+      ],
+      "Assets/Sound Effects/Skills/genos-ultimatecharging.mp3": [
+        4.876,
+        2.064
+      ],
+      "genos-ultimatecharging.mp3": [
+        4.876,
+        2.064
+      ],
+      "genos-ultimatecharging": [
+        4.876,
+        2.064
+      ],
+      "Assets/Sound Effects/Skills/gravitypull.mp3": [
+        6.99,
+        3.37
+      ],
+      "gravitypull.mp3": [
+        6.99,
+        3.37
+      ],
+      "gravitypull": [
+        6.99,
+        3.37
+      ],
+      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
+        10.41,
+        1.698
+      ],
+      "fugaexplode.mp3": [
+        10.41,
+        1.698
+      ],
+      "fugaexplode": [
+        10.41,
+        1.698
+      ],
+      "Assets/Sound Effects/Skills/genos-selfdestruct-explosion.mp3": [
+        12.157,
+        4.336
+      ],
+      "genos-selfdestruct-explosion.mp3": [
+        12.157,
+        4.336
+      ],
+      "genos-selfdestruct-explosion": [
+        12.157,
+        4.336
+      ],
+      "Assets/Sound Effects/Skills/johnwick-gundrop.mp3": [
+        16.544,
+        2.656
+      ],
+      "johnwick-gundrop.mp3": [
+        16.544,
+        2.656
+      ],
+      "johnwick-gundrop": [
+        16.544,
+        2.656
+      ]
+    }
+  },
+  "namelessdeity": {
+    "sheetId": "char_voice_namelessdeity",
+    "characterId": "namelessdeity",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_namelessdeity_sfx.mp3",
+    "totalDuration": 46.73,
+    "sliceCount": 24,
+    "slices": {
+      "Assets/Sound Effects/NamelessDeity/SunBeamShoot.ogg": [
+        0,
+        2.261
+      ],
+      "SunBeamShoot.ogg": [
+        0,
+        2.261
+      ],
+      "SunBeamShoot": [
+        0,
+        2.261
+      ],
+      "Assets/Sound Effects/NamelessDeity/WingFlap2.ogg": [
+        2.311,
+        0.896
+      ],
+      "WingFlap2.ogg": [
+        2.311,
+        0.896
+      ],
+      "WingFlap2": [
+        2.311,
+        0.896
+      ],
+      "Assets/Sound Effects/NamelessDeity/CosmicLaserObliteration.ogg": [
+        3.257,
+        3.222
+      ],
+      "CosmicLaserObliteration.ogg": [
+        3.257,
+        3.222
+      ],
+      "CosmicLaserObliteration": [
+        3.257,
+        3.222
+      ],
+      "Assets/Sound Effects/NamelessDeity/RealityTear.ogg": [
+        6.528,
+        2.574
+      ],
+      "RealityTear.ogg": [
+        6.528,
+        2.574
+      ],
+      "RealityTear": [
+        6.528,
+        2.574
+      ],
+      "Assets/Sound Effects/NamelessDeity/StarConvergenceFast.ogg": [
+        9.153,
+        2.211
+      ],
+      "StarConvergenceFast.ogg": [
+        9.153,
+        2.211
+      ],
+      "StarConvergenceFast": [
+        9.153,
+        2.211
+      ],
+      "Assets/Sound Effects/NamelessDeity/Supernova.ogg": [
+        11.413,
+        1.945
+      ],
+      "Supernova.ogg": [
+        11.413,
+        1.945
+      ],
+      "Supernova": [
+        11.413,
+        1.945
+      ],
+      "Assets/Sound Effects/NamelessDeity/SunFireballShootSound.ogg": [
+        13.408,
+        0.897
+      ],
+      "SunFireballShootSound.ogg": [
+        13.408,
+        0.897
+      ],
+      "SunFireballShootSound": [
+        13.408,
+        0.897
+      ],
+      "Assets/Sound Effects/NamelessDeity/GenericBurst.ogg": [
+        14.355,
+        1.623
+      ],
+      "GenericBurst.ogg": [
+        14.355,
+        1.623
+      ],
+      "GenericBurst": [
+        14.355,
+        1.623
+      ],
+      "Assets/Sound Effects/NamelessDeity/DaggerBurst.ogg": [
+        16.027,
+        1.576
+      ],
+      "DaggerBurst.ogg": [
+        16.027,
+        1.576
+      ],
+      "DaggerBurst": [
+        16.027,
+        1.576
+      ],
+      "Assets/Sound Effects/NamelessDeity/DaggerGraze1.ogg": [
+        17.653,
+        1.291
+      ],
+      "DaggerGraze1.ogg": [
+        17.653,
+        1.291
+      ],
+      "DaggerGraze1": [
+        17.653,
+        1.291
+      ],
+      "Assets/Sound Effects/NamelessDeity/DaggerGrazeEcho1.ogg": [
+        18.993,
+        1.715
+      ],
+      "DaggerGrazeEcho1.ogg": [
+        18.993,
+        1.715
+      ],
+      "DaggerGrazeEcho1": [
+        18.993,
+        1.715
+      ],
+      "Assets/Sound Effects/NamelessDeity/SliceTelegraph.ogg": [
+        20.758,
+        0.409
+      ],
+      "SliceTelegraph.ogg": [
+        20.758,
+        0.409
+      ],
+      "SliceTelegraph": [
+        20.758,
+        0.409
+      ],
+      "Assets/Sound Effects/NamelessDeity/BigSupernova.ogg": [
+        21.217,
+        4.459
+      ],
+      "BigSupernova.ogg": [
+        21.217,
+        4.459
+      ],
+      "BigSupernova": [
+        21.217,
+        4.459
+      ],
+      "Assets/Sound Effects/NamelessDeity/StarCrush.ogg": [
+        25.727,
+        3.536
+      ],
+      "StarCrush.ogg": [
+        25.727,
+        3.536
+      ],
+      "StarCrush": [
+        25.727,
+        3.536
+      ],
+      "Assets/Sound Effects/NamelessDeity/ScreenTear.ogg": [
+        29.313,
+        2.682
+      ],
+      "ScreenTear.ogg": [
+        29.313,
+        2.682
+      ],
+      "ScreenTear": [
+        29.313,
+        2.682
+      ],
+      "Assets/Sound Effects/NamelessDeity/FingerSnap.ogg": [
+        32.045,
+        0.353
+      ],
+      "FingerSnap.ogg": [
+        32.045,
+        0.353
+      ],
+      "FingerSnap": [
+        32.045,
+        0.353
+      ],
+      "Assets/Sound Effects/NamelessDeity/SwordSlash.ogg": [
+        32.448,
+        1.76
+      ],
+      "SwordSlash.ogg": [
+        32.448,
+        1.76
+      ],
+      "SwordSlash": [
+        32.448,
+        1.76
+      ],
+      "Assets/Sound Effects/NamelessDeity/PortalLaserShoot.ogg": [
+        34.258,
+        2.347
+      ],
+      "PortalLaserShoot.ogg": [
+        34.258,
+        2.347
+      ],
+      "PortalLaserShoot": [
+        34.258,
+        2.347
+      ],
+      "Assets/Sound Effects/NamelessDeity/MomentOfCreation.ogg": [
+        36.655,
+        3.332
+      ],
+      "MomentOfCreation.ogg": [
+        36.655,
+        3.332
+      ],
+      "MomentOfCreation": [
+        36.655,
+        3.332
+      ],
+      "Assets/Sound Effects/NamelessDeity/Mumble1.ogg": [
+        40.037,
+        1.391
+      ],
+      "Mumble1.ogg": [
+        40.037,
+        1.391
+      ],
+      "Mumble1": [
+        40.037,
+        1.391
+      ],
+      "Assets/Sound Effects/NamelessDeity/Mumble2.ogg": [
+        41.478,
+        1.314
+      ],
+      "Mumble2.ogg": [
+        41.478,
+        1.314
+      ],
+      "Mumble2": [
+        41.478,
+        1.314
+      ],
+      "Assets/Sound Effects/NamelessDeity/Mumble3.ogg": [
+        42.842,
+        1.235
+      ],
+      "Mumble3.ogg": [
+        42.842,
+        1.235
+      ],
+      "Mumble3": [
+        42.842,
+        1.235
+      ],
+      "Assets/Sound Effects/NamelessDeity/Mumble4.ogg": [
+        44.127,
+        1.224
+      ],
+      "Mumble4.ogg": [
+        44.127,
+        1.224
+      ],
+      "Mumble4": [
+        44.127,
+        1.224
+      ],
+      "Assets/Sound Effects/NamelessDeity/Mumble5.ogg": [
+        45.401,
+        1.277
+      ],
+      "Mumble5.ogg": [
+        45.401,
+        1.277
+      ],
+      "Mumble5": [
+        45.401,
+        1.277
+      ]
+    }
+  },
+  "nanami": {
+    "sheetId": "char_voice_nanami",
+    "characterId": "nanami",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_nanami_sfx.mp3",
+    "totalDuration": 7.27,
+    "sliceCount": 9,
+    "slices": {
+      "Assets/Sound Effects/Attacks/nanami-attack-noise1.mp3": [
+        0,
+        0.217
+      ],
+      "nanami-attack-noise1.mp3": [
+        0,
+        0.217
+      ],
+      "nanami-attack-noise1": [
+        0,
+        0.217
+      ],
+      "Assets/Sound Effects/Attacks/nanami-attack-noise2.mp3": [
+        0.267,
+        0.258
+      ],
+      "nanami-attack-noise2.mp3": [
+        0.267,
+        0.258
+      ],
+      "nanami-attack-noise2": [
+        0.267,
+        0.258
+      ],
+      "Assets/Sound Effects/Attacks/nanami-attack-noise3.mp3": [
+        0.575,
+        0.183
+      ],
+      "nanami-attack-noise3.mp3": [
+        0.575,
+        0.183
+      ],
+      "nanami-attack-noise3": [
+        0.575,
+        0.183
+      ],
+      "Assets/Sound Effects/Skills/nanami-bloodsplash.mp3": [
+        0.808,
+        1.019
+      ],
+      "nanami-bloodsplash.mp3": [
+        0.808,
+        1.019
+      ],
+      "nanami-bloodsplash": [
+        0.808,
+        1.019
+      ],
+      "Assets/Sound Effects/Skills/nanami-collapse-voiceline.mp3": [
+        1.877,
+        0.348
+      ],
+      "nanami-collapse-voiceline.mp3": [
+        1.877,
+        0.348
+      ],
+      "nanami-collapse-voiceline": [
+        1.877,
+        0.348
+      ],
+      "Assets/Sound Effects/Skills/nanami-collapse-voiceline2.mp3": [
+        2.274,
+        0.594
+      ],
+      "nanami-collapse-voiceline2.mp3": [
+        2.274,
+        0.594
+      ],
+      "nanami-collapse-voiceline2": [
+        2.274,
+        0.594
+      ],
+      "Assets/Sound Effects/Skills/blackflash1.mp3": [
+        2.918,
+        1.593
+      ],
+      "blackflash1.mp3": [
+        2.918,
+        1.593
+      ],
+      "blackflash1": [
+        2.918,
+        1.593
+      ],
+      "Assets/Sound Effects/Skills/nanami-blackflash-voiceline.mp3": [
+        4.562,
+        1.084
+      ],
+      "nanami-blackflash-voiceline.mp3": [
+        4.562,
+        1.084
+      ],
+      "nanami-blackflash-voiceline": [
+        4.562,
+        1.084
+      ],
+      "Assets/Sound Effects/Skills/nanami-overtime-voiceline.mp3": [
+        5.696,
+        1.527
+      ],
+      "nanami-overtime-voiceline.mp3": [
+        5.696,
+        1.527
+      ],
+      "nanami-overtime-voiceline": [
+        5.696,
+        1.527
+      ]
+    }
+  },
+  "naoya": {
+    "sheetId": "char_voice_naoya",
+    "characterId": "naoya",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_naoya_sfx.mp3",
+    "totalDuration": 14.79,
+    "sliceCount": 12,
+    "slices": {
+      "Assets/Sound Effects/NaoyaSFX/Naoya-pathafterimages-shockwaves.wav": [
+        0,
+        1.663
+      ],
+      "Naoya-pathafterimages-shockwaves.wav": [
+        0,
+        1.663
+      ],
+      "Naoya-pathafterimages-shockwaves": [
+        0,
+        1.663
+      ],
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        1.713,
+        2.038
+      ],
+      "enhance.mp3": [
+        1.713,
+        2.038
+      ],
+      "enhance": [
+        1.713,
+        2.038
+      ],
+      "Assets/Sound Effects/Skills/toji-firstseq-teleport.mp3": [
+        3.8,
+        0.836
+      ],
+      "toji-firstseq-teleport.mp3": [
+        3.8,
+        0.836
+      ],
+      "toji-firstseq-teleport": [
+        3.8,
+        0.836
+      ],
+      "Assets/Sound Effects/Skills/toji-2stseq-2ndweaponAttack.mp3": [
+        4.686,
+        0.914
+      ],
+      "toji-2stseq-2ndweaponAttack.mp3": [
+        4.686,
+        0.914
+      ],
+      "toji-2stseq-2ndweaponAttack": [
+        4.686,
+        0.914
+      ],
+      "Assets/Sound Effects/Skills/yuji-blackflash.mp3": [
+        5.65,
+        0.653
+      ],
+      "yuji-blackflash.mp3": [
+        5.65,
+        0.653
+      ],
+      "yuji-blackflash": [
+        5.65,
+        0.653
+      ],
+      "Assets/Sound Effects/NaoyaSFX/Naoya_glass_break.mp3": [
+        6.353,
+        1.489
+      ],
+      "Naoya_glass_break.mp3": [
+        6.353,
+        1.489
+      ],
+      "Naoya_glass_break": [
+        6.353,
+        1.489
+      ],
+      "Assets/Sound Effects/NaoyaSFX/Naoya_takeoff_knife.mp3": [
+        7.892,
+        0.758
+      ],
+      "Naoya_takeoff_knife.mp3": [
+        7.892,
+        0.758
+      ],
+      "Naoya_takeoff_knife": [
+        7.892,
+        0.758
+      ],
+      "Assets/Sound Effects/NaoyaSFX/Naoya_stabs.mp3": [
+        8.7,
+        1.202
+      ],
+      "Naoya_stabs.mp3": [
+        8.7,
+        1.202
+      ],
+      "Naoya_stabs": [
+        8.7,
+        1.202
+      ],
+      "Assets/Sound Effects/Skills/nanami-bloodsplash.mp3": [
+        9.951,
+        1.019
+      ],
+      "nanami-bloodsplash.mp3": [
+        9.951,
+        1.019
+      ],
+      "nanami-bloodsplash": [
+        9.951,
+        1.019
+      ],
+      "Assets/Sound Effects/Skills/ragescream.mp3": [
+        11.02,
+        2.194
+      ],
+      "ragescream.mp3": [
+        11.02,
+        2.194
+      ],
+      "ragescream": [
+        11.02,
+        2.194
+      ],
+      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
+        13.265,
+        0.872
+      ],
+      "genos-dash-noise.mp3": [
+        13.265,
+        0.872
+      ],
+      "genos-dash-noise": [
+        13.265,
+        0.872
+      ],
+      "Assets/Sound Effects/Skills/woosh.mp3": [
+        14.187,
+        0.549
+      ],
+      "woosh.mp3": [
+        14.187,
+        0.549
+      ],
+      "woosh": [
+        14.187,
+        0.549
+      ]
+    }
+  },
+  "pacman": {
+    "sheetId": "char_voice_pacman",
+    "characterId": "pacman",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_pacman_sfx.mp3",
+    "totalDuration": 9.37,
+    "sliceCount": 6,
+    "slices": {
+      "Assets/Sound Effects/PacmanSFX/chomp.wav": [
+        0,
+        0.35
+      ],
+      "chomp.wav": [
+        0,
+        0.35
+      ],
+      "chomp": [
+        0,
+        0.35
+      ],
+      "Assets/Sound Effects/PacmanSFX/pac-man_eat_fruits.mp3": [
+        0.4,
+        0.131
+      ],
+      "pac-man_eat_fruits.mp3": [
+        0.4,
+        0.131
+      ],
+      "pac-man_eat_fruits": [
+        0.4,
+        0.131
+      ],
+      "Assets/Sound Effects/PacmanSFX/pac-man_eat_fruits2.mp3": [
+        0.581,
+        0.131
+      ],
+      "pac-man_eat_fruits2.mp3": [
+        0.581,
+        0.131
+      ],
+      "pac-man_eat_fruits2": [
+        0.581,
+        0.131
+      ],
+      "Assets/Sound Effects/PacmanSFX/PAC-MAN - Eating The Big Fruit.mp3": [
+        0.761,
+        4.009
+      ],
+      "PAC-MAN - Eating The Big Fruit.mp3": [
+        0.761,
+        4.009
+      ],
+      "PAC-MAN - Eating The Big Fruit": [
+        0.761,
+        4.009
+      ],
+      "Assets/Sound Effects/PacmanSFX/pac-man-death-sound.mp3": [
+        4.82,
+        4.132
+      ],
+      "pac-man-death-sound.mp3": [
+        4.82,
+        4.132
+      ],
+      "pac-man-death-sound": [
+        4.82,
+        4.132
+      ],
+      "Assets/Sound Effects/PacmanSFX/refill.wav": [
+        9.002,
+        0.32
+      ],
+      "refill.wav": [
+        9.002,
+        0.32
+      ],
+      "refill": [
+        9.002,
+        0.32
+      ]
+    }
+  },
+  "pekka": {
+    "sheetId": "char_voice_pekka",
+    "characterId": "pekka",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_pekka_sfx.mp3",
+    "totalDuration": 6.49,
+    "sliceCount": 4,
+    "slices": {
+      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
+        0,
+        0.653
+      ],
+      "shieldblock2.mp3": [
+        0,
+        0.653
+      ],
+      "shieldblock2": [
+        0,
+        0.653
+      ],
+      "Assets/Sound Effects/Attacks/Escanor-attack.mp3": [
+        0.703,
+        1.584
+      ],
+      "Escanor-attack.mp3": [
+        0.703,
+        1.584
+      ],
+      "Escanor-attack": [
+        0.703,
+        1.584
+      ],
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        2.337,
+        2.038
+      ],
+      "enhance.mp3": [
+        2.337,
+        2.038
+      ],
+      "enhance": [
+        2.337,
+        2.038
+      ],
+      "Assets/Sound Effects/Skills/stormstrike.mp3": [
+        4.425,
+        2.011
+      ],
+      "stormstrike.mp3": [
+        4.425,
+        2.011
+      ],
+      "stormstrike": [
+        4.425,
+        2.011
+      ]
+    }
+  },
+  "reze": {
+    "sheetId": "char_voice_reze",
+    "characterId": "reze",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_reze_sfx.mp3",
+    "totalDuration": 10.12,
+    "sliceCount": 5,
+    "slices": {
+      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
+        0,
+        1.698
+      ],
+      "fugaexplode.mp3": [
+        0,
+        1.698
+      ],
+      "fugaexplode": [
+        0,
+        1.698
+      ],
+      "Assets/Sound Effects/Skills/genos-dash-noise.mp3": [
+        1.748,
+        0.872
+      ],
+      "genos-dash-noise.mp3": [
+        1.748,
+        0.872
+      ],
+      "genos-dash-noise": [
+        1.748,
+        0.872
+      ],
+      "Assets/Sound Effects/Skills/genos-ultimatecharging.mp3": [
+        2.67,
+        2.064
+      ],
+      "genos-ultimatecharging.mp3": [
+        2.67,
+        2.064
+      ],
+      "genos-ultimatecharging": [
+        2.67,
+        2.064
+      ],
+      "Assets/Sound Effects/Skills/genos-selfdestruct-explosion.mp3": [
+        4.784,
+        4.336
+      ],
+      "genos-selfdestruct-explosion.mp3": [
+        4.784,
+        4.336
+      ],
+      "genos-selfdestruct-explosion": [
+        4.784,
+        4.336
+      ],
+      "Assets/Sound Effects/RezeSFX/reze_boom_voiceline.mp3": [
+        9.17,
+        0.9
+      ],
+      "reze_boom_voiceline.mp3": [
+        9.17,
+        0.9
+      ],
+      "reze_boom_voiceline": [
+        9.17,
+        0.9
+      ]
+    }
+  },
+  "rubbick": {
+    "sheetId": "char_voice_rubbick",
+    "characterId": "rubbick",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_rubbick_sfx.mp3",
+    "totalDuration": 6.51,
+    "sliceCount": 3,
+    "slices": {
+      "Assets/Sound Effects/Skills/rubbick-telekenesis.mp3": [
+        0,
+        2.273
+      ],
+      "rubbick-telekenesis.mp3": [
+        0,
+        2.273
+      ],
+      "rubbick-telekenesis": [
+        0,
+        2.273
+      ],
+      "Assets/Sound Effects/Skills/rubbick-groundsmash.mp3": [
+        2.323,
+        2.168
+      ],
+      "rubbick-groundsmash.mp3": [
+        2.323,
+        2.168
+      ],
+      "rubbick-groundsmash": [
+        2.323,
+        2.168
+      ],
+      "Assets/Sound Effects/Skills/Rubbick-spellsteal.mp3": [
+        4.541,
+        1.916
+      ],
+      "Rubbick-spellsteal.mp3": [
+        4.541,
+        1.916
+      ],
+      "Rubbick-spellsteal": [
+        4.541,
+        1.916
+      ]
+    }
+  },
+  "ruby": {
+    "sheetId": "char_voice_ruby",
+    "characterId": "ruby",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_ruby_sfx.mp3",
+    "totalDuration": 2.49,
+    "sliceCount": 2,
+    "slices": {
+      "Assets/Sound Effects/Skills/spinslash.mp3": [
+        0,
+        1.646
+      ],
+      "spinslash.mp3": [
+        0,
+        1.646
+      ],
+      "spinslash": [
+        0,
+        1.646
+      ],
+      "Assets/Sound Effects/Skills/hookchain.mp3": [
+        1.696,
+        0.742
+      ],
+      "hookchain.mp3": [
+        1.696,
+        0.742
+      ],
+      "hookchain": [
+        1.696,
+        0.742
+      ]
+    }
+  },
+  "saitama": {
+    "sheetId": "char_voice_saitama",
+    "characterId": "saitama",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_saitama_sfx.mp3",
+    "totalDuration": 11.19,
+    "sliceCount": 10,
+    "slices": {
+      "Assets/Sound Effects/Attacks/saitama-attack-noise1.mp3": [
+        0,
+        0.894
+      ],
+      "saitama-attack-noise1.mp3": [
+        0,
+        0.894
+      ],
+      "saitama-attack-noise1": [
+        0,
+        0.894
+      ],
+      "Assets/Sound Effects/Attacks/saitama-attack-noise2.mp3": [
+        0.944,
+        0.735
+      ],
+      "saitama-attack-noise2.mp3": [
+        0.944,
+        0.735
+      ],
+      "saitama-attack-noise2": [
+        0.944,
+        0.735
+      ],
+      "Assets/Sound Effects/Attacks/saitama-attack-noise3.mp3": [
+        1.729,
+        1.573
+      ],
+      "saitama-attack-noise3.mp3": [
+        1.729,
+        1.573
+      ],
+      "saitama-attack-noise3": [
+        1.729,
+        1.573
+      ],
+      "Assets/Sound Effects/Skills/saitama-seriouspunch-impact.mp3": [
+        3.352,
+        1.332
+      ],
+      "saitama-seriouspunch-impact.mp3": [
+        3.352,
+        1.332
+      ],
+      "saitama-seriouspunch-impact": [
+        3.352,
+        1.332
+      ],
+      "Assets/Sound Effects/Skills/saitama-dodge-noise1.mp3": [
+        4.734,
+        0.531
+      ],
+      "saitama-dodge-noise1.mp3": [
+        4.734,
+        0.531
+      ],
+      "saitama-dodge-noise1": [
+        4.734,
+        0.531
+      ],
+      "Assets/Sound Effects/Skills/saitama-dodge-noise2.mp3": [
+        5.315,
+        0.4
+      ],
+      "saitama-dodge-noise2.mp3": [
+        5.315,
+        0.4
+      ],
+      "saitama-dodge-noise2": [
+        5.315,
+        0.4
+      ],
+      "Assets/Sound Effects/Skills/saitama-dodge-noise3.mp3": [
+        5.765,
+        0.542
+      ],
+      "saitama-dodge-noise3.mp3": [
+        5.765,
+        0.542
+      ],
+      "saitama-dodge-noise3": [
+        5.765,
+        0.542
+      ],
+      "Assets/Sound Effects/Skills/saitama-seriouspunch-voiceline.mp3": [
+        6.357,
+        0.888
+      ],
+      "saitama-seriouspunch-voiceline.mp3": [
+        6.357,
+        0.888
+      ],
+      "saitama-seriouspunch-voiceline": [
+        6.357,
+        0.888
+      ],
+      "Assets/Sound Effects/Skills/saitama-seriouspunch-charging.mp3": [
+        7.296,
+        2.769
+      ],
+      "saitama-seriouspunch-charging.mp3": [
+        7.296,
+        2.769
+      ],
+      "saitama-seriouspunch-charging": [
+        7.296,
+        2.769
+      ],
+      "Assets/Sound Effects/SkillEffects/saitama-champion-voiceline.mp3": [
+        10.115,
+        1.026
+      ],
+      "saitama-champion-voiceline.mp3": [
+        10.115,
+        1.026
+      ],
+      "saitama-champion-voiceline": [
+        10.115,
+        1.026
+      ]
+    }
+  },
+  "sans": {
+    "sheetId": "char_voice_sans",
+    "characterId": "sans",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_sans_sfx.mp3",
+    "totalDuration": 7.93,
+    "sliceCount": 10,
+    "slices": {
+      "Assets/Sound Effects/Sans/BoneStab.ogg": [
+        0,
+        0.501
+      ],
+      "BoneStab.ogg": [
+        0,
+        0.501
+      ],
+      "BoneStab": [
+        0,
+        0.501
+      ],
+      "Assets/Sound Effects/Sans/GasterBlast.ogg": [
+        0.551,
+        1.9
+      ],
+      "GasterBlast.ogg": [
+        0.551,
+        1.9
+      ],
+      "GasterBlast": [
+        0.551,
+        1.9
+      ],
+      "Assets/Sound Effects/Sans/GasterBlaster.ogg": [
+        2.5,
+        1.058
+      ],
+      "GasterBlaster.ogg": [
+        2.5,
+        1.058
+      ],
+      "GasterBlaster": [
+        2.5,
+        1.058
+      ],
+      "Assets/Sound Effects/Sans/Slam.ogg": [
+        3.608,
+        0.617
+      ],
+      "Slam.ogg": [
+        3.608,
+        0.617
+      ],
+      "Slam": [
+        3.608,
+        0.617
+      ],
+      "Assets/Sound Effects/Sans/Flash.ogg": [
+        4.275,
+        0.07
+      ],
+      "Flash.ogg": [
+        4.275,
+        0.07
+      ],
+      "Flash": [
+        4.275,
+        0.07
+      ],
+      "Assets/Sound Effects/Sans/Ding.ogg": [
+        4.395,
+        0.472
+      ],
+      "Ding.ogg": [
+        4.395,
+        0.472
+      ],
+      "Ding": [
+        4.395,
+        0.472
+      ],
+      "Assets/Sound Effects/Sans/SansSpeak.ogg": [
+        4.916,
+        0.138
+      ],
+      "SansSpeak.ogg": [
+        4.916,
+        0.138
+      ],
+      "SansSpeak": [
+        4.916,
+        0.138
+      ],
+      "Assets/Sound Effects/Sans/Warning.ogg": [
+        5.105,
+        1.257
+      ],
+      "Warning.ogg": [
+        5.105,
+        1.257
+      ],
+      "Warning": [
+        5.105,
+        1.257
+      ],
+      "Assets/Sound Effects/Sans/HeartSplit.ogg": [
+        6.411,
+        0.707
+      ],
+      "HeartSplit.ogg": [
+        6.411,
+        0.707
+      ],
+      "HeartSplit": [
+        6.411,
+        0.707
+      ],
+      "Assets/Sound Effects/Sans/HeartShatter.ogg": [
+        7.168,
+        0.71
+      ],
+      "HeartShatter.ogg": [
+        7.168,
+        0.71
+      ],
+      "HeartShatter": [
+        7.168,
+        0.71
+      ]
+    }
+  },
+  "shiro": {
+    "sheetId": "char_voice_shiro",
+    "characterId": "shiro",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_shiro_sfx.mp3",
+    "totalDuration": 13.37,
+    "sliceCount": 7,
+    "slices": {
+      "Assets/Sound Effects/Shiro/StarblessedPlatformActivate.ogg": [
+        0,
+        2.608
+      ],
+      "StarblessedPlatformActivate.ogg": [
+        0,
+        2.608
+      ],
+      "StarblessedPlatformActivate": [
+        0,
+        2.608
+      ],
+      "Assets/Sound Effects/Shiro/FingerSnap.ogg": [
+        2.658,
+        0.353
+      ],
+      "FingerSnap.ogg": [
+        2.658,
+        0.353
+      ],
+      "FingerSnap": [
+        2.658,
+        0.353
+      ],
+      "Assets/Sound Effects/Shiro/shiro_chessboard_turnon.mp3": [
+        3.061,
+        2.194
+      ],
+      "shiro_chessboard_turnon.mp3": [
+        3.061,
+        2.194
+      ],
+      "shiro_chessboard_turnon": [
+        3.061,
+        2.194
+      ],
+      "Assets/Sound Effects/Shiro/LightFlickerOff.ogg": [
+        5.305,
+        0.178
+      ],
+      "LightFlickerOff.ogg": [
+        5.305,
+        0.178
+      ],
+      "LightFlickerOff": [
+        5.305,
+        0.178
+      ],
+      "Assets/Sound Effects/Shiro/shiro_chessboard_shutdown_voiceline.mp3": [
+        5.533,
+        2.273
+      ],
+      "shiro_chessboard_shutdown_voiceline.mp3": [
+        5.533,
+        2.273
+      ],
+      "shiro_chessboard_shutdown_voiceline": [
+        5.533,
+        2.273
+      ],
+      "Assets/Sound Effects/Shiro/BookSynthFirstTier.ogg": [
+        7.856,
+        2.963
+      ],
+      "BookSynthFirstTier.ogg": [
+        7.856,
+        2.963
+      ],
+      "BookSynthFirstTier": [
+        7.856,
+        2.963
+      ],
+      "Assets/Sound Effects/Shiro/shiro_troop_buff_voiceline.mp3": [
+        10.869,
+        2.456
+      ],
+      "shiro_troop_buff_voiceline.mp3": [
+        10.869,
+        2.456
+      ],
+      "shiro_troop_buff_voiceline": [
+        10.869,
+        2.456
+      ]
+    }
+  },
+  "sukuna": {
+    "sheetId": "char_voice_sukuna",
+    "characterId": "sukuna",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_sukuna_sfx.mp3",
+    "totalDuration": 21.34,
+    "sliceCount": 11,
+    "slices": {
+      "Assets/Sound Effects/Skills/domainexpansion.mp3": [
+        0,
+        3.082
+      ],
+      "domainexpansion.mp3": [
+        0,
+        3.082
+      ],
+      "domainexpansion": [
+        0,
+        3.082
+      ],
+      "Assets/Sound Effects/Skills/shrine.mp3": [
+        3.132,
+        2.22
+      ],
+      "shrine.mp3": [
+        3.132,
+        2.22
+      ],
+      "shrine": [
+        3.132,
+        2.22
+      ],
+      "Assets/Sound Effects/Skills/fugaignite.mp3": [
+        5.403,
+        3.109
+      ],
+      "fugaignite.mp3": [
+        5.403,
+        3.109
+      ],
+      "fugaignite": [
+        5.403,
+        3.109
+      ],
+      "Assets/Sound Effects/Skills/fuga.mp3": [
+        8.561,
+        1.123
+      ],
+      "fuga.mp3": [
+        8.561,
+        1.123
+      ],
+      "fuga": [
+        8.561,
+        1.123
+      ],
+      "Assets/Sound Effects/Skills/fugaexplode.mp3": [
+        9.735,
+        1.698
+      ],
+      "fugaexplode.mp3": [
+        9.735,
+        1.698
+      ],
+      "fugaexplode": [
+        9.735,
+        1.698
+      ],
+      "Assets/Sound Effects/Skills/hookchain.mp3": [
+        11.483,
+        0.742
+      ],
+      "hookchain.mp3": [
+        11.483,
+        0.742
+      ],
+      "hookchain": [
+        11.483,
+        0.742
+      ],
+      "Assets/Sound Effects/Skills/enhance.mp3": [
+        12.274,
+        2.038
+      ],
+      "enhance.mp3": [
+        12.274,
+        2.038
+      ],
+      "enhance": [
+        12.274,
+        2.038
+      ],
+      "Assets/Sound Effects/Skills/Sukuna-rapidslash-voiceline.mp3": [
+        14.362,
+        1.744
+      ],
+      "Sukuna-rapidslash-voiceline.mp3": [
+        14.362,
+        1.744
+      ],
+      "Sukuna-rapidslash-voiceline": [
+        14.362,
+        1.744
+      ],
+      "Assets/Sound Effects/Skills/Sukuna-champion-voiceline.mp3": [
+        16.156,
+        1.493
+      ],
+      "Sukuna-champion-voiceline.mp3": [
+        16.156,
+        1.493
+      ],
+      "Sukuna-champion-voiceline": [
+        16.156,
+        1.493
+      ],
+      "Assets/Sound Effects/SukunaSFX/sukuna_mahoraga_summon.mp3": [
+        17.699,
+        1.269
+      ],
+      "sukuna_mahoraga_summon.mp3": [
+        17.699,
+        1.269
+      ],
+      "sukuna_mahoraga_summon": [
+        17.699,
+        1.269
+      ],
+      "Assets/Sound Effects/Skills/mahoraga-wheelclick.mp3": [
+        19.018,
+        2.273
+      ],
+      "mahoraga-wheelclick.mp3": [
+        19.018,
+        2.273
+      ],
+      "mahoraga-wheelclick": [
+        19.018,
+        2.273
+      ]
+    }
+  },
+  "todo": {
+    "sheetId": "char_voice_todo",
+    "characterId": "todo",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_todo_sfx.mp3",
+    "totalDuration": 16.11,
+    "sliceCount": 9,
+    "slices": {
+      "Assets/Sound Effects/Skills/blackflash1.mp3": [
+        0,
+        1.593
+      ],
+      "blackflash1.mp3": [
+        0,
+        1.593
+      ],
+      "blackflash1": [
+        0,
+        1.593
+      ],
+      "Assets/Sound Effects/Skills/todo-punch-noise.mp3": [
+        1.643,
+        0.877
+      ],
+      "todo-punch-noise.mp3": [
+        1.643,
+        0.877
+      ],
+      "todo-punch-noise": [
+        1.643,
+        0.877
+      ],
+      "Assets/Sound Effects/Skills/todo-punch-noise2.mp3": [
+        2.571,
+        0.781
+      ],
+      "todo-punch-noise2.mp3": [
+        2.571,
+        0.781
+      ],
+      "todo-punch-noise2": [
+        2.571,
+        0.781
+      ],
+      "Assets/Sound Effects/Skills/todo-combo-voiceline.mp3": [
+        3.402,
+        1.952
+      ],
+      "todo-combo-voiceline.mp3": [
+        3.402,
+        1.952
+      ],
+      "todo-combo-voiceline": [
+        3.402,
+        1.952
+      ],
+      "Assets/Sound Effects/Skills/todo-combo-voiceline2.mp3": [
+        5.404,
+        1.64
+      ],
+      "todo-combo-voiceline2.mp3": [
+        5.404,
+        1.64
+      ],
+      "todo-combo-voiceline2": [
+        5.404,
+        1.64
+      ],
+      "Assets/Sound Effects/Skills/todo-clap.mp3": [
+        7.094,
+        1.2
+      ],
+      "todo-clap.mp3": [
+        7.094,
+        1.2
+      ],
+      "todo-clap": [
+        7.094,
+        1.2
+      ],
+      "Assets/Sound Effects/Skills/todo-brother-voiceline.mp3": [
+        8.344,
+        0.967
+      ],
+      "todo-brother-voiceline.mp3": [
+        8.344,
+        0.967
+      ],
+      "todo-brother-voiceline": [
+        8.344,
+        0.967
+      ],
+      "Assets/Sound Effects/SkillEffects/todo-voiceline-mybestfriend.mp3": [
+        9.361,
+        2.784
+      ],
+      "todo-voiceline-mybestfriend.mp3": [
+        9.361,
+        2.784
+      ],
+      "todo-voiceline-mybestfriend": [
+        9.361,
+        2.784
+      ],
+      "Assets/Sound Effects/Skills/todo-tadakaimagination-voiceline.mp3": [
+        12.195,
+        3.866
+      ],
+      "todo-tadakaimagination-voiceline.mp3": [
+        12.195,
+        3.866
+      ],
+      "todo-tadakaimagination-voiceline": [
+        12.195,
+        3.866
+      ]
+    }
+  },
+  "toji": {
+    "sheetId": "char_voice_toji",
+    "characterId": "toji",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_toji_sfx.mp3",
+    "totalDuration": 13.82,
+    "sliceCount": 9,
+    "slices": {
+      "Assets/Sound Effects/Skills/johnwick-pistol-shot.mp3": [
+        0,
+        1.855
+      ],
+      "johnwick-pistol-shot.mp3": [
+        0,
+        1.855
+      ],
+      "johnwick-pistol-shot": [
+        0,
+        1.855
+      ],
+      "Assets/Sound Effects/Skills/toji-firstseq-teleport.mp3": [
+        1.905,
+        0.836
+      ],
+      "toji-firstseq-teleport.mp3": [
+        1.905,
+        0.836
+      ],
+      "toji-firstseq-teleport": [
+        1.905,
+        0.836
+      ],
+      "Assets/Sound Effects/Skills/toji-backthrust.mp3": [
+        2.791,
+        0.914
+      ],
+      "toji-backthrust.mp3": [
+        2.791,
+        0.914
+      ],
+      "toji-backthrust": [
+        2.791,
+        0.914
+      ],
+      "Assets/Sound Effects/Skills/toji-2stseq-2ndweaponAttack.mp3": [
+        3.755,
+        0.914
+      ],
+      "toji-2stseq-2ndweaponAttack.mp3": [
+        3.755,
+        0.914
+      ],
+      "toji-2stseq-2ndweaponAttack": [
+        3.755,
+        0.914
+      ],
+      "Assets/Sound Effects/Skills/toji-3rdseq-phantomflurry.mp3": [
+        4.719,
+        3.5
+      ],
+      "toji-3rdseq-phantomflurry.mp3": [
+        4.719,
+        3.5
+      ],
+      "toji-3rdseq-phantomflurry": [
+        4.719,
+        3.5
+      ],
+      "Assets/Sound Effects/Skills/toji-ultimatechanneling.mp3": [
+        8.27,
+        1.646
+      ],
+      "toji-ultimatechanneling.mp3": [
+        8.27,
+        1.646
+      ],
+      "toji-ultimatechanneling": [
+        8.27,
+        1.646
+      ],
+      "Assets/Sound Effects/Skills/woosh.mp3": [
+        9.965,
+        0.549
+      ],
+      "woosh.mp3": [
+        9.965,
+        0.549
+      ],
+      "woosh": [
+        9.965,
+        0.549
+      ],
+      "Assets/Sound Effects/Skills/tojo-finalblow-charging.mp3": [
+        10.564,
+        2.299
+      ],
+      "tojo-finalblow-charging.mp3": [
+        10.564,
+        2.299
+      ],
+      "tojo-finalblow-charging": [
+        10.564,
+        2.299
+      ],
+      "Assets/Sound Effects/Skills/toji-ultimate-finalblow.mp3": [
+        12.913,
+        0.862
+      ],
+      "toji-ultimate-finalblow.mp3": [
+        12.913,
+        0.862
+      ],
+      "toji-ultimate-finalblow": [
+        12.913,
+        0.862
+      ]
+    }
+  },
+  "uryu": {
+    "sheetId": "char_voice_uryu",
+    "characterId": "uryu",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_uryu_sfx.mp3",
+    "totalDuration": 5.9,
+    "sliceCount": 2,
+    "slices": {
+      "Assets/Sound Effects/Skills/redblast.mp3": [
+        0,
+        2.717
+      ],
+      "redblast.mp3": [
+        0,
+        2.717
+      ],
+      "redblast": [
+        0,
+        2.717
+      ],
+      "Assets/Sound Effects/Skills/domainexpansion.mp3": [
+        2.767,
+        3.082
+      ],
+      "domainexpansion.mp3": [
+        2.767,
+        3.082
+      ],
+      "domainexpansion": [
+        2.767,
+        3.082
       ]
     }
   },
@@ -4734,48 +4407,423 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
       ]
     }
   },
-  "mahoraga": {
-    "sheetId": "char_voice_mahoraga",
-    "characterId": "mahoraga",
-    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_mahoraga_sfx.mp3",
-    "totalDuration": 5.11,
-    "sliceCount": 3,
+  "yuji": {
+    "sheetId": "char_voice_yuji",
+    "characterId": "yuji",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_yuji_sfx.mp3",
+    "totalDuration": 8.92,
+    "sliceCount": 7,
     "slices": {
-      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
+      "Assets/Sound Effects/Skills/blackflash1.mp3": [
         0,
+        1.593
+      ],
+      "blackflash1.mp3": [
+        0,
+        1.593
+      ],
+      "blackflash1": [
+        0,
+        1.593
+      ],
+      "Assets/Sound Effects/Attacks/yuji-noise1.mp3": [
+        1.643,
+        0.183
+      ],
+      "yuji-noise1.mp3": [
+        1.643,
+        0.183
+      ],
+      "yuji-noise1": [
+        1.643,
+        0.183
+      ],
+      "Assets/Sound Effects/Attacks/yuji-noise2.mp3": [
+        1.876,
+        0.157
+      ],
+      "yuji-noise2.mp3": [
+        1.876,
+        0.157
+      ],
+      "yuji-noise2": [
+        1.876,
+        0.157
+      ],
+      "Assets/Sound Effects/Attacks/yuji-noise3.mp3": [
+        2.083,
+        0.313
+      ],
+      "yuji-noise3.mp3": [
+        2.083,
+        0.313
+      ],
+      "yuji-noise3": [
+        2.083,
+        0.313
+      ],
+      "Assets/Sound Effects/Skills/yuji-blackflash.mp3": [
+        2.447,
+        0.653
+      ],
+      "yuji-blackflash.mp3": [
+        2.447,
+        0.653
+      ],
+      "yuji-blackflash": [
+        2.447,
+        0.653
+      ],
+      "Assets/Sound Effects/Skills/yuji-transformation.mp3": [
+        3.15,
+        1.829
+      ],
+      "yuji-transformation.mp3": [
+        3.15,
+        1.829
+      ],
+      "yuji-transformation": [
+        3.15,
+        1.829
+      ],
+      "Assets/Sound Effects/SkillEffects/yuji-voiceline-bestfriend.mp3": [
+        5.028,
+        3.84
+      ],
+      "yuji-voiceline-bestfriend.mp3": [
+        5.028,
+        3.84
+      ],
+      "yuji-voiceline-bestfriend": [
+        5.028,
+        3.84
+      ]
+    }
+  },
+  "yuta": {
+    "sheetId": "char_voice_yuta",
+    "characterId": "yuta",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_yuta_sfx.mp3",
+    "totalDuration": 28.44,
+    "sliceCount": 14,
+    "slices": {
+      "Assets/Sound Effects/Skills/comerika.mp3": [
+        0,
+        2.56
+      ],
+      "comerika.mp3": [
+        0,
+        2.56
+      ],
+      "comerika": [
+        0,
+        2.56
+      ],
+      "Assets/Sound Effects/Skills/yutadomainexpansion.mp3": [
+        2.61,
+        2.325
+      ],
+      "yutadomainexpansion.mp3": [
+        2.61,
+        2.325
+      ],
+      "yutadomainexpansion": [
+        2.61,
+        2.325
+      ],
+      "Assets/Sound Effects/Skills/gojodomaindeploy.mp3": [
+        4.985,
+        1.515
+      ],
+      "gojodomaindeploy.mp3": [
+        4.985,
+        1.515
+      ],
+      "gojodomaindeploy": [
+        4.985,
+        1.515
+      ],
+      "Assets/Sound Effects/Skills/rikaAppearance1.mp3": [
+        6.55,
+        2.691
+      ],
+      "rikaAppearance1.mp3": [
+        6.55,
+        2.691
+      ],
+      "rikaAppearance1": [
+        6.55,
+        2.691
+      ],
+      "Assets/Sound Effects/Attacks/rikanoise1.mp3": [
+        9.291,
+        1.776
+      ],
+      "rikanoise1.mp3": [
+        9.291,
+        1.776
+      ],
+      "rikanoise1": [
+        9.291,
+        1.776
+      ],
+      "Assets/Sound Effects/Attacks/rikanoise2.mp3": [
+        11.117,
+        0.81
+      ],
+      "rikanoise2.mp3": [
+        11.117,
+        0.81
+      ],
+      "rikanoise2": [
+        11.117,
+        0.81
+      ],
+      "Assets/Sound Effects/Attacks/rikanoise3.mp3": [
+        11.977,
+        2.299
+      ],
+      "rikanoise3.mp3": [
+        11.977,
+        2.299
+      ],
+      "rikanoise3": [
+        11.977,
+        2.299
+      ],
+      "Assets/Sound Effects/Skills/shieldblock2.mp3": [
+        14.326,
         0.653
       ],
       "shieldblock2.mp3": [
-        0,
+        14.326,
         0.653
       ],
       "shieldblock2": [
-        0,
+        14.326,
         0.653
       ],
-      "Assets/Sound Effects/Skills/mahoraga-wheelclick.mp3": [
-        0.703,
-        2.273
+      "Assets/Sound Effects/Skills/thin-ice-breaker.mp3": [
+        15.029,
+        3.605
       ],
-      "mahoraga-wheelclick.mp3": [
-        0.703,
-        2.273
+      "thin-ice-breaker.mp3": [
+        15.029,
+        3.605
       ],
-      "mahoraga-wheelclick": [
-        0.703,
-        2.273
+      "thin-ice-breaker": [
+        15.029,
+        3.605
       ],
-      "Assets/Sound Effects/Skills/enhance.mp3": [
-        3.026,
-        2.038
+      "Assets/Sound Effects/Skills/yuta-thin-ice-breaker-noise.mp3": [
+        18.683,
+        0.549
       ],
-      "enhance.mp3": [
-        3.026,
-        2.038
+      "yuta-thin-ice-breaker-noise.mp3": [
+        18.683,
+        0.549
       ],
-      "enhance": [
-        3.026,
-        2.038
+      "yuta-thin-ice-breaker-noise": [
+        18.683,
+        0.549
+      ],
+      "Assets/Sound Effects/Skills/gojodomainexpansion.mp3": [
+        19.282,
+        2.377
+      ],
+      "gojodomainexpansion.mp3": [
+        19.282,
+        2.377
+      ],
+      "gojodomainexpansion": [
+        19.282,
+        2.377
+      ],
+      "Assets/Sound Effects/Skills/yuta-flurry-noise.mp3": [
+        21.709,
+        1.358
+      ],
+      "yuta-flurry-noise.mp3": [
+        21.709,
+        1.358
+      ],
+      "yuta-flurry-noise": [
+        21.709,
+        1.358
+      ],
+      "Assets/Sound Effects/Skills/rikaAppearance.mp3": [
+        23.118,
+        2.194
+      ],
+      "rikaAppearance.mp3": [
+        23.118,
+        2.194
+      ],
+      "rikaAppearance": [
+        23.118,
+        2.194
+      ],
+      "Assets/Sound Effects/Skills/yuta-lovebeam-fires.mp3": [
+        25.362,
+        3.03
+      ],
+      "yuta-lovebeam-fires.mp3": [
+        25.362,
+        3.03
+      ],
+      "yuta-lovebeam-fires": [
+        25.362,
+        3.03
+      ]
+    }
+  },
+  "zenitsu": {
+    "sheetId": "char_voice_zenitsu",
+    "characterId": "zenitsu",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_zenitsu_sfx.mp3",
+    "totalDuration": 9.83,
+    "sliceCount": 9,
+    "slices": {
+      "Assets/Sound Effects/Skills/Zenitsu-dash2.mp3": [
+        0,
+        2.403
+      ],
+      "Zenitsu-dash2.mp3": [
+        0,
+        2.403
+      ],
+      "Zenitsu-dash2": [
+        0,
+        2.403
+      ],
+      "Assets/Sound Effects/Skills/Zenitsu-dash-noise.mp3": [
+        2.453,
+        1.358
+      ],
+      "Zenitsu-dash-noise.mp3": [
+        2.453,
+        1.358
+      ],
+      "Zenitsu-dash-noise": [
+        2.453,
+        1.358
+      ],
+      "Assets/Sound Effects/Skills/Zenitsu-firstform-voiceline.mp3": [
+        3.862,
+        0.888
+      ],
+      "Zenitsu-firstform-voiceline.mp3": [
+        3.862,
+        0.888
+      ],
+      "Zenitsu-firstform-voiceline": [
+        3.862,
+        0.888
+      ],
+      "Assets/Sound Effects/Skills/Zenitsu-thunderclap&flash-voiceline.mp3": [
+        4.8,
+        1.071
+      ],
+      "Zenitsu-thunderclap&flash-voiceline.mp3": [
+        4.8,
+        1.071
+      ],
+      "Zenitsu-thunderclap&flash-voiceline": [
+        4.8,
+        1.071
+      ],
+      "Assets/Sound Effects/Skills/zenitsu-sixfold-voiceline.mp3": [
+        5.921,
+        0.627
+      ],
+      "zenitsu-sixfold-voiceline.mp3": [
+        5.921,
+        0.627
+      ],
+      "zenitsu-sixfold-voiceline": [
+        5.921,
+        0.627
+      ],
+      "Assets/Sound Effects/Skills/Zenitsu-electric-noise1.mp3": [
+        6.598,
+        0.679
+      ],
+      "Zenitsu-electric-noise1.mp3": [
+        6.598,
+        0.679
+      ],
+      "Zenitsu-electric-noise1": [
+        6.598,
+        0.679
+      ],
+      "Assets/Sound Effects/Skills/Zenitsu-electric-noise2.mp3": [
+        7.327,
+        0.758
+      ],
+      "Zenitsu-electric-noise2.mp3": [
+        7.327,
+        0.758
+      ],
+      "Zenitsu-electric-noise2": [
+        7.327,
+        0.758
+      ],
+      "Assets/Sound Effects/Skills/Zenitsu-electric-noise3.mp3": [
+        8.134,
+        0.575
+      ],
+      "Zenitsu-electric-noise3.mp3": [
+        8.134,
+        0.575
+      ],
+      "Zenitsu-electric-noise3": [
+        8.134,
+        0.575
+      ],
+      "Assets/Sound Effects/Attacks/thunderstrike.mp3": [
+        8.759,
+        1.019
+      ],
+      "thunderstrike.mp3": [
+        8.759,
+        1.019
+      ],
+      "thunderstrike": [
+        8.759,
+        1.019
+      ]
+    }
+  },
+  "zeus": {
+    "sheetId": "char_voice_zeus",
+    "characterId": "zeus",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_zeus_sfx.mp3",
+    "totalDuration": 3.13,
+    "sliceCount": 2,
+    "slices": {
+      "Assets/Sound Effects/Attacks/thunderstike.mp3": [
+        0,
+        1.019
+      ],
+      "thunderstike.mp3": [
+        0,
+        1.019
+      ],
+      "thunderstike": [
+        0,
+        1.019
+      ],
+      "Assets/Sound Effects/Skills/stormstrike.mp3": [
+        1.069,
+        2.011
+      ],
+      "stormstrike.mp3": [
+        1.069,
+        2.011
+      ],
+      "stormstrike": [
+        1.069,
+        2.011
       ]
     }
   }

@@ -22,6 +22,8 @@
     "patch-notes": "node scripts/generatePatchNotes.mjs",
     "catalog": "node scripts/buildAssetCatalog.mjs",
     "build:sound-sprite": "node scripts/buildAudioSprite.mjs",
+    "build:voicesprite": "node scripts/buildAudioSprite.mjs --voice-only",
+    "build:voice-sprite": "node scripts/buildAudioSprite.mjs --voice-only",
     "build:web": "node scripts/buildWeb.mjs",
     "build:mobile-assets": "node scripts/buildMobileAssets.mjs",
     "preview:web": "serve -l 8000 dist",

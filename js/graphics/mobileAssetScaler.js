@@ -404,6 +404,13 @@ export function prewarmMatchAssets(fighters, gameCtx = null) {
       }
       // Pre-bake canonical pixel hand cache for this fighter's palette (Rule 20 & Rule 35)
       drawPixelHand(wCtx, 0, 0, (f.r || 25) * 0.30, f.color || '#FFE0BD', '#000000');
+
+      // Pre-warm weapon graphics & weapon skin caches on GPU (Rule 35)
+      if (typeof f.drawWeapon === 'function') {
+        try {
+          f.drawWeapon(wCtx, f);
+        } catch (_) {}
+      }
       wCtx.restore();
     } catch (e) {
       try { wCtx.restore(); } catch (_) {}

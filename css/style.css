@@ -6666,6 +6666,11 @@ html.mobile-device .in-combat-touch-lock canvas {
   -webkit-user-select: none;
   cursor: pointer;
   padding: 24px 14px;
+  will-change: opacity, transform;
+  contain: strict;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .splash-screen.splash-hidden {
@@ -6942,6 +6947,11 @@ html.mobile-device .in-combat-touch-lock canvas {
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
+  will-change: opacity, transform;
+  contain: strict;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .prebattle-curtain.curtain-closing {
@@ -7037,6 +7047,8 @@ html.mobile-device .in-combat-touch-lock canvas {
   padding: 6px 10px;
   box-shadow: 3px 3px 0px #000000;
   transition: transform 0.15s ease, background 0.15s ease;
+  contain: layout style;
+  transform: translateZ(0);
 }
 
 .curtain-fighter-card.active-slot {
@@ -7177,6 +7189,14 @@ html.mobile-device .in-combat-touch-lock canvas {
   border-radius: 1px;
   box-shadow: none;
   transition: width 0.12s ease-out;
+  background-image: linear-gradient(90deg, #000000 0%, #444444 50%, #000000 100%);
+  background-size: 200% 100%;
+  animation: curtainBarShimmer 1.2s infinite linear;
+}
+
+@keyframes curtainBarShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 .curtain-info {

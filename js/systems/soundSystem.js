@@ -526,11 +526,19 @@ function getMasterAudioDestination() {
 export async function unlockAudio() {
   try {
     const audioCtx = getAudioContext();
-    if (audioCtx.state === 'running') {
-      _audioUnlocked = true;
-      return true;
+    if (!audioCtx) return false;
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
     }
-    await audioCtx.resume();
+    // Spin up mobile hardware audio clock with a 1-sample silent pulse
+    // (Prevents first-strike sound cutoff or pop on iOS Safari & Android WebView)
+    try {
+      const silentBuffer = audioCtx.createBuffer(1, 1, 22050);
+      const source = audioCtx.createBufferSource();
+      source.buffer = silentBuffer;
+      source.connect(audioCtx.destination);
+      source.start(0);
+    } catch (_) {}
     _audioUnlocked = audioCtx.state === 'running';
     return _audioUnlocked;
   } catch (e) {
