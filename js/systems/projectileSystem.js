@@ -6,7 +6,7 @@ import { GAME_MODES } from '../core/modeConfig.js';
 import { areOnSameTeam as areOnSameTeamByIndex, isTeamModeEnabled } from '../core/teamUtils.js';
 import { state, isGlobalHitPauseActive, registerProjectileSystem, triggerGlobalScreenShake, spawnFloatingText } from '../core/state.js';
 import { applyDamageToTarget } from '../entities/fighter.js';
-import { playSound, playLoopingSound, stopLoopingSound, fadeOutLoopingSound, fadeOutSound, fadeOutSoundBySrc } from './soundSystem.js';
+import { playSound, playLoopingSound, stopLoopingSound, fadeOutLoopingSound, fadeOutSound, fadeOutSoundBySrc, playCombatSFX } from './soundSystem.js';
 import { audioSystem } from './audioSystem.js';
 import { getBasicAttackSound } from '../soundEffects/basicAttackSounds.js';
 import { getSkillSound } from '../soundEffects/skillSounds.js';
@@ -2597,8 +2597,7 @@ class ProjectileSystem {
     // Play explosion sound when grenade detonates
     const ownerFighter = fighters[p.owner];
     if (ownerFighter) {
-      const sound = getBasicAttackSound(ownerFighter._def?.id, ownerFighter._def?.type);
-      if (sound) playSound(sound.src, sound.volume);
+      playCombatSFX(ownerFighter, 'basicAttack');
     }
 
     this.applyConcussiveBlast(p.x, p.y, fighters, p.owner, damage, radius);
@@ -2655,8 +2654,7 @@ class ProjectileSystem {
     // Play explosion sound when C4 detonates
     const ownerFighter = fighters[p.owner];
     if (ownerFighter) {
-      const sound = getBasicAttackSound(ownerFighter._def?.id, ownerFighter._def?.type);
-      if (sound) playSound(sound.src, sound.volume);
+      playCombatSFX(ownerFighter, 'basicAttack');
     }
 
     this.applyConcussiveBlast(p.x, p.y, fighters, p.owner, damage, radius);

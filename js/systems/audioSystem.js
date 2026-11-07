@@ -18,7 +18,9 @@ import {
   isSoundCached,
   isSoundAudioBuffer,
   soundSpriteManager,
-  stopFighterVoice
+  stopFighterVoice,
+  resolveCombatSFX,
+  playCombatSFX
 } from './soundSystem.js';
 import { AUDIO_CONFIG } from '../configs/audioConfig.js';
 
@@ -30,7 +32,9 @@ export {
   getSoundCacheStats,
   isSoundCached,
   isSoundAudioBuffer,
-  stopFighterVoice
+  stopFighterVoice,
+  resolveCombatSFX,
+  playCombatSFX
 };
 
 class AudioEventEmitter {
@@ -41,6 +45,16 @@ class AudioEventEmitter {
     this.stopLoop = this.stopLoop.bind(this);
     this.playFinisherAudio = this.playFinisherAudio.bind(this);
     this.stopFinisherAudio = this.stopFinisherAudio.bind(this);
+    this.resolveCombatSFX = this.resolveCombatSFX.bind(this);
+    this.playCombatSFX = this.playCombatSFX.bind(this);
+  }
+
+  resolveCombatSFX(fighterOrDef, soundKey, options) {
+    return resolveCombatSFX(fighterOrDef, soundKey, options);
+  }
+
+  playCombatSFX(fighterOrDef, soundKey, options) {
+    return playCombatSFX(fighterOrDef, soundKey, options);
   }
 
   on(event, callback) {

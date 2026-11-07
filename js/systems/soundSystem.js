@@ -5,6 +5,7 @@
 import { state } from '../core/state.js';
 import { soundSpriteManager } from './soundSpriteSystem.js';
 import { AUDIO_CONFIG } from '../configs/audioConfig.js';
+import { resolveCombatSFX } from '../soundEffects/basicAttackSounds.js';
 
 export { soundSpriteManager };
 
@@ -1949,6 +1950,28 @@ export function stopAllAudio(keepAnnouncer = false, fadeDelayMs = 0, fadeDuratio
   stopAllSounds(keepAnnouncer, fadeDelayMs, fadeDurationMs, forceStopAll);
   stopAllLoopingSounds(fadeDelayMs, fadeDurationMs, false, forceStopAll);
 }
+
+/**
+ * Unified Combat SFX Playback Helper.
+ * Resolves sound from the unified audio registry and immediately plays it.
+ *
+ * @param {object|number|string} fighterOrDef
+ * @param {string} [soundKey='basicAttack']
+ * @param {object} [options={}]
+ * @returns {object|null} Audio handle or null
+ */
+export function playCombatSFX(fighterOrDef, soundKey = 'basicAttack', options = {}) {
+  const sfx = resolveCombatSFX(fighterOrDef, soundKey, options);
+  if (!sfx || !sfx.exists || !sfx.src) return null;
+  const vol = options.volume !== undefined ? options.volume : sfx.volume;
+  const speed = options.speed !== undefined ? options.speed : 1.0;
+  const offset = options.offset !== undefined ? options.offset : 0;
+  const delay = options.delay !== undefined ? options.delay : sfx.delay;
+  const onEnded = options.onEnded || null;
+  return playSound(sfx.src, vol, speed, offset, delay, onEnded);
+}
+
+export { resolveCombatSFX };
 
 // Auto-unlock AudioContext on first user interaction (click, keydown, touch)
 if (typeof window !== 'undefined') {

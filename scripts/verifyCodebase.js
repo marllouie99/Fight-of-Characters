@@ -319,6 +319,100 @@ async function verifyAll() {
     console.log(`✅ Verified audio volume definitions across ${configFiles.length} character configs!`);
   }
 
+  // 2.62 Automated Fighter Audio Completeness Linter & Sound Registry Validator
+  console.log('🔍 [Audio Completeness Scanner] Verifying audio completeness & sound registrations across all fighters...');
+  let audioCompletenessErrors = 0;
+  let auditedFighterCount = 0;
+
+  try {
+    const { FIGHTER_DEFS, CONFIG } = await import('../js/core/config.js');
+    const { getBasicAttackSound, getFighterBasicAttackSoundPaths, resolveCombatSFX, BASIC_ATTACK_SOUNDS } = await import('../js/soundEffects/basicAttackSounds.js');
+    const { getFighterSkillSoundPaths } = await import('../js/soundEffects/skillSounds.js');
+
+    for (const def of FIGHTER_DEFS) {
+      auditedFighterCount++;
+      const id = def.id;
+      const type = def.type;
+
+      // 1. Numeric ID resolution
+      const soundById = getBasicAttackSound(id);
+      if (!soundById || soundById === BASIC_ATTACK_SOUNDS.default || !soundById.src) {
+        console.error(`❌ [MISSING BASIC ATTACK SOUND BY ID]: Fighter ID ${id} (${type}) returned missing or default sound when queried by numeric ID.`);
+        hasErrors = true;
+        audioCompletenessErrors++;
+      }
+
+      // 2. Type String resolution
+      const soundByType = getBasicAttackSound(type);
+      if (!soundByType || soundByType === BASIC_ATTACK_SOUNDS.default || !soundByType.src) {
+        console.error(`❌ [MISSING BASIC ATTACK SOUND BY TYPE]: Fighter "${type}" (ID ${id}) returned missing or default sound when queried by type string.`);
+        hasErrors = true;
+        audioCompletenessErrors++;
+      }
+
+      // 3. resolveCombatSFX unified audio registry resolution
+      const sfxById = resolveCombatSFX(id, 'basicAttack');
+      const sfxByType = resolveCombatSFX(type, 'basicAttack');
+      const sfxByDef = resolveCombatSFX(def, 'basicAttack');
+      const sfxByObj = resolveCombatSFX({ id, _def: def }, 'basicAttack');
+
+      if (!sfxById.exists || !sfxByType.exists || !sfxByDef.exists || !sfxByObj.exists) {
+        console.error(`❌ [RESOLVE COMBAT SFX FAILURE]: Fighter ${id} (${type}) failed unified audio registry resolution.`);
+        hasErrors = true;
+        audioCompletenessErrors++;
+      }
+
+      // 4. Exact path existence on disk with exact casing
+      const basicPaths = getFighterBasicAttackSoundPaths(id, type);
+      if (basicPaths.length === 0) {
+        console.error(`❌ [EMPTY BASIC ATTACK PATHS]: Fighter ${id} (${type}) has 0 basic attack sound paths.`);
+        hasErrors = true;
+        audioCompletenessErrors++;
+      }
+      for (const p of basicPaths) {
+        if (!verifyAssetPathExact(p)) {
+          console.error(`❌ [BROKEN BASIC ATTACK SOUND PATH]: Fighter ${id} (${type}) references missing asset "${p}".`);
+          hasErrors = true;
+          audioCompletenessErrors++;
+        }
+      }
+
+      // 5. Skill sound paths on disk
+      const skillPaths = getFighterSkillSoundPaths(type);
+      for (const p of skillPaths) {
+        if (!verifyAssetPathExact(p)) {
+          console.error(`❌ [BROKEN SKILL SOUND PATH]: Fighter ${id} (${type}) references missing skill audio asset "${p}".`);
+          hasErrors = true;
+          audioCompletenessErrors++;
+        }
+      }
+
+      // 6. Character config sounds paths on disk (if defined)
+      const cfg = CONFIG && CONFIG[type];
+      if (cfg && cfg.sounds) {
+        for (const [key, val] of Object.entries(cfg.sounds)) {
+          const soundList = Array.isArray(val) ? val : [val];
+          for (const item of soundList) {
+            if (typeof item === 'string' && (item.endsWith('.mp3') || item.endsWith('.wav') || item.endsWith('.ogg'))) {
+              if (!verifyAssetPathExact(item)) {
+                console.error(`❌ [BROKEN CONFIG SOUND PATH]: Fighter ${id} (${type}) sounds.${key} references missing audio asset "${item}".`);
+                hasErrors = true;
+                audioCompletenessErrors++;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (audioCompletenessErrors === 0) {
+      console.log(`✅ Verified audio completeness & basic attack sound registrations across all ${auditedFighterCount} fighters!`);
+    }
+  } catch (err) {
+    console.error('❌ [AUDIO COMPLETENESS SCANNER ERROR]:', err);
+    hasErrors = true;
+  }
+
   // 2.65 Fighter Grade Validator (cosmetic B / A / S / SS tiers — js/configs/gradeConfig.js)
   console.log('🔍 [Fighter Grade Validator] Checking grade attributes on character configs & FIGHTER_DEFS...');
   let gradeErrors = 0;

@@ -19398,6 +19398,65 @@ async function runInteractionTests() {
     console.log('      ✅ Unarmed Can Destroy Bomber Man\'s Planted Bombs verified cleanly.');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Test 146: Unified Audio Registry & resolveCombatSFX Standard
+  // ─────────────────────────────────────────────────────────────
+  {
+    console.log('   146. Testing Unified Audio Registry (resolveCombatSFX & playCombatSFX)...');
+    const { resolveCombatSFX } = await import('../js/soundEffects/basicAttackSounds.js');
+    const { playCombatSFX, resolveCombatSFX: sfxFromSoundSystem } = await import('../js/systems/soundSystem.js');
+    const { resolveCombatSFX: sfxFromAudioSystem, audioSystem } = await import('../js/systems/audioSystem.js');
+    const { FIGHTER_DEFS, CONFIG } = await import('../js/core/config.js');
+
+    assert(typeof resolveCombatSFX === 'function', 'resolveCombatSFX must be a function');
+    assert(resolveCombatSFX === sfxFromSoundSystem, 'soundSystem must re-export exact resolveCombatSFX function');
+    assert(resolveCombatSFX === sfxFromAudioSystem, 'audioSystem must re-export exact resolveCombatSFX function');
+    assert(typeof playCombatSFX === 'function', 'playCombatSFX must be a function');
+    assert(typeof audioSystem.playCombatSFX === 'function', 'audioSystem.playCombatSFX must be a function');
+
+    // 1. Resolve by numeric ID
+    const naoyaById = resolveCombatSFX(56);
+    assert(naoyaById && naoyaById.exists && naoyaById.src, 'Naoya (ID 56) must resolve via numeric ID');
+    assert(Array.isArray(naoyaById.src) && naoyaById.src.includes('Assets/Sound Effects/Attacks/heavypunch1.mp3'), 'Naoya ID 56 must resolve heavy punch hits');
+
+    // 2. Resolve by string type
+    const naoyaByType = resolveCombatSFX('naoya');
+    assert(naoyaByType && naoyaByType.exists && naoyaByType.src, 'Naoya must resolve via string type "naoya"');
+
+    // 3. Resolve by def object
+    const makiDef = FIGHTER_DEFS.find(f => f.id === 57);
+    assert(makiDef, 'Maki def must exist in FIGHTER_DEFS');
+    const makiByDef = resolveCombatSFX(makiDef);
+    assert(makiByDef && makiByDef.exists && makiByDef.src === 'Assets/Sound Effects/Attacks/swordswing.mp3', 'Maki must resolve swordswing via def object');
+
+    // 4. Resolve by live fighter mock instance
+    const mockFighter = { id: 57, _def: makiDef, characterId: 'maki' };
+    const makiByFighter = resolveCombatSFX(mockFighter);
+    assert(makiByFighter && makiByFighter.exists && makiByFighter.src === 'Assets/Sound Effects/Attacks/swordswing.mp3', 'Maki must resolve swordswing via fighter mock');
+
+    // 5. Resolve custom config sound key
+    const naoyaPunchHit = resolveCombatSFX('naoya', 'punchHit');
+    assert(naoyaPunchHit && naoyaPunchHit.exists && naoyaPunchHit.volume === (CONFIG.naoya?.soundVolumes?.punchHit ?? 0.85), 'Custom sound key punchHit must resolve with config volume');
+
+    // 6. Resolve skill sound key via SKILL_SOUNDS
+    const berserkerRage = resolveCombatSFX(10, 'rage');
+    assert(berserkerRage && berserkerRage.exists && berserkerRage.src === 'Assets/Sound Effects/Skills/ragescream.mp3', 'Berserker rage skill sound must resolve via SKILL_SOUNDS');
+
+    // 7. Resolve custom fallback options
+    const fallbackSfx = resolveCombatSFX(null, 'nonexistent', { defaultSrc: 'Assets/Sound Effects/Attacks/punch.mp3', defaultVolume: 0.77 });
+    assert(fallbackSfx && fallbackSfx.exists && fallbackSfx.src === 'Assets/Sound Effects/Attacks/punch.mp3' && fallbackSfx.volume === 0.77, 'Fallback options must be respected when sound is not found');
+
+    // 8. Nonexistent sound without fallback returns exists: false
+    const noneSfx = resolveCombatSFX(null, 'nonexistent');
+    assert(noneSfx && noneSfx.exists === false && noneSfx.src === null, 'Unknown sound without fallback must return exists: false');
+
+    // 9. playCombatSFX invocation does not throw
+    const playedNone = playCombatSFX(null, 'nonexistent');
+    assert(playedNone === null, 'playCombatSFX on non-existent sound must return null');
+
+    console.log('      ✅ Unified Audio Registry (resolveCombatSFX & playCombatSFX) verified cleanly.');
+  }
+
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 

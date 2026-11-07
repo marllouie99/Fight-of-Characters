@@ -16,6 +16,7 @@
 //   delay = 10  → sound plays 10 frames after (good for syncing with projectile travel)
 
 import { CONFIG, FIGHTER_DEFS } from '../core/config.js';
+import { getSkillSound } from './skillSounds.js';
 
 export const BASIC_ATTACK_SOUNDS = {
   // ── Ranger (aimbot/Jazz) ──────────────────────────
@@ -1519,5 +1520,142 @@ export function getFighterBasicAttackSoundPaths(id, type) {
   if (!cfg || !cfg.src) return [];
   if (Array.isArray(cfg.src)) return cfg.src.slice();
   return [cfg.src];
+}
+
+/**
+ * Unified Audio Registry Helper (resolveCombatSFX).
+ *
+ * Resolves combat sound effects (basic attacks, skill sound effects, weapon strikes,
+ * and character abilities) across numeric IDs, type strings, fighter definitions,
+ * or live fighter instances with built-in multi-source fallback.
+ *
+ * Lookup Priority:
+ *   1. Character Config: CONFIG[type]?.sounds?.[soundKey] + soundVolumes[soundKey]
+ *   2. Skill Sound Registry: SKILL_SOUNDS (via getSkillSound)
+ *   3. Basic Attack Sound Registry: BASIC_ATTACK_SOUNDS / BASIC_ATTACK_SOUNDS_BY_TYPE
+ *   4. Custom Options Fallback: options.defaultSrc / options.defaultSound
+ *
+ * @param {object|number|string} fighterOrDef - Fighter instance, fighter def, numeric ID, or type string
+ * @param {string} [soundKey='basicAttack'] - Sound identifier (e.g. 'basicAttack', 'attack', 'punchHit', 'swordSwing', 'skill1')
+ * @param {object} [options={}] - Optional tuning: defaultSrc, defaultVolume, defaultDelay
+ * @returns {{ src: string|string[]|null, volume: number, delay: number, exists: boolean }}
+ */
+export function resolveCombatSFX(fighterOrDef, soundKey = 'basicAttack', options = {}) {
+  let id = undefined;
+  let type = undefined;
+  let config = undefined;
+
+  if (fighterOrDef !== undefined && fighterOrDef !== null) {
+    if (typeof fighterOrDef === 'number') {
+      id = fighterOrDef;
+    } else if (typeof fighterOrDef === 'string') {
+      type = fighterOrDef;
+    } else if (typeof fighterOrDef === 'object') {
+      id = fighterOrDef.id ?? fighterOrDef._def?.id;
+      type = fighterOrDef._def?.type ?? fighterOrDef.type ?? fighterOrDef.characterId;
+      config = fighterOrDef.config;
+    }
+  }
+
+  // Derive missing id or type from FIGHTER_DEFS if needed
+  if (typeof FIGHTER_DEFS !== 'undefined' && Array.isArray(FIGHTER_DEFS)) {
+    if (type && id === undefined) {
+      const typeLower = String(type).toLowerCase();
+      const def = FIGHTER_DEFS.find((f) => f && f.type && String(f.type).toLowerCase() === typeLower);
+      if (def && def.id !== undefined) id = def.id;
+    } else if (typeof id === 'number' && !type) {
+      const def = FIGHTER_DEFS.find((f) => f && f.id === id);
+      if (def && def.type) type = def.type;
+    }
+  }
+
+  // Fallback to CONFIG[type] if config is not directly attached
+  const charConfig = config || (typeof CONFIG !== 'undefined' && type ? CONFIG[type] : undefined);
+
+  const normalizedKey = String(soundKey || 'basicAttack').trim();
+  const isBasicAttackKey = (
+    normalizedKey === '' ||
+    normalizedKey === 'basicAttack' ||
+    normalizedKey === 'attack' ||
+    normalizedKey === 'primary' ||
+    normalizedKey === 'shoot' ||
+    normalizedKey === 'shootAttack' ||
+    normalizedKey === 'strike'
+  );
+
+  // 1. If looking for basic attack / primary strike sound
+  if (isBasicAttackKey) {
+    const basicSound = getBasicAttackSound(id, type);
+    if (basicSound && basicSound.src) {
+      return {
+        src: basicSound.src,
+        volume: typeof basicSound.volume === 'number' ? basicSound.volume : 1.0,
+        delay: typeof basicSound.delay === 'number' ? basicSound.delay : 0,
+        exists: true,
+      };
+    }
+  }
+
+  // 2. Check character config sounds (e.g. CONFIG[type].sounds[soundKey])
+  if (charConfig && charConfig.sounds && charConfig.sounds[normalizedKey] !== undefined) {
+    const src = charConfig.sounds[normalizedKey];
+    const vol = (charConfig.soundVolumes && charConfig.soundVolumes[normalizedKey] !== undefined)
+      ? charConfig.soundVolumes[normalizedKey]
+      : (options.defaultVolume ?? 0.85);
+    const del = (charConfig.soundDelays && charConfig.soundDelays[normalizedKey] !== undefined)
+      ? charConfig.soundDelays[normalizedKey]
+      : (options.defaultDelay ?? 0);
+    return {
+      src,
+      volume: typeof vol === 'number' ? vol : 0.85,
+      delay: typeof del === 'number' ? del : 0,
+      exists: Boolean(src),
+    };
+  }
+
+  // 3. Check Skill Sound Registry (SKILL_SOUNDS via getSkillSound)
+  const skillSound = getSkillSound(id ?? type, normalizedKey);
+  if (skillSound && skillSound.src) {
+    return {
+      src: skillSound.src,
+      volume: typeof skillSound.volume === 'number' ? skillSound.volume : 0.85,
+      delay: typeof skillSound.delay === 'number' ? skillSound.delay : 0,
+      exists: true,
+    };
+  }
+
+  // 4. Check BASIC_ATTACK_SOUNDS_BY_TYPE for named sub-key (if any)
+  if (type) {
+    const typeKey = String(type).toLowerCase();
+    const typeSounds = BASIC_ATTACK_SOUNDS_BY_TYPE[typeKey];
+    if (typeSounds && typeSounds[normalizedKey] !== undefined) {
+      const entry = typeSounds[normalizedKey];
+      return {
+        src: entry.src || entry,
+        volume: typeof entry.volume === 'number' ? entry.volume : (options.defaultVolume ?? 0.85),
+        delay: typeof entry.delay === 'number' ? entry.delay : (options.defaultDelay ?? 0),
+        exists: true,
+      };
+    }
+  }
+
+  // 5. Check if caller provided explicit default fallback in options
+  if (options.defaultSrc || options.defaultSound) {
+    const src = options.defaultSrc || options.defaultSound;
+    return {
+      src,
+      volume: typeof options.defaultVolume === 'number' ? options.defaultVolume : 1.0,
+      delay: typeof options.defaultDelay === 'number' ? options.defaultDelay : 0,
+      exists: Boolean(src),
+    };
+  }
+
+  // 6. If no sound found, return clean non-existent descriptor
+  return {
+    src: null,
+    volume: 1.0,
+    delay: 0,
+    exists: false,
+  };
 }
 
