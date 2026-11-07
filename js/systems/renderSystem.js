@@ -56,7 +56,7 @@ let _cachedHudRight = null;
 
 const _NON_BATTLE_STATES = new Set([
   'title', 'select', 'index', 'indexDetail', 'leaderboard', 'weapons',
-  'weaponDetail', 'weaponStudio', 'skinStudio', 'survivorStudio', 'faceoff'
+  'weaponDetail', 'weaponStudio', 'skinStudio', 'survivorStudio', 'faceoff', 'curtain'
 ]);
 
 const _TOP_UI_STATES = new Set([

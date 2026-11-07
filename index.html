@@ -284,6 +284,47 @@
         </div>
       </div>
 
+      <!-- PRE-BATTLE VS LOADING CURTAIN (SceneLoadingCurtain Standard) -->
+      <div id="prebattle-curtain" class="prebattle-curtain" style="display: none;" role="dialog" aria-label="Pre-Battle Roster Loading Curtain">
+        <div class="curtain-header">
+          <div class="curtain-mode-badge" id="curtain-mode-badge">3V3 TAG MATCH</div>
+          <div class="curtain-sub-badge" id="curtain-sub-badge">MATCH PREPARATION</div>
+        </div>
+
+        <div class="curtain-body" id="curtain-body">
+          <!-- Left Team / Player Roster -->
+          <div class="curtain-side curtain-side-left" id="curtain-side-left">
+            <div class="curtain-team-name red-glow" id="curtain-left-name">TEAM RED</div>
+            <div class="curtain-roster-list" id="curtain-left-roster"></div>
+          </div>
+
+          <!-- Center VS Emblem -->
+          <div class="curtain-vs-wrap">
+            <div class="curtain-vs-spark">⚡</div>
+            <div class="curtain-vs-text">VS</div>
+            <div class="curtain-vs-glow"></div>
+          </div>
+
+          <!-- Right Team / Enemy Roster -->
+          <div class="curtain-side curtain-side-right" id="curtain-side-right">
+            <div class="curtain-team-name blue-glow" id="curtain-right-name">TEAM BLUE</div>
+            <div class="curtain-roster-list" id="curtain-right-roster"></div>
+          </div>
+        </div>
+
+        <!-- Pre-warm Progress Bar -->
+        <div class="curtain-footer">
+          <div class="curtain-track">
+            <div class="curtain-bar" id="curtain-progress-bar"></div>
+          </div>
+          <div class="curtain-info">
+            <span class="curtain-status" id="curtain-status-text">PRE-WARMING ROSTER ASSETS...</span>
+            <span class="curtain-pct" id="curtain-status-pct">0%</span>
+          </div>
+          <div class="curtain-skip-hint">TAP ANYWHERE TO SKIP</div>
+        </div>
+      </div>
+
       <!-- Phase 4: HTML UI Layer -->
       <div id="ui-layer">
         <!-- TITLE SCREEN: RETRO 90S MAC OS PIXEL WINDOW BOX -->

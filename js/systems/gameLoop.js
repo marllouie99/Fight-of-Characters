@@ -29,7 +29,8 @@ const _MENU_STATES = new Set([
   'weaponDetail',
   'weaponStudio',
   'skinStudio',
-  'survivorStudio'
+  'survivorStudio',
+  'curtain'
 ]);
 
 // Pause game loop when tab is hidden (mobile optimization)

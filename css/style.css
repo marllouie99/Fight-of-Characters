@@ -6766,5 +6766,270 @@ html.mobile-device .in-combat-touch-lock canvas {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * PRE-BATTLE VS LOADING CURTAIN (SceneLoadingCurtain Standard)
+ * ───────────────────────────────────────────────────────────────────────────── */
+.prebattle-curtain {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, #151824 0%, #0A0C12 70%, #040508 100%);
+  z-index: 45000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 36px 20px 24px 20px;
+  box-sizing: border-box;
+  text-align: center;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.prebattle-curtain.curtain-closing {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+
+.curtain-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.curtain-mode-badge {
+  font-family: 'Outfit', 'Bangers', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #FFFFFF;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+.curtain-sub-badge {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #38BDF8;
+  text-transform: uppercase;
+}
+
+.curtain-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  gap: 12px;
+}
+
+.curtain-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.curtain-team-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.curtain-team-name.red-glow {
+  color: #FF3344;
+  text-shadow: 0 0 10px rgba(255, 51, 68, 0.5);
+}
+
+.curtain-team-name.blue-glow {
+  color: #38BDF8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.curtain-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.curtain-fighter-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.curtain-fighter-card.active-slot {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+}
+
+.curtain-fighter-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid #0E0F14;
+  background: #111;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.curtain-fighter-thumb canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.curtain-fighter-thumb.horde-thumb {
+  background: #2a1118;
+}
+
+.horde-icon {
+  font-size: 18px;
+}
+
+.curtain-fighter-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  overflow: hidden;
+}
+
+.curtain-fighter-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.curtain-fighter-role {
+  font-family: 'Rajdhani', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Center VS */
+.curtain-vs-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.curtain-vs-text {
+  font-family: 'Outfit', 'Bangers', sans-serif;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFD700 60%, #FF5500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 14px rgba(255, 120, 0, 0.7));
+  animation: curtainVsPulse 1.2s ease-in-out infinite alternate;
+}
+
+.curtain-vs-spark {
+  font-size: 16px;
+  color: #FFD700;
+  margin-bottom: -4px;
+}
+
+@keyframes curtainVsPulse {
+  0% { transform: scale(0.94); }
+  100% { transform: scale(1.06); }
+}
+
+/* Footer & Progress Bar */
+.curtain-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.curtain-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.curtain-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FF3344, #FF9900, #38BDF8);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  transition: width 0.12s ease-out;
+}
+
+.curtain-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.curtain-status {
+  font-family: 'Rajdhani', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #94A3B8;
+}
+
+.curtain-pct {
+  font-family: 'Rajdhani', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #38BDF8;
+}
+
+.curtain-skip-hint {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: #64748B;
+  text-transform: uppercase;
+}
+
 
 

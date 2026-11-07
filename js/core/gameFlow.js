@@ -42,6 +42,7 @@ import { BossManager, BossEntranceSequence } from '../bosses/index.js';
 import { getFocMapForBoss } from '../maps/index.js';
 import { setViewportOrientation, getArenaConfigForMode } from './viewportManager.js';
 import { getFfaPlusQuadrantSpawns } from '../systems/arenaObstacleSystem.js';
+import { showPreBattleCurtain } from '../graphics/ui/PreBattleCurtain.js';
 
 // ─────────────────────────────────────────────
 // ON-DEMAND AUDIO & ASSET STREAMING (LAZY LOADING)
@@ -1090,6 +1091,22 @@ export function launchMatchOrBossEntrance() {
       startBattleDirectlyAfterBossEntrance();
     });
     return;
+  }
+
+  // Pre-Battle VS Loading Curtain for Tag Match & Survivor Modes (SceneLoadingCurtain Standard)
+  const isCurtainMode = (
+    state.mode === GAME_MODES.TAG_MATCH ||
+    state.mode === 'Tag Match' ||
+    state.mode === GAME_MODES.SURVIVOR ||
+    state.mode === 'Survivor'
+  );
+
+  if (isCurtainMode && (state.roundNum || 1) === 1 && typeof showPreBattleCurtain === 'function') {
+    state.gameState = 'curtain';
+    const shown = showPreBattleCurtain(() => {
+      startCountdown();
+    });
+    if (shown) return;
   }
 
   startCountdown();
