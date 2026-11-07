@@ -186,7 +186,7 @@ function drawPauseScreen() {
   const cy = state.pauseMenuY;
 
   const panelW = 260;
-  const panelH = 360;
+  const panelH = 380;
   drawPanel(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
 
   // Drag handle grip bar indicator at top of panel
@@ -201,26 +201,35 @@ function drawPauseScreen() {
   ctx.font = '900 22px "Outfit", "Rajdhani", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('PAUSED', Math.round(cx), Math.round(cy - 130));
+  ctx.fillText('PAUSED', Math.round(cx), Math.round(cy - 145));
 
   const btnW = 200;
   const btnH = 32;
 
-  drawButton('▶ RESUME', cx, cy - 90, () => {
+  drawButton('▶ RESUME', cx, cy - 105, () => {
     state.gameState = state.previousGameState || 'playing';
   }, btnW, btnH);
 
   const isCamDynamic = Boolean(state.camera && state.camera.mode === 'dynamic');
   const camBtnLabel = isCamDynamic ? 'CAM: DYNAMIC' : 'CAM: FIXED';
-  drawButton(camBtnLabel, cx, cy - 50, () => {
+  drawButton(camBtnLabel, cx, cy - 70, () => {
     toggleCameraMode();
   }, btnW, btnH);
 
-  drawButton('⚙️ SETTINGS', cx, cy - 10, () => {
+  const isManual = (state.controlMode === 'manual');
+  const controlLabel = isManual ? '🕹️ CONTROL: MANUAL' : '⚔️ CONTROL: AUTO';
+  drawButton(controlLabel, cx, cy - 35, () => {
+    state.controlMode = isManual ? 'auto' : 'manual';
+    if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+      audioSystem.playSFX('skill_dash1', 0.25);
+    }
+  }, btnW, btnH);
+
+  drawButton('⚙️ SETTINGS', cx, cy, () => {
     openSettingsModal('paused');
   }, btnW, btnH);
 
-  drawButton('↺ RESTART ROUND', cx, cy + 30, () => {
+  drawButton('↺ RESTART ROUND', cx, cy + 35, () => {
     restartCurrentRound();
   }, btnW, btnH);
 
@@ -229,7 +238,7 @@ function drawPauseScreen() {
     state.gameState = 'leaderboard';
   }, btnW, btnH);
 
-  drawButton('MAIN MENU', cx, cy + 110, () => {
+  drawButton('MAIN MENU', cx, cy + 105, () => {
     goToTitle();
   }, btnW, btnH);
 }

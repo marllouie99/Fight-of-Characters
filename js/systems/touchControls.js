@@ -48,11 +48,51 @@ const _touchButtons = {
 
 let _hasReceivedTouch = false;
 
+// PC Keyboard input tracking for manual control mode (WASD / Arrows + J, K, L)
+const _keysDown = {};
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    _keysDown[e.code] = true;
+    if (state && state.controlMode === 'manual' && state.gameState === 'playing') {
+      if (e.code === 'KeyJ') {
+        _fireFighterSkill('atk');
+      } else if (e.code === 'KeyK' || e.code === 'KeyQ') {
+        _fireFighterSkill('s1');
+      } else if (e.code === 'KeyL' || e.code === 'KeyE') {
+        _fireFighterSkill('ult');
+      }
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    _keysDown[e.code] = false;
+  });
+}
+
 export function isJoystickActive() {
-  return _joystickActive;
+  if (_joystickActive) return true;
+  if (state && state.controlMode === 'manual') {
+    return Boolean(
+      _keysDown['KeyW'] || _keysDown['KeyS'] || _keysDown['KeyA'] || _keysDown['KeyD'] ||
+      _keysDown['ArrowUp'] || _keysDown['ArrowDown'] || _keysDown['ArrowLeft'] || _keysDown['ArrowRight']
+    );
+  }
+  return false;
 }
 
 export function getJoystickVector() {
+  if (_joystickActive) return _stickVector;
+  if (state && state.controlMode === 'manual') {
+    let x = 0;
+    let y = 0;
+    if (_keysDown['KeyW'] || _keysDown['ArrowUp']) y -= 1;
+    if (_keysDown['KeyS'] || _keysDown['ArrowDown']) y += 1;
+    if (_keysDown['KeyA'] || _keysDown['ArrowLeft']) x -= 1;
+    if (_keysDown['KeyD'] || _keysDown['ArrowRight']) x += 1;
+    const mag = Math.hypot(x, y);
+    if (mag > 0) {
+      return { x: x / mag, y: y / mag, mag: 1.0 };
+    }
+  }
   return _stickVector;
 }
 
@@ -341,77 +381,23 @@ function _fireFighterSkill(slot, manualAngle = null) {
   }
 }
 
-let _cachedAutoBtnCanvas = null;
-
-function _getAutoToggleCanvas(w, h) {
-  if (_cachedAutoBtnCanvas) return _cachedAutoBtnCanvas;
-  if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
-  const c = document.createElement('canvas');
-  c.width = w + 4;
-  c.height = h + 4;
-  const cCtx = c.getContext('2d');
-  if (!cCtx) return null;
-
-  cCtx.translate(2, 2);
-  cCtx.fillStyle = 'rgba(10, 15, 24, 0.75)';
-  cCtx.strokeStyle = 'rgba(0, 245, 212, 0.45)';
-  cCtx.lineWidth = 1.4;
-  drawChamferedRect(cCtx, 0, 0, w, h, 4);
-  cCtx.fill();
-  cCtx.stroke();
-
-  cCtx.fillStyle = '#00F5D4';
-  cCtx.font = '900 10px "Outfit", "Rajdhani", sans-serif';
-  cCtx.textAlign = 'center';
-  cCtx.textBaseline = 'middle';
-  cCtx.fillText('⚔️ AUTO', w / 2, h / 2);
-
-  _cachedAutoBtnCanvas = c;
-  return _cachedAutoBtnCanvas;
-}
-
 /**
  * Main draw routine for mobile touch controls
  * @param {CanvasRenderingContext2D} ctx
  */
 export function drawTouchControls(ctx) {
   if (!state || state.gameState !== 'playing') return;
+  // For PC users / non-mobile devices without active touch, suppress in-arena controls
+  if (!state.isMobileDevice && !_hasReceivedTouch) return;
+
   const isManual = (state.controlMode === 'manual');
-  if (!isManual && ! _hasReceivedTouch) return;
+  // When in AUTO mode, combat is automated by AI — suppress on-screen floating toggle
+  // to preserve 100% clean combat HUD without healthbar overlap.
+  // Control mode toggle is now placed cleanly in the Pause Menu!
+  if (!isManual) return;
 
   _updateLayout();
-  const tb = _touchButtons.modeToggle;
-
-  // Fast-path when in AUTO mode after touch: single pre-baked quad blit (Rule 35)
-  if (!isManual) {
-    const autoSprite = _getAutoToggleCanvas(tb.w, tb.h);
-    if (autoSprite) {
-      ctx.drawImage(autoSprite, tb.x - 2, tb.y - 2);
-      return;
-    }
-  }
-
   ctx.save();
-
-  // 1. Mode Toggle Button (AUTO / MANUAL)
-  ctx.fillStyle = isManual ? '#00F5D4' : 'rgba(10, 15, 24, 0.75)';
-  ctx.strokeStyle = isManual ? '#FFFFFF' : 'rgba(0, 245, 212, 0.45)';
-  ctx.lineWidth = 1.4;
-  drawChamferedRect(ctx, tb.x, tb.y, tb.w, tb.h, 4);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = isManual ? '#0E0F14' : '#00F5D4';
-  ctx.font = '900 10px "Outfit", "Rajdhani", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(isManual ? '🕹️ MANUAL' : '⚔️ AUTO', tb.x + tb.w / 2, tb.y + tb.h / 2);
-
-  // If in AUTO mode, hide the virtual joystick and action wheel
-  if (!isManual) {
-    ctx.restore();
-    return;
-  }
 
   const p1 = state.fighters && state.fighters[0];
   const themeColor = (p1 && p1.color) ? p1.color : '#00F5D4';
