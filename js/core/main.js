@@ -10,6 +10,7 @@ import { handleUIClick, handleUIMove, getHoveredButton, captureFaceOffScreenshot
 import { survivorSystem } from '../systems/survivorSystem.js';
 import { handleUpgradeMouseMove, handleUpgradeClick, handleUpgradeKeyDown } from '../graphics/ui/SurvivorUpgradeModal.js';
 import { stopAllSounds, stopAllLoopingSounds, unlockAudio } from '../systems/soundSystem.js';
+import { audioSystem } from '../systems/audioSystem.js';
 import { getSelectedArenaBgmTrack, cycleNextArenaBgmTrack } from '../systems/arenaBgmSystem.js';
 import { initGraphicsCache } from '../graphics/graphicsCache.js';
 import { syncHudPosition } from '../graphics/ui/hudLayout.js';
@@ -104,6 +105,69 @@ const _unlockAudioOnce = () => {
 ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evt => {
   window.addEventListener(evt, _unlockAudioOnce, { passive: true, once: true });
 });
+
+// ─────────────────────────────────────────────
+// STARTUP PRE-WARM & SPLASH SCREEN CONTROLLER
+// ─────────────────────────────────────────────
+function initStartupSplashScreen() {
+  if (typeof document === 'undefined') return;
+  const splash = document.getElementById('splash-screen');
+  const startBtn = document.getElementById('btn-splash-start');
+  const statusEl = document.getElementById('splash-status-text');
+  if (!splash) return;
+
+  let isDismissed = false;
+  const dismissSplash = async () => {
+    if (isDismissed) return;
+    isDismissed = true;
+    try {
+      await unlockAudio();
+    } catch (_) {}
+    if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
+      try {
+        audioSystem.playSFX('ui_click', 0.5);
+      } catch (_) {}
+    }
+    splash.classList.add('splash-hidden');
+    setTimeout(() => {
+      splash.style.display = 'none';
+    }, 380);
+  };
+
+  if (startBtn) {
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismissSplash();
+    });
+    startBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissSplash();
+    }, { passive: false });
+  }
+
+  splash.addEventListener('click', dismissSplash);
+  splash.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    dismissSplash();
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    if (!isDismissed && (e.key === ' ' || e.key === 'Enter')) {
+      dismissSplash();
+    }
+  });
+
+  if (typeof document !== 'undefined' && 'fonts' in document && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      if (statusEl && !isDismissed) {
+        statusEl.textContent = 'READY • 60 FPS PRE-WARMED';
+      }
+    }).catch(() => {});
+  }
+}
+
+initStartupSplashScreen();
 
 // ─────────────────────────────────────────────
 // INPUT HANDLING
