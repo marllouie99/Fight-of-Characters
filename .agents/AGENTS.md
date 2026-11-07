@@ -78,6 +78,20 @@ After completing ANY code modification, update, or fix in the project, the agent
   - Pool high-frequency projectiles, afterimages, and damage popups (apply crowd-control density scaling on mobile floating text and gate ghost trails by minimum velocity + distance traveled).
   - Preserve `mobileAssetScaler.js` lazy on-demand asset loading + 2-slot mip caching, `160×160` mobile HUD portrait canvases, and zero multi-pass CSS `drop-shadow` / `backdrop-filter` rules on mobile (`body.mobile-device`).
 
+### 0.10 Mandatory Google Play Store Authenticity, Legal Safety & Commercial Compliance Standard (Rule 36 — The *Ball Fight League* & *Weapon Ball Z* Commercial Publishing Standard)
+- **Full Architectural Reference**: Always follow [`docs/GOOGLE_PLAY_COMPLIANCE_BLUEPRINT.md`](docs/GOOGLE_PLAY_COMPLIANCE_BLUEPRINT.md).
+- **Parody Archetype & IP Safety Standard**:
+  - Direct trademarked anime/game franchise names (*"Satoru Gojo"*, *"Ryomen Sukuna"*, *"Carl Johnson / CJ"*, *"Goku"*), official logos, and ripped voice actor lines MUST NEVER be included in public store listings, titles, descriptions, or production bundles.
+  - Implement and support the **Parody Archetype System** (e.g. *The Void Sorcerer*, *King of Curses*, *Grove Brawler*, *The Soul Reaper*) and the dual-mode configuration toggle (`CONFIG.COMMERCIAL_MODE` in `js/configs/config.js`) so local fan development remains intact while production builds compile 100% legal, original parody assets.
+- **Audio Copyright & Synthesis Standard**:
+  - Never package copyrighted anime OSTs or ripped studio voice tracks into production builds.
+  - Use procedurally synthesized Web Audio SFX (oscillators, noise buffers, bandpass filters) or commercial-cleared royalty-free audio for slashes, clashes, and battle shouts.
+- **Capacitor Android Target SDK & Vitals Compliance**:
+  - Mobile packaging MUST target Android 15 (API 35) with Android App Bundle (`.aab`) format and minimal permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`). Zero unnecessary invasive permissions.
+  - Enforce Android Vitals thresholds (crash rate $< 1.09\%$, ANR rate $< 0.47\%$) backed by Rule 35 pre-baked offscreen canvas quads, texture pre-warming, and `@0.5x` mobile asset scaling.
+- **Policy Compliance & Store Review Guardrails**:
+  - Ensure a live HTTPS Privacy Policy is linked, Data Safety declarations reflect zero unauthorized user data tracking, and IARC content rating is calibrated to Fantasy Cartoon Violence (Everyone 10+ / PEGI 7).
+
 ---
 
 

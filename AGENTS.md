@@ -342,6 +342,21 @@ When designing, implementing, tuning, or balancing fighters, skills, weapons, or
   - HUD cards MUST NEVER display artificial `Crit Rate: 100% (FLOW 1.85x)` or `(EGO CRIT)` indicators for non-crit characters.
   - The HUD stats array must accurately reflect authentic character attributes (Damage, Speed, Kick Speed, Evade, Dribble Control, CDR) without manufactured RPG crit statistics.
 
+## Mandatory Google Play Store Authenticity, Legal Safety & Commercial Compliance Standard (Rule 36 — The *Ball Fight League* & *Weapon Ball Z* Commercial Publishing Standard)
+
+Whenever packaging, scaffolding, optimizing, configuring, or preparing the project, characters, assets, or configs for commercial release, mobile builds, or app store distribution, agents **MUST ALWAYS** follow the standards in [`docs/GOOGLE_PLAY_COMPLIANCE_BLUEPRINT.md`](docs/GOOGLE_PLAY_COMPLIANCE_BLUEPRINT.md):
+- **Parody Archetype & IP Safety Standard**:
+  - Direct trademarked anime/game franchise names (*"Satoru Gojo"*, *"Ryomen Sukuna"*, *"Carl Johnson / CJ"*, *"Goku"*), official logos, and ripped voice actor lines MUST NEVER be included in public store listings, titles, descriptions, or production bundles.
+  - Implement and support the **Parody Archetype System** (e.g. *The Void Sorcerer*, *King of Curses*, *Grove Brawler*, *The Soul Reaper*) and the dual-mode configuration toggle (`CONFIG.COMMERCIAL_MODE` in `js/configs/config.js`) so local fan development remains intact while production builds compile 100% legal, original parody assets.
+- **Audio Copyright & Synthesis Standard**:
+  - Never package copyrighted anime OSTs or ripped studio voice tracks into production builds.
+  - Use procedurally synthesized Web Audio SFX (oscillators, noise buffers, bandpass filters) or commercial-cleared royalty-free audio for slashes, clashes, and battle shouts.
+- **Capacitor Android Target SDK & Vitals Compliance**:
+  - Mobile packaging MUST target Android 15 (API 35) with Android App Bundle (`.aab`) format and minimal permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`). Zero unnecessary invasive permissions.
+  - Enforce Android Vitals thresholds (crash rate $< 1.09\%$, ANR rate $< 0.47\%$) backed by Rule 35 pre-baked offscreen canvas quads, texture pre-warming, and `@0.5x` mobile asset scaling.
+- **Policy Compliance & Store Review Guardrails**:
+  - Ensure a live HTTPS Privacy Policy is linked, Data Safety declarations reflect zero unauthorized user data tracking, and IARC content rating is calibrated to Fantasy Cartoon Violence (Everyone 10+ / PEGI 7).
+
 ## Post-Change Suggestions
 
 This applies to any chat-based AI coding assistant working in this repository, regardless of IDE, extension, model, or provider, whenever these project instructions are loaded.
