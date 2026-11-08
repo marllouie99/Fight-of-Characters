@@ -1115,8 +1115,18 @@ export function drawArena() {
     const bgW = pixiApp.screen.width + bleed * 2;
     const bgH = pixiApp.screen.height + bleed * 2;
 
-    const activeOuterColor = suppressArenaFloor ? (isDark ? 0x000000 : 0x080808) : outerBg.color;
-    const activeOuterAlpha = suppressArenaFloor ? 1.0 : outerBg.alpha;
+    let activeOuterColor = outerBg.color;
+    let activeOuterAlpha = outerBg.alpha;
+    if (suppressArenaFloor) {
+      if (state.globalDimEdgeColor) {
+        const parsed = parseColor(state.globalDimEdgeColor);
+        activeOuterColor = parsed.color;
+        activeOuterAlpha = parsed.alpha;
+      } else {
+        activeOuterColor = isDark ? 0x000000 : 0x080808;
+        activeOuterAlpha = 1.0;
+      }
+    }
     g.beginFill(activeOuterColor, activeOuterAlpha);
     g.drawRect(-bleed, -bleed, bgW, bgH);
     g.endFill();
@@ -1153,7 +1163,7 @@ export function drawArena() {
     // Fills the exact viewport (0, 0, canvas.width, canvas.height) with ZERO wasted overdraw
     // (eliminates 153 megapixels of redundant rasterization per frame on mobile devices).
     const outerBg = suppressArenaFloor
-      ? (isDark ? '#000000' : '#080808')
+      ? (state.globalDimEdgeColor || (isDark ? '#000000' : '#080808'))
       : (isDark ? (CONFIG.darkArenaOuterBgColor || '#000000') : (CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || '#ffffff'));
     ctx.fillStyle = outerBg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);

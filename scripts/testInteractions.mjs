@@ -12294,6 +12294,51 @@ async function runInteractionTests() {
     assert(unarmedConfig.enableKineticSurge !== undefined, 'unarmedConfig must define enableKineticSurge toggle');
     assert(unarmedConfig.enableBallSteering !== undefined, 'unarmedConfig must define enableBallSteering toggle');
     assert(unarmedConfig.requireWallBounceForDamage !== undefined, 'unarmedConfig must define requireWallBounceForDamage toggle');
+    assert(unarmedConfig.enableBumpStun !== undefined, 'unarmedConfig must define enableBumpStun toggle');
+    assert(unarmedConfig.bumpStunChance !== undefined, 'unarmedConfig must define bumpStunChance');
+    assert(unarmedConfig.bumpStunDuration !== undefined, 'unarmedConfig must define bumpStunDuration');
+
+    // 7.6b Concussive Bump Stun Mechanic Verification
+    const savedEnableBumpStun = unarmedConfig.enableBumpStun;
+    const savedBumpStunChance = unarmedConfig.bumpStunChance;
+    const savedBumpStunDuration = unarmedConfig.bumpStunDuration;
+    const stunDummy = new NormalFighter({ characterId: 'normal', name: 'StunDummy', x: 260, y: 300, radius: 25, hp: 500, maxHp: 500 });
+    state.fighters = [unarmed, stunDummy];
+
+    // When enableBumpStun is disabled, stun chance is 0 and bump does NOT stun
+    unarmedConfig.enableBumpStun = false;
+    unarmedConfig.bumpStunChance = 1.0;
+    assert(unarmed._getBumpStunChance() === 0, '_getBumpStunChance() must return 0 when enableBumpStun is false');
+    unarmed.hasWallRebounded = true;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = stunDummy.x - 5;
+    unarmed.y = stunDummy.y;
+    unarmed.vx = 12.0;
+    unarmed.vy = 0;
+    unarmed._checkFighterCollision(stunDummy);
+    assert((stunDummy.paralyzeTimer || 0) === 0, 'Bump must NOT stun target when enableBumpStun is false');
+
+    // When enableBumpStun is enabled with 100% chance, primed damaging bump applies stun
+    unarmedConfig.enableBumpStun = true;
+    unarmedConfig.bumpStunChance = 1.0;
+    unarmedConfig.bumpStunDuration = 45;
+    assert(unarmed._getBumpStunChance() > 0, '_getBumpStunChance() must return positive probability when enableBumpStun is true');
+    unarmed.hasWallRebounded = true;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = stunDummy.x - 5;
+    unarmed.y = stunDummy.y;
+    unarmed.vx = 12.0;
+    unarmed.vy = 0;
+    unarmed._checkFighterCollision(stunDummy);
+    assert(stunDummy.paralyzeTimer === 45, `Primed bump with 100% stun chance must apply paralyzeTimer=45, got ${stunDummy.paralyzeTimer}`);
+    assert(stunDummy.stunTimer === 45, `Primed bump with 100% stun chance must apply stunTimer=45, got ${stunDummy.stunTimer}`);
+    assert(stunDummy.isParalyzed === true, 'Primed bump stun must mark target isParalyzed = true');
+    assert(stunDummy._handleTimeStop() === true, 'Stunned target must be immobilized by _handleTimeStop()');
+
+    unarmedConfig.enableBumpStun = savedEnableBumpStun;
+    unarmedConfig.bumpStunChance = savedBumpStunChance;
+    unarmedConfig.bumpStunDuration = savedBumpStunDuration;
+    state.fighters = [unarmed, collisionDummy];
 
     const basicSkill = unarmed.skillManager.getSkill('kineticBump');
     assert(Boolean(basicSkill), 'Unarmed must register Kinetic Bump as its declarative basic attack skill in SkillManager');
@@ -14344,6 +14389,11 @@ async function runInteractionTests() {
     const { updateFighters } = await import('../js/systems/physics.js');
 
     // 4. Verify Gojo and Sukuna trigger Melee Mode against summoned Pokémon
+    const savedGojoMelee = CONFIG.gojo?.enableMeleeMode;
+    const savedSukunaMelee = CONFIG.sukuna?.enableMeleeMode;
+    if (CONFIG.gojo) CONFIG.gojo.enableMeleeMode = true;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMeleeMode = true;
+
     ash.activePokemon = null;
     ash._spawnPokemonFromBall({ speciesKey: 'pikachu', targetX: 250, targetY: 450 });
     const pika = ash.activePokemon;
@@ -14385,6 +14435,9 @@ async function runInteractionTests() {
     meleeSukuna.meleeModeCooldown = 0;
     ash._dealPokemonDamage(meleeSukuna, 15, { isMelee: true, attacker: pika });
     assert(meleeSukuna.isMeleeMode === true, 'Sukuna must enter Melee Mode when struck by Pokémon close-range melee attack');
+
+    if (CONFIG.gojo) CONFIG.gojo.enableMeleeMode = savedGojoMelee;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMeleeMode = savedSukunaMelee;
 
     state.fighters = [];
     console.log('      ✅ Pokémon Trainer Absolute God-Mode, Sideline Immunity & Gojo/Sukuna Melee Mode on Pokémon verified.');
@@ -15153,9 +15206,13 @@ async function runInteractionTests() {
     const GojoClass = FIGHTER_CLASS_MAP['gojo'];
     assert(SukunaClass && GojoClass, 'Fighter classes must exist');
 
+    const savedEnableMahoraga = CONFIG.sukuna?.enableMahoragaSummon;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = true;
+
     const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4 };
     const sukuna = new SukunaClass({ x: 200, y: 300, controls: {}, fighterIndex: 0 });
     const gojo = new GojoClass({ x: 400, y: 300, controls: {}, fighterIndex: 1 });
+    sukuna.enableMahoragaSummon = 1;
     sukuna.target = gojo;
     gojo.target = sukuna;
     sukuna.mahoragaSummonCooldown = 0;
@@ -15256,6 +15313,7 @@ async function runInteractionTests() {
     assert(state.roundWinner === gojo, 'Gojo must be declared roundWinner after defeating Mahoraga');
 
     // Clean up
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = savedEnableMahoraga;
     state.fighters = [];
     state.illusions = [];
     console.log('      ✅ Sukuna Mahoraga minion outlives summoner, fight continues, targeting verified, and both win outcomes verified.');
@@ -15325,10 +15383,14 @@ async function runInteractionTests() {
     const MahoragaClass = FIGHTER_CLASS_MAP['mahoraga'];
     assert(SukunaClass && MahoragaClass, 'Fighter classes must exist');
 
+    const savedEnableMahoraga = CONFIG.sukuna?.enableMahoragaSummon;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = true;
+
     const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
     const sukuna = new SukunaClass({ x: 270, y: 350, controls: {}, fighterIndex: 0 });
     const dummyOpponent = new SukunaClass({ x: 270, y: 550, controls: {}, fighterIndex: 1 });
     const standaloneMahoraga = new MahoragaClass({ x: 270, y: 400, controls: {}, fighterIndex: 2 });
+    sukuna.enableMahoragaSummon = 1;
 
     state.fighters = [sukuna, dummyOpponent, standaloneMahoraga];
     state.illusions = [];
@@ -15388,6 +15450,7 @@ async function runInteractionTests() {
     assert(minion.swordCooldown === 0, 'Wall bounce dash resets sword cooldown for authentic rebound strike');
 
     // Clean up
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = savedEnableMahoraga;
     state.fighters = [];
     state.illusions = [];
     console.log('      ✅ Minion Mahoraga base speed parity, authentic rapid cooldown decay, adaptation speed scaling, and bounded wall rebound dash verified.');
@@ -15458,10 +15521,14 @@ async function runInteractionTests() {
     const { getAdditionalInfoForFighter, updateHealthHud, clearHealthHud } = await import('../js/graphics/hudManager.js');
     const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
 
+    const savedEnableMahoraga = CONFIG.sukuna?.enableMahoragaSummon;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = true;
+
     const SukunaClass = FIGHTER_CLASS_MAP['sukuna'];
     const GojoClass = FIGHTER_CLASS_MAP['gojo'];
     const sukuna = new SukunaClass({ x: 220, y: 300, controls: {} });
     const dummyEnemy = new GojoClass({ x: 320, y: 300, controls: {} });
+    sukuna.enableMahoragaSummon = 1;
 
     state.fighters = [sukuna, dummyEnemy];
     state.illusions = [];
@@ -15598,6 +15665,7 @@ async function runInteractionTests() {
     assert(!postStats.some(line => line.includes('<b>Maho')), 'Maho stats must be cleanly removed after dispel');
 
     // Cleanup
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = savedEnableMahoraga;
     state.fighters = [];
     state.illusions = [];
     console.log('      ✅ Sukuna Minion Mahoraga dynamic HUD skill bars, theme consistency, dark mode registration, and combat stats verified cleanly.');
@@ -15796,7 +15864,11 @@ async function runInteractionTests() {
     state.mode = '1v1';
     state.illusions = [];
 
+    const savedEnableMahoraga = CONFIG.sukuna?.enableMahoragaSummon;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = true;
+
     const sukuna = new SukunaClass({ x: 200, y: 300, controls: {} });
+    sukuna.enableMahoragaSummon = 1;
     const prey = new Fighter({ id: 'dummy', name: 'DUMMY', type: 'dummy', hp: 500, maxHp: 500, x: 300, y: 300 });
     state.fighters = [sukuna, prey];
 
@@ -15855,6 +15927,7 @@ async function runInteractionTests() {
     assert(trySummonMahoraga(sukuna, 0, testArena) === true, 'Sukuna can summon Mahoraga once in the new round');
 
     // Cleanup
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = savedEnableMahoraga;
     dispelMahoragaSummon(sukuna, { silent: true, instantCooldown: true });
     state.fighters = [];
     state.illusions = [];
@@ -15876,7 +15949,11 @@ async function runInteractionTests() {
     state.mode = '1v1';
     state.illusions = [];
 
+    const savedEnableMahoraga = CONFIG.sukuna?.enableMahoragaSummon;
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = true;
+
     const sukuna = new SukunaClass({ x: 100, y: 300, controls: {} });
+    sukuna.enableMahoragaSummon = 1;
     sukuna.x = 100;
     sukuna.y = 300;
 
@@ -15933,6 +16010,7 @@ async function runInteractionTests() {
     assert(Math.abs(state.camera.targetX - 270) < 1, `Expected camera.targetX locked to arena center 270 in fixed mode, got ${state.camera.targetX}`);
 
     // Cleanup
+    if (CONFIG.sukuna) CONFIG.sukuna.enableMahoragaSummon = savedEnableMahoraga;
     dispelMahoragaSummon(sukuna, { silent: true, instantCooldown: true });
     state.camera.mode = 'dynamic';
     state.fighters = [];
@@ -19720,6 +19798,72 @@ async function runInteractionTests() {
     assert(!domainVoiceHandle.isPlaying(), 'Death with force=true must cleanly terminate the active voiceline');
 
     console.log('      ✅ Web Audio Fast-Path Execution, Character Voice Channel Governance & Zero-Cutoff Standard verified cleanly.');
+  }
+
+  // ── TEST 150: Domain Expansion Arena Vignette Cutout Camera Synchronization (Rule 31) ──
+  {
+    console.log('🧪 Test 150: Domain Arena Vignette Cutout Camera Sync & Anti-Black-Border Standard (Rule 31)...');
+    const { applyDomainArenaVignetteCutout } = await import('../js/graphics/renderers/domainDimOverlays.js');
+    const { getActiveCameraZoom } = await import('../js/systems/cameraSystem.js');
+
+    let fillRectCalls = [];
+    let saveCount = 0;
+    let restoreCount = 0;
+    const mockCtx = {
+      canvas: { width: 540, height: 960 },
+      globalCompositeOperation: 'source-over',
+      fillStyle: '#000000',
+      save() { saveCount++; },
+      restore() { restoreCount++; },
+      translate() {},
+      scale() {},
+      fillRect(x, y, w, h) {
+        fillRectCalls.push({ op: this.globalCompositeOperation, x, y, w, h });
+      },
+      beginPath() {},
+      arc() {},
+      fill() {},
+      rect() {},
+      clip() {},
+      setTransform() {}
+    };
+
+    const prevPixiApp = state.pixiApp;
+    const prevCamera = state.camera;
+    state.pixiApp = { stage: { addChild() {} }, screen: { width: 540, height: 960 } };
+    state.camera = {
+      enabled: true,
+      mode: 'fixed',
+      zoom: 0.90,
+      userZoom: 0.90,
+      x: 270,
+      y: 465,
+      shakeX: 0,
+      shakeY: 0
+    };
+
+    const zoom = getActiveCameraZoom();
+    assert(Math.abs(zoom - 0.90) < 0.001, `getActiveCameraZoom must report 0.90, got ${zoom}`);
+
+    fillRectCalls = [];
+    saveCount = 0;
+    restoreCount = 0;
+
+    applyDomainArenaVignetteCutout(mockCtx);
+
+    assert(saveCount === restoreCount, 'applyDomainArenaVignetteCutout stack depth must be perfectly balanced');
+    const cutoutCall = fillRectCalls.find(c => c.op === 'destination-out');
+    assert(cutoutCall !== undefined, 'Must execute a destination-out clearing call');
+
+    // Coordinates in camera space must match inner arena: arena.x + ww = 45 + 4 = 49, width - ww*2 = 450 - 8 = 442
+    assert(cutoutCall.x === 49, `Cutout X must equal arena.x + wallWidth (49), got ${cutoutCall.x}`);
+    assert(cutoutCall.y === 244, `Cutout Y must equal arena.y + wallWidth (244), got ${cutoutCall.y}`);
+    assert(cutoutCall.w === 442, `Cutout width must equal arena.width - wallWidth*2 (442), got ${cutoutCall.w}`);
+    assert(cutoutCall.h === 442, `Cutout height must equal arena.height - wallWidth*2 (442), got ${cutoutCall.h}`);
+
+    state.pixiApp = prevPixiApp;
+    state.camera = prevCamera;
+    console.log('      ✅ Domain arena vignette cutout camera sync & inner arena alignment (Rule 31) verified.');
   }
 
 

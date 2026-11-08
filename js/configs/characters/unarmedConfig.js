@@ -87,6 +87,13 @@ export const unarmedConfig = {
   enemyHitSlowDuration: 14,         // ~0.23s slow applied to the enemy on impact
   enemyHitSlowMultiplier: 0.35,     // 35% speed multiplier for enemy
 
+  // ── 3.5. Concussive Bump Stun Mechanic (Chance to stun enemy on bump) ──
+  enableBumpStun: true,             // Master toggle for chance to stun the enemy when bumping into them
+  bumpStunChance: 0.25,             // 25% base chance (0.0 to 1.0) to apply stun on a damaging bump
+  bumpStunChancePerHit: 0.0,        // Optional bonus stun chance per momentum stack (0.0 = flat chance)
+  maxBumpStunChance: 0.60,          // Maximum cap for bump stun chance (60%)
+  bumpStunDuration: 45,             // Stun duration in frames when triggered (45 frames = 0.75s at 60 FPS)
+
   // ── 4. Skill 1: Kinetic Surge (Rapid directional rocket propulsion) ──
   enableKineticSurge: true,         // Master toggle for Skill: Kinetic Surge burst dash
   kineticSurgeCooldownMax: 280,     // ~4.6s cooldown

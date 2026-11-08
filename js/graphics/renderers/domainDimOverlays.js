@@ -1,6 +1,6 @@
 import { state, getProjectiles } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
-import { worldToScreen } from '../../systems/cameraSystem.js';
+import { worldToScreen, applyCameraToCtx, getActiveCameraZoom } from '../../systems/cameraSystem.js';
 import { isInsideRubbickStolenVoid } from '../../entities/fighters/rubbick/rubbickThemes.js';
 import { isTodoTakadaOverlayActive } from './specialOverlayRenderer.js';
 import { getCachedRadialGradientCanvas } from '../graphicsCache.js';
@@ -120,7 +120,7 @@ export function excludeGojoInfinityFromDim(ctx) {
     if (!isLimitlessActive) continue;
     
     const infinityR = CONFIG.gojo?.infinityRadius ?? (f.r + 30);
-    const camZoom = (state.camera && state.camera.mode === 'dynamic' && Number.isFinite(state.camera.zoom) && state.camera.zoom > 0) ? state.camera.zoom : 1.0;
+    const camZoom = getActiveCameraZoom();
     const cutoutRadius = Math.max(1, (infinityR + 25) * camZoom);
     const screenPos = worldToScreen(f.x, f.y - (f.z || 0));
     const drawX = (screenPos && Number.isFinite(screenPos.x)) ? screenPos.x : (state.canvas ? state.canvas.width / 2 : 270);
@@ -163,33 +163,30 @@ export function applyDomainArenaVignetteCutout(ctx) {
   const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
   if (!arena || !ctx) return;
 
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
-  const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
-  const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
-  const screenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
-  const arenaCenterX = screenCenter.x;
-  const arenaCenterY = screenCenter.y;
-
-  if (isNaN(arenaCenterX) || isNaN(arenaCenterY)) return;
-
-  const arenaW = (arena.width || 800) * zoom;
-  const arenaH = (arena.height || 600) * zoom;
-  const arenaX = arenaCenterX - arenaW / 2;
-  const arenaY = arenaCenterY - arenaH / 2;
-
   ctx.save();
+  // Transform context to camera space so the cutout precisely matches the WebGL environment layer
+  // at ANY camera zoom, position, and shake without manual math approximation or edge gaps (Rule 31).
+  applyCameraToCtx(ctx);
   ctx.globalCompositeOperation = 'destination-out';
 
+  const ww = (arena.wallWidth !== undefined) ? arena.wallWidth : 4;
   if (arena.shape === 'circle') {
-    const ar = (arena.radius || ((arena.width || 800) / 2)) * zoom;
+    const acx = (arena.x || 0) + (arena.width || 800) / 2;
+    const acy = (arena.y || 0) + (arena.height || 600) / 2;
+    const ar = Math.max(0, (arena.radius !== undefined ? arena.radius : ((arena.width || 800) / 2)) - ww);
     ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
     ctx.beginPath();
-    ctx.arc(arenaCenterX, arenaCenterY, ar, 0, Math.PI * 2);
+    ctx.arc(acx, acy, ar, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    // Rectangular Arena — 100% full arena interior & corner clearing
+    // Rectangular Arena — clear inner arena floor exactly matching the environment mask (arena.x + ww, arena.y + ww, arena.width - ww*2, arena.height - ww*2)
     ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
-    ctx.fillRect(arenaX, arenaY, arenaW, arenaH);
+    ctx.fillRect(
+      (arena.x || 0) + ww,
+      (arena.y || 0) + ww,
+      Math.max(0, (arena.width || 800) - ww * 2),
+      Math.max(0, (arena.height || 600) - ww * 2)
+    );
   }
 
   ctx.restore();
@@ -277,7 +274,7 @@ export function drawRedDimScreen() {
   const screenPos = worldToScreen(cx, cy);
   const drawCx = screenPos.x;
   const drawCy = screenPos.y;
-  const camZoom = (state.camera && state.camera.mode === 'dynamic') ? state.camera.zoom : 1.0;
+  const camZoom = getActiveCameraZoom();
   const maxR = Math.max(canvas.width, canvas.height) * 0.95 * camZoom;
 
   // 1. Deep obsidian-crimson pitch dark backdrop
@@ -397,7 +394,7 @@ export function drawPurpleDimScreen() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 2. Dynamic radial gradient centered on Gojo or Purple Orb
-  const camZoom = (state.camera && state.camera.mode === 'dynamic') ? state.camera.zoom : 1.0;
+  const camZoom = getActiveCameraZoom();
   const screenPos = worldToScreen(cx, cy);
   const maxDim = Math.max(arena.width, arena.height) * 0.80 * camZoom;
   const roundCx = Math.round(screenPos.x / 10) * 10;
@@ -856,6 +853,7 @@ export function drawSukunaDomainDimScreen() {
   if (dimGrad) {
     ctx.fillStyle = dimGrad;
     ctx.fillRect(0, 0, w, h);
+    state.globalDimEdgeColor = `rgba(8, 0, 2, ${(quantizedOpacity * 0.96).toFixed(3)})`;
   }
 
   // 2. Subtle radial lighter pocket centered on Sukuna (WebGL only; in 2D mode destination-out erases main canvas)
@@ -1552,7 +1550,7 @@ export function drawTojiUltimateOverlay() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 2. Render Toji Ultimate Arena Overlay Image (Assets/Overlays/Toji-ultimate-overlay.png) clipped to arena
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const screenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -1658,7 +1656,7 @@ export function drawTojiUltimateOverlay() {
     }
     
     // 1. Toji Cinematic Spotlight / Ethereal Backlight
-    const tojiZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+    const tojiZoom = getActiveCameraZoom();
     const tojiScreen = worldToScreen(toji.x, toji.y - (toji.z || 0));
     const tojiScreenX = tojiScreen.x;
     const tojiScreenY = tojiScreen.y;
@@ -1796,7 +1794,7 @@ export function drawNanamiOvertimeArenaOverlay() {
     if (!(typeof state !== 'undefined' && state.isMobileDevice)) {
       ctx.globalCompositeOperation = 'screen';
     }
-    const nanamiZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+    const nanamiZoom = getActiveCameraZoom();
     const nanamiScreen = worldToScreen(nanami.x, nanami.y - (nanami.z || 0));
     const spotR = (nanami.r || 25) * 4.0 * nanamiZoom;
     const nanamiSpotCanvas = getCachedRadialGradientCanvas('nanami_overtime_spot', 128, NANAMI_OVERTIME_SPOT_STOPS);
@@ -1922,7 +1920,7 @@ export function drawGenosUltimateArenaOverlay() {
   }
 
   // 5. Draw Genos Ultimate Overlay Artwork (Assets/Overlays/Genos-ultimate-overlay.png) inside Arena
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const arenaScreenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -1995,7 +1993,7 @@ export function drawGenosUltimateArenaOverlay() {
   if (genos) {
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    const genosZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+    const genosZoom = getActiveCameraZoom();
     const genosScreen = worldToScreen(genos.x, genos.y - (genos.z || 0));
     const spotR = (genos.r || 25) * 5.0 * genosZoom;
     const spotGrad = ctx.createRadialGradient(genosScreen.x, genosScreen.y, 6 * genosZoom, genosScreen.x, genosScreen.y, spotR);
@@ -2111,7 +2109,7 @@ export function drawEscanorUltimateArenaOverlay() {
   }
 
   // 4. Subtle Radiant Solar Warmth inside Arena (Feathered Radial Falloff, Zero Rectangular Seams)
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const arenaScreenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -2164,7 +2162,7 @@ export function drawEscanorUltimateArenaOverlay() {
   if (escanor) {
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    const escanorZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+    const escanorZoom = getActiveCameraZoom();
     const escanorScreen = worldToScreen(escanor.x, escanor.y - (escanor.z || 0));
     const spotR = (escanor.r || 32) * 5.0 * escanorZoom;
     const spotGrad = createSafeRadialGradient(ctx, escanorScreen.x, escanorScreen.y, 6 * escanorZoom, escanorScreen.x, escanorScreen.y, spotR);
@@ -2501,7 +2499,7 @@ export function drawMahoragaWheelArenaOverlay() {
   const currentRotation = lastMahoragaWheelOverlayRotation;
 
   // Arena Screen Center & Geometry
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const arenaScreenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -2733,7 +2731,7 @@ export function drawNanamiRatioCritDimScreen() {
 
     // Accurate Screen Space positioning accounting for Camera pan, zoom, and shake
     const screenImpact = worldToScreen(impactX, impactY);
-    const camZoom = (state.camera && state.camera.enabled && (state.camera.mode === 'dynamic' || state.camera.cinematicOverride)) ? (state.camera.zoom || 1.0) : 1.0;
+    const camZoom = getActiveCameraZoom();
 
     const baseAngle = (nanami.chopCastAngle !== undefined) ? nanami.chopCastAngle : ((nanami.gunAngle !== undefined) ? nanami.gunAngle : (nanami.angle || 0));
     // Lay ruler across the strike line (perpendicular to cut angle) with subtle manga tilt (-0.15 rad)
@@ -3019,7 +3017,7 @@ export function drawSaitamaSeriousPunchDimScreen() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = currentSaitamaSeriousPunchOpacity;
 
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const screenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -3473,7 +3471,7 @@ export function drawBankaiImpactDimScreen() {
   if (!isBankaiChannelingOrBursting && currentHollowMaskOpacity > 0.01 && hollowMaskOverlayImg && hollowMaskOverlayImg.complete && hollowMaskOverlayImg.naturalWidth > 0) {
     ctx.save();
 
-    const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+    const zoom = getActiveCameraZoom();
     const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
     const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
     const screenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -3997,7 +3995,7 @@ export function drawJohnWickAssassinationDimScreen() {
   const h = canvas.height;
 
   const target = wickFighter?.cqcComboTarget;
-  const camZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const camZoom = getActiveCameraZoom();
 
   const wickScreen = wickFighter ? worldToScreen(wickFighter.x, wickFighter.y - (wickFighter.z || 0)) : { x: w / 2, y: h / 2 };
   const targetScreen = (target && target.hp > 0) ? worldToScreen(target.x, target.y - (target.z || 0)) : wickScreen;
@@ -4134,7 +4132,7 @@ export function drawZenitsuChannelDimScreen() {
   const opacity = currentZenitsuChannelDimOpacity;
   const w = canvas.width;
   const h = canvas.height;
-  const camZoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const camZoom = getActiveCameraZoom();
   const focus = zenitsu
     ? worldToScreen(zenitsu.x, zenitsu.y - (zenitsu.z || 0))
     : { x: w / 2, y: h / 2 };

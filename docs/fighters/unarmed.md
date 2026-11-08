@@ -57,6 +57,7 @@ When activating its Ultimate, Unarmed ascends into its official wiki **Super Una
 | **Collision Damage** | `30 base` | **$30 + \Delta v + \text{Stacks}$** | Directly scales with current kinetic velocity and accumulated momentum |
 | **Parry Interaction** | **Unparriable** | **Unparriable** | Body collisions bypass weapon parries, shield deflections, and blade blocks |
 | **Wall Ricochet** | `1.0` multiplier | Natural Specular | Conserves speed on wall impacts with billiard cushion dispersion |
+| **Bump Stun Chance** | `25%` (`0.25`) | `0.75s` (`45 frames`) | Chance to apply concussive stun (`paralyzeTimer`) to enemy on damaging bumps |
 | **Evade Chance** | `5%` base | **`45%` (Max 20 Stacks)** | Gains `+2%` stacking evasion on each hit; triggers supersonic evade dash |
 | **Super Unarmed** | `10.0s CD` | `4.0s Duration` | Super Form: $18.0\text{ speed}$, $+60\%$ collision damage, unstoppable mass |
 | **Shoot Suppression** | Blank `shoot()` | Blank `shoot()` | Overrides default `Fighter.shoot()` to suppress generic bullets ([Rule 23](file:///c:/Users/asus/OneDrive/Desktop/Circle%20Mini-Battle/AGENTS.md)) |
@@ -114,6 +115,9 @@ Unarmed does not swing fists or weapons; its body is the weapon.
   `Assets/Sound Effects/Attacks/heavypunch3.mp3` (`unarmed_enemy_bump`).
 * **True 2D Elastic Physics:** Resolves realistic sphere-on-sphere momentum transfer along normal and tangential contact angles.
 * **Mutual Hit Slow:** Applies a brief movement slowdown on impact ($0.35\times$ speed for $14\text{ frames}$) for tactile hitstop feel.
+* **Concussive Bump Stun (`enableBumpStun: true`, `bumpStunChance: 0.25`, `bumpStunDuration: 45`):**
+  * Whenever a primed kinetic bump deals actual damage to an enemy, Unarmed rolls a **25% chance** (`bumpStunChance: 0.25`) to inflict a **0.75-second concussive stun** (`45 frames` via `paralyzeTimer` / `stunTimer`).
+  * Interrupts active enemy casts/combos (`interruptAttacks(true)`), renders orbiting golden stun rings (`drawParalyzeEffect`), and spawns golden **`STUNNED!`** floating text (`#FACC15`).
 
 ---
 

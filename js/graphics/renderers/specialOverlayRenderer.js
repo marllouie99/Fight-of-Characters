@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────
 import { state } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
-import { worldToScreen } from '../../systems/cameraSystem.js';
+import { worldToScreen, getActiveCameraZoom } from '../../systems/cameraSystem.js';
 import { excludeGojoInfinityFromDim } from './domainDimOverlays.js';
 
 // ─────────────────────────────────────────────────────────────────────
@@ -482,7 +482,7 @@ export function drawTodoUltimateArenaOverlay(customCtx = null, customOpacity = n
 
   if (opacity <= 0.005) return;
 
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const arenaScreenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -618,7 +618,7 @@ export function drawTodoTakadaDimScreen() {
   const screenPos = todoFighter ? worldToScreen(todoFighter.x, todoFighter.y - (todoFighter.z || 0)) : { x: w / 2, y: h / 2 };
   const cx = screenPos.x;
   const cy = screenPos.y;
-  const camZoom = (state.camera && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const camZoom = getActiveCameraZoom();
   const maxDim = Math.max(w, h) * 0.95 * camZoom;
 
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxDim);
@@ -831,7 +831,7 @@ export function drawYujiSoulSwapArenaOverlay(customCtx = null, customOpacity = n
 
   if (opacity <= 0.005) return;
 
-  const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+  const zoom = getActiveCameraZoom();
   const worldArenaCenterX = (arena.x || 0) + (arena.width || 800) / 2;
   const worldArenaCenterY = (arena.y || 0) + (arena.height || 600) / 2;
   const arenaScreenCenter = worldToScreen(worldArenaCenterX, worldArenaCenterY);
@@ -1024,7 +1024,7 @@ export function drawYujiSoulSwapDimScreen() {
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
       ctx.globalAlpha = opacity;
-      const zoom = (state.camera && state.camera.enabled && state.camera.mode === 'dynamic') ? (state.camera.zoom || 1.0) : 1.0;
+      const zoom = getActiveCameraZoom();
       const spotR = (yujiFighter.r || 25) * 4.2 * zoom;
       ctx.drawImage(spotCanvas, cx - spotR, cy - spotR, spotR * 2, spotR * 2);
       ctx.restore();

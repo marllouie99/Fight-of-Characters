@@ -754,6 +754,14 @@ export function applyCameraToCtx(ctx) {
  * taking into account dynamic camera pan, distance zoom, and screen shake.
  * Used for screen-space dim overlays to keep radial blooms and halos locked to fighters.
  */
+export function getActiveCameraZoom() {
+  const cam = (typeof state !== 'undefined') ? state.camera : null;
+  if (!cam || !cam.enabled) return 1.0;
+  const isDynamic = Boolean(cam.mode === 'dynamic' || cam.cinematicOverride);
+  const isZooming = Boolean(Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
+  return (isDynamic || isZooming) && Number.isFinite(cam.zoom) && cam.zoom > 0 ? cam.zoom : 1.0;
+}
+
 export function worldToScreen(worldX, worldY) {
   const cam = state.camera;
   const arena = (typeof state !== 'undefined' && state.arena) || CONFIG.arena || ARENA_VERTICAL;

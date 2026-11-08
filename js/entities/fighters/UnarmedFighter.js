@@ -660,6 +660,65 @@ export class UnarmedFighter extends Fighter {
   }
 
   /**
+   * Computes current probability (0.0 to 1.0) of stunning an enemy on a damaging kinetic bump.
+   */
+  _getBumpStunChance() {
+    const cfg = CONFIG.unarmed || {};
+    if (!this.isSkillEnabled(cfg.enableBumpStun, true)) return 0;
+    let rawBase = cfg.bumpStunChance ?? 0.25;
+    if (rawBase > 1) rawBase = rawBase / 100;
+    let rawPerHit = cfg.bumpStunChancePerHit ?? 0.0;
+    if (rawPerHit > 1) rawPerHit = rawPerHit / 100;
+    let rawMax = cfg.maxBumpStunChance ?? 1.0;
+    if (rawMax > 1) rawMax = rawMax / 100;
+    const effectiveMax = Math.max(rawBase, rawMax);
+    const chance = rawBase + (this.momentumStacks || 0) * rawPerHit;
+    return Math.max(0, Math.min(1.0, Math.min(effectiveMax, chance)));
+  }
+
+  /**
+   * Applies concussive bump stun to a damaged enemy target, interrupting active attacks
+   * and rendering the 3D golden orbiting stun halo above the target.
+   */
+  _applyBumpStun(target, cfg = CONFIG.unarmed || {}) {
+    if (!target || target.isDead || target.dead || (typeof target.hp === 'number' && target.hp <= 0)) return false;
+    if (
+      target.isTurret ||
+      target.isDispenser ||
+      target.isBuilding ||
+      target.isWallnut ||
+      target.isPlantBarrier ||
+      target.immuneToDebuffs ||
+      target.isDebuffImmune ||
+      target.immuneToCC ||
+      target.isBaguvixActive ||
+      target.isGodModeActive
+    ) {
+      return false;
+    }
+
+    const stunDur = Math.max(1, Math.round(cfg.bumpStunDuration ?? 45));
+    if (typeof target.interruptAttacks === 'function') {
+      target.interruptAttacks(true);
+    }
+    if (typeof target.applyParalyze === 'function') {
+      target.applyParalyze(stunDur, { isUnarmedStun: true });
+    }
+    target.paralyzeTimer = Math.max(target.paralyzeTimer || 0, stunDur);
+    target.stunTimer = Math.max(target.stunTimer || 0, stunDur);
+    target.isParalyzed = true;
+    if (target.statusEffects) {
+      target.statusEffects.paralyzeTimer = Math.max(target.statusEffects.paralyzeTimer || 0, stunDur);
+      target.statusEffects.isParalyzed = true;
+    }
+
+    const tr = target.r || 25;
+    spawnFloatingText(target.x, target.y - tr - 14, 'STUNNED!', '#FACC15');
+    spawnSparks(target.x, target.y, 10, '#FACC15');
+    return true;
+  }
+
+  /**
    * Universal Engine Physics Collision Hook (invoked by physics.js lines 312-313 & 1316).
    * Delivers Unarmed's iconic kinetic slam / basic attack body bump!
    */
@@ -928,6 +987,12 @@ export class UnarmedFighter extends Fighter {
       // Gains evade chance for each hit connected that actually damages
       this.evadeHits = (this.evadeHits || 0) + 1;
       this._syncEvadeChance();
+
+      // ── 2. Concussive Bump Stun Mechanic (Chance to stun enemy on damaging bump) ──
+      const stunChance = this._getBumpStunChance();
+      if (stunChance > 0 && Math.random() < stunChance) {
+        this._applyBumpStun(target, cfg);
+      }
 
       // Signature loud "THUD" audio & screen shake (heavypunch3 impact)
       const bumpSound = CONFIG.unarmed?.sounds?.enemyBump || CONFIG.unarmed?.sounds?.slam || 'Assets/Sound Effects/Attacks/heavypunch3.mp3';

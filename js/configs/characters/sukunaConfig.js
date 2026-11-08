@@ -12,7 +12,7 @@ export const sukunaConfig = {
   },
 
     name: 'Sukuna',
-    displayName: 'Meguna',
+    displayName: 'Sukuna',
     // ── Base Attributes ──
     hp: 200,
     speed: 5.8,
@@ -58,7 +58,7 @@ export const sukunaConfig = {
     rctRevivalHealAmount: 0.50,               // % of Max HP restored on emergency revival (0.50 = 50% Max HP)
 
     // ── 7. Melee Mode & Hand-to-Hand Martial Arts ──
-    enableMeleeMode: true,            // Master toggle for Melee Mode & Martial Arts
+    enableMeleeMode: 0,            // Master toggle for Melee Mode & Martial Arts
     closeRangeRadius: 110,             // Proximity distance (pixels) to enter Melee Mode (direct contact only)
     initialMeleeDuration: 100,        // Active melee clash duration in frames (120 frames = 2.0 seconds at 60fps)
     meleeModeCooldown: 300,           // Mandatory ranged separation cooldown in frames (120 frames = 2.0 seconds at 60fps)
@@ -137,7 +137,7 @@ export const sukunaConfig = {
     // ── OPTIONAL SKILL: Ten Shadows — Summon Mahoraga (Divine General Minion) ──
     // Sukuna summons the Divine General Mahoraga as a temporary allied minion.
     // Toggle `enableMahoragaSummon` off to disable the skill entirely (HUD card disappears too).
-    enableMahoragaSummon: 1,       // MASTER TOGGLE for the Mahoraga summon skill
+    enableMahoragaSummon: 0,       // MASTER TOGGLE for the Mahoraga summon skill
     mahoragaSummonOncePerMatch: true, // Strict limit: Sukuna can only summon Mahoraga once per match/round
     mahoragaSummonCooldown: 2500,     // Frames before Mahoraga can be summoned (~41.6s)
     mahoragaSummonInitialCooldown: 1000, // Immediate opening summon (0.25s after match start) so it triggers every match

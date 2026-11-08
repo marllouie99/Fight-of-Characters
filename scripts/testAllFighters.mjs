@@ -9089,55 +9089,61 @@ async function main() {
     }
 
     if (SukunaClass && sukunaDef) {
-      const sukuna = new SukunaClass(sukunaDef);
-      const enemy = { x: 500, y: 350, r: 25, hp: 200, maxHp: 200, isDead: false, takeDamage: (dmg) => { enemy.hp -= dmg; return true; } };
-      sukuna.x = 200;
-      sukuna.y = 350;
-      state.fighters = [sukuna, enemy];
-      state.gameState = 'playing';
+      const savedSukunaMelee = CONFIG.sukuna?.enableMeleeMode;
+      if (CONFIG.sukuna) CONFIG.sukuna.enableMeleeMode = true;
+      try {
+        const sukuna = new SukunaClass(sukunaDef);
+        const enemy = { x: 500, y: 350, r: 25, hp: 200, maxHp: 200, isDead: false, takeDamage: (dmg) => { enemy.hp -= dmg; return true; } };
+        sukuna.x = 200;
+        sukuna.y = 350;
+        state.fighters = [sukuna, enemy];
+        state.gameState = 'playing';
 
-      // 1. Enemy far away (300px) -> Sukuna stays in Ranged Mode
-      sukuna.update(enemy, 0, arena);
-      if (sukuna.isMeleeMode) {
-        throw new Error(`Expected Sukuna to be in Ranged Mode when enemy is far (300px), but isMeleeMode was true`);
-      }
-
-      // 2. Move enemy within closeRangeRadius (60px) -> Sukuna enters Melee Mode
-      enemy.x = 260; // dist = 60 <= closeRangeRadius (85px)
-      sukuna.update(enemy, 0, arena);
-      if (!sukuna.isMeleeMode) {
-        throw new Error(`Expected Sukuna to enter Melee Mode when enemy is in closeRangeRadius (60px), but isMeleeMode remained false`);
-      }
-      if (sukuna.forcedMeleeTimer <= 0) {
-        throw new Error(`Expected Sukuna forcedMeleeTimer > 0 on entering Melee Mode`);
-      }
-      if (sukuna.canPerformBasicAttack()) {
-        throw new Error(`Expected Sukuna canPerformBasicAttack() to be false while in Melee Mode`);
-      }
-
-      // 3. Update melee combat -> Sukuna executes punch-teleport-punch combo
-      const initialEnemyHp = enemy.hp;
-      const initialSukunaX = sukuna.x;
-      const initialSukunaY = sukuna.y;
-      let sukunaTeleported = false;
-      let punchHits = 0;
-      let lastHp = enemy.hp;
-
-      for (let f = 0; f < 60; f++) {
+        // 1. Enemy far away (300px) -> Sukuna stays in Ranged Mode
         sukuna.update(enemy, 0, arena);
-        if (sukuna.x !== initialSukunaX || sukuna.y !== initialSukunaY) {
-          sukunaTeleported = true;
+        if (sukuna.isMeleeMode) {
+          throw new Error(`Expected Sukuna to be in Ranged Mode when enemy is far (300px), but isMeleeMode was true`);
         }
-        if (enemy.hp < lastHp) {
-          punchHits++;
-          lastHp = enemy.hp;
+
+        // 2. Move enemy within closeRangeRadius (60px) -> Sukuna enters Melee Mode
+        enemy.x = 260; // dist = 60 <= closeRangeRadius (85px)
+        sukuna.update(enemy, 0, arena);
+        if (!sukuna.isMeleeMode) {
+          throw new Error(`Expected Sukuna to enter Melee Mode when enemy is in closeRangeRadius (60px), but isMeleeMode remained false`);
         }
-      }
-      if (enemy.hp >= initialEnemyHp || punchHits === 0) {
-        throw new Error(`Expected Sukuna to land melee punch damage on enemy during Melee Mode, but enemy HP remained ${enemy.hp}`);
-      }
-      if (!sukunaTeleported) {
-        throw new Error(`Expected Sukuna to teleport to flank angles during punch-teleport-punch melee combo, but position remained (${sukuna.x}, ${sukuna.y})`);
+        if (sukuna.forcedMeleeTimer <= 0) {
+          throw new Error(`Expected Sukuna forcedMeleeTimer > 0 on entering Melee Mode`);
+        }
+        if (sukuna.canPerformBasicAttack()) {
+          throw new Error(`Expected Sukuna canPerformBasicAttack() to be false while in Melee Mode`);
+        }
+
+        // 3. Update melee combat -> Sukuna executes punch-teleport-punch combo
+        const initialEnemyHp = enemy.hp;
+        const initialSukunaX = sukuna.x;
+        const initialSukunaY = sukuna.y;
+        let sukunaTeleported = false;
+        let punchHits = 0;
+        let lastHp = enemy.hp;
+
+        for (let f = 0; f < 60; f++) {
+          sukuna.update(enemy, 0, arena);
+          if (sukuna.x !== initialSukunaX || sukuna.y !== initialSukunaY) {
+            sukunaTeleported = true;
+          }
+          if (enemy.hp < lastHp) {
+            punchHits++;
+            lastHp = enemy.hp;
+          }
+        }
+        if (enemy.hp >= initialEnemyHp || punchHits === 0) {
+          throw new Error(`Expected Sukuna to land melee punch damage on enemy during Melee Mode, but enemy HP remained ${enemy.hp}`);
+        }
+        if (!sukunaTeleported) {
+          throw new Error(`Expected Sukuna to teleport to flank angles during punch-teleport-punch melee combo, but position remained (${sukuna.x}, ${sukuna.y})`);
+        }
+      } finally {
+        if (CONFIG.sukuna) CONFIG.sukuna.enableMeleeMode = savedSukunaMelee;
       }
     }
   } catch (err) {
