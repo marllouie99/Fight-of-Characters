@@ -2794,20 +2794,34 @@ async function main() {
         // Test Consecutive Normal Punches breather window: Saitama stays motionless after the final punch
         fighter.reset();
         dummyOpponent.reset();
+        dummyOpponent.hp = 2000;
+        dummyOpponent.maxHp = 2000;
         dummyOpponent.x = fighter.x + 80;
         dummyOpponent.y = fighter.y;
+        state.fighters = [fighter, dummyOpponent];
         fighter.flurryCooldown = 0;
         fighter.executeConsecutiveNormalPunches(dummyOpponent);
         if (!fighter.isFlurrying) {
           throw new Error('Saitama failed to start Consecutive Normal Punches');
         }
+        const oppStartHp = dummyOpponent.hp;
         let flurryFrames = 0;
         while (fighter.isFlurrying && flurryFrames < 100) {
           fighter.update(dummyOpponent, 0, null);
+          // Rapid punches (hits 1..9): enemy HP must remain completely untouched (all damage deferred to final punch)
+          if (fighter.isFlurrying && fighter.flurryHitsLeft > 0) {
+            if (dummyOpponent.hp !== oppStartHp) {
+              throw new Error(`Enemy took premature damage during flurry rapid punches (expected HP ${oppStartHp}, got ${dummyOpponent.hp})`);
+            }
+          }
           flurryFrames++;
         }
         if (fighter.isFlurrying) {
           throw new Error('Saitama Consecutive Normal Punches failed to complete within 100 frames');
+        }
+        // Final punch: all accumulated flurry damage must be applied on the final punch
+        if (dummyOpponent.hp >= oppStartHp) {
+          throw new Error(`Enemy must take all accumulated flurry damage on the final punch (start HP: ${oppStartHp}, final HP: ${dummyOpponent.hp})`);
         }
         if (fighter._flurryBreatherTimer <= 0) {
           throw new Error('Saitama failed to enter _flurryBreatherTimer breather window after final punch');

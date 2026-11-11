@@ -15,8 +15,8 @@ import { state, isGlobalHitPauseActive, spawnFloatingText, triggerGlobalScreenSh
 import { MODE_SETTINGS } from '../../core/modeConfig.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { gokuConfig } from '../../configs/characters/gokuConfig.js';
-import { drawGokuSkin, drawGokuGhostSkin } from '../../graphics/fighters/gokuSkin.js';
-import { spawnImpactFlash, spawnSparks, spawnMeleeClashShockwave } from '../../graphics/particles/sparkEffect.js';
+import { drawGokuSkin } from '../../graphics/fighters/gokuSkin.js';
+import { spawnImpactFlash, spawnSparks, spawnMeleeClashShockwave, spawnAnimePunchImpactFrame, spawnDbzInstantTransmissionVFX } from '../../graphics/particles/sparkEffect.js';
 import { projectileSystem } from '../../systems/projectileSystem.js';
 
 export class GokuFighter extends Fighter {
@@ -53,6 +53,7 @@ export class GokuFighter extends Fighter {
     this.isMeleeFighter = true;
     this.isMeleeMode = true;
     this.isBrawler = true;
+    this.handScale = cfg.handScale || 1.0;
     this.meleeReach = cfg.meleeReach || 68;
 
     // ─── Basic Attack: Hybrid Martial Arts & Follow-Up Ki Barrage Engine ───
@@ -303,7 +304,12 @@ export class GokuFighter extends Fighter {
     if (this.dragonHammerCooldown > 0) this.dragonHammerCooldown--;
     if (this.kaiokenCooldown > 0) this.kaiokenCooldown--;
     if (this.kamehamehaCooldown > 0) this.kamehamehaCooldown--;
-    if (this.punchAnimTimer > 0) this.punchAnimTimer--;
+    if (this.punchAnimTimer > 0) {
+      this.punchAnimTimer--;
+      this.isPunching = this.punchAnimTimer > 0;
+    } else {
+      this.isPunching = false;
+    }
     if (this.kaiokenAuraTimer > 0) this.kaiokenAuraTimer--;
     if (this._shotgunDodgeGraceTimer > 0) this._shotgunDodgeGraceTimer--;
   }
@@ -384,7 +390,8 @@ export class GokuFighter extends Fighter {
 
     // Phase 1: Z-Vanish Gap-Closer Step-In
     if (this.basicComboPhase === 1) {
-      this._spawnAfterimage();
+      const oldX = this.x;
+      const oldY = this.y;
       this._playAudio('dodge', cfg.sounds?.dodge, cfg.soundVolumes?.dodge || 0.80);
 
       // Flash-step directly to 45px melee striking distance
@@ -393,6 +400,10 @@ export class GokuFighter extends Fighter {
       this.x = opponent.x + Math.cos(strikeAngle) * targetDist;
       this.y = opponent.y + Math.sin(strikeAngle) * targetDist;
       this._clampToArena(arena);
+
+      // DBZ Instant Transmission Dematerialize & Materialize VFX
+      spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
+      spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
 
       // Instant 0-frame angle snap facing opponent
       const targetZ = opponent.z || 0;
@@ -465,8 +476,9 @@ export class GokuFighter extends Fighter {
     this.angle = punchAngle;
 
     this.isRightPunch = !this.isRightPunch;
-    this.punchAnimTimer = cfg.meleePunchAnimDuration || 10;
-    this.punchMaxTime = cfg.meleePunchAnimDuration || 10;
+    this.isPunching = true;
+    this.punchAnimTimer = baseCadence;
+    this.punchMaxTime = baseCadence;
     this.meleePunchCooldown = baseCadence;
 
     // Check Brawler Clash
@@ -526,6 +538,17 @@ export class GokuFighter extends Fighter {
     opponent.takeDamage(dmg, this, { isMelee: true, isPhysical: true });
     spawnSparks(opponent.x, opponent.y, '#FFD700', 10, 4.0);
     spawnImpactFlash(opponent.x, opponent.y, 22, '#FFF9C4');
+
+    // 👊 Spawn Authentic 12-Frame Punch Attack VFX (Assets/effects/Punch Attack/)
+    const hitAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
+    const punchColor = this.isSuperSaiyan ? 'gold' : 'orange';
+    const punchRadius = launchRicochet ? 80 : 62;
+    const impactDist = Math.max(this.r, Math.hypot(opponent.x - this.x, opponent.y - this.y) - (opponent.r || 25) * 0.45);
+    const impactX = this.x + Math.cos(hitAngle) * impactDist;
+    const impactY = this.y + Math.sin(hitAngle) * impactDist;
+    if (typeof spawnAnimePunchImpactFrame === 'function') {
+      spawnAnimePunchImpactFrame(impactX, impactY, punchRadius, hitAngle, punchColor);
+    }
 
     // Rule 1.5: Hit-pause strictly on target, never freeze attacker
     if (typeof opponent.applyTimeStop === 'function') {
@@ -598,35 +621,25 @@ export class GokuFighter extends Fighter {
       opponent.aim(this);
     }
 
-    // Spawn afterimages along teleport trajectory
-    const dx = this.x - oldX;
-    const dy = this.y - oldY;
-    const dist = Math.hypot(dx, dy);
-    if (dist >= 10) {
-      const steps = Math.max(2, Math.min(5, Math.floor(dist / 24)));
-      for (let i = 0; i <= steps; i++) {
-        const t = steps > 0 ? (i / steps) : 0;
-        this.afterImages.push({
-          x: oldX + dx * t,
-          y: oldY + dy * t,
-          angle: this.gunAngle || this.angle || 0,
-          alpha: 0.40 * (1 - t * 0.4),
-          duration: 16,
-          timer: 16
-        });
-      }
-    }
+    // DBZ Instant Transmission Dematerialization & Materialization VFX (Vertical Scanlines)
+    spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
+    spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
 
     this._playAudio('dodge', this._cfg.sounds?.dodge, this._cfg.soundVolumes?.dodge || 0.80);
   }
 
   _vaultBackward(opponent, arena, distance = 120) {
     if (!opponent) return;
-    this._spawnAfterimage();
+    const oldX = this.x;
+    const oldY = this.y;
     const awayAngle = Math.atan2(this.y - opponent.y, this.x - opponent.x);
     this.x += Math.cos(awayAngle) * distance;
     this.y += Math.sin(awayAngle) * distance;
     this._clampToArena(arena);
+
+    // DBZ Instant Transmission Dematerialize & Materialize VFX
+    spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
+    spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
 
     // Instant snap aim facing back towards opponent
     const targetZ = opponent.z || 0;
@@ -759,8 +772,8 @@ export class GokuFighter extends Fighter {
     const cfg = this._cfg;
     const arena = (typeof state !== 'undefined' ? state.arena : null) || CONFIG.arena;
 
-    this._spawnAfterimage();
-    this._spawnAfterimage();
+    const oldX = this.x;
+    const oldY = this.y;
 
     const src = target || { x: this.x + 1, y: this.y };
     const distToAttacker = Math.hypot(src.x - this.x, src.y - this.y);
@@ -821,6 +834,10 @@ export class GokuFighter extends Fighter {
         target.teleportChaseDelayTimer = Math.max(target.teleportChaseDelayTimer || 0, cfg.attackerTeleportChaseDelayFrames || 5);
       }
     }
+
+    // DBZ Instant Transmission Dematerialize & Materialize VFX
+    spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
+    spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
 
     this.dodgeCooldown = cfg.dodgeCooldown || 4;
     this._playAudio('dodge', cfg.sounds?.dodge, cfg.soundVolumes?.dodge || 0.80);
@@ -885,12 +902,17 @@ export class GokuFighter extends Fighter {
     this.dragonHammerCooldown = cfg.dragonHammerCooldown || 420;
 
     // Instant blink in front of target
-    this._spawnAfterimage();
+    const oldX = this.x;
+    const oldY = this.y;
     const angle = Math.atan2(this.y - opponent.y, this.x - opponent.x);
     this.x = opponent.x + Math.cos(angle) * (this.r + (opponent.r || 25) + 5);
     this.y = opponent.y + Math.sin(angle) * (this.r + (opponent.r || 25) + 5);
     this._clampToArena(arena);
     this.aim(opponent);
+
+    // DBZ Instant Transmission Dematerialize & Materialize VFX
+    spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
+    spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
     this._playAudio('dodge', cfg.sounds?.dodge, 0.80);
   }
 
@@ -903,6 +925,10 @@ export class GokuFighter extends Fighter {
     if (this.dragonHammerTimer % 8 === 0 && this.dragonHammerStep < hits.length) {
       const dmg = Math.round(hits[this.dragonHammerStep] * dmgMult);
       const isFinisher = this.dragonHammerStep === hits.length - 1;
+      this.isPunching = true;
+      this.punchAnimTimer = isFinisher ? 12 : 8;
+      this.punchMaxTime = isFinisher ? 12 : 8;
+      this.isRightPunch = !this.isRightPunch;
       this._applyHit(opponent, dmg, isFinisher ? 14 : 6, isFinisher ? 12.0 : 4.0, isFinisher);
 
       if (isFinisher) {
@@ -923,6 +949,10 @@ export class GokuFighter extends Fighter {
   startKaiokenStrike(opponent) {
     const cfg = this._cfg;
     this.isKaiokenActive = true;
+    this.isPunching = true;
+    this.punchAnimTimer = cfg.kaiokenDashFrames || 14;
+    this.punchMaxTime = cfg.kaiokenDashFrames || 14;
+    this.isRightPunch = true;
     this.kaiokenTimer = cfg.kaiokenDashFrames || 14;
     this.kaiokenCooldown = cfg.kaiokenCooldown || 390;
     this.kaiokenAuraTimer = 40;
@@ -954,6 +984,9 @@ export class GokuFighter extends Fighter {
         triggerGlobalScreenShake(4.0, 14);
         spawnImpactFlash(opponent.x, opponent.y, 40, '#FF1744');
         spawnSparks(opponent.x, opponent.y, '#FF1744', 15, 5.0);
+        if (typeof spawnAnimePunchImpactFrame === 'function') {
+          spawnAnimePunchImpactFrame(opponent.x, opponent.y, 85, this.kaiokenAngle, 'crimson');
+        }
         this.isKaiokenActive = false;
         return;
       }

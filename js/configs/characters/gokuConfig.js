@@ -5,7 +5,7 @@
 
 export const gokuConfig = {
   assets: {
-    hair: 'Assets/model/goku/Goku-hair.png',
+    hair: 'Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png',
   },
 
   name: 'GOKU',
@@ -21,6 +21,7 @@ export const gokuConfig = {
   moveSpeed: 5.6,
   r: 25,
   radius: 25,
+  handScale: 1.0,             // Canonical brawler fist scale (evaluated via getHandSize to match Gojo/Sukuna/Yuji/Todo)
   color: '#FF7A00',           // Turtle School Orange
   themeColor: '#FF7A00',
   secondaryColor: '#1A237E',   // Deep Indigo Underdogi

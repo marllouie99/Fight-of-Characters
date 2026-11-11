@@ -941,9 +941,14 @@ export function _getPunchAttackFrames() {
         _punchAttackFrames[idx] = img;
       };
       img.onerror = (e) => {
-        console.warn(`Failed to load Punch Attack frame ${idx + 1} at ${src}:`, e);
+        const fallbackSrc = `Assets/effects/Punch Attack/attack-${idx + 1}.png`;
+        if (!img.src.includes('attack-')) {
+          img.src = encodeURI(fallbackSrc);
+        } else {
+          console.warn(`Failed to load Punch Attack frame ${idx + 1} at ${src}:`, e);
+        }
       };
-      img.src = `${src}?v=1`;
+      img.src = encodeURI(`${src}?v=1`);
       _punchAttackFrames[idx] = img;
     });
   }
@@ -975,6 +980,31 @@ export function _drawPunchAttackAnimatedSprite(ctx, radius, p, alpha = 1.0, colo
   const prevSmoothing = ctx.imageSmoothingEnabled;
   const prevAlpha = ctx.globalAlpha;
   ctx.imageSmoothingEnabled = false;
+
+  // Thematic Ki Aura Bloom (Rule 11 Compliant - pre-calculated opacity, zero shadowBlur)
+  if (color && p <= 0.60) {
+    const auraAlpha = Math.max(0, (1.0 - p / 0.60)) * 0.40 * alpha;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.85 * (0.6 + 0.6 * p), 0, Math.PI * 2);
+    if (color === 'gold') {
+      ctx.fillStyle = `rgba(255, 215, 0, ${auraAlpha.toFixed(3)})`;
+    } else if (color === 'orange') {
+      ctx.fillStyle = `rgba(255, 122, 0, ${auraAlpha.toFixed(3)})`;
+    } else if (color === 'cyan' || color === 'blue') {
+      ctx.fillStyle = `rgba(0, 229, 255, ${auraAlpha.toFixed(3)})`;
+    } else if (color === 'crimson' || color === 'red') {
+      ctx.fillStyle = `rgba(255, 23, 68, ${auraAlpha.toFixed(3)})`;
+    } else if (color === 'purple') {
+      ctx.fillStyle = `rgba(168, 85, 247, ${auraAlpha.toFixed(3)})`;
+    } else if (color === 'lime') {
+      ctx.fillStyle = `rgba(118, 224, 66, ${auraAlpha.toFixed(3)})`;
+    } else {
+      ctx.fillStyle = `rgba(255, 255, 255, ${auraAlpha.toFixed(3)})`;
+    }
+    ctx.fill();
+    ctx.restore();
+  }
 
   // Natural fade-out on late dissipating frames (frames 1-9 solid, 10-12 dissolve)
   const fadeAlpha = p > 0.82 ? Math.max(0, (1.0 - p) / 0.18) : 1.0;
@@ -1531,5 +1561,110 @@ export function drawArcaneShockwave(ctx, effect) {
     ctx.fillStyle = colCore;
     ctx.fillRect(snap(effect.x + cosA * r2), snap(effect.y + sinA * r2), P, P);
   }
+  ctx.restore();
+}
+
+/**
+ * DBZ Instant Transmission / Vanish Dematerialization & Materialization VFX
+ * Canonical vertical scanline strip dissolve (Sam van Berlo / DBZ Standard).
+ * Matches the uploaded sprite sequence: strips division, vertical stretch, repeated fade-out curve.
+ */
+export function drawDbzInstantTransmissionVFX(ctx, effect) {
+  const life = effect.life !== undefined ? effect.life : 1.0;
+  if (life <= 0) return;
+
+  const isArrival = Boolean(effect.isArrival);
+  // Progress p in [0.0, 1.0]
+  const rawP = 1.0 - Math.max(0, Math.min(1.0, life));
+  // Departure goes 0.0 -> 1.0 (dissolve); Arrival goes 1.0 -> 0.0 (materialize)
+  const p = isArrival ? (1.0 - rawP) : rawP;
+
+  const r = effect.radius || 25;
+  const isSuperSaiyan = Boolean(effect.isSuperSaiyan);
+  const characterId = effect.characterId || 'goku';
+  const isVegeta = characterId === 'vegeta';
+
+  ctx.save();
+  ctx.translate(effect.x, effect.y);
+
+  // 1. Vertical line scaling & centering:
+  // Lines stretch up to 1.45x during peak dissolution while staying centered on (x, y)
+  const stretch = 1.0 + Math.sin(p * Math.PI) * 0.45;
+
+  // 2. Multi-pulse fade curve (mimicking repeated fade-out curve in the Godot shader)
+  const pulseFlicker = 0.72 + 0.28 * Math.sin(p * Math.PI * 6);
+  const fadeOut = Math.pow(1.0 - p, 1.15);
+  const alpha = Math.max(0, Math.min(1.0, fadeOut * pulseFlicker));
+
+  // 3. Scanline grid parameters
+  const spanX = r * 2.1;
+  const stripW = 2.0; // 2.0px pixel art strip
+  const numStrips = Math.floor(spanX / stripW);
+
+  // Character-specific color palette
+  const colHair = isSuperSaiyan ? '#FFD700' : '#0E0F14';
+  const colSkin = isSuperSaiyan ? '#FFE0B2' : '#FFE0BD';
+  const colMain = isVegeta ? (isSuperSaiyan ? '#1976D2' : '#1565C0') : (isSuperSaiyan ? '#FF8F00' : '#FF7A00');
+  const colSec = isVegeta ? '#FFFFFF' : '#1A237E';
+  const colCore = isVegeta ? '#00E5FF' : '#FFFFFF';
+
+  for (let i = 0; i < numStrips; i++) {
+    const sx = -spanX / 2 + i * stripW + stripW / 2;
+    const absX = Math.abs(sx);
+    if (absX > r * 1.05) continue;
+
+    // Slicing & hiding selected fragments based on progress (matching sprite progression)
+    if (p > 0.65 && (i * 11) % 4 !== 0) continue; // Late: sparse needle flecks
+    if (p > 0.30 && p <= 0.65 && (i % 2 !== 0)) continue; // Mid: alternating scanline strips
+
+    // Vertical line bounds: circular body height + hair apex
+    const chordY = Math.sqrt(Math.max(0, (r * 1.05) * (r * 1.05) - sx * sx));
+    const hairBoost = (1.0 - absX / (r * 1.2)) * (r * 0.45);
+    const topY = (-chordY - hairBoost) * stretch;
+    const botY = chordY * stretch;
+    const totalH = botY - topY;
+
+    if (totalH <= 2) continue;
+
+    // Distribute character clothing/hair/skin colors along the vertical strip
+    const hairH = totalH * 0.35;
+    const skinH = totalH * 0.25;
+    const garmentH = totalH - hairH - skinH;
+
+    // Top: Hair
+    ctx.fillStyle = colHair;
+    ctx.globalAlpha = alpha * 0.95;
+    ctx.fillRect(Math.round(sx - stripW / 2), Math.round(topY), Math.round(stripW), Math.round(hairH));
+
+    // Middle: Face / Skin
+    ctx.fillStyle = colSkin;
+    ctx.globalAlpha = alpha * 0.90;
+    ctx.fillRect(Math.round(sx - stripW / 2), Math.round(topY + hairH), Math.round(stripW), Math.round(skinH));
+
+    // Bottom: Clothes / Armor
+    ctx.fillStyle = (i % 3 === 0) ? colSec : colMain;
+    ctx.globalAlpha = alpha * 0.95;
+    ctx.fillRect(Math.round(sx - stripW / 2), Math.round(topY + hairH + skinH), Math.round(stripW), Math.round(garmentH));
+
+    // Luminous Center Specular Core Filament (DBZ Ki Glint)
+    if (p > 0.15 && p < 0.85) {
+      ctx.fillStyle = colCore;
+      ctx.globalAlpha = alpha * 0.90;
+      ctx.fillRect(Math.round(sx - 0.5), Math.round(topY + 2), 1, Math.round(totalH - 4));
+    }
+  }
+
+  // 4. Subtle Departure/Arrival Ground Compression Ring (Supersonic Mach Air Pop)
+  const ringProgress = Math.sin(p * Math.PI);
+  if (ringProgress > 0.05) {
+    const ringR = r * (0.8 + ringProgress * 0.7);
+    ctx.beginPath();
+    ctx.arc(0, r * 0.4, ringR, 0, Math.PI * 2);
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = isSuperSaiyan ? '#FFD700' : (isVegeta ? '#00E5FF' : '#FFFFFF');
+    ctx.globalAlpha = (1.0 - p) * 0.45;
+    ctx.stroke();
+  }
+
   ctx.restore();
 }

@@ -24,6 +24,7 @@ import {
   drawSaitamaCounterFrontalBlast,
   drawGojoRedFrontalBlast,
   drawArcaneShockwave,
+  drawDbzInstantTransmissionVFX,
 } from './renderers/blastShockwaveRenderers.js';
 import {
   drawMahitoSoulBubble,
@@ -1242,6 +1243,7 @@ const SPARK_RENDERERS = {
   saitamaCounterFrontalBlast: drawSaitamaCounterFrontalBlast,
   gojoRedFrontalBlast: drawGojoRedFrontalBlast,
   arcaneShockwave: drawArcaneShockwave,
+  dbzInstantTransmission: drawDbzInstantTransmissionVFX,
 
   // Character Specials
   mahitoSoulBubble: drawMahitoSoulBubble,
@@ -1436,6 +1438,32 @@ export function spawnAnimePunchImpactFrame(x, y, radius = 60, hitAngle = 0, colo
   shockwave.isProtected = true;
   shockwave.isPixi = false;
   state.sparkEffects.push(shockwave);
+}
+
+/**
+ * Spawns the dedicated 12-frame Punch Attack Impact Animation (Assets/effects/Punch Attack/).
+ * @param {number} x - Impact epicenter X coordinate
+ * @param {number} y - Impact epicenter Y coordinate
+ * @param {number} radius - Impact visual radius
+ * @param {number} hitAngle - Striking aim angle in radians
+ * @param {string} color - Thematic Ki aura tint (e.g. 'gold', 'orange', 'cyan', 'crimson', 'purple')
+ */
+export function spawnPunchAttackImpact(x, y, radius = 60, hitAngle = 0, color = null) {
+  const p = ParticleSystem.getParticle();
+  p.x = x;
+  p.y = y;
+  p.vx = 0;
+  p.vy = 0;
+  p.size = radius;
+  p.targetSize = radius;
+  p.life = 1.0;
+  p.decay = 0.040; // ~25 frames duration
+  p.type = 'punchAttackImpact';
+  p.hitAngle = hitAngle;
+  p.color = color;
+  p.isProtected = true;
+  p.isPixi = false;
+  state.sparkEffects.push(p);
 }
 
 /**
@@ -2351,4 +2379,37 @@ export function spawnPurpleExplosion(x, y, radius = 280, is200 = false, isGreen 
   explosion.isProtected = true;
   state.sparkEffects.push(explosion);
   return explosion;
+}
+
+/**
+ * Spawns the DBZ Instant Transmission / Vanish vertical scanline dissolve VFX.
+ * @param {number} x - Center X
+ * @param {number} y - Center Y
+ * @param {number} radius - Character radius
+ * @param {Object} [options={}] - Options { isArrival, isSuperSaiyan, characterId, fighter }
+ */
+export function spawnDbzInstantTransmissionVFX(x, y, radius = 25, options = {}) {
+  if (!state || !state.sparkEffects) return null;
+  const isArrival = Boolean(options.isArrival);
+  const isSuperSaiyan = Boolean(options.isSuperSaiyan || options.fighter?.isSuperSaiyan);
+  const characterId = options.characterId || options.fighter?.characterId || 'goku';
+
+  const vfx = ParticleSystem.getParticle();
+  vfx.x = x;
+  vfx.y = y;
+  vfx.radius = radius;
+  vfx.size = radius * 2;
+  vfx.life = 1.0;
+  vfx.decay = isArrival ? 0.20 : 0.125; // Departure ~8 frames, Arrival ~5 frames
+  vfx.type = 'dbzInstantTransmission';
+  vfx.isArrival = isArrival;
+  vfx.isSuperSaiyan = isSuperSaiyan;
+  vfx.characterId = characterId;
+  vfx.isProtected = true;
+  vfx.isPixi = false;
+  vfx.vx = 0;
+  vfx.vy = 0;
+  vfx.friction = 0;
+  state.sparkEffects.push(vfx);
+  return vfx;
 }

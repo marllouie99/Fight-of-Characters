@@ -173,10 +173,10 @@ Goku’s procedural body model and proportions strictly follow the **Canonical T
   - Maintained interior fabric luminance separation ($Y \ge 24$) against outer black borders.
 
 ### 2. Hair Asset & Crown Calibration (Rules 22 & 24)
-- **Asset Path**: `Assets/model/goku/Goku-hair.png`
+- **Asset Path**: `Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png` (mirror: `Assets/model/goku/Goku-hair.png`)
 - **Silhouette**: Iconic, gravity-defying Saiyan hair with distinct sweeping crescents and jagged bangs framing the brow.
 - **Layering**: Rendered on Layer 2 (`_drawGokuHair(ctx, r, facingLeft)`) above the procedural body dome.
-- **Crown Apex Anchor**: `drawY = -r * 1.30` to `-r * 1.40`, scaled to `targetHairWidth = r * 2.90` and `targetHairHeight = r * 2.25`.
+- **Crown Apex Anchor**: `drawY = -r * 1.38`, scaled to `targetHairWidth = r * 3.10` and `targetHairHeight = r * 2.07`.
 - **Eager Image Caching**: Module-level image cache `_getGokuHairImage()` initialized on load with `ctx.imageSmoothingEnabled = false;`.
 
 ### 3. Symmetrical Hands & Weapon Stance (Rule 20)

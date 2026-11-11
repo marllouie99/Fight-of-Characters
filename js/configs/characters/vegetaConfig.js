@@ -5,7 +5,7 @@
 
 export const vegetaConfig = {
   assets: {
-    hair: 'Assets/model/vegeta/Vegeta-hair.png',
+    hair: 'Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png',
   },
 
   name: 'VEGETA',
@@ -21,6 +21,7 @@ export const vegetaConfig = {
   moveSpeed: 5.4,
   r: 25,
   radius: 25,
+  handScale: 1.0,             // Canonical brawler fist scale (evaluated via getHandSize to match Gojo/Sukuna/Yuji/Todo)
   color: '#1565C0',           // Royal Saiyan Navy
   themeColor: '#1565C0',
   secondaryColor: '#FFC107',   // Battle Armor Gold

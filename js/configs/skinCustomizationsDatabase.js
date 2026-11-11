@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE â€” MASTER SKIN & HAIR CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Skin Studio on 2026-11-05T01:50:33.851Z
+ * Generated from Skin Studio on 2026-11-11T08:57:52.075Z
  * =============================================================================
  */
 
@@ -15,8 +15,8 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   yuta: { widthScale: 1.00, heightScale: 0.94, offsetX: -1, offsetY: 2, angleOffset: 0, flipX: false, flipY: false },
   yuji: { widthScale: 0.90, heightScale: 1.00, offsetX: 0, offsetY: -2, angleOffset: 0, flipX: false, flipY: false },
   toji: { widthScale: 0.84, heightScale: 0.96, offsetX: 0, offsetY: 2, angleOffset: 0, flipX: false, flipY: false },
-  goku: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
-  vegeta: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
+  goku: { widthScale: 1.40, heightScale: 1.12, offsetX: 1, offsetY: -18, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
+  vegeta: { widthScale: 1.20, heightScale: 1.00, offsetX: 0, offsetY: -9, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   todo: { widthScale: 0.96, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   nanami: { widthScale: 1.06, heightScale: 1.08, offsetX: 0, offsetY: -2, angleOffset: 0, flipX: false, flipY: false },
   mahito: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },

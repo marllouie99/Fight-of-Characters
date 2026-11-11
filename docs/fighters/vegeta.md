@@ -172,10 +172,10 @@ Vegeta's procedural body model and proportions strictly adhere to the **Canonica
   - Interior fabric luminance separation maintained ($Y \ge 24$) against outer black borders.
 
 ### 2. Hair Asset & Crown Calibration (Rules 22 & 24)
-- **Asset Path**: `Assets/model/vegeta/Vegeta-hair.png`
+- **Asset Path**: `Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png` (mirror: `Assets/model/vegeta/Vegeta-hair.png`)
 - **Silhouette**: Iconic, towering flame-shaped Saiyan hair flaring straight upward with a distinctive widow's peak crest at the forehead.
 - **Layering**: Rendered on Layer 2 (`_drawVegetaHair(ctx, r, facingLeft)`) above the procedural body dome.
-- **Crown Apex Anchor**: `drawY = -r * 1.35` to `-r * 1.45`, scaled to `targetHairWidth = r * 2.80` and `targetHairHeight = r * 2.35`.
+- **Crown Apex Anchor**: `drawY = -r * 2.05`, scaled to `targetHairWidth = r * 2.80` and `targetHairHeight = r * 2.80`.
 - **Eager Image Caching**: Module-level image cache `_getVegetaHairImage()` initialized on load with `ctx.imageSmoothingEnabled = false;`.
 
 ### 3. Symmetrical Hands & Combat Gloves (Rule 20)

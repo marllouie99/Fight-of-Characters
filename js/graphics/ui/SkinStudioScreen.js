@@ -64,6 +64,8 @@ import { drawCreeperSkin, _drawCreeperHair } from '../fighters/creeperSkin.js';
 import { drawIsagiSkin, _drawIsagiHair, _getIsagiHairImage } from '../fighters/isagiSkin.js';
 import { drawChigiriSkin, _drawChigiriHair, _getChigiriHairImage } from '../fighters/chigiriSkin.js';
 import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighters/wardenSkin.js';
+import { drawGokuSkin, _drawGokuHair, _getGokuHairImage } from '../fighters/gokuSkin.js';
+import { drawVegetaSkin, _drawVegetaHair, _getVegetaHairImage } from '../fighters/vegetaSkin.js';
 
 
 
@@ -149,7 +151,8 @@ export const SKIN_STUDIO_CATEGORIES = [
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
   { id: 'BLUELOCK', label: 'BLUE LOCK', filter: (f) => ['isagi', 'chigiri'].includes(f.key) },
-  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden'].includes(f.key) }
+  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'goku', 'vegeta'].includes(f.key) },
+  { id: 'DBZ', label: 'DBZ', filter: (f) => ['goku', 'vegeta'].includes(f.key) }
 ];
 
 
@@ -916,6 +919,42 @@ export const SKIN_STUDIO_FIGHTERS = [
       { id: 'default', label: 'DEEP DARK GUARDIAN' },
       { id: 'enraged', label: 'SCULK ROAR (ENRAGED)' }
     ]
+  },
+  {
+    key: 'goku',
+    label: 'SON GOKU',
+    asset: 'Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png',
+    assetDims: '1536 x 1024',
+    baseW: 3.10,
+    baseH: 2.07,
+    baseCrownY: -1.38,
+    visW: 1504,
+    visH: 976,
+    centerX: 762,
+    topY: 18,
+    themeColor: '#FF7A00',
+    forms: [
+      { id: 'default', label: 'BASE (BLACK HAIR)' },
+      { id: 'super_saiyan', label: 'SUPER SAIYAN (GOLD)' }
+    ]
+  },
+  {
+    key: 'vegeta',
+    label: 'VEGETA',
+    asset: 'Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png',
+    assetDims: '1024 x 1024',
+    baseW: 2.80,
+    baseH: 2.80,
+    baseCrownY: -2.05,
+    visW: 831,
+    visH: 984,
+    centerX: 527.5,
+    topY: 20,
+    themeColor: '#1565C0',
+    forms: [
+      { id: 'default', label: 'BASE (BLACK HAIR)' },
+      { id: 'super_saiyan', label: 'SUPER SAIYAN (GOLD)' }
+    ]
   }
 ];
 
@@ -1311,6 +1350,18 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 262 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'goku') {
+    return `// Calibrated Hair for Goku (Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'vegeta') {
+    return `// Calibrated Hair for Vegeta (Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   }
   let extra = '';
   if (custom.handScale !== undefined) {
@@ -1806,6 +1857,14 @@ export function drawSkinStudioScreen() {
         dummyFighter._isStudioDummy = true;
         dummyFighter.isEnraged = (state.studioSkinForm === 'enraged');
         drawWardenSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'goku') {
+        dummyFighter._isStudioDummy = true;
+        dummyFighter.isSuperSaiyan = (state.studioSkinForm === 'super_saiyan');
+        drawGokuSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'vegeta') {
+        dummyFighter._isStudioDummy = true;
+        dummyFighter.isSuperSaiyan = (state.studioSkinForm === 'super_saiyan');
+        drawVegetaSkin(ctx, dummyFighter);
       }
     } catch (renderErr) {
       console.error('Skin render error in studio:', renderErr);
@@ -1890,6 +1949,10 @@ export function drawSkinStudioScreen() {
       _drawChigiriHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'warden') {
       _drawWardenHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'goku') {
+      _drawGokuHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'super_saiyan');
+    } else if (fDef.key === 'vegeta') {
+      _drawVegetaHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'super_saiyan');
     }
 
     ctx.restore();

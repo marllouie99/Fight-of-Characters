@@ -20701,6 +20701,583 @@ async function runInteractionTests() {
     console.log('      ✅ Mahito Domain Channeling clean interruption, penalty cooldown & visual reset verified cleanly.');
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 158. Goku & Vegeta Spiky Black Hair Sprite Asset Standard (Rule 22)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 158: Goku & Vegeta Spiky Black Hair Sprite Asset Standard...');
+    const { _getGokuHairImage, _drawGokuHair, drawGokuSkin } = await import('../js/graphics/fighters/gokuSkin.js');
+    const { _getVegetaHairImage, _drawVegetaHair, drawVegetaSkin } = await import('../js/graphics/fighters/vegetaSkin.js');
+    const { GokuFighter } = await import('../js/entities/fighters/GokuFighter.js');
+    const { VegetaFighter } = await import('../js/entities/fighters/VegetaFighter.js');
+    const fs = await import('fs');
+
+    // 1. Verify files exist on disk with exact paths
+    const gokuPath = 'Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png';
+    const vegetaPath = 'Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png';
+    assert(fs.existsSync(gokuPath), 'Goku hair asset file must exist on disk');
+    assert(fs.existsSync(vegetaPath), 'Vegeta hair asset file must exist on disk');
+
+    // 2. Verify files have RGBA format (ColorType 6 = RGBA)
+    const gokuBuf = fs.readFileSync(gokuPath);
+    const vegetaBuf = fs.readFileSync(vegetaPath);
+    assert(gokuBuf[25] === 6, 'Goku hair PNG must be 32-bit RGBA with transparent alpha channel');
+    assert(vegetaBuf[25] === 6, 'Vegeta hair PNG must be 32-bit RGBA with transparent alpha channel');
+
+    // 3. Verify Canvas stack balance and render functions execute cleanly
+    let stackDepth = 0;
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse() {},
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    _drawGokuHair(mockCtx, 25, false);
+    assert(stackDepth === 0, `_drawGokuHair must maintain 0 canvas stack depth (got ${stackDepth})`);
+
+    _drawVegetaHair(mockCtx, 25, false);
+    assert(stackDepth === 0, `_drawVegetaHair must maintain 0 canvas stack depth (got ${stackDepth})`);
+
+    const goku = new GokuFighter({ x: 200, y: 200 });
+    drawGokuSkin(mockCtx, goku);
+    assert(stackDepth === 0, `drawGokuSkin must maintain 0 canvas stack depth (got ${stackDepth})`);
+
+    const vegeta = new VegetaFighter({ x: 300, y: 200 });
+    drawVegetaSkin(mockCtx, vegeta);
+    assert(stackDepth === 0, `drawVegetaSkin must maintain 0 canvas stack depth (got ${stackDepth})`);
+
+    console.log('      ✅ Goku & Vegeta Spiky Black Hair Sprite assets and canvas stack balance verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 159. Goku & Vegeta Skin & Hair Studio Integration Standard
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 159: Goku & Vegeta Skin & Hair Studio Integration Standard...');
+    const { SKIN_STUDIO_FIGHTERS, SKIN_STUDIO_CATEGORIES } = await import('../js/graphics/ui/SkinStudioScreen.js');
+    const { _drawGokuHair, drawGokuSkin } = await import('../js/graphics/fighters/gokuSkin.js');
+    const { _drawVegetaHair, drawVegetaSkin } = await import('../js/graphics/fighters/vegetaSkin.js');
+
+    // 1. Verify entries exist in SKIN_STUDIO_FIGHTERS
+    const gokuStudioDef = SKIN_STUDIO_FIGHTERS.find(f => f.key === 'goku');
+    const vegetaStudioDef = SKIN_STUDIO_FIGHTERS.find(f => f.key === 'vegeta');
+    assert(gokuStudioDef, 'Goku must be registered in SKIN_STUDIO_FIGHTERS');
+    assert(vegetaStudioDef, 'Vegeta must be registered in SKIN_STUDIO_FIGHTERS');
+
+    // 2. Verify forms and asset paths
+    assert(gokuStudioDef.forms && gokuStudioDef.forms.length === 2, 'Goku must have 2 studio forms (Base & Super Saiyan)');
+    assert(vegetaStudioDef.forms && vegetaStudioDef.forms.length === 2, 'Vegeta must have 2 studio forms (Base & Super Saiyan)');
+    assert(gokuStudioDef.asset.includes('Pixel Art Spiky Black Hair Sprite.png'), 'Goku asset path must reference spiky black hair');
+    assert(vegetaStudioDef.asset.includes('Pixel Art Spiky Black Hair Sprite.png'), 'Vegeta asset path must reference spiky black hair');
+
+    // 3. Verify category tabs
+    const dbzCategory = SKIN_STUDIO_CATEGORIES.find(c => c.id === 'DBZ');
+    assert(dbzCategory, 'SKIN_STUDIO_CATEGORIES must contain DBZ tab');
+    assert(dbzCategory.filter({ key: 'goku' }) && dbzCategory.filter({ key: 'vegeta' }), 'DBZ tab filter must include goku and vegeta');
+
+    const arcadeCategory = SKIN_STUDIO_CATEGORIES.find(c => c.id === 'ARCADE');
+    assert(arcadeCategory.filter({ key: 'goku' }) && arcadeCategory.filter({ key: 'vegeta' }), 'ARCADE filter must include goku and vegeta');
+
+    // 4. Verify studio forms canvas stack depth
+    let stackDepth = 0;
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse() {},
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    // Test both forms for Goku
+    _drawGokuHair(mockCtx, 25, false, false);
+    assert(stackDepth === 0, 'Goku Base Hair draw must maintain 0 stack depth');
+    _drawGokuHair(mockCtx, 25, false, true);
+    assert(stackDepth === 0, 'Goku Super Saiyan Hair draw must maintain 0 stack depth');
+
+    // Test both forms for Vegeta
+    _drawVegetaHair(mockCtx, 25, false, false);
+    assert(stackDepth === 0, 'Vegeta Base Hair draw must maintain 0 stack depth');
+    _drawVegetaHair(mockCtx, 25, false, true);
+    assert(stackDepth === 0, 'Vegeta Super Saiyan Hair draw must maintain 0 stack depth');
+
+    // Test dummy fighter skin render
+    const dummyGoku = { r: 25, radius: 25, _isWinnerReveal: true, _isStudioDummy: true, isSuperSaiyan: true };
+    drawGokuSkin(mockCtx, dummyGoku);
+    assert(stackDepth === 0, 'Goku dummy skin draw must maintain 0 stack depth');
+
+    const dummyVegeta = { r: 25, radius: 25, _isWinnerReveal: true, _isStudioDummy: true, isSuperSaiyan: true };
+    drawVegetaSkin(mockCtx, dummyVegeta);
+    assert(stackDepth === 0, 'Vegeta dummy skin draw must maintain 0 stack depth');
+
+    console.log('      ✅ Goku & Vegeta Skin & Hair Studio registration, categories, forms & stack balance verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 160. Goku & Vegeta Melee Mode Punch Attack VFX Standard (Assets/effects/Punch Attack)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 160: Goku & Vegeta Melee Mode Punch Attack VFX Standard...');
+    const { GokuFighter } = await import('../js/entities/fighters/GokuFighter.js');
+    const { VegetaFighter } = await import('../js/entities/fighters/VegetaFighter.js');
+    const { _getPunchAttackFrames, _drawPunchAttackAnimatedSprite, drawAnimeImpactFrame, drawPunchAttackImpact } = await import('../js/graphics/particles/renderers/blastShockwaveRenderers.js');
+    const { spawnAnimePunchImpactFrame } = await import('../js/graphics/particles/sparkEffect.js');
+
+    // 1. Verify 12-Frame Punch Attack Assets exist and load
+    const fs = await import('fs');
+    for (let i = 1; i <= 12; i++) {
+      const punchPath = `Assets/effects/Punch Attack/punch-${i}.png`;
+      assert(fs.existsSync(punchPath), `Punch Attack frame ${i} must exist at ${punchPath}`);
+    }
+
+    // 2. Test Goku Melee Strike spawns Punch Attack VFX
+    const goku = new GokuFighter({ x: 200, y: 200 });
+    const dummyTarget = { x: 240, y: 200, r: 25, hp: 400, takeDamage() {} };
+    state.sparkEffects = [];
+
+    // Base form strike: orange punch VFX
+    goku._applyHit(dummyTarget, 20);
+    const gokuBasePunch = state.sparkEffects.find(p => p.type === 'animeImpactFrame' && p.color === 'orange');
+    assert(gokuBasePunch, 'Goku base melee hit must spawn an orange animeImpactFrame punch VFX');
+    assert(gokuBasePunch.x > goku.x, 'Punch impact must spawn along the forward attack vector toward target');
+
+    // Super Saiyan strike: gold punch VFX
+    state.sparkEffects = [];
+    goku.isSuperSaiyan = true;
+    goku._applyHit(dummyTarget, 30);
+    const gokuSsjPunch = state.sparkEffects.find(p => p.type === 'animeImpactFrame' && p.color === 'gold');
+    assert(gokuSsjPunch, 'Goku Super Saiyan melee hit must spawn a gold animeImpactFrame punch VFX');
+
+    // Finisher slam: larger radius punch VFX
+    state.sparkEffects = [];
+    goku._applyHit(dummyTarget, 45, 12, 12.0, true);
+    const gokuFinisherPunch = state.sparkEffects.find(p => p.type === 'animeImpactFrame' && p.size >= 80);
+    assert(gokuFinisherPunch, 'Goku finisher slam hit must spawn a heavy (radius >= 80) punch VFX');
+
+    // 3. Test Vegeta Melee Strike spawns Punch Attack VFX
+    const vegeta = new VegetaFighter({ x: 300, y: 200 });
+    state.sparkEffects = [];
+
+    // Base form strike: cyan punch VFX
+    vegeta._applyHit(dummyTarget, 20);
+    const vegetaBasePunch = state.sparkEffects.find(p => p.type === 'animeImpactFrame' && p.color === 'cyan');
+    assert(vegetaBasePunch, 'Vegeta base melee hit must spawn a cyan animeImpactFrame punch VFX');
+
+    // Super Saiyan strike: gold punch VFX
+    state.sparkEffects = [];
+    vegeta.isSuperSaiyan = true;
+    vegeta._applyHit(dummyTarget, 30);
+    const vegetaSsjPunch = state.sparkEffects.find(p => p.type === 'animeImpactFrame' && p.color === 'gold');
+    assert(vegetaSsjPunch, 'Vegeta Super Saiyan melee hit must spawn a gold animeImpactFrame punch VFX');
+
+    // 4. Test Canvas 2D transform stack balance during Punch Attack rendering
+    let stackDepth = 0;
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse() {},
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    drawAnimeImpactFrame(mockCtx, { x: 200, y: 200, size: 65, life: 0.8, color: 'gold', hitAngle: 0 });
+    assert(stackDepth === 0, 'drawAnimeImpactFrame must maintain 0 canvas stack depth');
+
+    drawAnimeImpactFrame(mockCtx, { x: 200, y: 200, size: 65, life: 0.8, color: 'orange', hitAngle: 0.5 });
+    assert(stackDepth === 0, 'drawAnimeImpactFrame (orange) must maintain 0 canvas stack depth');
+
+    drawAnimeImpactFrame(mockCtx, { x: 200, y: 200, size: 65, life: 0.8, color: 'cyan', hitAngle: -0.5 });
+    assert(stackDepth === 0, 'drawAnimeImpactFrame (cyan) must maintain 0 canvas stack depth');
+
+    drawPunchAttackImpact(mockCtx, { x: 200, y: 200, size: 65, life: 0.8, color: 'gold', hitAngle: 0 });
+    assert(stackDepth === 0, 'drawPunchAttackImpact must maintain 0 canvas stack depth');
+
+    console.log('      ✅ Goku & Vegeta Melee Mode Punch Attack VFX, colors, sizing & stack balance verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TEST 161: GOKU & VEGETA BRAWLER HAND SIZING STANDARD (RULE 20, 24 & 35)
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 161: Goku & Vegeta Brawler Hand Sizing Standard (Rule 20, Rule 24 & Rule 35)...');
+
+    const { GokuFighter } = await import('../js/entities/fighters/GokuFighter.js');
+    const { VegetaFighter } = await import('../js/entities/fighters/VegetaFighter.js');
+    const { getHandSize, CONFIG } = await import('../js/core/config.js');
+    const { DEFAULT_SKIN_CUSTOMIZATIONS } = await import('../js/configs/skinCustomizationsDatabase.js');
+    const { drawGokuSkin, drawGokuFist } = await import('../js/graphics/fighters/gokuSkin.js');
+    const { drawVegetaSkin, drawVegetaFist } = await import('../js/graphics/fighters/vegetaSkin.js');
+
+    const goku = new GokuFighter({ x: 200, y: 200 });
+    const vegeta = new VegetaFighter({ x: 300, y: 200 });
+
+    // 1. Verify fighters declare brawler identity and canonical handScale
+    assert(goku.isBrawler === true, 'Goku must declare isBrawler = true');
+    assert(vegeta.isBrawler === true, 'Vegeta must declare isBrawler = true');
+    assert(goku.handScale === 1.0, `Goku handScale must default to 1.0, got ${goku.handScale}`);
+    assert(vegeta.handScale === 1.0, `Vegeta handScale must default to 1.0, got ${vegeta.handScale}`);
+    assert(CONFIG.goku.handScale === 1.0, `CONFIG.goku.handScale must be 1.0, got ${CONFIG.goku.handScale}`);
+    assert(CONFIG.vegeta.handScale === 1.0, `CONFIG.vegeta.handScale must be 1.0, got ${CONFIG.vegeta.handScale}`);
+
+    // 2. Verify skinCustomizations database defaults
+    assert(DEFAULT_SKIN_CUSTOMIZATIONS.goku.handScale === 1.00, `DEFAULT_SKIN_CUSTOMIZATIONS.goku.handScale must be 1.00, got ${DEFAULT_SKIN_CUSTOMIZATIONS.goku.handScale}`);
+    assert(DEFAULT_SKIN_CUSTOMIZATIONS.vegeta.handScale === 1.00, `DEFAULT_SKIN_CUSTOMIZATIONS.vegeta.handScale must be 1.00, got ${DEFAULT_SKIN_CUSTOMIZATIONS.vegeta.handScale}`);
+
+    // 3. Verify getHandSize produces exact canonical brawler radius (10.5px for base radius 7.5px with global multiplier 1.4)
+    const baseR = (CONFIG.globalFighter?.sizeMultiplier) ? (goku.r / CONFIG.globalFighter.sizeMultiplier) : 25;
+    const gokuHandR = getHandSize(baseR * 0.30, goku);
+    const vegetaHandR = getHandSize(baseR * 0.30, vegeta);
+    const gojoHandR = getHandSize(7.5, { characterId: 'gojo' });
+    const sukunaHandR = getHandSize(7.5, { characterId: 'sukuna' });
+    const yujiHandR = getHandSize(7.5);
+    const todoHandR = getHandSize(7.5);
+
+    assert(Math.abs(gokuHandR - 10.5) < 0.001, `Goku hand radius must match brawler standard (10.5px), got ${gokuHandR}`);
+    assert(Math.abs(vegetaHandR - 10.5) < 0.001, `Vegeta hand radius must match brawler standard (10.5px), got ${vegetaHandR}`);
+    assert(Math.abs(vegetaHandR - 10.5) < 0.001, `Vegeta hand radius must match brawler standard (10.5px), got ${vegetaHandR}`);
+    assert(Math.abs(gokuHandR - gojoHandR) < 0.001, `Goku hand radius (${gokuHandR}) must equal Gojo hand radius (${gojoHandR})`);
+    assert(Math.abs(vegetaHandR - sukunaHandR) < 0.001, `Vegeta hand radius (${vegetaHandR}) must equal Sukuna hand radius (${sukunaHandR})`);
+    assert(Math.abs(gokuHandR - yujiHandR) < 0.001, `Goku hand radius (${gokuHandR}) must equal Yuji hand radius (${yujiHandR})`);
+    assert(Math.abs(vegetaHandR - todoHandR) < 0.001, `Vegeta hand radius (${vegetaHandR}) must equal Todo hand radius (${todoHandR})`);
+
+    // 4. Verify custom skinCustomizations handScale reactivity
+    state.skinCustomizations = state.skinCustomizations || {};
+    state.skinCustomizations.goku = { handScale: 1.25 };
+    const scaledGokuHand = getHandSize(baseR * 0.30, goku);
+    assert(Math.abs(scaledGokuHand - 10.5 * 1.25) < 0.001, `Goku hand must scale reactively with skinCustomizations (expected ${10.5 * 1.25}, got ${scaledGokuHand})`);
+    delete state.skinCustomizations.goku;
+
+    // 5. Verify Canvas 2D transform stack depth across all render methods
+    let stackDepth = 0;
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse() {},
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    drawGokuFist(mockCtx, 10, 10, gokuHandR, '#FFE0BD');
+    assert(stackDepth === 0, 'drawGokuFist must maintain 0 canvas stack depth');
+
+    drawVegetaFist(mockCtx, 10, 10, vegetaHandR);
+    assert(stackDepth === 0, 'drawVegetaFist must maintain 0 canvas stack depth');
+
+    drawGokuSkin(mockCtx, goku);
+    assert(stackDepth === 0, 'drawGokuSkin must maintain 0 canvas stack depth');
+
+    drawVegetaSkin(mockCtx, vegeta);
+    assert(stackDepth === 0, 'drawVegetaSkin must maintain 0 canvas stack depth');
+
+    console.log('      ✅ Goku & Vegeta Brawler Hand Sizing (10.5px, Gojo/Sukuna/Yuji/Todo parity) and stack balance verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TEST 162: GOKU & VEGETA DBZ INSTANT TRANSMISSION / VANISH SCANLINES VFX
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 162: Goku & Vegeta DBZ Instant Transmission / Vanish Scanline Dissolve VFX Standard...');
+
+    const { GokuFighter } = await import('../js/entities/fighters/GokuFighter.js');
+    const { VegetaFighter } = await import('../js/entities/fighters/VegetaFighter.js');
+    const { drawDbzInstantTransmissionVFX } = await import('../js/graphics/particles/renderers/blastShockwaveRenderers.js');
+    const { spawnDbzInstantTransmissionVFX } = await import('../js/graphics/particles/sparkEffect.js');
+
+    const goku = new GokuFighter({ x: 200, y: 200 });
+    const vegeta = new VegetaFighter({ x: 300, y: 200 });
+    const dummyTarget = { x: 250, y: 200, r: 25, hp: 100, aim() {} };
+
+    // 1. Verify Goku Dodge Teleport: ZERO ghost afterimages, spawns DBZ scanlines dematerialize + materialize
+    state.sparkEffects = [];
+    goku.afterImages = [];
+    goku.x = 200;
+    goku.y = 200;
+    goku.executeDodgeTeleport(dummyTarget);
+
+    assert(goku.afterImages.length === 0, `Goku dodge must NOT generate trailing ghost afterimages, got ${goku.afterImages.length}`);
+    const gokuDepartVfx = state.sparkEffects.find(p => p.type === 'dbzInstantTransmission' && p.isArrival === false && p.characterId === 'goku');
+    const gokuArriveVfx = state.sparkEffects.find(p => p.type === 'dbzInstantTransmission' && p.isArrival === true && p.characterId === 'goku');
+    assert(gokuDepartVfx, 'Goku dodge teleport must spawn dbzInstantTransmission dematerialization VFX at departure point');
+    assert(gokuArriveVfx, 'Goku dodge teleport must spawn dbzInstantTransmission materialization VFX at arrival point');
+
+    // 2. Verify Goku Melee Angle Teleport: ZERO ghost afterimages, spawns DBZ scanlines
+    state.sparkEffects = [];
+    goku.afterImages = [];
+    goku._teleportToMeleeAngle(dummyTarget, { x: 0, y: 0, width: 800, height: 600 });
+    assert(goku.afterImages.length === 0, 'Goku melee flurry teleport must NOT generate ghost afterimages');
+    const gokuFlurryVfx = state.sparkEffects.filter(p => p.type === 'dbzInstantTransmission');
+    assert(gokuFlurryVfx.length >= 2, `Goku melee flurry teleport must spawn at least 2 DBZ scanlines effects, got ${gokuFlurryVfx.length}`);
+
+    // 3. Verify Vegeta Dodge Teleport: ZERO ghost afterimages, spawns DBZ scanlines dematerialize + materialize
+    state.sparkEffects = [];
+    vegeta.afterImages = [];
+    vegeta.x = 300;
+    vegeta.y = 200;
+    vegeta.executeDodgeTeleport(dummyTarget);
+
+    assert(vegeta.afterImages.length === 0, `Vegeta dodge must NOT generate trailing ghost afterimages, got ${vegeta.afterImages.length}`);
+    const vegetaDepartVfx = state.sparkEffects.find(p => p.type === 'dbzInstantTransmission' && p.isArrival === false && p.characterId === 'vegeta');
+    const vegetaArriveVfx = state.sparkEffects.find(p => p.type === 'dbzInstantTransmission' && p.isArrival === true && p.characterId === 'vegeta');
+    assert(vegetaDepartVfx, 'Vegeta dodge teleport must spawn dbzInstantTransmission dematerialization VFX at departure point');
+    assert(vegetaArriveVfx, 'Vegeta dodge teleport must spawn dbzInstantTransmission materialization VFX at arrival point');
+
+    // 4. Verify Vegeta Melee Angle Teleport: ZERO ghost afterimages, spawns DBZ scanlines
+    state.sparkEffects = [];
+    vegeta.afterImages = [];
+    vegeta._teleportToMeleeAngle(dummyTarget, { x: 0, y: 0, width: 800, height: 600 });
+    assert(vegeta.afterImages.length === 0, 'Vegeta melee flurry teleport must NOT generate ghost afterimages');
+    const vegetaFlurryVfx = state.sparkEffects.filter(p => p.type === 'dbzInstantTransmission');
+    assert(vegetaFlurryVfx.length >= 2, `Vegeta melee flurry teleport must spawn at least 2 DBZ scanlines effects, got ${vegetaFlurryVfx.length}`);
+
+    // 5. Verify Canvas 2D transform stack depth across all DBZ scanline states
+    let stackDepth = 0;
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse() {},
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    // Test departure (dematerialize), arrival (materialize), base form & super saiyan
+    for (let p = 0; p <= 1.0; p += 0.2) {
+      drawDbzInstantTransmissionVFX(mockCtx, { x: 200, y: 200, radius: 25, life: 1.0 - p, isArrival: false, characterId: 'goku', isSuperSaiyan: false });
+      assert(stackDepth === 0, 'drawDbzInstantTransmissionVFX (Goku Base Depart) must maintain 0 canvas stack depth');
+
+      drawDbzInstantTransmissionVFX(mockCtx, { x: 200, y: 200, radius: 25, life: 1.0 - p, isArrival: true, characterId: 'goku', isSuperSaiyan: true });
+      assert(stackDepth === 0, 'drawDbzInstantTransmissionVFX (Goku SSJ Arrive) must maintain 0 canvas stack depth');
+
+      drawDbzInstantTransmissionVFX(mockCtx, { x: 200, y: 200, radius: 25, life: 1.0 - p, isArrival: false, characterId: 'vegeta', isSuperSaiyan: false });
+      assert(stackDepth === 0, 'drawDbzInstantTransmissionVFX (Vegeta Base Depart) must maintain 0 canvas stack depth');
+
+      drawDbzInstantTransmissionVFX(mockCtx, { x: 200, y: 200, radius: 25, life: 1.0 - p, isArrival: true, characterId: 'vegeta', isSuperSaiyan: true });
+      assert(stackDepth === 0, 'drawDbzInstantTransmissionVFX (Vegeta SSJ Arrive) must maintain 0 canvas stack depth');
+    }
+
+    console.log('      ✅ Goku & Vegeta DBZ Instant Transmission / Vanish Scanline Dissolve VFX and stack balance verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TEST 163: GOKU & VEGETA SMOOTH PUNCH KINEMATICS & ZERO-STRETCH FLOATING PIXEL FIST STANDARD (RULE 20 & GOJO STANDARD)
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 163: Goku & Vegeta Smooth Punch Kinematics & Zero-Stretch Floating Pixel Fist Standard (Rule 20 & Gojo Standard)...');
+
+    const { GokuFighter } = await import('../js/entities/fighters/GokuFighter.js');
+    const { VegetaFighter } = await import('../js/entities/fighters/VegetaFighter.js');
+    const { drawGokuSkin, drawGokuArmLinkage, drawGokuFist } = await import('../js/graphics/fighters/gokuSkin.js');
+    const { drawVegetaSkin, drawVegetaArmLinkage, drawVegetaFist } = await import('../js/graphics/fighters/vegetaSkin.js');
+
+    // 1. Verify export of arm linkage functions (strictly no-op stubs to prevent stretching arm tubes)
+    assert(typeof drawGokuArmLinkage === 'function', 'drawGokuArmLinkage must be an exported function');
+    assert(typeof drawVegetaArmLinkage === 'function', 'drawVegetaArmLinkage must be an exported function');
+
+    // 2. Mock Canvas Context with transform stack depth tracker
+    let stackDepth = 0;
+    const drawnPaths = [];
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() { drawnPaths.push('beginPath'); },
+      closePath() { drawnPaths.push('closePath'); },
+      moveTo(x, y) { drawnPaths.push(`moveTo(${x},${y})`); },
+      lineTo(x, y) { drawnPaths.push(`lineTo(${x},${y})`); },
+      stroke() { drawnPaths.push('stroke'); },
+      fill() { drawnPaths.push('fill'); },
+      arc(x, y, r) { drawnPaths.push(`arc(${x},${y},${r})`); },
+      ellipse() {},
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    // 3. Verify Strict Prohibition of Stretching Arm Tubes (Gojo Standard):
+    // Linkage functions MUST NOT mutate paths or draw rubber-band arm tubes
+    const testDistances = [
+      { hx: 10, hy: 8, label: 'chambered tight flexion' },
+      { hx: 25, hy: 5, label: 'halfway extension' },
+      { hx: 45, hy: 4, label: 'full punch reach' },
+      { hx: 65, hy: 2, label: 'maximum hyper-extension' }
+    ];
+
+    for (const td of testDistances) {
+      // Goku Base & Super Saiyan arm linkages (both left & right arms)
+      drawGokuArmLinkage(mockCtx, 0, 10, td.hx, td.hy, 10.5, 25, true, false);
+      assert(stackDepth === 0, `drawGokuArmLinkage Right (${td.label}) must maintain 0 stack depth`);
+      assert(drawnPaths.length === 0, `drawGokuArmLinkage Right (${td.label}) must draw zero paths (no stretching arms)`);
+
+      drawGokuArmLinkage(mockCtx, 0, -10, td.hx, -td.hy, 10.5, 25, false, true);
+      assert(stackDepth === 0, `drawGokuArmLinkage Left SSJ (${td.label}) must maintain 0 stack depth`);
+      assert(drawnPaths.length === 0, `drawGokuArmLinkage Left SSJ (${td.label}) must draw zero paths (no stretching arms)`);
+
+      // Vegeta Base & Super Saiyan arm linkages (both left & right arms)
+      drawVegetaArmLinkage(mockCtx, 0, 10, td.hx, td.hy, 10.5, 25, true, false);
+      assert(stackDepth === 0, `drawVegetaArmLinkage Right (${td.label}) must maintain 0 stack depth`);
+      assert(drawnPaths.length === 0, `drawVegetaArmLinkage Right (${td.label}) must draw zero paths (no stretching arms)`);
+
+      drawVegetaArmLinkage(mockCtx, 0, -10, td.hx, -td.hy, 10.5, 25, false, true);
+      assert(stackDepth === 0, `drawVegetaArmLinkage Left SSJ (${td.label}) must maintain 0 stack depth`);
+      assert(drawnPaths.length === 0, `drawVegetaArmLinkage Left SSJ (${td.label}) must draw zero paths (no stretching arms)`);
+    }
+
+    // 4. Test Entity Melee Strike State & Punch Animation Execution
+    const goku = new GokuFighter({ x: 200, y: 200 });
+    const vegeta = new VegetaFighter({ x: 300, y: 200 });
+    const dummyTarget = { x: 240, y: 200, r: 25, hp: 500, takeDamage() {}, aim() {} };
+
+    // Initial state: not punching
+    assert(goku.isPunching === false, 'Goku isPunching must start false');
+    assert(vegeta.isPunching === false, 'Vegeta isPunching must start false');
+
+    // Execute Goku Strike: triggers isPunching, sets punchAnimTimer, and cycles punch hand
+    const initialGokuHand = goku.isRightPunch;
+    goku._executeMeleeStrike(dummyTarget);
+    assert(goku.isPunching === true, 'Goku isPunching must be true after _executeMeleeStrike');
+    assert(goku.punchAnimTimer > 0, `Goku punchAnimTimer must be > 0, got ${goku.punchAnimTimer}`);
+    assert(goku.isRightPunch !== initialGokuHand, 'Goku isRightPunch must alternate between strikes');
+
+    // Verify timer decrement maintains isPunching and clears on expiry
+    while (goku.punchAnimTimer > 1) {
+      goku._decrementCooldowns();
+      assert(goku.isPunching === true, 'Goku isPunching must remain true while punchAnimTimer > 0');
+    }
+    goku._decrementCooldowns();
+    assert(goku.punchAnimTimer === 0, 'Goku punchAnimTimer must reach 0');
+    assert(goku.isPunching === false, 'Goku isPunching must cleanly reset to false when timer expires');
+
+    // Execute Vegeta Strike: triggers isPunching, sets punchAnimTimer, and cycles punch hand
+    const initialVegetaHand = vegeta.isRightPunch;
+    vegeta._executeMeleeStrike(dummyTarget);
+    assert(vegeta.isPunching === true, 'Vegeta isPunching must be true after _executeMeleeStrike');
+    assert(vegeta.punchAnimTimer > 0, `Vegeta punchAnimTimer must be > 0, got ${vegeta.punchAnimTimer}`);
+    assert(vegeta.isRightPunch !== initialVegetaHand, 'Vegeta isRightPunch must alternate between strikes');
+
+    // Verify timer decrement maintains isPunching and clears on expiry
+    while (vegeta.punchAnimTimer > 1) {
+      vegeta._decrementCooldowns();
+      assert(vegeta.isPunching === true, 'Vegeta isPunching must remain true while punchAnimTimer > 0');
+    }
+    vegeta._decrementCooldowns();
+    assert(vegeta.punchAnimTimer === 0, 'Vegeta punchAnimTimer must reach 0');
+    assert(vegeta.isPunching === false, 'Vegeta isPunching must cleanly reset to false when timer expires');
+
+    // 5. Verify Goku Dragon Hammer & Kaioken Strike activate punch animation state
+    goku.dragonHammerStep = 0;
+    goku.dragonHammerTimer = 25; // 25 - 1 = 24, which triggers 24 % 8 === 0 hit
+    goku._updateDragonHammer(dummyTarget, { x: 0, y: 0, width: 800, height: 600 });
+    assert(goku.isPunching === true, 'Goku Dragon Hammer hit must activate isPunching = true');
+    assert(goku.punchAnimTimer > 0, 'Goku Dragon Hammer hit must set punchAnimTimer > 0');
+
+    goku.startKaiokenStrike(dummyTarget);
+    assert(goku.isPunching === true, 'Goku Kaioken strike must activate isPunching = true');
+    assert(goku.punchAnimTimer > 0, 'Goku Kaioken strike must set punchAnimTimer > 0');
+
+    // 6. Test Skin Rendering across 4 punch phases with arm linkages & stack depth = 0
+    const testProgresses = [0.05, 0.25, 0.45, 0.75, 0.95]; // Coil, Strike, Impact Lock, Retraction, Settle
+    for (const prog of testProgresses) {
+      goku.isPunching = true;
+      goku.punchMaxTime = 14;
+      goku.punchAnimTimer = Math.round(14 * (1.0 - prog));
+      goku.isRightPunch = true;
+      drawGokuSkin(mockCtx, goku);
+      assert(stackDepth === 0, `drawGokuSkin (p=${prog}, Right) must maintain 0 canvas stack depth`);
+
+      goku.isRightPunch = false;
+      drawGokuSkin(mockCtx, goku);
+      assert(stackDepth === 0, `drawGokuSkin (p=${prog}, Left) must maintain 0 canvas stack depth`);
+
+      vegeta.isPunching = true;
+      vegeta.punchMaxTime = 15;
+      vegeta.punchAnimTimer = Math.round(15 * (1.0 - prog));
+      vegeta.isRightPunch = true;
+      drawVegetaSkin(mockCtx, vegeta);
+      assert(stackDepth === 0, `drawVegetaSkin (p=${prog}, Right) must maintain 0 canvas stack depth`);
+
+      vegeta.isRightPunch = false;
+      drawVegetaSkin(mockCtx, vegeta);
+      assert(stackDepth === 0, `drawVegetaSkin (p=${prog}, Left) must maintain 0 canvas stack depth`);
+    }
+
+    console.log('      ✅ Goku & Vegeta Smooth Punch Kinematics, Zero-Stretch Floating Pixel Fists, Impact Lock & Stack Balance verified cleanly.');
+  }
+
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 

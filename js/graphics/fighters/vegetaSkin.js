@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────
 
 import { state } from '../../core/state.js';
+import { CONFIG, getHandSize } from '../../core/config.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
 import { getFilteredSpriteCanvas } from '../graphicsCache.js';
 
@@ -29,9 +30,14 @@ export function _getVegetaHairImage() {
       _vegetaHairImageLoading = false;
     };
     img.onerror = () => {
-      _vegetaHairImageLoading = false;
+      if (!img.src.endsWith('Vegeta-hair.png')) {
+        img.src = 'Assets/model/vegeta/Vegeta-hair.png';
+      } else {
+        _vegetaHairImageLoading = false;
+      }
     };
-    img.src = 'Assets/model/vegeta/Vegeta-hair.png';
+    const hairPath = (typeof CONFIG !== 'undefined' && CONFIG.vegeta?.assets?.hair) || 'Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png';
+    img.src = hairPath;
     _vegetaHairImage = img;
   }
   return _vegetaHairImage;
@@ -42,7 +48,7 @@ if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
 }
 
 /**
- * Draws Vegeta's upward flame hair silhouette from Assets/model/vegeta/Vegeta-hair.png.
+ * Draws Vegeta's upward flame hair silhouette from Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png.
  */
 export function _drawVegetaHair(ctx, r, facingLeft = false, isSuperSaiyan = false) {
   const hairImg = _getVegetaHairImage();
@@ -56,13 +62,13 @@ export function _drawVegetaHair(ctx, r, facingLeft = false, isSuperSaiyan = fals
   const flipY = custom.flipY ? -1 : 1;
 
   const targetHairWidth = r * 2.80 * wMult;
-  const targetHairHeight = r * 2.35 * hMult;
+  const targetHairHeight = r * 2.80 * hMult;
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
 
   const drawX = -targetHairWidth / 2 + offX;
-  const drawY = -r * 1.40 + offY;
+  const drawY = -r * 2.05 + offY;
 
   if (rot !== 0 || flipX !== 1 || flipY !== 1) {
     ctx.translate(drawX + targetHairWidth / 2, drawY + targetHairHeight / 2);
@@ -92,8 +98,17 @@ export function _drawVegetaHair(ctx, r, facingLeft = false, isSuperSaiyan = fals
 export function drawVegetaFist(ctx, x, y, radius) {
   ctx.save();
   ctx.translate(x, y);
-  drawPixelHand(ctx, 0, 0, radius, '#FFFFFF');
+  drawPixelHand(ctx, 0, 0, radius, '#FFFFFF', '#0E0F14');
   ctx.restore();
+}
+
+/**
+ * Strict Prohibition of Stretching Arm Tubes (Gojo Standard).
+ * Brawlers use discrete floating pixel fists with zero stretching arm linkages.
+ */
+export function drawVegetaArmLinkage(ctx, sx, sy, hx, hy, handRadius, r, isRightArm, isSuperSaiyan = false) {
+  // Intentionally empty: Vegeta uses discrete floating pixel fists matching Gojo, Sukuna, and Yuji.
+  return;
 }
 
 let _cachedVegetaBodyCanvas = null;
@@ -240,7 +255,7 @@ export function drawVegetaSkin(ctx, fighter) {
   ctx.translate(fighter.x || 0, (fighter.y || 0) - (fighter.z || 0));
 
   // 1. Orientation & Mirroring (Rule 19 Upright POV)
-  const angle = fighter._isWinnerReveal ? 0 : (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
+  const angle = (fighter._isWinnerReveal && !fighter._isStudioDummy) ? 0 : (fighter.gunAngle !== undefined ? fighter.gunAngle : (fighter.angle || 0));
   const normAngle = Math.atan2(Math.sin(angle), Math.cos(angle));
   ctx.rotate(angle);
 
@@ -272,37 +287,57 @@ export function drawVegetaSkin(ctx, fighter) {
   // 4. Hair Asset Overlay (Layer 2)
   _drawVegetaHair(ctx, r, facingLeft, isSuperSaiyan);
 
-  // 5. Canonical Floating Hands & Dynamic Punch Extension (Gojo/Sukuna/Yuji Floating Hand Standard)
-  const handRadius = r * 0.30;
+  // 5. Canonical Hands, Arm Physics & Smooth Punch Kinematics (Rule 20 & 30)
+  const baseR = (CONFIG.globalFighter?.sizeMultiplier) ? (r / CONFIG.globalFighter.sizeMultiplier) : 25;
+  const handRadius = getHandSize ? getHandSize(baseR * 0.30, fighter) : 10.5;
   const isPodiumPreview = Boolean(fighter._isWinnerReveal);
-  const isPunching = !isPodiumPreview && Boolean(fighter.punchAnimTimer && fighter.punchAnimTimer > 0);
+  const isPunching = !isPodiumPreview && Boolean((fighter.punchAnimTimer && fighter.punchAnimTimer > 0) || fighter.isPunching);
   const isChargingFinalFlash = Boolean(fighter.isChargingFinalFlash);
   const isFiringFinalFlash = Boolean(fighter.isFiringFinalFlash);
   const isBigBang = Boolean(fighter.isBigBangActive || (fighter.bigBangChargeTimer && fighter.bigBangChargeTimer > 0));
   const isKiVolley = Boolean(fighter.basicComboPhase === 3);
   const isFinisherSlam = Boolean(fighter.basicComboPhase === 2 && (fighter.meleeModeDurationTimer || 0) <= 0);
 
-  // Canonical Brawler Default Hand Placement (matching Gojo/Sukuna: floating at front perimeter along +X aim axis)
+  // Canonical Brawler Default Hand Placement along +X aim axis
   const baseHandX = r * 0.88;
   const idleBob = (!isPodiumPreview && !isPunching) ? Math.sin(Date.now() * 0.007) * (r * 0.05) : 0;
-  let handRX = baseHandX + idleBob;
-  let handRY = +r * 0.20;
-  let handLX = 0;
-  let handLY = 0;
-  let hideBackHand = true; // Canonical brawler single front hand stance
-  let hideFrontHand = (typeof state !== 'undefined' && state.showSkinOnly) || isPodiumPreview || fighter.hideHands;
+
+  // Single front hand brawler punch stance (matching GojoRenderer proven standard)
+  let hideFrontHand = false;
+  let hideBackHand = true; // Other hand completely removed/chambered during punches and neutral stance
+
+  let frontHandX = baseHandX + idleBob;
+  let frontHandY = 0;
+  let backHandX = 0;
+  let backHandY = 0;
+
+  const hideHands = (typeof state !== 'undefined' && state.showSkinOnly) || isPodiumPreview || fighter.hideHands;
+  let easePunch = 0;
+  let rawProgress = 0;
 
   if (isPunching) {
     const maxT = fighter.punchActiveMaxTime || fighter.punchMaxTime || 10;
-    const rawProgress = Math.min(1.0, Math.max(0.0, 1.0 - (fighter.punchAnimTimer / maxT)));
+    rawProgress = Math.min(1.0, Math.max(0.0, 1.0 - (fighter.punchAnimTimer / maxT)));
 
-    // Asymmetric punch kinematics (Gojo / Brawler Standard)
-    let easePunch = 0;
-    if (rawProgress < 0.28) {
-      easePunch = Math.sin((rawProgress / 0.28) * (Math.PI / 2));
+    // 4-Phase Anime Martial Arts Punch Kinematics (Anti-Stiffness & 5-Phase Impact Lock Standard)
+    // Phase 1 (0.00 <= p < 0.12): Windup / Chamber Coil (-10% backward cocking)
+    // Phase 2 (0.12 <= p < 0.38): Hypersonic Whip Stroke (Power ease forward to 1.0)
+    // Phase 3 (0.38 <= p < 0.52): Impact Lock & Knuckle Latch (Held at 1.0 with micro-tremor)
+    // Phase 4 (0.52 <= p <= 1.00): Damped Elastic Retraction Settle (Cosine ease back to 0.0)
+    let impactTremor = 0;
+
+    if (rawProgress < 0.12) {
+      const cp = rawProgress / 0.12;
+      easePunch = -Math.sin(cp * Math.PI) * 0.10;
+    } else if (rawProgress < 0.38) {
+      const sp = (rawProgress - 0.12) / 0.26;
+      easePunch = Math.sin(sp * (Math.PI / 2));
+    } else if (rawProgress < 0.52) {
+      easePunch = 1.0;
+      impactTremor = Math.sin((rawProgress - 0.38) * 45) * (r * 0.04);
     } else {
-      const retractT = (rawProgress - 0.28) / 0.72;
-      easePunch = Math.cos(retractT * (Math.PI / 2));
+      const rp = (rawProgress - 0.52) / 0.48;
+      easePunch = Math.cos(rp * (Math.PI / 2));
     }
 
     // Dynamic target proximity extension (matching GojoRenderer proven standard)
@@ -335,83 +370,104 @@ export function drawVegetaSkin(ctx, fighter) {
       }
     }
 
-    const currentLunge = easePunch * maxLunge;
+    const currentLunge = easePunch * maxLunge + impactTremor;
     const dip = Math.sin(rawProgress * Math.PI) * (r * 0.12) * (fighter.isRightPunch ? 1 : -1);
 
     if (isFinisherSlam) {
-      // High Overhead Axe Kick Finisher: Fists braced defensively at chest level
+      // High Overhead Axe Kick / Fist Finisher: Fists braced overhead driving downward
       hideBackHand = false;
-      handRX = r * 0.45;
-      handRY = +r * 0.20;
-      handLX = r * 0.45;
-      handLY = -r * 0.20;
-    } else if (fighter.isRightPunch) {
-      // Right Fist Leading Beatdown Strike along +X aim vector
-      handRX = baseHandX + currentLunge;
-      handRY = +r * 0.20 + dip;
-      hideBackHand = true;
+      frontHandX = baseHandX + currentLunge;
+      frontHandY = +r * 0.08 + dip;
+      backHandX = baseHandX + currentLunge;
+      backHandY = -r * 0.08 + dip;
     } else {
-      // Left Fist Leading Beatdown Strike along +X aim vector
-      handLX = baseHandX + currentLunge;
-      handLY = -r * 0.20 - dip;
+      // Single front striking fist lunges forward (Gojo / brawler standard)
       hideBackHand = true;
+      frontHandX = baseHandX + currentLunge;
+      frontHandY = dip;
     }
   } else if (isKiVolley) {
     // Phase 3: Rapid Ki Volley (Renzoku Ki Dān) — Manic alternating floating palm thrusts
     hideBackHand = false;
     const kiVibe = Math.sin((fighter.kiVolleyTimer || 0) * 2.2) * 3.5;
-    handRX = r * 1.15 + kiVibe;
-    handRY = +r * 0.24;
-    handLX = r * 1.15 - kiVibe;
-    handLY = -r * 0.24;
+    frontHandX = r * 1.15 + kiVibe;
+    frontHandY = +r * 0.24;
+    backHandX = r * 1.15 - kiVibe;
+    backHandY = -r * 0.24;
   } else if (isBigBang) {
     // Big Bang Attack: Open right palm thrust forward, left arm coiled back
     hideBackHand = false;
-    handRX = r * 1.25;
-    handRY = +r * 0.08;
-    handLX = -r * 0.20;
-    handLY = -r * 0.30;
+    frontHandX = r * 1.25;
+    frontHandY = +r * 0.08;
+    backHandX = -r * 0.20;
+    backHandY = -r * 0.30;
   } else if (isChargingFinalFlash) {
-    // Dual floating arms spread wide charging golden lightning
+    // Dual arms spread wide charging golden lightning
     hideBackHand = false;
-    handRX = 0;
-    handRY = +r * 0.85;
-    handLX = 0;
-    handLY = -r * 0.85;
+    frontHandX = 0;
+    frontHandY = +r * 0.85;
+    backHandX = 0;
+    backHandY = -r * 0.85;
   } else if (isFiringFinalFlash) {
     // Both wrists clasped forward unleashing Final Flash beam
     hideBackHand = false;
-    handRX = r * 1.25;
-    handRY = +r * 0.10;
-    handLX = r * 1.25;
-    handLY = -r * 0.10;
+    frontHandX = r * 1.25;
+    frontHandY = +r * 0.10;
+    backHandX = r * 1.25;
+    backHandY = -r * 0.10;
   }
 
-  // Draw Floating Pixel Fists (Zero stretching arm tubes — Gojo standard)
-  if (!hideBackHand) {
-    drawVegetaFist(ctx, handLX, handLY, handRadius);
-  }
+  // Draw Floating White Combat Gloves (Zero stretching arm tubes — Gojo standard)
+  if (!hideHands) {
+    if (!hideBackHand) {
+      drawVegetaFist(ctx, backHandX, backHandY, handRadius);
+    }
+    if (!hideFrontHand) {
+      drawVegetaFist(ctx, frontHandX, frontHandY, handRadius);
+    }
 
-  if (!hideFrontHand) {
-    const fx = (isPunching && !fighter.isRightPunch) ? handLX : handRX;
-    const fy = (isPunching && !fighter.isRightPunch) ? handLY : handRY;
-    drawVegetaFist(ctx, fx, fy, handRadius);
-  }
+    // Knuckle Punch VFX & Supersonic Compression Ripples during Strike Phase
+    if (isPunching && easePunch > 0.40) {
+      const activeHandX = frontHandX;
+      const activeHandY = frontHandY;
+      const punchAlpha = Math.min(1.0, (easePunch - 0.40) / 0.50);
 
-  // Super Saiyan / Royal Knuckle Aura Wisps when Punching
-  if (isPunching) {
-    const activeHandX = fighter.isRightPunch ? handRX : handLX;
-    const activeHandY = fighter.isRightPunch ? handRY : handLY;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(activeHandX, activeHandY, handRadius * 1.45, 0, Math.PI * 2);
-    ctx.fillStyle = isSuperSaiyan ? 'rgba(255, 215, 0, 0.40)' : 'rgba(0, 229, 255, 0.35)';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(activeHandX, activeHandY, handRadius * 0.85, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.60)';
-    ctx.fill();
-    ctx.restore();
+      ctx.save();
+      // Supersonic Air Compression Ring ahead of knuckles
+      ctx.beginPath();
+      ctx.arc(activeHandX + handRadius * 0.40, activeHandY, handRadius * (0.85 + easePunch * 0.55), 0, Math.PI * 2);
+      ctx.strokeStyle = isSuperSaiyan ? `rgba(255, 235, 59, ${0.75 * punchAlpha})` : `rgba(0, 229, 255, ${0.70 * punchAlpha})`;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // Manga Action Speed Needles trailing behind knuckles
+      const needleCount = 3;
+      const streakColor = isSuperSaiyan ? '#FFF59D' : '#80D8FF';
+      ctx.fillStyle = streakColor;
+      for (let sn = 0; sn < needleCount; sn++) {
+        const ny = activeHandY + (sn - 1) * (handRadius * 0.45);
+        const nx = activeHandX - handRadius * 0.30;
+        const trailLen = handRadius * (1.2 + easePunch * 1.4);
+        ctx.beginPath();
+        ctx.moveTo(nx - trailLen, ny);
+        ctx.lineTo(nx, ny - 1.2);
+        ctx.lineTo(nx + 2, ny);
+        ctx.lineTo(nx, ny + 1.2);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Specular Knuckle Ki Flare
+      ctx.beginPath();
+      ctx.arc(activeHandX, activeHandY, handRadius * 1.35, 0, Math.PI * 2);
+      ctx.fillStyle = isSuperSaiyan ? 'rgba(255, 215, 0, 0.42)' : 'rgba(0, 229, 255, 0.32)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(activeHandX, activeHandY, handRadius * 0.80, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   // 6. Universal Manga Ink Outline (Rule 32)

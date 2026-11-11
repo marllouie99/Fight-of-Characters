@@ -73,6 +73,7 @@ export class SaitamaFighter extends Fighter {
     this.flurryHitsLeft = 0;
     this.flurryTimer = 0;
     this.flurryTarget = null;
+    this._flurryAccumulatedDamage = 0;
     this._flurryAimAngle = undefined;
     this._flurryBreatherTimer = 0; // Stationary breather stance timer after final punch
 
@@ -2013,6 +2014,7 @@ export class SaitamaFighter extends Fighter {
     this.flurryTarget = opponent;
     this.flurryCooldown = CONFIG.saitama?.flurryCooldown || 540;
     this._flurryAccumulatedDamage = 0;
+    if (opponent) opponent._flurryAccumulatedDamage = 0;
 
     // Cancel any charging basic punch
     this.basicPunchChargeTimer = 0;
@@ -2161,6 +2163,7 @@ export class SaitamaFighter extends Fighter {
     if (this.flurryTarget) {
       this.flurryTarget.caughtInSaitamaFlurry = false;
       this.flurryTarget.timeStopTimer = 0;
+      this.flurryTarget._flurryAccumulatedDamage = 0;
     }
     this.caughtInGenosFlurry = false;
     if (typeof state !== 'undefined') {
@@ -2168,15 +2171,22 @@ export class SaitamaFighter extends Fighter {
         if (f) {
           if (f.caughtInSaitamaFlurry && f.timeStopTimer > 0) f.timeStopTimer = 0;
           f.caughtInSaitamaFlurry = false;
+          f._flurryAccumulatedDamage = 0;
         }
       });
       if (state.illusions) state.illusions.forEach(ill => {
         if (ill) {
           if (ill.caughtInSaitamaFlurry && ill.timeStopTimer > 0) ill.timeStopTimer = 0;
           ill.caughtInSaitamaFlurry = false;
+          ill._flurryAccumulatedDamage = 0;
         }
       });
-      if (state.cjDriveBys) state.cjDriveBys.forEach(car => { if (car) car.caughtInSaitamaFlurry = false; });
+      if (state.cjDriveBys) state.cjDriveBys.forEach(car => {
+        if (car) {
+          car.caughtInSaitamaFlurry = false;
+          car._flurryAccumulatedDamage = 0;
+        }
+      });
     }
     this.isFlurrying = false;
     this.flurryHitsLeft = 0;
@@ -2658,6 +2668,7 @@ export class SaitamaFighter extends Fighter {
     this.flurryHitsLeft = 0;
     this.flurryTimer = 0;
     this.flurryTarget = null;
+    this._flurryAccumulatedDamage = 0;
     this._flurryAimAngle = undefined;
     this._flurryBreatherTimer = 0;
     this.caughtInGenosFlurry = false;
@@ -3105,7 +3116,11 @@ export class SaitamaFighter extends Fighter {
             if (Math.abs(angleDiff) <= currentHalfArc || dist <= (this.r + (target.r || 20) + 15)) {
               if (isFinalHit) {
                 // ── FINAL BLOW: Devastating finisher punch across entire blast cone ──
-                const didDamage = applyDamageToTarget(target, finalDamage, this, {
+                // Apply all accumulated flurry damage + final blow slam damage in one single massive strike
+                const totalDamage = finalDamage + (target._flurryAccumulatedDamage || 0);
+                target._flurryAccumulatedDamage = 0;
+
+                const didDamage = applyDamageToTarget(target, totalDamage, this, {
                   isSkill: true,
                   isMelee: true,
                   isMachineGunBlow: true,
@@ -3162,15 +3177,21 @@ export class SaitamaFighter extends Fighter {
                   }
                 }
               } else {
-                // ── NON-FINAL HIT: Apply frontal barrage punch damage + corridor micro-pushback ──
-                applyDamageToTarget(target, rapidDamage, this, {
-                  isSkill: true,
-                  isMelee: true,
-                  isMachineGunBlow: true,
-                  isSaitamaPunch: true,
-                  bypassShield: true,
-                  undodgeable: true
-                });
+                // ── NON-FINAL HIT: Accumulate barrage punch damage without dealing damage yet ──
+                // All damage of the consecutive skill is applied to the enemy on the last punch
+                const isTargetDamageable = !target.isUntargetable && !target.untargetable &&
+                  !target.isInvulnerable && !target.isInvincible && !target.invincible &&
+                  !(target.invincibleTimer > 0) && !(target.invincibilityTimer > 0);
+
+                if (isTargetDamageable) {
+                  target._flurryAccumulatedDamage = (target._flurryAccumulatedDamage || 0) + rapidDamage;
+                  this._flurryAccumulatedDamage = (this._flurryAccumulatedDamage || 0) + rapidDamage;
+                }
+
+                // Special Gojo Limitless Infinity interaction: structural barrier stress during flurry
+                if (typeof target.damageInfinityBarrier === 'function' && typeof target.hasActiveInfinity === 'function' && target.hasActiveInfinity()) {
+                  target.damageInfinityBarrier(35, this, { isSkill: true, isMelee: true, isMachineGunBlow: true, isSaitamaPunch: true });
+                }
 
                 const isTargetImmune = Boolean(target && (target.characterId === 'escanor' || target.type === 'escanor' || target.immuneToKnockback || target.immuneToPush));
                 if (!isTargetImmune) {
@@ -3201,9 +3222,11 @@ export class SaitamaFighter extends Fighter {
           }
         }
 
-        // Reset boredom stacks on hit
-        this.boredomStacks = 0;
-        this.boredomTimer = 0;
+        // Reset boredom stacks on final hit
+        if (isFinalHit) {
+          this.boredomStacks = 0;
+          this.boredomTimer = 0;
+        }
 
         // Conclude flurry on final hit
         if (isFinalHit) {
@@ -3225,22 +3248,32 @@ export class SaitamaFighter extends Fighter {
           if (this.flurryTarget) {
             this.flurryTarget.caughtInSaitamaFlurry = false;
             this.flurryTarget.timeStopTimer = 0;
+            this.flurryTarget._flurryAccumulatedDamage = 0;
           }
           if (typeof state !== 'undefined') {
             if (state.fighters) state.fighters.forEach(f => {
-              if (f && f.caughtInSaitamaFlurry) {
-                f.caughtInSaitamaFlurry = false;
-                if (f.timeStopTimer > 0) f.timeStopTimer = 0;
+              if (f) {
+                if (f.caughtInSaitamaFlurry) {
+                  f.caughtInSaitamaFlurry = false;
+                  if (f.timeStopTimer > 0) f.timeStopTimer = 0;
+                }
+                f._flurryAccumulatedDamage = 0;
               }
             });
             if (state.illusions) state.illusions.forEach(ill => {
-              if (ill && ill.caughtInSaitamaFlurry) {
-                ill.caughtInSaitamaFlurry = false;
-                if (ill.timeStopTimer > 0) ill.timeStopTimer = 0;
+              if (ill) {
+                if (ill.caughtInSaitamaFlurry) {
+                  ill.caughtInSaitamaFlurry = false;
+                  if (ill.timeStopTimer > 0) ill.timeStopTimer = 0;
+                }
+                ill._flurryAccumulatedDamage = 0;
               }
             });
             if (state.cjDriveBys) state.cjDriveBys.forEach(car => {
-              if (car) car.caughtInSaitamaFlurry = false;
+              if (car) {
+                car.caughtInSaitamaFlurry = false;
+                car._flurryAccumulatedDamage = 0;
+              }
             });
           }
           this.isFlurrying = false;
