@@ -295,6 +295,7 @@ export const CONFIG = {
     zoomSmoothing: 0.05,               // Zoom interpolation smoothing
     minDist: 80,                       // Combat distance for maxZoom
     maxDist: 420,                      // Combat distance for minZoom
+    anchorBottomHudToArena: false,     // When camera tracking is enabled, keep bottom HUD screen-locked (do not anchor to arena)
   },
   canvasWidth: 540,                 // Logical width of the game screen
   canvasHeight: 960,                 // Logical height of the game screen (standard 9:16 portrait)
@@ -308,8 +309,8 @@ export const CONFIG = {
   arenaOuterBgColor: '#ffffffff',      // Background color of the container area outside the arena (under HUD and sides)
   arenaInnerBgColor: '#ffffffff',      // Background color inside the arena boundaries
   lightCanvasBgColor: '#f4f4f4ff',
-  lightArenaOuterBgColor: '#fcfcfcff',
-  lightArenaInnerBgColor: '#fbfcfdff',
+  lightArenaOuterBgColor: '#ffffffff',
+  lightArenaInnerBgColor: '#ffffffff',
   darkArenaOuterBgColor: '#000000ff',  // Dark mode arena outer background color (defaults to #000000)
   darkArenaInnerBgColor: '#000000ff',  // Dark mode arena inner background color (defaults to #000000)
   darkCanvasBgColor: '#000000ff',      // Dark mode canvas background color (defaults to #000000)

@@ -16,6 +16,7 @@ import { applyDamageToTarget } from '../../fighter.js';
 import { spawnBloodEffect, spawnFatalBloodSplash } from '../../../graphics/particles/bloodEffect.js';
 import { spawnSparks, spawnImpactFlash, spawnMeleeClashShockwave, spawnMahitoClawScratchImpact, spawnMahitoSoulExplosion, spawnMahitoDomainSoulTendrilStrike, spawnMahitoSoulBubbles } from '../../../graphics/particles/sparkEffect.js';
 import { audioSystem } from '../../../systems/audioSystem.js';
+import { stopFighterVoice } from '../../../systems/soundSystem.js';
 import { projectileSystem } from '../../../systems/projectileSystem.js';
 import { pushTrailCap } from '../../../graphics/particles/visualTrailSystem.js';
 
@@ -194,7 +195,9 @@ export function executeIdleTransfigurationStrike(fighter, targetHint = null) {
     const { entity: ent, angle: targetAngle } = validHits[i];
 
     // 1. Apply Base Damage
-    applyDamageToTarget(ent, baseDamage, fighter, { isMelee: true, isBasicAttack: true });
+    const prevHp = ent.hp;
+    const hitSuccess = applyDamageToTarget(ent, baseDamage, fighter, { isMelee: true, isBasicAttack: true });
+    const actuallyDamaged = hitSuccess !== false && (ent.hp < prevHp);
 
     // 2. Physical Knockback Impulse
     const baseKb = cfg.knockbackForce || 8;
@@ -214,7 +217,7 @@ export function executeIdleTransfigurationStrike(fighter, targetHint = null) {
     // 4. Blood & Claw Scratch Impact Visuals
     const impactX = ent.x;
     const impactY = ent.y;
-    if (typeof spawnBloodEffect === 'function') {
+    if (actuallyDamaged && typeof spawnBloodEffect === 'function') {
       spawnBloodEffect(ent, Math.max(1, Math.round(baseDamage * 0.2)), targetAngle);
     }
     spawnMahitoClawScratchImpact(impactX, impactY, targetAngle, isTransformed);
@@ -224,8 +227,10 @@ export function executeIdleTransfigurationStrike(fighter, targetHint = null) {
       spawnImpactFlash(ent.x, ent.y, 45, '#D946EF');
     }
 
-    // 5. Soul Disfigurement Mechanic
-    applySoulDisfigurementStack(ent, fighter);
+    // 5. Soul Disfigurement Mechanic: Gated strictly to actual enemy damage
+    if (actuallyDamaged) {
+      applySoulDisfigurementStack(ent, fighter);
+    }
   }
 
   // If inside domain and no enemy was caught in frontal cone, still reach towards primaryTarget
@@ -324,8 +329,32 @@ export function triggerMahitoParalyzeExplosion(entity) {
   }
 }
 
-export function applySoulDisfigurementStack(ent, fighter) {
+export function applySoulDisfigurementStack(ent, fighter, damageDealt = undefined) {
+  if (!ent || ent.isDead || (ent.hp || 0) <= 0) return;
+  if (ent.immuneToSoulDisfigurement) return;
+  if (damageDealt !== undefined && damageDealt <= 0) return;
   if (fighter && typeof fighter.isSkillEnabled === 'function' && !fighter.isSkillEnabled(CONFIG.mahito?.soulDisfigurement?.enableSoulDisfigurement, true)) return;
+
+  // Guard against active Limitless Infinity barrier (Rule 1.7)
+  if (typeof ent.hasActiveInfinity === 'function' && ent.hasActiveInfinity()) {
+    return;
+  }
+
+  // Guard against invulnerable, invincible, or untargetable entities
+  if (
+    ent.isInvulnerable ||
+    ent.isInvincible ||
+    ent.invincible ||
+    ent.isUntargetable ||
+    ent.untargetable ||
+    ent.cannotBeTargeted ||
+    ent.isTargetable === false ||
+    (ent.invincibleTimer && ent.invincibleTimer > 0) ||
+    (ent.invincibilityTimer && ent.invincibilityTimer > 0)
+  ) {
+    return;
+  }
+
   if (ent.characterId === 'mahoraga' || ent.type === 'mahoraga') {
     if (ent.adaptedSoulDisfigurement) {
       // Immune to any debuff - no stacks, no paralyze!
@@ -806,11 +835,13 @@ export function updateMahitoFleshSurge(fighter) {
             hitAnyEnemy = true;
 
             // Apply True/Soul Damage & Hit Effects
-            applyDamageToTarget(ent, baseDamage, fighter, {
+            const prevHp = ent.hp;
+            const hitSuccess = applyDamageToTarget(ent, baseDamage, fighter, {
               isTrueDamage: false,
               isSoulDamage: true,
               isSkill: true
             });
+            const actuallyDamaged = hitSuccess !== false && (ent.hp < prevHp);
 
             // Physical upward/outward knockback
             const hitAngle = Math.atan2(ent.y - lp.peakY, ent.x - lp.peakX);
@@ -822,9 +853,11 @@ export function updateMahitoFleshSurge(fighter) {
               ent.applyHitStun(surgeCfg.hitStun || 12);
             }
 
-            // Apply Soul Disfigurement stack (+1 stack)
-            applySoulDisfigurementStack(ent, fighter);
-            spawnBloodEffect(ent, 8, hitAngle);
+            // Apply Soul Disfigurement stack (+1 stack): Gated strictly to actual enemy damage
+            if (actuallyDamaged) {
+              applySoulDisfigurementStack(ent, fighter);
+              spawnBloodEffect(ent, 8, hitAngle);
+            }
           }
         }
 
@@ -1039,7 +1072,9 @@ export function updateMahitoSoulPhaseSlip(fighter) {
       if (isTransformed) {
         slashDmg *= (cfg.transformation?.damageMultiplier ?? 1.25);
       }
-      applyDamageToTarget(target, slashDmg, fighter, { isMelee: true, isBasicAttack: true });
+      const prevHp = target.hp;
+      const hitSuccess = applyDamageToTarget(target, slashDmg, fighter, { isMelee: true, isBasicAttack: true });
+      const actuallyDamaged = hitSuccess !== false && (target.hp < prevHp);
 
       // 2. Hit-Stun & Knockback
       const stunDur = dashCfg.hitStunDuration || 14;
@@ -1057,13 +1092,15 @@ export function updateMahitoSoulPhaseSlip(fighter) {
       }
 
       // 3. Blood & 5-Blade Razor Claw Slash Laceration Impact Visuals
-      if (typeof spawnBloodEffect === 'function') {
+      if (actuallyDamaged && typeof spawnBloodEffect === 'function') {
         spawnBloodEffect(target, Math.max(2, Math.round(slashDmg * 0.25)), passAngle);
       }
       spawnMahitoClawScratchImpact(target.x, target.y, passAngle, isTransformed);
 
-      // 4. Soul Disfigurement Stacking
-      applySoulDisfigurementStack(target, fighter);
+      // 4. Soul Disfigurement Stacking: Gated strictly to actual enemy damage
+      if (actuallyDamaged) {
+        applySoulDisfigurementStack(target, fighter);
+      }
 
       // Audio & Impact Shake
       audioSystem.playSFX('Assets/Sound Effects/Attacks/fleshhit.mp3', 0.95);
@@ -1623,7 +1660,9 @@ export function updateMahitoMaceCannon(fighter) {
           // Primary Target Damage & Heavy Impact
           let impactDmg = cannonCfg.impactDamage || 22;
           if (isTransformed) impactDmg *= (cfg.transformation?.damageMultiplier ?? 1.25);
-          applyDamageToTarget(ent, impactDmg, fighter, { isMelee: true, isSkill: true });
+          const prevHp = ent.hp;
+          const hitSuccess = applyDamageToTarget(ent, impactDmg, fighter, { isMelee: true, isSkill: true });
+          const actuallyDamaged = hitSuccess !== false && (ent.hp < prevHp);
 
           const hitAngle = Math.atan2(ent.y - impactY, ent.x - impactX) || data.angle;
           const kb = (cannonCfg.knockbackForce || 13) * (isTransformed ? 1.4 : 1.0);
@@ -1634,39 +1673,41 @@ export function updateMahitoMaceCannon(fighter) {
             ent.applyHitStun(18);
           }
 
-          if (typeof spawnBloodEffect === 'function') {
+          if (actuallyDamaged && typeof spawnBloodEffect === 'function') {
             spawnBloodEffect(ent, Math.max(3, Math.round(impactDmg * 0.25)), hitAngle);
           }
 
           // Attach 4 randomized embedded bone spikes across and inside enemy body
-          ent._embeddedMahitoSpikes = ent._embeddedMahitoSpikes || [];
-          const numToAttach = 4;
-          for (let p = 0; p < numToAttach; p++) {
-            if (ent._embeddedMahitoSpikes.length >= 8) break;
-            const bodyR = ent.r || 25;
-            // Fully randomized distribution in 2D body disk (inside core and outer contours)
-            const randAng = Math.random() * Math.PI * 2;
-            const randDist = Math.sqrt(Math.random()) * (bodyR * 0.90);
-            const randPiercingAng = Math.random() * Math.PI * 2; // Organic randomized piercing angle
-            const randLen = (isTransformed ? 26 : 20) * (0.75 + Math.random() * 0.55);
-            const randW = (isTransformed ? 6.2 : 4.8) * (0.80 + Math.random() * 0.40);
-            const penetrationDepth = 0.20 + Math.random() * 0.55;
+          if (actuallyDamaged) {
+            ent._embeddedMahitoSpikes = ent._embeddedMahitoSpikes || [];
+            const numToAttach = 4;
+            for (let p = 0; p < numToAttach; p++) {
+              if (ent._embeddedMahitoSpikes.length >= 8) break;
+              const bodyR = ent.r || 25;
+              // Fully randomized distribution in 2D body disk (inside core and outer contours)
+              const randAng = Math.random() * Math.PI * 2;
+              const randDist = Math.sqrt(Math.random()) * (bodyR * 0.90);
+              const randPiercingAng = Math.random() * Math.PI * 2; // Organic randomized piercing angle
+              const randLen = (isTransformed ? 26 : 20) * (0.75 + Math.random() * 0.55);
+              const randW = (isTransformed ? 6.2 : 4.8) * (0.80 + Math.random() * 0.40);
+              const penetrationDepth = 0.20 + Math.random() * 0.55;
 
-            ent._embeddedMahitoSpikes.push({
-              relX: Math.cos(randAng) * randDist,
-              relY: Math.sin(randAng) * randDist,
-              angle: randPiercingAng,
-              length: randLen,
-              width: randW,
-              penetrationDepth,
-              isTransformed: Boolean(isTransformed),
-              duration: 180, // 3 full seconds
-              maxDuration: 180
-            });
+              ent._embeddedMahitoSpikes.push({
+                relX: Math.cos(randAng) * randDist,
+                relY: Math.sin(randAng) * randDist,
+                angle: randPiercingAng,
+                length: randLen,
+                width: randW,
+                penetrationDepth,
+                isTransformed: Boolean(isTransformed),
+                duration: 180, // 3 full seconds
+                maxDuration: 180
+              });
+            }
+
+            // Stacks Soul Disfigurement: Gated strictly to actual enemy damage
+            applySoulDisfigurementStack(ent, fighter);
           }
-
-          // Stacks Soul Disfigurement
-          applySoulDisfigurementStack(ent, fighter);
         }
       }
     }
@@ -2136,7 +2177,9 @@ export function updateMahitoTwinScissor(fighter) {
             if (isGojoInfinity) continue;
             let dmg = scissorCfg.damage || 24;
             if (isTransformed) dmg *= (cfg.transformation?.damageMultiplier ?? 1.25);
-            applyDamageToTarget(ent, dmg, fighter, { isMelee: true, isSkill: true });
+            const prevHp = ent.hp;
+            const hitSuccess = applyDamageToTarget(ent, dmg, fighter, { isMelee: true, isSkill: true });
+            const actuallyDamaged = hitSuccess !== false && (ent.hp < prevHp);
 
             // Inward Hook Pull: Pull the target towards Mahito (caster) instead of knocking them away
             const angleToCaster = Math.atan2(fighter.y - ent.y, fighter.x - ent.x);
@@ -2161,12 +2204,14 @@ export function updateMahitoTwinScissor(fighter) {
 
             spawnFloatingText(ent.x, ent.y - ent.r - 18, "STUNNED!", "#C026D3");
 
-            if (typeof spawnBloodEffect === 'function') {
+            if (actuallyDamaged && typeof spawnBloodEffect === 'function') {
               spawnBloodEffect(ent, 8, data.angle);
             }
 
-            // Stacks Soul Disfigurement
-            applySoulDisfigurementStack(ent, fighter);
+            // Stacks Soul Disfigurement: Gated strictly to actual enemy damage
+            if (actuallyDamaged) {
+              applySoulDisfigurementStack(ent, fighter);
+            }
           }
         }
       }
@@ -2564,16 +2609,18 @@ export function updateMahitoDomainExpansion(fighter) {
 
   // Channeling Phase
   if (fighter.domainChargeTimer > 0) {
+    // Interruption conditions: fatal damage, death, ambush, silence, or interrupted channeling
+    if (fighter.hp <= 0 || fighter.isDead || fighter.dead || fighter._hasDied || fighter.isTargetOfAmbush || (fighter.silenceTimer || 0) > 0 || !fighter.isChannelingDomainExpansion) {
+      fighter.domainChargeTimer = 0;
+      fighter.isChannelingDomainExpansion = false;
+      if (typeof stopFighterVoice === 'function') {
+        stopFighterVoice(fighter.characterId || 'mahito', 60, true);
+      }
+      return;
+    }
     fighter.domainChargeTimer--;
     if (typeof fighter.clearAllAfterimages === 'function') fighter.clearAllAfterimages();
     else if (fighter.afterImages) fighter.afterImages.length = 0;
-
-    // Domain Expansion Hyper Armor: only Toji can interrupt (or death)
-    if (fighter.hp <= 0 || fighter.isDead || fighter.isTargetOfAmbush || (fighter.silenceTimer || 0) > 0) {
-      fighter.domainChargeTimer = 0;
-      fighter.isChannelingDomainExpansion = false;
-      return;
-    }
 
     // Smooth Periodic Arena Rumble while Channeling (Builds up towards deployment)
     const chargeProgress = 1.0 - (fighter.domainChargeTimer / (fighter.domainChargeMax || 120));

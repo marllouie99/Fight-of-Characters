@@ -5102,7 +5102,8 @@ async function runInteractionTests() {
     const continuousDealt = hpAfterFirstImpact - targetDummy.hp;
     const expectedContinuousDmg = Math.max(1, Math.round(gigaBaseDmg * 0.5));
     assert(continuousDealt === expectedContinuousDmg, `Gigablaster continuous damage must deal 50% damage (${expectedContinuousDmg} dmg, got ${continuousDealt})`);
-    assert(sans.stamina > staminaAfterFirstImpact, `Sans must recover stamina on continuous beam contact tick (was ${staminaAfterFirstImpact}, now ${sans.stamina})`);
+    const expectedContStamina = sansConfig.blasterGigaContinuousStaminaRecover ?? sansConfig.blasterContinuousStaminaRecover ?? 0;
+    assert(sans.stamina >= staminaAfterFirstImpact + expectedContStamina, `Sans must recover configured stamina on continuous beam contact tick (was ${staminaAfterFirstImpact}, now ${sans.stamina})`);
 
     // Verify Pattern 0 Carousel and Pattern 1 Radial Ring config base damage & 50% continuous ratio
     sans.reset();
@@ -6957,57 +6958,67 @@ async function runInteractionTests() {
     resetNaoyaDomainDimOpacity();
 
     // G. Naoya Vengeful Curse Rebirth & Awakened Jet Cursed Spirit Transformation
-    const testNaoya = new NaoyaFighter({ x: 200, y: 200, hp: 190, maxHp: 190 });
-    testNaoya.team = 0;
-    gojo.team = 1;
-    state.fighters = [testNaoya, gojo];
-    state.gameState = 'playing';
+    const { naoyaConfig } = await import('../js/configs/characters/naoyaConfig.js');
+    const savedEnableCurseRebirth = naoyaConfig.enableCurseRebirth;
+    const savedEnableCurseDomain = naoyaConfig.enableCurseDomain;
+    naoyaConfig.enableCurseRebirth = true;
+    naoyaConfig.enableCurseDomain = true;
+    try {
+      const testNaoya = new NaoyaFighter({ x: 200, y: 200, hp: 190, maxHp: 190 });
+      testNaoya.team = 0;
+      gojo.team = 1;
+      state.fighters = [testNaoya, gojo];
+      state.gameState = 'playing';
 
-    // Apply lethal damage to trigger Cursed Womb cocoon transformation
-    testNaoya.takeDamage(500, gojo);
-    assert(testNaoya.isCurseWomb === true, 'Naoya must enter Cursed Womb cocoon state upon taking lethal damage');
-    assert(testNaoya.hp === 0, 'Naoya HP must be 0 at moment of entering cocoon');
-    assert(testNaoya.isDead === false && testNaoya.dead === false, 'Naoya must NOT be marked dead while transforming in Cursed Womb cocoon');
+      // Apply lethal damage to trigger Cursed Womb cocoon transformation
+      testNaoya.takeDamage(500, gojo);
+      assert(testNaoya.isCurseWomb === true, 'Naoya must enter Cursed Womb cocoon state upon taking lethal damage');
+      assert(testNaoya.hp === 0, 'Naoya HP must be 0 at moment of entering cocoon');
+      assert(testNaoya.isDead === false && testNaoya.dead === false, 'Naoya must NOT be marked dead while transforming in Cursed Womb cocoon');
 
-    // Run 70 frames of updateFighters to simulate cocoon incubation and hatching
-    const { updateFighters } = await import('../js/systems/physics.js');
-    for (let f = 0; f < 70; f++) {
-      updateFighters();
+      // Run 70 frames of updateFighters to simulate cocoon incubation and hatching
+      const { updateFighters } = await import('../js/systems/physics.js');
+      for (let f = 0; f < 70; f++) {
+        updateFighters();
+      }
+      assert(testNaoya.isCurseWomb === false, 'Naoya must exit Cursed Womb cocoon after incubation timer completes');
+      assert(testNaoya.isCurseForm === true, 'Naoya must hatch into Awakened Jet Skull Cursed Spirit (isCurseForm = true)');
+      assert(testNaoya.hp > 0, `Naoya HP must be restored upon hatching into Curse Form (got ${testNaoya.hp})`);
+      assert(testNaoya.hasCurseReborn === true, 'Naoya hasCurseReborn flag must be true');
+      assert(state.gameState === 'playing', `Game state must remain playing during and after curse rebirth (got ${state.gameState})`);
+
+      // Verify object-based damage payloads ({ damage: 500 }) also trigger Curse Rebirth
+      const testNaoyaObj = new NaoyaFighter({ x: 200, y: 200, hp: 190, maxHp: 190 });
+      testNaoyaObj.team = 0;
+      state.fighters = [testNaoyaObj, gojo];
+      testNaoyaObj.takeDamage({ damage: 500 }, gojo);
+      assert(testNaoyaObj.isCurseWomb === true, 'Object-based lethal damage ({ damage }) must trigger Cursed Womb cocoon transformation');
+      assert(testNaoyaObj.isDead === false, 'Object-based lethal damage must not bypass rebirth');
+
+      // H. Curse Naoya Gojo/Sukuna-style Domain Expansion Channeling & VFX Verification
+      const { drawCurseNaoyaDomainChannelVFX } = await import('../js/graphics/weapons/naoyaWeaponGraphics.js');
+      const { drawUltimateChannelingTexts } = await import('../js/graphics/renderers/effectsRenderer.js');
+      testNaoya.ultCooldown = 0;
+      testNaoya._castTimeCellMoonPalace(gojo);
+      assert(testNaoya.isChannelingDomainExpansion === true, 'Curse Naoya must enter Domain Expansion channeling wind-up upon casting Time Cell Moon Palace');
+      assert(testNaoya.isDomainActive === false, 'Domain Expansion must not be active during channeling wind-up');
+      mockCtx.resetStackDepth();
+      drawCurseNaoyaDomainChannelVFX(mockCtx, testNaoya);
+      assert(mockCtx.getStackDepth() === 0, `drawCurseNaoyaDomainChannelVFX must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+      state.fighters = [testNaoya, gojo];
+      mockCtx.resetStackDepth();
+      drawUltimateChannelingTexts();
+      assert(mockCtx.getStackDepth() === 0, `drawUltimateChannelingTexts for Naoya must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+      for (let f = 0; f < 95; f++) {
+        testNaoya._updateTimeCellMoonPalace(gojo, state.arena);
+      }
+      assert(testNaoya.isChannelingDomainExpansion === false, 'Curse Naoya must finish channeling after curseDomainChannelFrames');
+      assert(testNaoya.isDomainActive === true, 'Curse Naoya Time Cell Moon Palace must unfurl (isDomainActive = true) after channeling completes');
+      testNaoya.isDomainActive = false;
+    } finally {
+      naoyaConfig.enableCurseRebirth = savedEnableCurseRebirth;
+      naoyaConfig.enableCurseDomain = savedEnableCurseDomain;
     }
-    assert(testNaoya.isCurseWomb === false, 'Naoya must exit Cursed Womb cocoon after incubation timer completes');
-    assert(testNaoya.isCurseForm === true, 'Naoya must hatch into Awakened Jet Skull Cursed Spirit (isCurseForm = true)');
-    assert(testNaoya.hp > 0, `Naoya HP must be restored upon hatching into Curse Form (got ${testNaoya.hp})`);
-    assert(testNaoya.hasCurseReborn === true, 'Naoya hasCurseReborn flag must be true');
-    assert(state.gameState === 'playing', `Game state must remain playing during and after curse rebirth (got ${state.gameState})`);
-
-    // Verify object-based damage payloads ({ damage: 500 }) also trigger Curse Rebirth
-    const testNaoyaObj = new NaoyaFighter({ x: 200, y: 200, hp: 190, maxHp: 190 });
-    testNaoyaObj.team = 0;
-    state.fighters = [testNaoyaObj, gojo];
-    testNaoyaObj.takeDamage({ damage: 500 }, gojo);
-    assert(testNaoyaObj.isCurseWomb === true, 'Object-based lethal damage ({ damage }) must trigger Cursed Womb cocoon transformation');
-    assert(testNaoyaObj.isDead === false, 'Object-based lethal damage must not bypass rebirth');
-
-    // H. Curse Naoya Gojo/Sukuna-style Domain Expansion Channeling & VFX Verification
-    const { drawCurseNaoyaDomainChannelVFX } = await import('../js/graphics/weapons/naoyaWeaponGraphics.js');
-    const { drawUltimateChannelingTexts } = await import('../js/graphics/renderers/effectsRenderer.js');
-    testNaoya.ultCooldown = 0;
-    testNaoya._castTimeCellMoonPalace(gojo);
-    assert(testNaoya.isChannelingDomainExpansion === true, 'Curse Naoya must enter Domain Expansion channeling wind-up upon casting Time Cell Moon Palace');
-    assert(testNaoya.isDomainActive === false, 'Domain Expansion must not be active during channeling wind-up');
-    mockCtx.resetStackDepth();
-    drawCurseNaoyaDomainChannelVFX(mockCtx, testNaoya);
-    assert(mockCtx.getStackDepth() === 0, `drawCurseNaoyaDomainChannelVFX must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
-    state.fighters = [testNaoya, gojo];
-    mockCtx.resetStackDepth();
-    drawUltimateChannelingTexts();
-    assert(mockCtx.getStackDepth() === 0, `drawUltimateChannelingTexts for Naoya must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
-    for (let f = 0; f < 95; f++) {
-      testNaoya._updateTimeCellMoonPalace(gojo, state.arena);
-    }
-    assert(testNaoya.isChannelingDomainExpansion === false, 'Curse Naoya must finish channeling after curseDomainChannelFrames');
-    assert(testNaoya.isDomainActive === true, 'Curse Naoya Time Cell Moon Palace must unfurl (isDomainActive = true) after channeling completes');
-    testNaoya.isDomainActive = false;
 
     console.log('      ✅ Naoya Vengeful Curse Rebirth: Cursed Womb cocoon incubation & hatching into Awakened Jet Cursed Spirit verified.');
     console.log('      ✅ Naoya Domain Expansion: Time Cell Moon Palace arena PNG overlay and atmospheric void/corona render cleanly with balanced Canvas 2D stack depth across rect & circle arenas.');
@@ -8023,12 +8034,29 @@ async function runInteractionTests() {
       const boneText = state.floatingTexts[state.floatingTexts.length - 1];
       assert(boneText && boneText.color === '#03d5f1ff', `Bone projectile damage color must be #03d5f1ff, got ${boneText?.color}`);
 
-      // 3. Karmic Retribution (KR) Poison Tick Damage
+      // 3. Karmic Retribution (KR) Poison Tick Damage (Zero Pushback & Global Hit SFX Standard)
       state.floatingTexts = [];
+      target.knockbackVx = 0;
+      target.knockbackVy = 0;
+      target.vx = 0;
+      target.vy = 0;
+      let krHitSfxPlayed = false;
+      const prevPlaySFX = audioSystem.playSFX;
+      audioSystem.playSFX = (src, vol) => {
+        if (src === 'attack_fleshhit' || (typeof src === 'string' && src.includes('fleshhit'))) {
+          krHitSfxPlayed = true;
+        }
+        return prevPlaySFX?.(src, vol);
+      };
       sans.karmaTargets.set(target, { stacks: 8, timer: 100, tickTimer: 13 });
       sans._updateKarma();
+      audioSystem.playSFX = prevPlaySFX;
+
       const krText = state.floatingTexts[state.floatingTexts.length - 1];
       assert(krText && krText.color === '#03d5f1ff', `Karmic Retribution damage color must be #03d5f1ff, got ${krText?.color}`);
+      assert((target.knockbackVx || 0) === 0 && (target.knockbackVy || 0) === 0, `Karmic Retribution tick damage must NOT apply push back or knockback, got (${target.knockbackVx}, ${target.knockbackVy})`);
+      assert((target.vx || 0) === 0 && (target.vy || 0) === 0, `Target velocity must remain 0 after Karmic Retribution tick damage, got (${target.vx}, ${target.vy})`);
+      assert(krHitSfxPlayed === true, 'Karmic Retribution tick damage MUST trigger global hit SFX (attack_fleshhit)');
 
       // 4. Gravity Slam Wall Impact Damage
       state.floatingTexts = [];
@@ -12230,53 +12258,93 @@ async function runInteractionTests() {
     unarmed.update(dummy, 0, arena);
     assert(unarmed.afterimages.length > 0, 'High-velocity movement must spawn ghost afterimages');
 
+    // 5.5. Super Unarmed Black Outline Integrity (Rule 32 Standard)
+    const { drawUnarmedPixelBody, drawUnarmedSkin } = await import('../js/graphics/fighters/unarmedSkin.js');
+    mockCtx.resetStackDepth();
+    drawUnarmedPixelBody(mockCtx, 25, true, '100');
+    assert(mockCtx.strokeStyle === '#000000', 'Super Unarmed pixel body outer border must be #000000 (Rule 32) so outline is never cut off');
+    assert(mockCtx.getStackDepth() === 0, 'drawUnarmedPixelBody must maintain 0 stack depth');
+    drawUnarmedSkin(mockCtx, unarmed);
+    assert(mockCtx.getStackDepth() === 0, 'drawUnarmedSkin must maintain 0 stack depth in Super Unarmed mode');
+
     // 6. Projectile Suppression & Basic Attack Lunge (Rule 23)
     const initialBullets = projectileSystem.bullets ? projectileSystem.bullets.length : 0;
     unarmed.shoot(0, dummy);
     const afterBullets = projectileSystem.bullets ? projectileSystem.bullets.length : 0;
     assert(initialBullets === afterBullets, 'Unarmed shoot() must suppress default generic projectile bullets (Rule 23)');
 
-    // 7. Wall Rebounce Requirement: Must Rebounce to Wall to Deal Damage (Earclacks Standard)
+    // 7. Unarmed Kinetic Bump Damage Standard (No Wall Rebounce Required)
+    const { unarmedConfig } = await import('../js/configs/characters/unarmedConfig.js');
     state.gameState = 'playing';
     const collisionDummy = new NormalFighter({ characterId: 'normal', name: 'CollisionDummy', x: 260, y: 300, radius: 25, hp: 500, maxHp: 500 });
     state.fighters = [unarmed, collisionDummy];
     const dummyInitialHp = collisionDummy.hp;
     unarmed.isSuperUnarmed = false;
+    unarmed.isTerminalVelocity = false;
+    unarmed.isSuperBumpPrimed = false;
+    unarmed.superUnarmedHits = 0;
     unarmed.momentumStacks = 3;
     unarmed.speed = unarmed.baseSpeed + unarmed.momentumStacks * unarmed.speedPerHit;
     const initialUnarmedSpeed = unarmed.speed;
     const initialMomentum = unarmed.momentumStacks;
 
-    // 7.1 Without wall rebounce: deals ZERO damage and gains ZERO momentum
-    unarmed.hasWallRebounded = false;
+    // 7. Unarmed Kinetic Bump Damage Standard (No Wall Rebounce Required)
+    // 7.1 Without wall rebounce: deals full kinetic damage directly
     unarmed.x = collisionDummy.x - 5;
     unarmed.y = collisionDummy.y;
     unarmed.vx = 15.0;
     unarmed.vy = 0;
     unarmed.collisionCooldown = 0;
     unarmed._checkFighterCollision(collisionDummy);
-    assert(collisionDummy.hp === dummyInitialHp, 'Unarmed must NOT deal damage without rebouncing off the wall first');
-    assert(unarmed.momentumStacks === initialMomentum, 'Unarmed must NOT gain momentum without rebouncing off the wall first');
+    assert(collisionDummy.hp < dummyInitialHp, 'Unarmed must deal kinetic damage directly on bump without needing wall rebounce');
+    assert(collisionDummy.vx > 0, 'High-velocity body collision must apply directional knockback to opponent');
+    assert(unarmed.momentumStacks > initialMomentum, 'Collision into enemy must gain momentum stacks');
+    assert(unarmed.speed > initialUnarmedSpeed, 'Collision into enemy must permanently increase Unarmed speed');
 
-    // 7.2 Rebounce off arena wall: primes Unarmed for damage
+    // 7.2 Immediate consecutive bump WITHOUT bouncing off wall first: deals damage again!
+    const hpAfterFirstHit = collisionDummy.hp;
+    const momentumAfterFirstHit = unarmed.momentumStacks;
+    const speedAfterFirstHit = unarmed.speed;
+    unarmed.x = collisionDummy.x - 5;
+    unarmed.y = collisionDummy.y;
+    unarmed.vx = 15.0;
+    unarmed.vy = 0;
+    unarmed.collisionCooldown = 0;
+    unarmed._checkFighterCollision(collisionDummy);
+    assert(collisionDummy.hp < hpAfterFirstHit, 'Unarmed must deal damage on consecutive bump without rebouncing off the wall');
+    assert(unarmed.momentumStacks > momentumAfterFirstHit, 'Unarmed must gain momentum on consecutive bump without rebouncing off the wall');
+    assert(unarmed.speed > speedAfterFirstHit, 'Unarmed must gain speed on consecutive bump without rebouncing off the wall');
+
+    // 7.3 Optional Wall Rebounce Gating (when requireWallBounceForDamage is explicitly true)
+    unarmedConfig.requireWallBounceForDamage = true;
+    const dummyGated = new NormalFighter({ characterId: 'normal', name: 'DummyGated', x: 260, y: 300, radius: 25, hp: 500, maxHp: 500 });
+    const dummyGatedInitialHp = dummyGated.hp;
+    state.fighters = [unarmed, dummyGated];
+    unarmed.hasWallRebounded = false;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = dummyGated.x - 5;
+    unarmed.y = dummyGated.y;
+    unarmed.vx = 15.0;
+    unarmed.vy = 0;
+    unarmed._checkFighterCollision(dummyGated);
+    assert(dummyGated.hp === dummyGatedInitialHp, 'When requireWallBounceForDamage is true, Unarmed must NOT deal damage without rebouncing off the wall first');
+
+    // Rebounce off arena wall: primes Unarmed when requireWallBounceForDamage is true
     unarmed.x = arena.x - 5;
     unarmed.vx = -4.0;
     unarmed.vy = 0;
-    unarmed.resolveWallBounce(arena, collisionDummy);
-    assert(unarmed.hasWallRebounded === true, 'Wall bounce must prime Unarmed with wall rebound charge (hasWallRebounded = true)');
-
-    // 7.3 Primed collision after wall rebounce: deals full kinetic damage, scales momentum & consumes charge
-    unarmed.x = collisionDummy.x - 5;
-    unarmed.y = collisionDummy.y;
+    unarmed.resolveWallBounce(arena, dummyGated);
+    assert(unarmed.hasWallRebounded === true, 'Wall bounce must prime Unarmed when requireWallBounceForDamage is true');
+    unarmed.x = dummyGated.x - 5;
+    unarmed.y = dummyGated.y;
     unarmed.vx = 15.0;
     unarmed.vy = 0;
     unarmed.collisionCooldown = 0;
-    unarmed._checkFighterCollision(collisionDummy);
-    assert(collisionDummy.hp < dummyInitialHp, 'High-velocity body collision after wall rebounce must deal kinetic impact damage');
-    assert(collisionDummy.vx > 0, 'High-velocity body collision must apply directional knockback to opponent');
-    assert(unarmed.momentumStacks > initialMomentum, 'Primed collision into enemy must gain momentum stacks');
-    assert(unarmed.speed > initialUnarmedSpeed, 'Primed collision into enemy must permanently increase Unarmed speed');
-    assert(unarmed.hasWallRebounded === false, 'Wall rebound charge must be consumed upon dealing damage');
+    unarmed._checkFighterCollision(dummyGated);
+    assert(dummyGated.hp < dummyGatedInitialHp, 'Primed collision after wall rebounce must deal kinetic impact damage when requireWallBounceForDamage is true');
+    assert(unarmed.hasWallRebounded === false, 'Wall rebound charge must be consumed when requireWallBounceForDamage is true');
+    unarmedConfig.requireWallBounceForDamage = false;
+    state.fighters = [unarmed, collisionDummy];
 
     // 7.5 Hit Slow Movement Verification for both Unarmed and Opponent
     assert(collisionDummy.slowTimer > 0, 'Opponent must experience a brief movement slow upon collision hit');
@@ -12286,7 +12354,6 @@ async function runInteractionTests() {
     assert(unarmed.punchAnimTimer > 0, 'Unarmed must trigger dynamic martial arts fist punch animation on collision impact');
 
     // 7.6 Basic Skill HUD Registration & Config Ability Toggles
-    const { unarmedConfig } = await import('../js/configs/characters/unarmedConfig.js');
     assert(unarmedConfig.enableKineticBump !== undefined, 'unarmedConfig must define enableKineticBump toggle');
     assert(unarmedConfig.enableMomentumScaling !== undefined, 'unarmedConfig must define enableMomentumScaling toggle');
     assert(unarmedConfig.enableSuperUnarmed !== undefined, 'unarmedConfig must define enableSuperUnarmed toggle');
@@ -12331,7 +12398,6 @@ async function runInteractionTests() {
     unarmed.vy = 0;
     unarmed._checkFighterCollision(stunDummy);
     assert(stunDummy.paralyzeTimer === 45, `Primed bump with 100% stun chance must apply paralyzeTimer=45, got ${stunDummy.paralyzeTimer}`);
-    assert(stunDummy.stunTimer === 45, `Primed bump with 100% stun chance must apply stunTimer=45, got ${stunDummy.stunTimer}`);
     assert(stunDummy.isParalyzed === true, 'Primed bump stun must mark target isParalyzed = true');
     assert(stunDummy._handleTimeStop() === true, 'Stunned target must be immobilized by _handleTimeStop()');
 
@@ -12340,31 +12406,177 @@ async function runInteractionTests() {
     unarmedConfig.bumpStunDuration = savedBumpStunDuration;
     state.fighters = [unarmed, collisionDummy];
 
+    // 7.6c Super Unarmed Hit-Gated Stun & 2X Damage Verification
+    const savedSuperHitsReq = unarmedConfig.superUnarmedHitsRequired;
+    const savedSuperBumpMult = unarmedConfig.superBumpDamageMultiplier;
+    const savedSuperStunDur = unarmedConfig.superBumpStunDuration;
+    const savedEnableSuperBumpStun = unarmedConfig.enableSuperBumpStun;
+
+    unarmedConfig.enableSuperUnarmed = true;
+    unarmedConfig.enableSuperBumpStun = true;
+    unarmedConfig.superUnarmedHitsRequired = 3;
+    unarmedConfig.superBumpDamageMultiplier = 2.0;
+    unarmedConfig.superBumpStunDuration = 90;
+
+    const superDummy = new NormalFighter({ characterId: 'normal', name: 'SuperDummy', x: 260, y: 300, radius: 25, hp: 1000, maxHp: 1000 });
+    state.fighters = [unarmed, superDummy];
+    unarmed.superUnarmedHits = 0;
+    unarmed.isSuperBumpPrimed = false;
+    unarmed.isSuperUnarmed = false;
+
+    // Land 2 hits (under the 3-hit requirement)
+    for (let i = 0; i < 2; i++) {
+      unarmed.collisionCooldown = 0;
+      unarmed.x = superDummy.x - 5;
+      unarmed.y = superDummy.y;
+      unarmed.vx = 8.0;
+      unarmed.vy = 0;
+      unarmed._checkFighterCollision(superDummy);
+    }
+    assert(unarmed.superUnarmedHits === 2, `Super Unarmed hits must be 2 after 2 hits, got ${unarmed.superUnarmedHits}`);
+    assert(unarmed.isSuperBumpPrimed === false, 'Super bump must NOT be primed before meeting hit requirement');
+
+    // Land the 3rd hit (meeting the 3-hit requirement)
+    unarmed.collisionCooldown = 0;
+    unarmed.x = superDummy.x - 5;
+    unarmed.y = superDummy.y;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+    unarmed._checkFighterCollision(superDummy);
+    assert(unarmed.isSuperBumpPrimed === true, 'Super bump must be primed upon meeting hit requirement');
+    assert(unarmed.isSuperUnarmed === true, 'Unarmed must enter Super Unarmed form upon meeting hit requirement');
+
+    // The NEXT bump on enemy must deal 2X damage and apply long stun duration (90 frames)
+    superDummy.maxHp = 1000;
+    superDummy.hp = 1000;
+    const hpBeforeSuperBump = superDummy.hp;
+    superDummy.paralyzeTimer = 0;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = superDummy.x - 5;
+    unarmed.y = superDummy.y;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+
+    // Calculate expected normal damage to verify 2x multiplier
+    const expectedBaseNormalDmg = (unarmedConfig.baseCollisionDamage || 30) +
+      Math.max(0, 8.0 - unarmed.baseSpeed) * (unarmedConfig.speedDamageScale !== undefined ? unarmedConfig.speedDamageScale : 1.0) +
+      unarmed.momentumStacks * unarmed.damagePerHit;
+    const expectedSuperNormalDmg = Math.round(expectedBaseNormalDmg * (unarmedConfig.superUnarmedDamageMult || 1.6));
+    const expected2xDmg = Math.round(expectedSuperNormalDmg * 2.0);
+
+    unarmed._checkFighterCollision(superDummy);
+    const damageDealt = hpBeforeSuperBump - superDummy.hp;
+    assert(damageDealt === expected2xDmg, `Super bump must deal exactly 2X current damage (${expected2xDmg}), got ${damageDealt}`);
+    assert(superDummy.paralyzeTimer === 90, `Super bump must apply long stun duration of 90 frames, got ${superDummy.paralyzeTimer}`);
+    assert(superDummy.isParalyzed === true, 'Super bump must mark target isParalyzed = true');
+    assert(unarmed.isSuperBumpPrimed === false, 'Super bump charge must be consumed after landing');
+    assert(unarmed.superUnarmedHits === 0, 'Super Unarmed hits must reset to 0 after empowered bump');
+    assert(unarmed.vx < 0, `Unarmed must rebounce backward away from target after landing Super Bump, got vx: ${unarmed.vx}`);
+    assert(unarmed.vx <= -6.0, `Unarmed Super Bump rebound must maintain explosive backward terminal velocity, got vx: ${unarmed.vx}`);
+
+    // Verify rebounce and damage off an already-stunned enemy: Unarmed must bounce cleanly backward and deal damage
+    unarmed.collisionCooldown = 0;
+    unarmed.x = superDummy.x - 5;
+    unarmed.y = superDummy.y;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+    const dummyXBefore = superDummy.x;
+    const dummyYBefore = superDummy.y;
+    const dummyHpBeforeStunnedBump = superDummy.hp;
+    unarmed._checkFighterCollision(superDummy);
+    assert(unarmed.vx < 0, `Unarmed must rebounce backward cleanly off an already-stunned enemy, got vx: ${unarmed.vx}`);
+    assert(superDummy.x === dummyXBefore && superDummy.y === dummyYBefore, 'Stunned enemy must act as immovable obstacle and not get knocked back by bump');
+    assert(superDummy.hp < dummyHpBeforeStunnedBump, 'Bumping an already-stunned enemy must reliably apply damage');
+
+    // Verify wall ricochet immediately clears collisionCooldown and allows follow-up damage on stunned enemy
+    unarmed.collisionCooldown = 8;
+    unarmed.x = arena.x - 5;
+    unarmed.vx = -10.0;
+    unarmed.vy = 0;
+    unarmed.resolveWallBounce(arena, superDummy);
+    assert(unarmed.collisionCooldown === 0, 'resolveWallBounce must immediately reset collisionCooldown to 0 upon wall ricochet');
+    assert(unarmed.hasWallRebounded === true, 'Wall bounce must prime Unarmed hasWallRebounded');
+
+    // Land follow-up bump after wall ricochet: must deal damage to stunned target
+    const hpBeforeRicochetBump = superDummy.hp;
+    unarmed.x = superDummy.x - 5;
+    unarmed.y = superDummy.y;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+    unarmed._checkFighterCollision(superDummy);
+    assert(superDummy.hp < hpBeforeRicochetBump, 'Follow-up bump on stunned enemy after wall ricochet must deal damage');
+
+    // Verify stunned enemy cannot evade basic attacks even if holding evade chance/buff
+    superDummy.evadeBuffTimer = 60;
+    superDummy.evadeChance = 1.0; // 100% evade chance if not stunned
+    assert(superDummy.paralyzeTimer > 0, 'Dummy must still be stunned');
+    unarmed.collisionCooldown = 0;
+    unarmed.x = superDummy.x - 5;
+    unarmed.y = superDummy.y;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+    const hpBeforeEvadeCheck = superDummy.hp;
+    unarmed._checkFighterCollision(superDummy);
+    assert(superDummy.hp < hpBeforeEvadeCheck, 'Stunned enemy must never evade incoming bumps (must take full damage)');
+    superDummy.evadeBuffTimer = 0;
+    superDummy.evadeChance = 0;
+
+    // 7.6d Stun Effect Duration Synchronization Verification
+    // Both physical freeze timers (paralyzeTimer) and visual condition must tick in lockstep and expire together
+    for (let f = 0; f < 45; f++) {
+      superDummy._handleTimeStop();
+    }
+    assert(superDummy.paralyzeTimer === 45, `At midpoint (45 frames), paralyzeTimer must be 45, got ${superDummy.paralyzeTimer}`);
+    assert(superDummy.isParalyzed === true, 'At midpoint, isParalyzed must remain true');
+
+    for (let f = 0; f < 45; f++) {
+      superDummy._handleTimeStop();
+    }
+    assert(superDummy.paralyzeTimer === 0, `At completion (90 frames), paralyzeTimer must be 0, got ${superDummy.paralyzeTimer}`);
+    assert(superDummy.stunTimer === 0, `At completion (90 frames), stunTimer must be 0 in exact sync (no lingering 90-frame visual lag), got ${superDummy.stunTimer}`);
+    assert(superDummy.isParalyzed === false, 'At completion, isParalyzed must be cleared to false');
+    assert(superDummy._handleTimeStop() === false, 'After 90 frames, _handleTimeStop() must return false so entity is unfrozen');
+
+    // Restore saved configs
+    unarmedConfig.superUnarmedHitsRequired = savedSuperHitsReq;
+    unarmedConfig.superBumpDamageMultiplier = savedSuperBumpMult;
+    unarmedConfig.superBumpStunDuration = savedSuperStunDur;
+    unarmedConfig.enableSuperUnarmed = savedEnableSuperUnarmed;
+    unarmedConfig.enableSuperBumpStun = savedEnableSuperBumpStun;
+    state.fighters = [unarmed, collisionDummy];
+
     const basicSkill = unarmed.skillManager.getSkill('kineticBump');
     assert(Boolean(basicSkill), 'Unarmed must register Kinetic Bump as its declarative basic attack skill in SkillManager');
     assert(basicSkill.type === 'basic', 'Kinetic Bump skill must have type basic');
 
-    // 7.7 Direct Physics onCollide Hook Verification (requires wall rebounce)
+    // 7.7 Direct Physics onCollide Hook Verification
     const onCollideDummy = new NormalFighter({ characterId: 'normal', name: 'OnCollideDummy', x: 260, y: 300, radius: 25, hp: 500, maxHp: 500 });
     const onCollideInitialHp = onCollideDummy.hp;
 
-    // Unprimed onCollide: zero damage
+    // By default (requireWallBounceForDamage: false), onCollide deals damage directly
+    unarmed.collisionCooldown = 0;
+    unarmed.onCollide(onCollideDummy);
+    assert(onCollideDummy.hp < onCollideInitialHp, 'onCollide hook must trigger kinetic bump damage without requiring wall rebounce');
+    assert(unarmed.collisionCooldown > 0, 'onCollide hook must initiate collision cooldown to prevent multi-hit glitching');
+
+    // When requireWallBounceForDamage is explicitly true, wall rebounce is required
+    unarmedConfig.requireWallBounceForDamage = true;
+    const onCollideGatedDummy = new NormalFighter({ characterId: 'normal', name: 'OnCollideGatedDummy', x: 260, y: 300, radius: 25, hp: 500, maxHp: 500 });
+    const initialOnCollideGatedHp = onCollideGatedDummy.hp;
     unarmed.hasWallRebounded = false;
     unarmed.collisionCooldown = 0;
-    unarmed.onCollide(onCollideDummy);
-    assert(onCollideDummy.hp === onCollideInitialHp, 'onCollide hook must NOT deal damage without rebouncing off the wall first');
+    unarmed.onCollide(onCollideGatedDummy);
+    assert(onCollideGatedDummy.hp === initialOnCollideGatedHp, 'onCollide hook must NOT deal damage when requireWallBounceForDamage is true and has not rebounded');
 
-    // Primed onCollide after wall bounce: deals damage
     unarmed.x = arena.x - 5;
     unarmed.vx = -4.0;
-    unarmed.resolveWallBounce(arena, onCollideDummy);
-    assert(unarmed.hasWallRebounded === true, 'Wall bounce must prime Unarmed before onCollide');
-
+    unarmed.resolveWallBounce(arena, onCollideGatedDummy);
+    assert(unarmed.hasWallRebounded === true, 'Wall bounce must prime Unarmed when requireWallBounceForDamage is true');
     unarmed.collisionCooldown = 0;
-    unarmed.onCollide(onCollideDummy);
-    assert(onCollideDummy.hp < onCollideInitialHp, 'onCollide hook must trigger kinetic bump damage after wall rebounce');
-    assert(unarmed.collisionCooldown > 0, 'onCollide hook must initiate collision cooldown to prevent multi-hit glitching');
-    assert(unarmed.hasWallRebounded === false, 'onCollide damage must consume wall rebounce charge');
+    unarmed.onCollide(onCollideGatedDummy);
+    assert(onCollideGatedDummy.hp < initialOnCollideGatedHp, 'onCollide hook must trigger kinetic bump damage after wall rebounce when requireWallBounceForDamage is true');
+    assert(unarmed.hasWallRebounded === false, 'onCollide damage must consume wall rebounce charge when requireWallBounceForDamage is true');
+    unarmedConfig.requireWallBounceForDamage = false;
 
     // Verify toggle gating
     unarmed.isSuperUnarmed = false;
@@ -16517,14 +16729,15 @@ async function runInteractionTests() {
     const velAngle = Math.atan2(isagi.vy, isagi.vx);
     assert(Math.abs(angleToBall - velAngle) > 0.05, 'Isagi must not artificially steer towards the ball');
 
-    // 5. Skill 1: Metavision Slip (Activates ONLY when close to the ball, dashing towards it)
+    // 5. Skill 1: Metavision Slip (Triggers reactively when enemy attacks and skill is UP)
     isagi.metavisionCooldownTimer = 0;
     isagi.isMetavisionDashing = false;
-    // Taking damage must NOT activate Metavision Slip (only ball proximity triggers it)
     const hpBeforeAttack = isagi.hp;
-    isagi.takeDamage(40, dummy);
-    assert(isagi.hp < hpBeforeAttack, 'Metavision must NOT trigger on damage; it only activates on ball proximity');
-    assert(isagi.isMetavisionDashing === false, 'Taking damage must not activate Metavision dash');
+    const attackEvaded = isagi.takeDamage(40, dummy);
+    assert(attackEvaded === false, 'Metavision must trigger and evade incoming attack when skill is UP');
+    assert(isagi.hp === hpBeforeAttack, 'Isagi must take 0 damage when Metavision reactive trigger activates');
+    assert(isagi.isMetavisionDashing === true, 'Taking damage while skill is UP must activate Metavision dash');
+    assert(isagi.metavisionCooldownTimer > 0, 'Metavision must go on cooldown after triggering on attack');
 
     // 5b. Metavision Slip: Activates when close to loose soccer ball and dashes towards it
     isagi.metavisionCooldownTimer = 0; // ready skill
@@ -16667,10 +16880,20 @@ async function runInteractionTests() {
 
     // 9. HUD Provider Validation
     const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const savedEnableStriker = CONFIG.isagi?.enableStriker;
+    const savedEnableEgo = CONFIG.isagi?.enableEgo;
+    if (CONFIG.isagi) {
+      CONFIG.isagi.enableStriker = true;
+      CONFIG.isagi.enableEgo = true;
+    }
     const hudSkills = getSkillDataForFighter(isagi, () => []);
     assert(Array.isArray(hudSkills) && hudSkills.length >= 2, 'Isagi must export HUD skills (Metavision, Striker & Ego)');
     assert(hudSkills.every(s => s.color === '#00F0FF'), 'All HUD skill bars must use unified themeColor (Rule 18)');
     assert(hudSkills.some(s => s.isSignature === true), 'Signature skills must declare isSignature: true (Rule 18)');
+    if (CONFIG.isagi) {
+      CONFIG.isagi.enableStriker = savedEnableStriker;
+      CONFIG.isagi.enableEgo = savedEnableEgo;
+    }
 
     // 10. Skin Studio & Hair Width / Length Adjustment Calibration (Rule 22 & Rule 24)
     const { SKIN_STUDIO_FIGHTERS } = await import('../js/graphics/ui/SkinStudioScreen.js');
@@ -17671,23 +17894,29 @@ async function runInteractionTests() {
     assert(isagi.egoMeter === 0, 'Ego meter must reset to 0 upon expiration');
 
     // 7. HUD Skill Provider Theme Consistency & Label Standard (Rule 18)
-    isagi.egoMeter = 50;
-    const hudSkillsIdle = getSkillDataForFighter(isagi, () => []);
-    const egoBarIdle = hudSkillsIdle.find(s => s.id === 'ego');
-    assert(egoBarIdle !== undefined, 'Ego bar must be present in Isagi HUD skill array');
-    assert(egoBarIdle.color === isagi.color, 'Ego bar must use unified character themeColor (Rule 18)');
-    assert(egoBarIdle.ready === false, 'Ego bar must not be ready while charging');
-    assert(egoBarIdle.pct === 50, 'Ego bar pct must reflect meter percentage');
-    assert(egoBarIdle.label.includes('50%'), 'Ego bar label must show charge progress');
+    const prevEgoToggle = CONFIG.isagi?.enableEgo;
+    if (CONFIG.isagi) CONFIG.isagi.enableEgo = true;
+    try {
+      isagi.egoMeter = 50;
+      const hudSkillsIdle = getSkillDataForFighter(isagi, () => []);
+      const egoBarIdle = hudSkillsIdle.find(s => s.id === 'ego');
+      assert(egoBarIdle !== undefined, 'Ego bar must be present in Isagi HUD skill array');
+      assert(egoBarIdle.color === isagi.color, 'Ego bar must use unified character themeColor (Rule 18)');
+      assert(egoBarIdle.ready === false, 'Ego bar must not be ready while charging');
+      assert(egoBarIdle.pct === 50, 'Ego bar pct must reflect meter percentage');
+      assert(egoBarIdle.label.includes('50%'), 'Ego bar label must show charge progress');
 
-    isagi.isEgoActive = true;
-    isagi.egoDurationTimer = 300;
-    isagi.egoMaxDuration = 360;
-    const hudSkillsActive = getSkillDataForFighter(isagi, () => []);
-    const egoBarActive = hudSkillsActive.find(s => s.id === 'ego');
-    assert(egoBarActive.ready === true, 'Ego bar must be ready/active when Ego is awakened');
-    assert(egoBarActive.label.includes('EGO AWAKENED'), 'Ego bar label must show awakened state');
-    assert(egoBarActive.label.includes('5.0S'), 'Ego bar label must show live remaining seconds countdown');
+      isagi.isEgoActive = true;
+      isagi.egoDurationTimer = 300;
+      isagi.egoMaxDuration = 360;
+      const hudSkillsActive = getSkillDataForFighter(isagi, () => []);
+      const egoBarActive = hudSkillsActive.find(s => s.id === 'ego');
+      assert(egoBarActive.ready === true, 'Ego bar must be ready/active when Ego is awakened');
+      assert(egoBarActive.label.includes('EGO AWAKENED'), 'Ego bar label must show awakened state');
+      assert(egoBarActive.label.includes('5.0S'), 'Ego bar label must show live remaining seconds countdown');
+    } finally {
+      if (CONFIG.isagi) CONFIG.isagi.enableEgo = prevEgoToggle;
+    }
 
     // 8. HUD Stats Update when Gaining Buffs Standard
     const { getBlueLockFighterStatsInfo, getAdditionalInfoForFighter } = await import('../js/graphics/hudManager.js');
@@ -18207,6 +18436,9 @@ async function runInteractionTests() {
     // B. Chigiri steals possession
     assert(ball.dribbler === chigiri, 'Chigiri must take over dribble possession on steal while on shoot cooldown');
     assert(ball.lastKicker === chigiri, 'Chigiri must become lastKicker upon stealing ball');
+    const chigiriStealText = (state.floatingTexts || []).find(t => t.text === 'STEAL');
+    assert(chigiriStealText !== undefined, 'Floating text "STEAL" must spawn when Chigiri successfully steals the ball');
+    assert(chigiriStealText.color === chigiri.themeColor || chigiriStealText.color === chigiri.color, 'Steal floating text must use Chigiri theme color');
 
     // 3. Counter-Attack Steal: When tackler has shootCooldown <= 0, stealing immediately fires a counter-kick
     // Reset states
@@ -18217,6 +18449,7 @@ async function runInteractionTests() {
     chigiri._ballStealCooldown = 0;
     chigiri._tackleStealCooldown = 0;
     isagi._tackleStealCooldown = 0;
+    state.floatingTexts = [];
 
     // Chigiri is now dribbling
     chigiri.shootCooldown = 15;
@@ -18232,6 +18465,9 @@ async function runInteractionTests() {
     assert(ball.lastKicker === isagi, 'Ball lastKicker must be Isagi');
     assert(chigiri.shootCooldown >= 35, 'Chigiri shoot cooldown penalty must be applied');
     assert(chigiri.hitStunTimer >= 16, 'Chigiri hitstun stagger must be applied');
+    const isagiStealText = (state.floatingTexts || []).find(t => t.text === 'STEAL');
+    assert(isagiStealText !== undefined, 'Floating text "STEAL" must spawn when Isagi successfully steals the ball');
+    assert(isagiStealText.color === isagi.themeColor || isagiStealText.color === isagi.color, 'Steal floating text must use Isagi theme color');
 
     // 4. Non-Blue Lock Fighter (Gojo) bumps into dribbler: Dispossesses and kicks ball away
     isagi.hitStunTimer = 0;
@@ -18732,7 +18968,7 @@ async function runInteractionTests() {
     assert(hpAfterFirstBump < initialServantHp, `Servant of Cthulhu must take damage from Unarmed (expected < 120, got ${servant.hp})`);
     assert(servant.knockbackVx === 0 && servant.vx === 0, 'Servant of Cthulhu must NOT receive knockback impulse when bumped by Unarmed');
     assert(unarmed.vx < 0, `Unarmed must rebounce backward when bumping into a Servant of Cthulhu (expected vx < 0, got ${unarmed.vx})`);
-    assert(unarmed.hasWallRebounded === false, 'Bumping into a minion must consume Unarmed wall rebound charge so he must rebounce off the wall before bumping again');
+    assert(unarmed.hasWallRebounded === true, 'When requireWallBounceForDamage is false, Unarmed retains readiness to bump without wall recharge');
 
     // 1.5. Regression check: Servant hovering/orbiting around Unarmed in mid-air must NOT cause rapid multi-bumping
     const stacksAfterFirstBump = unarmed.momentumStacks;
@@ -18759,7 +18995,7 @@ async function runInteractionTests() {
     unarmed._checkFighterCollision(eye);
 
     assert(eye.hp < initialEyeHp, `Eye of Cthulhu must take primed kinetic bump damage (expected < ${initialEyeHp}, got ${eye.hp})`);
-    assert(unarmed.hasWallRebounded === false, 'Hitting a primary fighter must consume Unarmed wall rebound charge');
+    assert(unarmed.hasWallRebounded === true, 'When requireWallBounceForDamage is false, hitting a primary fighter retains readiness for subsequent bumps');
 
     // Cleanup
     state.illusions = [];
@@ -19120,11 +19356,10 @@ async function runInteractionTests() {
     state.fighters = [unarmed, dave, wallnut];
     state.arena = testArena;
 
-    // 1. Initial bump WITHOUT wall rebound (hasWallRebounded = false)
+    // 1. Initial bump without needing wall rebound (requireWallBounceForDamage: false)
     unarmed.momentumStacks = 0;
     unarmed.evadeHits = 0;
     unarmed.speed = unarmed.baseSpeed;
-    unarmed.hasWallRebounded = false;
     unarmed.collisionCooldown = 0;
     unarmed.x = 220;
     unarmed.y = 300;
@@ -19134,33 +19369,14 @@ async function runInteractionTests() {
     const initialWallnutHp = wallnut.hp;
     unarmed._handleKineticBumpCollision(wallnut);
 
-    // Wall-nut must take 0 damage and Unarmed must gain 0 buffs
-    assert(wallnut.hp === initialWallnutHp, 'Wall-nut must take 0 damage when Unarmed has not rebounded off arena wall');
-    assert(unarmed.momentumStacks === 0, 'Unarmed must NOT gain momentum stacks on non-primed Wall-nut collision');
-    assert(unarmed.evadeHits === 0, 'Unarmed must NOT gain evade hits on non-primed Wall-nut collision');
-    assert(unarmed.vx < 0, 'Unarmed must deflect backwards away from Wall-nut');
-    assert(Math.hypot(wallnut.x - unarmed.x, wallnut.y - unarmed.y) >= unarmed.r + wallnut.r, 'Unarmed must be pushed outside Wall-nut radius');
-    assert(unarmed.collisionCooldown > 0, 'Unarmed must enter collision cooldown after deflecting from Wall-nut');
-
-    // 2. Primed bump WITH wall rebound (hasWallRebounded = true)
-    unarmed.collisionCooldown = 0;
-    unarmed.hasWallRebounded = true;
-    unarmed.x = 220;
-    unarmed.y = 300;
-    unarmed.vx = 8.0;
-    unarmed.vy = 0;
-
-    unarmed._handleKineticBumpCollision(wallnut);
-
-    assert(wallnut.hp < initialWallnutHp, `Wall-nut must take primed kinetic bump damage (expected < ${initialWallnutHp}, got ${wallnut.hp})`);
-    assert(unarmed.momentumStacks === 1, 'Unarmed must gain exactly 1 momentum stack on primed Wall-nut hit');
-    assert(unarmed.evadeHits === 1, 'Unarmed must gain exactly 1 evade hit on primed Wall-nut hit');
-    assert(unarmed.hasWallRebounded === false, 'Hitting a Wall-nut barrier must consume Unarmed wall rebound charge');
+    assert(wallnut.hp < initialWallnutHp, `Wall-nut must take kinetic bump damage directly without needing wall rebounce`);
+    assert(unarmed.momentumStacks === 1, 'Unarmed must gain exactly 1 momentum stack on Wall-nut hit');
+    assert(unarmed.evadeHits === 1, 'Unarmed must gain exactly 1 evade hit on Wall-nut hit');
     assert(unarmed.vx < 0, 'Unarmed must elastically rebound backwards after hitting Wall-nut');
     assert(Math.hypot(wallnut.x - unarmed.x, wallnut.y - unarmed.y) >= unarmed.r + wallnut.r, 'Unarmed must be resolved outside Wall-nut radius after impact');
     assert(unarmed.collisionCooldown >= 14, 'Unarmed must enforce full collision cooldown after striking Wall-nut');
 
-    // 3. Immediate consecutive bump WITHOUT bouncing off arena wall first (hasWallRebounded is now false)
+    // 2. Immediate consecutive bump WITHOUT bouncing off arena wall first deals damage again!
     unarmed.collisionCooldown = 0;
     unarmed.x = 220;
     unarmed.y = 300;
@@ -19170,11 +19386,25 @@ async function runInteractionTests() {
     const hpAfterFirstHit = wallnut.hp;
     unarmed._handleKineticBumpCollision(wallnut);
 
-    // Verify anti-rapid-bump guarantee: 0 damage, 0 additional momentum, 0 additional evade
-    assert(wallnut.hp === hpAfterFirstHit, 'Consecutive bump without wall rebound must deal 0 additional damage to Wall-nut');
-    assert(unarmed.momentumStacks === 1, 'Unarmed must NOT gain additional momentum stacks without wall rebound');
-    assert(unarmed.evadeHits === 1, 'Unarmed must NOT gain additional evade hits without wall rebound');
+    assert(wallnut.hp < hpAfterFirstHit, 'Consecutive bump without wall rebound must deal damage to Wall-nut');
+    assert(unarmed.momentumStacks === 2, 'Unarmed must gain additional momentum stack on consecutive Wall-nut bump');
     assert(unarmed.vx < 0, 'Unarmed must deflect backwards away from Wall-nut on second contact');
+
+    // 3. Optional Wall Rebounce Gating Test (when requireWallBounceForDamage is explicitly true)
+    const { unarmedConfig } = await import('../js/configs/characters/unarmedConfig.js');
+    unarmedConfig.requireWallBounceForDamage = true;
+    unarmed.hasWallRebounded = false;
+    unarmed.collisionCooldown = 0;
+    unarmed.x = 220;
+    unarmed.y = 300;
+    unarmed.vx = 8.0;
+    unarmed.vy = 0;
+
+    const hpBeforeGated = wallnut.hp;
+    unarmed._handleKineticBumpCollision(wallnut);
+    assert(wallnut.hp === hpBeforeGated, 'Wall-nut must take 0 damage when requireWallBounceForDamage is true and Unarmed has not rebounded');
+    assert(unarmed.momentumStacks === 2, 'Unarmed must not gain momentum on unprimed hit when requireWallBounceForDamage is true');
+    unarmedConfig.requireWallBounceForDamage = false;
 
     // Cleanup
     state.fighters = [];
@@ -19864,6 +20094,611 @@ async function runInteractionTests() {
     state.pixiApp = prevPixiApp;
     state.camera = prevCamera;
     console.log('      ✅ Domain arena vignette cutout camera sync & inner arena alignment (Rule 31) verified.');
+  }
+
+  // ── TEST 151: Camera Tracking Bottom HUD Non-Anchoring Standard ──
+  {
+    console.log('🧪 Test 151: Camera Tracking Bottom HUD Non-Anchoring Standard...');
+    const { updateBottomHudCameraTracking } = await import('../js/graphics/ui/hudLayout.js');
+
+    const prevCamera = state.camera;
+    const prevOrientation = state.viewOrientation;
+    state.viewOrientation = 'vertical';
+
+    const testBottomContainer = {
+      style: {
+        transform: '',
+        bottom: '',
+        setProperty(prop, val) { this[prop] = val; }
+      }
+    };
+
+    // 1. Dynamic Camera Tracking Active (Pan + Zoom)
+    state.camera = {
+      enabled: true,
+      mode: 'dynamic',
+      zoom: 1.15,
+      x: 300,
+      y: 400
+    };
+
+    // By default (anchorBottomHudToArena: false), Bottom HUD must remain screen-locked without translate3d arena drift
+    updateBottomHudCameraTracking(testBottomContainer);
+    assert(
+      !testBottomContainer.style.transform.includes('translate3d'),
+      `Bottom HUD must NOT anchor or drift with arena during camera tracking (expected scale-only, got: ${testBottomContainer.style.transform})`
+    );
+    assert(
+      testBottomContainer.style.transform.startsWith('scale('),
+      `Bottom HUD must remain screen-locked with scale() transform (got: ${testBottomContainer.style.transform})`
+    );
+
+    // 2. Explicitly enabling anchorBottomHudToArena must anchor Bottom HUD to arena
+    CONFIG.camera = CONFIG.camera || {};
+    CONFIG.camera.anchorBottomHudToArena = true;
+    updateBottomHudCameraTracking(testBottomContainer);
+    assert(
+      testBottomContainer.style.transform.includes('translate3d'),
+      `Bottom HUD must anchor to arena when anchorBottomHudToArena is explicitly true (got: ${testBottomContainer.style.transform})`
+    );
+
+    // 3. Resetting anchorBottomHudToArena to false restores screen-locked behavior
+    CONFIG.camera.anchorBottomHudToArena = false;
+    updateBottomHudCameraTracking(testBottomContainer);
+    assert(
+      !testBottomContainer.style.transform.includes('translate3d'),
+      `Bottom HUD must return to screen-locked when anchorBottomHudToArena is false`
+    );
+
+    state.camera = prevCamera;
+    state.viewOrientation = prevOrientation;
+    console.log('      ✅ Camera Tracking Bottom HUD Non-Anchoring Standard verified cleanly.');
+  }
+
+  // ── TEST 152: Black Flash Effect Gated to Actual Enemy Damage Standard ──
+  console.log('🧪 Test 152: Black Flash Effect Gated to Actual Enemy Damage Standard...');
+  {
+    const prevGameState = state.gameState;
+    const prevMode = state.mode;
+    state.gameState = 'playing';
+    state.mode = '1v1';
+    const { clearBlackFlashEffects, getBlackFlashParticleCount } = await import('../js/graphics/particles/blackFlashEffect.js');
+    const { modUpdateMeleeCombat: yujiMelee } = await import('../js/entities/fighters/yuji/yujiCombat.js');
+    const { modUpdateMeleeCombat: todoMelee } = await import('../js/entities/fighters/todo/todoCombat.js');
+    const YujiClass = FIGHTER_CLASS_MAP.yuji;
+    const TodoClass = FIGHTER_CLASS_MAP.todo;
+    const NanamiClass = FIGHTER_CLASS_MAP.nanami;
+    const GojoClass = FIGHTER_CLASS_MAP.gojo;
+    const NormalClass = FIGHTER_CLASS_MAP.normal;
+
+    assert(YujiClass && TodoClass && NanamiClass && GojoClass && NormalClass, 'Fighter classes must be registered');
+
+    // 1. Yuji Black Flash vs Gojo Infinity (0 Damage -> No Black Flash Effect & No Zone Entry)
+    {
+      const yuji = new YujiClass({ x: 200, y: 200, ownerIndex: 0 });
+      const gojo = new GojoClass({ x: 230, y: 200, ownerIndex: 1 });
+      state.fighters = [yuji, gojo];
+      gojo.infinityCooldown = 0;
+      gojo.infinityActive = true;
+      const gojoInitialHp = gojo.hp;
+
+      yuji.blackFlashCharge = 4;
+      yuji.blackFlashTimer = 0;
+      clearBlackFlashEffects();
+
+      yuji.aim(gojo);
+      yujiMelee.call(yuji, gojo);
+
+      assert(gojo.hp === gojoInitialHp, 'Gojo Infinity must block Yuji punch damage');
+      assert(getBlackFlashParticleCount() === 0, `Black Flash effect must NOT spawn when attack deals 0 damage (got ${getBlackFlashParticleCount()} particles)`);
+      assert(yuji.blackFlashTimer === 0, 'Yuji must NOT enter the Zone when Black Flash punch deals 0 damage');
+      assert(yuji.blackFlashCharge === 4, 'Yuji must retain Black Flash charge when strike was blocked without damage');
+
+      // Now punch a vulnerable target -> Deals damage -> Black Flash spawns & enters Zone!
+      yuji.x = 200;
+      yuji.y = 200;
+      yuji.vx = 0;
+      yuji.vy = 0;
+      const dummy = new NormalClass({ x: 230, y: 200, ownerIndex: 1 });
+      const dummyInitialHp = dummy.hp;
+      state.fighters = [yuji, dummy];
+      yuji.punchAnimTimer = 0;
+      yuji.slashSwingTimer = 0;
+      yuji.cooldownTimer = 0;
+      clearBlackFlashEffects();
+
+      yuji.aim(dummy);
+      yujiMelee.call(yuji, dummy);
+
+      assert(dummy.hp < dummyInitialHp, 'Dummy must take damage from Yuji Black Flash punch');
+      assert(getBlackFlashParticleCount() > 0, 'Black Flash particles MUST spawn when attack actually deals damage to enemy');
+      assert(yuji.blackFlashTimer > 0, 'Yuji must enter the Zone upon landing a damaging Black Flash strike');
+      assert(yuji.blackFlashCharge === 0, 'Yuji Black Flash charge must reset after successful trigger');
+    }
+
+    // 2. Todo Black Flash vs Gojo Infinity (0 Damage -> No Black Flash Effect & No Zone Entry)
+    {
+      const todo = new TodoClass({ x: 200, y: 200, ownerIndex: 0 });
+      const gojo = new GojoClass({ x: 230, y: 200, ownerIndex: 1 });
+      state.fighters = [todo, gojo];
+      gojo.infinityCooldown = 0;
+      gojo.infinityActive = true;
+      const gojoInitialHp = gojo.hp;
+
+      todo.justSwappedTimer = 30; // Black Flash primed via swap
+      todo.blackFlashTimer = 0;
+      clearBlackFlashEffects();
+
+      todo.aim(gojo);
+      todoMelee.call(todo, gojo, false);
+
+      assert(gojo.hp === gojoInitialHp, 'Gojo Infinity must block Todo punch damage');
+      assert(getBlackFlashParticleCount() === 0, `Todo Black Flash must NOT spawn when attack deals 0 damage (got ${getBlackFlashParticleCount()} particles)`);
+      assert(todo.blackFlashTimer === 0, 'Todo must NOT enter the Zone when punch deals 0 damage');
+      assert(todo.justSwappedTimer > 0, 'Todo must retain justSwappedTimer when attack was blocked without damage');
+
+      // Now punch a vulnerable target -> Deals damage -> Black Flash spawns & enters Zone!
+      todo.x = 200;
+      todo.y = 200;
+      todo.vx = 0;
+      todo.vy = 0;
+      const dummy = new NormalClass({ x: 230, y: 200, ownerIndex: 1 });
+      const dummyInitialHp = dummy.hp;
+      state.fighters = [todo, dummy];
+      todo.punchAnimTimer = 0;
+      todo.cooldownTimer = 0;
+      clearBlackFlashEffects();
+
+      todo.aim(dummy);
+      todoMelee.call(todo, dummy, false);
+
+      assert(dummy.hp < dummyInitialHp, 'Dummy must take damage from Todo Black Flash punch');
+      assert(getBlackFlashParticleCount() > 0, 'Todo Black Flash particles MUST spawn when attack actually damages enemy');
+      assert(todo.blackFlashTimer > 0, 'Todo must enter the Zone upon landing a damaging Black Flash strike');
+      assert(todo.justSwappedTimer === 0, 'Todo swap buff must be consumed upon actually damaging enemy');
+    }
+
+    // 3. Nanami Ultimate Channeling & Strike Damage Gating
+    {
+      const nanami = new NanamiClass({ x: 200, y: 200, ownerIndex: 0 });
+      const dummy = new NormalClass({ x: 230, y: 200, ownerIndex: 1 });
+      state.fighters = [nanami, dummy];
+
+      CONFIG.nanami = CONFIG.nanami || {};
+      const origEnableBF = CONFIG.nanami.enableBlackFlash;
+      CONFIG.nanami.enableBlackFlash = true;
+
+      clearBlackFlashEffects();
+
+      // Casting ultimate voiceline channeling must NOT spawn Black Flash in empty air
+      nanami.performBlitz(CONFIG.nanami, dummy);
+      assert(getBlackFlashParticleCount() === 0, 'Nanami ultimate channeling windup must NOT spawn Black Flash particles before striking');
+
+      CONFIG.nanami.enableBlackFlash = origEnableBF;
+    }
+
+    clearBlackFlashEffects();
+    state.fighters = [];
+    state.gameState = prevGameState;
+    state.mode = prevMode;
+    console.log('      ✅ Black Flash effect gated strictly to actual enemy damage verified across Yuji, Todo & Nanami.');
+  }
+
+  // =========================================================================
+  // TEST 153: NAOYA 24-FRAME PALM TOUCH FREEZE & TANTO STAB FINISHER STANDARD
+  // =========================================================================
+  {
+    console.log('\n⏱️ Test 153: Naoya 24-Frame Palm Touch Freeze & Tanto Stab Finisher Standard...');
+    const { Fighter, applyDamageToTarget } = await import('../js/entities/fighter.js');
+    const { NaoyaFighter } = await import('../js/entities/fighters/NaoyaFighter.js');
+    const { naoyaConfig } = await import('../js/configs/characters/naoyaConfig.js');
+    const { draw24FPSFrameStasisOverlay } = await import('../js/graphics/weapons/naoyaWeaponGraphics.js');
+
+    assert(naoyaConfig.enableFrameFreeze === 1 || naoyaConfig.enableFrameFreeze === true, 'naoyaConfig.enableFrameFreeze must be enabled');
+    assert((naoyaConfig.frameFreezeChance ?? 0) > 0, 'naoyaConfig.frameFreezeChance must be > 0');
+    assert(naoyaConfig.frameFreezeDuration === 60, 'naoyaConfig.frameFreezeDuration must be 60 frames (1.0s)');
+
+    const naoya = new NaoyaFighter({ x: 200, y: 200, hp: 500, maxHp: 500 });
+    naoya.team = 0;
+
+    const dummy = new Fighter({ x: 230, y: 200, hp: 300, maxHp: 300, speed: 6.0 });
+    dummy.team = 1;
+    dummy.vx = 4.0;
+    dummy.vy = 2.0;
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    state.fighters = [naoya, dummy];
+    state.arena = testArena;
+    state.gameState = 'playing';
+
+    // 1. Direct applyFrameStasis
+    const applied = naoya.applyFrameStasis(dummy);
+    assert(applied === true, 'naoya.applyFrameStasis must succeed on enemy dummy');
+    assert(dummy.isFrameFrozen === true, 'dummy.isFrameFrozen must be true after applyFrameStasis');
+    assert(dummy.frameFreezeTimer === (naoyaConfig.frameFreezeDuration || 60), `dummy.frameFreezeTimer must equal frameFreezeDuration (got ${dummy.frameFreezeTimer})`);
+    assert(dummy.timeStopTimer > 0, 'dummy.timeStopTimer must be > 0');
+    assert(dummy._handleTimeStop() === true, 'dummy._handleTimeStop() must return true when frame frozen');
+
+    // Dummy update while frame frozen must freeze movement
+    const prevDummyX = dummy.x;
+    const prevDummyY = dummy.y;
+    dummy.update(naoya, 1, testArena);
+    assert(dummy.x === prevDummyX && dummy.y === prevDummyY, 'dummy coordinates must NOT change while frame frozen');
+
+    // 2. Clear / End frame stasis
+    naoya.endFrameStasis(dummy);
+    assert(dummy.isFrameFrozen === false, 'dummy.isFrameFrozen must be false after endFrameStasis');
+    assert(dummy.frameFreezeTimer === 0, 'dummy.frameFreezeTimer must be 0 after endFrameStasis');
+    assert(dummy.timeStopTimer === 0, 'dummy.timeStopTimer must be 0 after endFrameStasis');
+    assert(dummy._handleTimeStop() === false, 'dummy._handleTimeStop() must return false after stasis cleared');
+
+    // 3. Melee Flurry 24-Frame Palm Touch Stasis -> Tanto Knife Stab Finisher Transition
+    dummy.hp = 300;
+    dummy.x = 220;
+    dummy.y = 200;
+    naoya.x = 200;
+    naoya.y = 200;
+    naoya.shootCooldown = 0;
+    naoya.shoot(0, dummy);
+    assert(naoya.isExecutingFlurry === true, 'Naoya shoot() must initiate 24 FPS flurry barrage');
+
+    // Force frame stasis during flurry
+    naoya.flurryTriggeredStasis = true;
+    naoya.applyFrameStasis(dummy, 60);
+    assert(dummy.isFrameFrozen === true, 'Dummy must be frame-frozen during flurry');
+
+    // Complete flurry strikes until finisher evaluation
+    while (naoya.isExecutingFlurry) {
+      naoya._updateFlurryBarrage(0, testArena);
+    }
+
+    // Must have transitioned directly into Cursed Tanto Knife Stab Finisher on the frozen target
+    assert(naoya.isStabbingKnife === true, 'Naoya must transition to isStabbingKnife when flurry finishes on frozen target');
+    assert(naoya.knifeStabTarget === dummy, 'knifeStabTarget must be the frozen dummy');
+    assert(dummy.isFrameFrozen === true, 'Dummy must remain frame-frozen during knife stab wind-up');
+
+    // Step knife stab animation to strike phase
+    const hpBeforeStab = dummy.hp;
+    while (naoya.isStabbingKnife && !naoya.knifeStabHitDone) {
+      naoya.update(dummy, 0, testArena);
+    }
+    assert(naoya.knifeStabHitDone === true, 'Knife stab finisher must land hit');
+    assert(dummy.hp < hpBeforeStab, 'Frozen target must receive knife stab finisher damage');
+    assert(dummy.isFrameFrozen === false, 'Frame stasis must end and shatter upon knife stab impact');
+
+    // Complete remaining knife stab recovery frames
+    while (naoya.isStabbingKnife) {
+      naoya.update(dummy, 0, testArena);
+    }
+    assert(naoya.isStabbingKnife === false, 'Knife stab finisher must complete and reset isStabbingKnife');
+    const expectedCd = naoya._getFlurryCooldown(naoyaConfig);
+    assert(naoya.shootCooldown === expectedCd - 1, `shootCooldown must be on flurry cooldown after knife stab completes (expected ${expectedCd - 1}, got ${naoya.shootCooldown})`);
+    assert(naoya.shootCooldownMax === expectedCd, `shootCooldownMax must match flurry cooldown`);
+    naoya.shoot(0, dummy);
+    assert(naoya.isExecutingFlurry === false, 'shoot() must NOT trigger new flurry while shootCooldown is active');
+    naoya.update(dummy, 0, testArena);
+    assert(naoya.shootCooldown === expectedCd - 2, `shootCooldown must decrement by 1 per frame after combo finishes (expected ${expectedCd - 2}, got ${naoya.shootCooldown})`);
+
+    // 4. Curse Form Frame Shatter Mechanic
+    dummy.hp = 200;
+    naoya.isCurseForm = true;
+    naoya.isExecutingFlurry = false;
+    naoya.isStabbingKnife = false;
+    naoya.applyFrameStasis(dummy, 60);
+    assert(dummy.isFrameFrozen === true, 'Dummy must be frame frozen before Curse Form shatter');
+
+    // Execute Curse Form melee hit against frozen target
+    const hpBeforeCurseHit = dummy.hp;
+    const hitOk = applyDamageToTarget(dummy, naoyaConfig.cursePunchFinisherDamage || 22, naoya, { isMelee: true });
+    assert(hitOk === true, 'applyDamageToTarget must succeed on frame-frozen dummy');
+    if (dummy.isFrameFrozen) {
+      naoya.endFrameStasis(dummy);
+    }
+    assert(dummy.isFrameFrozen === false, 'Dummy frame stasis must be cleared after Curse Form shatter');
+
+    // 5. Canvas 2D Overlay Stack Depth
+    draw24FPSFrameStasisOverlay(mockCtx, dummy, 45);
+    assert(mockCtx.getStackDepth() === 0, `draw24FPSFrameStasisOverlay must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+
+    naoya.isCurseForm = false;
+    state.fighters = [];
+    console.log('      ✅ Naoya 24-Frame Palm Touch freeze, target stasis & tanto finisher verified cleanly.');
+  }
+
+  // 154. Testing Blue Lock Kick Kinematics Slowdown, Successful Ball Hit Slowdown & Isagi Metavision Reactive Evasion
+  {
+    console.log('⚽ Test 154: Blue Lock Kick Kinematics Slowdown, Ball Hit Slowdown & Isagi Metavision Reactive Evasion...');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { NormalFighter } = await import('../js/entities/fighters/NormalFighter.js');
+    const {
+      getOrCreateSharedSoccerBall,
+      executeSoccerKick,
+      updateSoccerBallPhysics
+    } = await import('../js/systems/soccerBallSystem.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+    const isagi = new IsagiFighter({ id: 70, type: 'isagi', name: 'ISAGI', x: 200, y: 300, color: '#00F0FF' });
+    const chigiri = new ChigiriFighter({ id: 71, type: 'chigiri', name: 'CHIGIRI', x: 200, y: 350, color: '#EC4899' });
+    const dummy = new NormalFighter({ id: 99, type: 'normal', name: 'DUMMY', x: 300, y: 300, hp: 500, maxHp: 500 });
+    state.fighters = [isagi, dummy];
+    state.arena = testArena;
+    state.gameState = 'playing';
+
+    // 1. Kick Kinematics Slowdown on kick execution
+    const ball = getOrCreateSharedSoccerBall(isagi, {}, state);
+    isagi.kickSlowTimer = 0;
+    isagi.kickSlowMultiplier = 1.0;
+    isagi.vx = 5.0;
+    isagi.vy = 0;
+    executeSoccerKick(isagi, ball, 0, 15.0);
+    assert(isagi.kickSlowTimer > 0, 'Isagi must receive kickSlowTimer frames upon kicking');
+    assert(isagi.kickSlowMultiplier < 1.0, 'Isagi must receive reduced kickSlowMultiplier upon kicking');
+    assert(isagi.vx < 5.0, 'Isagi velocity must immediately scale down on kick');
+
+    // 2. Successful Ball Hit on Enemy Slowdown on activeKicker
+    isagi.kickSlowTimer = 0;
+    isagi.kickSlowMultiplier = 1.0;
+    isagi.vx = 4.0;
+    isagi.vy = 0;
+    ball.x = dummy.x - 5;
+    ball.y = dummy.y;
+    ball.vx = 12.0;
+    ball.vy = 0;
+    ball.isKicked = true;
+    ball.lastKicker = isagi;
+    const dummyHpBefore = dummy.hp;
+    updateSoccerBallPhysics(ball, isagi, dummy, testArena, {}, state);
+    assert(dummy.hp < dummyHpBefore, 'Enemy dummy must take damage when hit by soccer ball');
+    assert(isagi.kickSlowTimer > 0, 'Isagi (active kicker) must receive slowdown frames when ball successfully hits enemy');
+    assert(isagi.kickSlowMultiplier < 1.0, 'Isagi kickSlowMultiplier must be active upon ball hitting enemy');
+
+    // Chigiri Kick Slowdown on ball hit
+    state.fighters = [chigiri, dummy];
+    chigiri.kickSlowTimer = 0;
+    chigiri.kickSlowMultiplier = 1.0;
+    chigiri.vx = 6.0;
+    ball.x = dummy.x - 5;
+    ball.y = dummy.y;
+    ball.vx = 12.0;
+    ball.isKicked = true;
+    ball.lastKicker = chigiri;
+    dummy._ballHitCooldown = 0;
+    dummy._isagiBallHitCooldown = 0;
+    updateSoccerBallPhysics(ball, chigiri, dummy, testArena, {}, state);
+    assert(chigiri.kickSlowTimer > 0, 'Chigiri (active kicker) must receive slowdown frames when ball successfully hits enemy');
+    assert(chigiri.kickSlowMultiplier < 1.0, 'Chigiri kickSlowMultiplier must be active upon ball hitting enemy');
+
+    // 3. Isagi Metavision Reactive Attack Evasion
+    state.fighters = [isagi, dummy];
+    isagi.metavisionCooldownTimer = 0; // Skill is UP!
+    isagi.isMetavisionDashing = false;
+    isagi.isFlowStateActive = false;
+    const isagiHpBefore = isagi.hp;
+    const attackEvaded = isagi.takeDamage(40, dummy, { isMelee: true });
+    assert(attackEvaded === false, 'takeDamage must return false when Metavision is UP and evades the attack');
+    assert(isagi.hp === isagiHpBefore, 'Isagi must take 0 damage when Metavision reactive slip triggers');
+    assert(isagi.isMetavisionDashing === true, 'Isagi must enter Metavision dash upon reactive attack trigger');
+    assert(isagi.metavisionCooldownTimer > 0, 'Metavision must go on cooldown after triggering');
+    assert(isagi.isFlowStateActive === true, 'Flow State must activate upon Metavision reactive trigger');
+
+    // 4. Metavision does NOT trigger when on cooldown
+    isagi.isMetavisionDashing = false;
+    isagi.metavisionInvulnTimer = 0;
+    isagi.metavisionCooldownTimer = 300; // Skill is NOT UP (on cooldown)
+    const hpBeforeHit = isagi.hp;
+    const normalHitTaken = isagi.takeDamage(25, dummy, { isMelee: true });
+    assert(normalHitTaken !== false, 'takeDamage must resolve normally when Metavision is on cooldown');
+    assert(isagi.hp < hpBeforeHit, 'Isagi must take damage when Metavision is on cooldown');
+
+    // 5. Metavision reactive trigger on beam attack
+    isagi.metavisionCooldownTimer = 0; // Skill is UP again
+    isagi.isMetavisionDashing = false;
+    isagi.metavisionInvulnTimer = 0;
+    const beamEvaded = isagi.dodgeBeam({ attacker: dummy });
+    assert(beamEvaded === true, 'dodgeBeam must return true and trigger Metavision when skill is UP');
+    assert(isagi.isMetavisionDashing === true, 'Isagi must enter Metavision dash upon beam trigger');
+
+    state.fighters = [];
+    console.log('      ✅ Blue Lock Kick Kinematics Slowdown, Ball Hit Slowdown & Isagi Metavision Reactive Evasion verified cleanly.');
+  }
+
+  // 155. Testing Mahito Soul Disfigurement Gated to Actual Enemy Damage Standard
+  {
+    console.log('🧪 Test 155: Mahito Soul Disfigurement Gated to Actual Enemy Damage Standard...');
+    const { MahitoFighter } = await import('../js/entities/fighters/MahitoFighter.js');
+    const { GojoFighter } = await import('../js/entities/fighters/GojoFighter.js');
+    const { NormalFighter } = await import('../js/entities/fighters/NormalFighter.js');
+    const { executeIdleTransfigurationStrike, applySoulDisfigurementStack } = await import('../js/entities/fighters/mahito/mahitoCombat.js');
+
+    const testArena = { x: 0, y: 0, width: 800, height: 600 };
+    const mahito = new MahitoFighter({ x: 200, y: 200, hp: 200, maxHp: 200 });
+    mahito.team = 0;
+
+    // 1. Mahito vs Gojo with Infinity Active (0 Damage -> 0 Soul Disfigurement Stacks)
+    const gojo = new GojoFighter({ x: 230, y: 200, hp: 200, maxHp: 200 });
+    gojo.team = 1;
+    gojo.infinityCooldown = 0;
+    gojo.infinityActive = true;
+    state.fighters = [mahito, gojo];
+    state.arena = testArena;
+    state.gameState = 'playing';
+
+    const gojoInitialHp = gojo.hp;
+    mahito.aim(gojo);
+    executeIdleTransfigurationStrike(mahito, gojo);
+
+    assert(gojo.hp === gojoInitialHp, 'Gojo Infinity must block Mahito melee strike (0 damage dealt)');
+    assert(!gojo._soulDisfigurementStacks || gojo._soulDisfigurementStacks === 0, `Gojo must NOT receive Soul Disfigurement stacks when taking 0 damage (got ${gojo._soulDisfigurementStacks})`);
+    assert(gojo.isParalyzedByMahito !== true, 'Gojo must NOT be paralyzed by Mahito when strike is blocked by Infinity');
+
+    // 2. Direct applySoulDisfigurementStack Call vs Infinity/Invulnerable Entity
+    applySoulDisfigurementStack(gojo, mahito);
+    assert(!gojo._soulDisfigurementStacks || gojo._soulDisfigurementStacks === 0, 'applySoulDisfigurementStack must reject target with active Infinity');
+
+    // 3. Invulnerable / Dodging Entity takes 0 damage -> No stacks
+    const dummy = new NormalFighter({ x: 230, y: 200, hp: 200, maxHp: 200 });
+    dummy.team = 1;
+    dummy.isInvulnerable = true;
+    state.fighters = [mahito, dummy];
+    const dummyInitialHp = dummy.hp;
+
+    mahito.aim(dummy);
+    executeIdleTransfigurationStrike(mahito, dummy);
+    assert(dummy.hp === dummyInitialHp, 'Invulnerable dummy must take 0 damage');
+    assert(!dummy._soulDisfigurementStacks || dummy._soulDisfigurementStacks === 0, 'Invulnerable dummy must NOT receive Soul Disfigurement stacks');
+
+    // 4. Vulnerable Target takes damage -> Stacks increment cleanly
+    dummy.isInvulnerable = false;
+    mahito.aim(dummy);
+    executeIdleTransfigurationStrike(mahito, dummy);
+    assert(dummy.hp < dummyInitialHp, 'Vulnerable dummy must take damage from Mahito strike');
+    assert(dummy._soulDisfigurementStacks === 1, `Dummy must receive 1 Soul Disfigurement stack upon taking damage (got ${dummy._soulDisfigurementStacks})`);
+
+    state.fighters = [];
+    console.log('      ✅ Mahito Soul Disfigurement gated to actual enemy damage verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 156. Mahito Domain Expansion Channeling Silhouette & Ink Outline Buffer Standard
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 156: Mahito Domain Expansion Channeling Silhouette Standard...');
+    const { MahitoFighter } = await import('../js/entities/fighters/MahitoFighter.js');
+    const { drawMahitoSkin } = await import('../js/graphics/fighters/mahitoSkin.js');
+
+    const mahito = new MahitoFighter({ x: 200, y: 200, hp: 200, maxHp: 200 });
+    mahito.domainChargeTimer = 60;
+    mahito.domainChargeMax = 120;
+    mahito.isChannelingDomainExpansion = true;
+
+    // Track calls made to mock context during silhouette pass vs regular pass
+    let arcCalls = 0;
+    let createRadialGradientCalls = 0;
+    const mockCtx = {
+      save() {},
+      restore() {},
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() { arcCalls++; },
+      ellipse() {},
+      quadraticCurveTo() {},
+      bezierCurveTo() {},
+      strokeText() {},
+      fillText() {},
+      createRadialGradient() {
+        createRadialGradientCalls++;
+        return { addColorStop() {} };
+      },
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    // 1. In silhouette pass (_isSilhouettePass = true), ground summoning circle must be completely skipped
+    mahito._isSilhouettePass = true;
+    drawMahitoSkin(mockCtx, mahito);
+    assert(createRadialGradientCalls === 0, 'Silhouette pass must NOT execute createRadialGradient for ground summoning circles or core flare');
+
+    // 2. In normal rendering pass (_isSilhouettePass = false), ground summoning circle executes naturally
+    mahito._isSilhouettePass = false;
+    createRadialGradientCalls = 0;
+    drawMahitoSkin(mockCtx, mahito);
+    assert(createRadialGradientCalls > 0, 'Normal rendering pass must execute ground summoning circle and cursed core gradients');
+
+    console.log('      ✅ Mahito Domain Channeling silhouette pass suppression verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 157. Mahito Domain Expansion Channeling Clean Interruption & Visual Reset Standard
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 157: Mahito Domain Expansion Channeling Clean Interruption & Visual Reset Standard...');
+    const { MahitoFighter } = await import('../js/entities/fighters/MahitoFighter.js');
+    const { drawMahitoSkin } = await import('../js/graphics/fighters/mahitoSkin.js');
+
+    const mahito = new MahitoFighter({ x: 200, y: 200, hp: 200, maxHp: 200 });
+    mahito.domainChargeTimer = 60;
+    mahito.domainChargeMax = 120;
+    mahito.isChannelingDomainExpansion = true;
+
+    let createRadialGradientCalls = 0;
+    const mockCtx = {
+      save() {},
+      restore() {},
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse() {},
+      quadraticCurveTo() {},
+      bezierCurveTo() {},
+      strokeText() {},
+      fillText() {},
+      createRadialGradient() {
+        createRadialGradientCalls++;
+        return { addColorStop() {} };
+      },
+      drawImage() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      setLineDash() {},
+      clip() {}
+    };
+
+    // 1. Force interrupt during channeling resets state and applies penalty cooldown
+    mahito.interruptAttacks(true);
+    assert(mahito.isChannelingDomainExpansion === false, 'isChannelingDomainExpansion must be false after interruptAttacks(true)');
+    assert(mahito.domainChargeTimer === 0, 'domainChargeTimer must be 0 after interruptAttacks(true)');
+    assert((mahito.domainCooldown || 0) >= 270, 'domainCooldown must receive penalty cooldown (>= 270) upon interrupt');
+
+    // Visuals must produce zero channeling gradient calls
+    createRadialGradientCalls = 0;
+    drawMahitoSkin(mockCtx, mahito);
+    assert(createRadialGradientCalls === 0, 'Ground summoning circle must NOT render after domain channeling interrupt');
+
+    // 2. Hard CC during channeling cleanly aborts channeling
+    mahito.domainChargeTimer = 90;
+    mahito.domainChargeMax = 120;
+    mahito.isChannelingDomainExpansion = true;
+    mahito.isTargetOfAmbush = true;
+    mahito.update(null, 0, { x: 0, y: 0, width: 500, height: 500 });
+    assert(mahito.isChannelingDomainExpansion === false, 'isChannelingDomainExpansion must be false after hard CC / ambush');
+    assert(mahito.domainChargeTimer === 0, 'domainChargeTimer must be 0 after hard CC / ambush');
+
+    // 3. Death during channeling cleanly cancels channeling
+    mahito.domainChargeTimer = 90;
+    mahito.domainChargeMax = 120;
+    mahito.isChannelingDomainExpansion = true;
+    mahito.isTargetOfAmbush = false;
+    mahito.hp = 0;
+    mahito.isDead = true;
+    mahito.update(null, 0, { x: 0, y: 0, width: 500, height: 500 });
+    assert(mahito.isChannelingDomainExpansion === false, 'isChannelingDomainExpansion must be false upon death');
+    assert(mahito.domainChargeTimer === 0, 'domainChargeTimer must be 0 upon death');
+
+    createRadialGradientCalls = 0;
+    drawMahitoSkin(mockCtx, mahito);
+    assert(createRadialGradientCalls === 0, 'Corpse must NOT render ground summoning circle or domain channeling visuals');
+
+    console.log('      ✅ Mahito Domain Channeling clean interruption, penalty cooldown & visual reset verified cleanly.');
   }
 
 

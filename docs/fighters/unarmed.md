@@ -57,9 +57,9 @@ When activating its Ultimate, Unarmed ascends into its official wiki **Super Una
 | **Collision Damage** | `30 base` | **$30 + \Delta v + \text{Stacks}$** | Directly scales with current kinetic velocity and accumulated momentum |
 | **Parry Interaction** | **Unparriable** | **Unparriable** | Body collisions bypass weapon parries, shield deflections, and blade blocks |
 | **Wall Ricochet** | `1.0` multiplier | Natural Specular | Conserves speed on wall impacts with billiard cushion dispersion |
-| **Bump Stun Chance** | `25%` (`0.25`) | `0.75s` (`45 frames`) | Chance to apply concussive stun (`paralyzeTimer`) to enemy on damaging bumps |
+| **Bump Stun** | **Hit-Gated Ultimate** | `1.50s` (`90 frames`) | Hit requirement charges Super Unarmed; next bump deals **2X damage** & long stun |
 | **Evade Chance** | `5%` base | **`45%` (Max 20 Stacks)** | Gains `+2%` stacking evasion on each hit; triggers supersonic evade dash |
-| **Super Unarmed** | `10.0s CD` | `4.0s Duration` | Super Form: $18.0\text{ speed}$, $+60\%$ collision damage, unstoppable mass |
+| **Super Unarmed** | `5 Hits Req` | `4.0s Duration` | Super Form: $18.0\text{ speed}$, $+60\%$ base, **2X damage** on empowered bump |
 | **Shoot Suppression** | Blank `shoot()` | Blank `shoot()` | Overrides default `Fighter.shoot()` to suppress generic bullets ([Rule 23](file:///c:/Users/asus/OneDrive/Desktop/Circle%20Mini-Battle/AGENTS.md)) |
 
 ---
@@ -102,22 +102,26 @@ Every time Unarmed successfully lands a primed collision hit that **actually inf
 
 ---
 
-### 💥 Basic Attack: Kinetic Bump (Rebound-Primed Body Slam)
+### 💥 Basic Attack: Kinetic Bump (Kinetic Body Slam)
 
 Unarmed does not swing fists or weapons; its body is the weapon.
 
-* **Earclacks Wall Rebound Requirement (`requireWallBounceForDamage: true`)**:
-  * Unarmed **must rebounce off an arena wall first** to prime its kinetic charge (`hasWallRebounded = true`).
-  * **Unprimed Collision:** If Unarmed touches an enemy without bouncing off a wall first, zero damage is dealt; fighters elastically deflect apart with a light cushion impact (`heavypunch3.mp3` at $0.6$ volume) to guide Unarmed back toward the perimeter.
-  * **Primed Kinetic Collision:** Upon colliding with an enemy after a wall rebound, Unarmed unleashes its stored kinetic force:
+* **Continuous Kinetic Bump Damage (`requireWallBounceForDamage: false`)**:
+  * Unarmed deals kinetic bump damage directly upon colliding with enemies without needing to rebounce off an arena wall first.
+  * Consecutive bumps after recovery frames (`collisionCooldown`) deal full kinetic impact damage continuously, building momentum stacks and speed without requiring wall-rebound cycling.
+  * **Config Toggle Support:** If `requireWallBounceForDamage: true` is explicitly enabled in `unarmedConfig.js`, Unarmed reverts to requiring an arena wall rebounce before dealing damage.
+  * **Kinetic Collision Damage:**
     $$\text{Damage} = \text{baseDmg (30)} + (\text{currentSpeed} - \text{baseSpeed}) \times 1.0 + (\text{momentumStacks} \times 1.0)$$
 * **Concussive Impact Audio:** Triggers the heavyweight punch impact sound:
   `Assets/Sound Effects/Attacks/heavypunch3.mp3` (`unarmed_enemy_bump`).
 * **True 2D Elastic Physics:** Resolves realistic sphere-on-sphere momentum transfer along normal and tangential contact angles.
 * **Mutual Hit Slow:** Applies a brief movement slowdown on impact ($0.35\times$ speed for $14\text{ frames}$) for tactile hitstop feel.
-* **Concussive Bump Stun (`enableBumpStun: true`, `bumpStunChance: 0.25`, `bumpStunDuration: 45`):**
-  * Whenever a primed kinetic bump deals actual damage to an enemy, Unarmed rolls a **25% chance** (`bumpStunChance: 0.25`) to inflict a **0.75-second concussive stun** (`45 frames` via `paralyzeTimer` / `stunTimer`).
-  * Interrupts active enemy casts/combos (`interruptAttacks(true)`), renders orbiting golden stun rings (`drawParalyzeEffect`), and spawns golden **`STUNNED!`** floating text (`#FACC15`).
+* **Ultimate-Gated Concussive Bump Stun & 2X Damage:**
+  * Unarmed's stun mechanic is integrated directly into his **Ultimate: Super Unarmed**.
+  * Landing hits on enemies builds up charges toward Super Unarmed (`superUnarmedHitsRequired: 5`).
+  * When the hit requirement is met, Unarmed ascends into **Super Unarmed** form, priming the empowered **Super Bump**.
+  * The **NEXT bump** against an enemy delivers **`2X Current Damage`** (`superBumpDamageMultiplier: 2.0`), inflicts a **`1.50s Long Stun`** (`superBumpStunDuration: 90 frames` via `paralyzeTimer`), and triggers floating text **`SUPER STUN!`** (`#FACC15`) and **`2X DAMAGE!`** (`#EF4444`).
+  * Legacy random bump stun remains configurable via `enableBumpStun` (`0.25` chance, `45 frames`).
 
 ---
 
@@ -134,18 +138,21 @@ Unarmed does not swing fists or weapons; its body is the weapon.
 
 ---
 
-### ⚡ Ultimate: Super Unarmed (Official Earclacks Overdrive)
+### ⚡ Ultimate: Super Unarmed (Official Earclacks Overdrive & Empowered Super Bump)
 
-* **Type:** Form Transformation / Kinetic Overdrive
-* **Cooldown:** `600 frames` (`10.0 seconds`)
+* **Type:** Hit-Gated Transformation & Empowered 2X Stun Finisher
+* **Requirement:** `5 Hits Connected` (`superUnarmedHitsRequired: 5`)
+* **Cooldown Fallback:** `600 frames` (`10.0 seconds`)
 * **Duration:** `240 frames` (`4.0 seconds`)
 * **Top Speed:** `18.0 px/frame`
 * **Mechanics:**
+  * **Hit Requirement & Activation:** Connecting 5 damaging hits against enemies primes Super Unarmed.
+  * **Empowered Super Bump:** The next body collision against an opponent inflicts **`2X to Current Damage`** and applies a **`1.50s Concussive Stun`** (`90 frames` of paralysis/time-stop).
   * **Overdrive Transformation:** The sphere turns pure white (`#FFFFFF`) with a light silver outline (`#D4D4D8`).
   * **Instant Prime:** Enters the form with instant wall-rebound priming (`hasWallRebounded = true`).
   * **Bonus Damage:** Boosts all collision damage by **`+60%`** (`superUnarmedDamageMult: 1.6`).
   * **Unstoppable Penetrating Mass:** Overrides standard normal elastic rebound; instead of bouncing away backward from the target, Super Unarmed punches cleanly through opponent defenses with minimal friction.
-  * **Activation Audio:** Plays `heavypunch3.mp3` alongside heavy arena screen shake and a $95\text{px}$ white shockwave detonation.
+  * **Activation Audio:** Plays `heavypunch3.mp3` alongside heavy arena screen shake, golden/white spark bursts, and a $95\text{px}$ white shockwave detonation.
 
 ---
 
@@ -180,7 +187,7 @@ Unarmed does not swing fists or weapons; its body is the weapon.
 
 ## 💡 Tactical Combat Tips
 
-1. **Keep the Wall Cycle Flowing:** Never hover near the center of the arena for prolonged periods. Constantly skim and ricochet off the perimeter to ensure `hasWallRebounded` remains active for every pass at the enemy.
+1. **Relentless Kinetic Pressure:** Unarmed deals direct kinetic damage on every bump without needing to bounce off a wall first. Keep continuous pressure on opponents, chaining elastic collisions to build momentum stacks.
 2. **Bank On Tangent Billiard Angles:** Natural specular reflection with cushion dispersion allows Unarmed to slingshot around projectiles and strike opponents from unpredictable lateral flanks.
 3. **Save Kinetic Surge for Recovery:** Use Kinetic Surge not only for offense, but to instantly re-align trajectory towards a wall or escape dangerous ground hazards.
 4. **Time Super Unarmed for Enclosed Exchanges:** Activate Super Unarmed when the opponent is pinned near a corner to deliver multiple unstoppable high-speed bounces in rapid succession.

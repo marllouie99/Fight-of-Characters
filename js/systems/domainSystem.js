@@ -4,6 +4,7 @@ import { clearDomainSlashLines } from '../entities/fighters/sukuna/sukunaDomainV
 import { projectileSystem } from './projectileSystem.js';
 import { CONFIG } from '../core/config.js';
 import { triggerHaptic } from './mobileAppBridge.js';
+import { stopFighterVoice } from './soundSystem.js';
 
 /**
  * Checks if a fighter is immune to Domain Expansions (e.g. Toji Heavenly Restriction / Zero Cursed Energy).
@@ -141,6 +142,13 @@ export function clearFighterDomain(fighter, state) {
   fighter.postDomainFadeInTimer = 0;
 
   const charId = fighter.characterId || fighter.type || fighter._def?.id;
+
+  // MAHITO: Stop active domain channeling voicelines
+  if (charId === 'mahito' || fighter.type === 'mahito') {
+    if (typeof stopFighterVoice === 'function') {
+      stopFighterVoice('mahito', 60, true);
+    }
+  }
 
   // GOJO: Unfreeze enemies trapped in Unlimited Void
   if (charId === 'gojo' || fighter.type === 'gojo') {

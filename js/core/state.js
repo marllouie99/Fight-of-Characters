@@ -1198,6 +1198,7 @@ export function isAllowedFloatingText(text) {
   if (/^MISS/i.test(upper)) return true;
   if (/^CRIT/i.test(upper)) return true;
   if (/^[-]?\d+(\.\d+)?$/i.test(upper)) return true; // Pure numeric damage values
+  if (/^STEAL/i.test(upper)) return true; // Blue Lock ball kick steal floating text
   return false;
 }
 
@@ -1313,6 +1314,10 @@ function getContrastColor(colorStr, backgroundIsDark) {
 const _floatingTextPool = [];
 export function recycleFloatingText(item) {
   if (item && _floatingTextPool.length < 120) {
+    item.isCrit = false;
+    item.isMiss = false;
+    item.isSteal = false;
+    item.isDamage = false;
     _floatingTextPool.push(item);
   }
 }
@@ -1344,6 +1349,7 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
   const upper = displayText.toUpperCase();
   const isCrit = /^CRIT/i.test(upper) || upper.includes('💥');
   const isMiss = /^MISS/i.test(upper);
+  const isSteal = /^STEAL/i.test(upper);
 
   // Robust numeric extraction: extract number even if formatted with prefixes like "CRIT! 25", "-25", or "+25"
   let numericVal = NaN;
@@ -1351,7 +1357,7 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
   if (numMatch) {
     numericVal = parseFloat(numMatch[0]);
   }
-  const isDamage = !isMiss && !isNaN(numericVal) && isFinite(numericVal);
+  const isDamage = !isMiss && !isSteal && !isNaN(numericVal) && isFinite(numericVal);
 
   // Normalize display text
   if (isCrit) {
@@ -1362,6 +1368,8 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
     }
   } else if (isMiss) {
     displayText = upper.includes('!') ? 'MISS!' : (upper === 'MISSED' ? 'MISSED' : 'MISS');
+  } else if (isSteal) {
+    displayText = 'STEAL';
   } else if (isDamage) {
     displayText = String(Math.round(numericVal));
   } else {
@@ -1452,6 +1460,17 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
     if (!finalColor || finalColor === '#ffffff' || finalColor === '#fff') {
       finalColor = '#E2E8F0'; // Clean silver/white miss
     }
+  } else if (isSteal) {
+    vx = (Math.random() - 0.5) * 0.8;
+    vy = -3.2;
+    gravity = 0.08;
+    popAmount = 0.45;
+    popFrames = 5;
+    maxTimer = 42;
+    baseScale = 1.25;
+    if (!finalColor || finalColor === '#ffffff' || finalColor === '#fff') {
+      finalColor = '#00F0FF'; // Vibrant Blue Lock cyan default
+    }
   } else {
     // Standard discrete damage number takes an alternating parabolic fountain arc with slight scatter
     spawnOffsetX = spreadDir * (4 + Math.random() * 6);
@@ -1484,6 +1503,7 @@ export function spawnFloatingText(x, y, text, color = '#ffffff') {
   textObj.maxTimer = maxTimer;
   textObj.isCrit = isCrit;
   textObj.isMiss = isMiss;
+  textObj.isSteal = isSteal;
   textObj.isDamage = isDamage;
   textObj.damageValue = isDamage ? numericVal : 0;
   textObj.stackCount = 1;

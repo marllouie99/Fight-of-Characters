@@ -43,7 +43,7 @@ export const naoyaConfig = {
   // Passive: Projection Sorcery (Permanent Speed & Evade Stacking on Hit)
   enableProjectionSorcery: true,
   maxFrameStacks: 20,               // Max speed & evade stacks
-  speedBonusPerStack: 0.50,         // +0.50 permanent movement speed per hit
+  speedBonusPerStack: 1.00,         // +0.50 permanent movement speed per hit
   baseEvadeChance: 0.05,            // 5% starting base evade chance
   evadeBonusPerStack: 0.04,         // +4% permanent evade chance per hit stack
   maxEvadeChance: 0.30,             // 70% max evade cap
@@ -63,9 +63,10 @@ export const naoyaConfig = {
   movementAfterimageSFX: false,      // ⚡ Subtle step SFX on each movement afterimage pop
 
   // Passive: 24-Frame Palm Touch & Frame Stasis Freeze
-  enableFrameFreeze: 0,             // ⚡ Disabled per user tuning
-  frameFreezeChance: 0.0,           // ⚡ Trigger chance disabled
-  frameFreezeCooldown: 500,         // ⚡ Synced with tantoCooldown
+  enableFrameFreeze: 1,             // ⚡ 24-Frame Palm Touch Frame Stasis Freeze
+  frameFreezeChance: 0.35,          // ⚡ Trigger chance per flurry punch (35%)
+  frameFreezeDuration: 60,          // ⚡ 1.0s duration (60 frames)
+  frameFreezeCooldown: 30,          // ⚡ Cooldown between passive palm touch freezes
   frameFreezeVulnerability: 0.30,   // +30% bonus True Damage taken while frozen
   maxDisruptionsForStasis: 1,       // Triggers on flurry hit once tantoCooldown is UP
   frameShatterDamage: 18,           // AOE shatter damage upon breaking out
@@ -84,11 +85,11 @@ export const naoyaConfig = {
   flurryLungeSpeed: 2.5,
   punchDamage: 8,                  // Damage per flurry punch
   punchComboFinisherDamage: 18,    // Bonus damage on the final finisher punch
-  punchCooldown: 500,               // Low cooldown between full flurry bursts (~0.50s)
+  punchCooldown: 1000,               // Low cooldown between full flurry bursts (~0.50s)
   punchKnockback: 16,              // Knockback applied ONLY on the final finisher punch
   tantoDamage: 8,                  // Backward compatibility alias
   tantoComboFinisherDamage: 30,
-  tantoCooldown: 30,               // Low cooldown between flurry sequences
+  tantoCooldown: 1000,             // Backward compatibility alias matching punchCooldown
   knifeStabFrames: 50,              // ⚡ Total duration of the smooth tanto stab finisher animation (frames)
   tantoStrikeFrames: 30,
   tantoRecoveryFrames: 8,
@@ -146,7 +147,7 @@ export const naoyaConfig = {
   // ═══════════════════════════════════════════════════════════
   // OPTION B: VENGEFUL CURSE REBIRTH & AWAKENED JET MECHANICS
   // ═══════════════════════════════════════════════════════════
-  enableCurseRebirth: 1,         // ⚡ Master toggle for Vengeful Curse Rebirth upon lethal damage (hp <= 0)
+  enableCurseRebirth: 0,         // ⚡ Master toggle for Vengeful Curse Rebirth upon lethal damage (hp <= 0)
   startInCurseForm: false,          // ⚡ Debug / testing toggle to start battle directly in Curse Form
   curseRebirthHpPercent: 0.50,      // ⚡ Reborn with 50% max HP (95 HP)
   curseWombDurationFrames: 60,      // ⚡ Duration (frames) of Cursed Womb cocoon phase before hatching (~1.0s)
@@ -168,7 +169,7 @@ export const naoyaConfig = {
   machRamKnockback: 14,             // ⚡ Collision pushback
 
   // Upgraded Projection Sorcery in Curse Form (2. 24 FPS Frame Trapping & 1s Freeze)
-  curseFrameFreezeChance: 0.0,      // ⚡ Disabled per user tuning (Passive 24-Frame Freeze disabled)
+  curseFrameFreezeChance: 0.35,     // ⚡ Upgraded Projection Sorcery Frame Trapping in Curse Form (35% chance)
   curseFrameFreezeDuration: 60,     // ⚡ 1.0 full second (60 frames) freeze inside animation frame
   curseFrameShatterDamage: 24,      // ⚡ Bonus True Damage when shattering a frozen 24 FPS frame in Curse Form
 
@@ -200,7 +201,7 @@ export const naoyaConfig = {
   curseTurbineKnockback: 18,        // Concussive repulsion blowing opponents away
 
   // Awakened Ultimate: Domain Expansion — Time Cell Moon Palace (時胞月宮殿 - Tokyū Gesshōkyū)
-  enableCurseDomain: 1,
+  enableCurseDomain: 0,
   curseDomainInitialCooldown: 240,   // ⚡ Initial cooldown (4.0s = 240 frames) when transforming into Curse Form before Domain can be opened
   curseDomainChannelFrames: 90,      // ⚡ Domain Expansion channeling wind-up duration (1.5s = 90 frames, matching Gojo & Sukuna)
   curseUltCooldown: 1200,            // 20.0s (1200 frames)

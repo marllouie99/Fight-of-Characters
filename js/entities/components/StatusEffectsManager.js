@@ -27,6 +27,13 @@ export class StatusEffectsManager {
     this.fighter.paralyzeTimer = val;
   }
 
+  get stunTimer() {
+    return this.fighter.stunTimer || 0;
+  }
+  set stunTimer(val) {
+    this.fighter.stunTimer = val;
+  }
+
   get isParalyzed() {
     return Boolean(this.fighter.isParalyzed || (this.fighter.paralyzeTimer && this.fighter.paralyzeTimer > 0));
   }
@@ -321,6 +328,23 @@ export class StatusEffectsManager {
         }
       }
     }
+
+    if (opts.isFrameStasis || opts.isNaoya) {
+      this.fighter.isFrameFrozen = true;
+      this.fighter.frameFreezeTimer = Math.max(this.fighter.frameFreezeTimer || 0, frames);
+    }
+  }
+
+  clearTimeStop() {
+    if (!this.fighter) return;
+    this.fighter.timeStopTimer = 0;
+    this.fighter.isFrameFrozen = false;
+    this.fighter.frameFreezeTimer = 0;
+    this.fighter.isFrozenByInfinity = false;
+    delete this.fighter._timeStopFrozenAngle;
+    delete this.fighter._timeStopFrozenGunAngle;
+    delete this.fighter._timeStopOriginalDuration;
+    delete this.fighter._timeStopStartTime;
   }
 
   handleTimeStop() {
@@ -369,7 +393,7 @@ export class StatusEffectsManager {
       fighter.isFrozenByInfinity = false;
       fighter.infinityFreezeTimer = 0;
     }
-    const isFrozen = (fighter.crimsonElectrifiedTimer > 0) || (fighter.electricStunTimer > 0) || (fighter.dubstepStunTimer > 0) || (fighter.timeStopTimer > 0) || ((fighter.iceFreezeTimer || 0) > 0) || fighter.isFrozenBySnowPea;
+    const isFrozen = (fighter.crimsonElectrifiedTimer > 0) || (fighter.electricStunTimer > 0) || (fighter.dubstepStunTimer > 0) || (fighter.timeStopTimer > 0) || ((fighter.iceFreezeTimer || 0) > 0) || fighter.isFrozenBySnowPea || fighter.isFrameFrozen || ((fighter.frameFreezeTimer || 0) > 0);
 
     if (isFrozen) {
       fighter.mahoragaAdaptationFreezeTimer = 0;
@@ -541,7 +565,7 @@ export class StatusEffectsManager {
         delete fighter._timeStopStartTime;
 
         // Restore baseline movement velocity if fighter is stationary and not channeling/building/in stasis
-        if (fighter.vx === 0 && fighter.vy === 0 && (fighter.speed || 0) > 0 && !fighter.isBuildingTurret && !fighter.isChannelingDomain && !fighter.isCountering && !isInsideRubbickStolenVoid(fighter) && (fighter.timeStopTimer || 0) <= 0) {
+        if (fighter.vx === 0 && fighter.vy === 0 && (fighter.speed || 0) > 0 && !fighter.isBuildingTurret && !fighter.isChannelingDomain && !fighter.isCountering && !fighter.isFrameFrozen && !((fighter.frameFreezeTimer || 0) > 0) && !isInsideRubbickStolenVoid(fighter) && (fighter.timeStopTimer || 0) <= 0) {
           const arenaCenterX = (typeof CONFIG !== 'undefined' && CONFIG.arena) ? (CONFIG.arena.x + CONFIG.arena.width / 2) : fighter.x;
           const arenaCenterY = (typeof CONFIG !== 'undefined' && CONFIG.arena) ? (CONFIG.arena.y + CONFIG.arena.height / 2) : fighter.y;
           const recoverAngle = Math.atan2(arenaCenterY - fighter.y, arenaCenterX - fighter.x) + (Math.random() - 0.5) * 0.4;
@@ -553,6 +577,18 @@ export class StatusEffectsManager {
     } else {
       fighter.isFrozenByInfinity = false;
     }
+
+    if (fighter.isFrameFrozen || (fighter.frameFreezeTimer && fighter.frameFreezeTimer > 0)) {
+      fighter.vx = 0;
+      fighter.vy = 0;
+      fighter.knockbackVx = 0;
+      fighter.knockbackVy = 0;
+      if (typeof fighter._handleFrozenSkillCooldowns === 'function') {
+        fighter._handleFrozenSkillCooldowns();
+      }
+      return true;
+    }
+
     return false;
   }
 

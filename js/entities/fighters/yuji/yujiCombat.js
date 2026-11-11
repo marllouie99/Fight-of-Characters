@@ -106,6 +106,7 @@ export function modUpdateMeleeCombat(customTarget = null) {
   }
 
   let hitAny = false;
+  let actuallyDamagedAny = false;
   const punchReach = CONFIG.yuji?.punchRange || 50;
   const maxReach = this.r + punchReach; // base reach plus reach distance
   const arcAngle = Math.PI / 4; // 45 degrees either side (90 degree frontal cone)
@@ -148,24 +149,23 @@ export function modUpdateMeleeCombat(customTarget = null) {
         }
 
         // Apply damage & knockback
+        const prevHp = target.hp;
         const didDamage = applyDamageToTarget(target, damage, this);
+        const actuallyDamaged = didDamage !== false && (target.hp < prevHp);
         
-        if (didDamage !== false) {
+        if (actuallyDamaged) {
+          actuallyDamagedAny = true;
           if (typeof target.applyKnockback === 'function') {
             target.applyKnockback(Math.cos(angleToTarget) * knockback, Math.sin(angleToTarget) * knockback);
           } else if (!target.immuneToPush && !target.immuneToKnockback && target.characterId !== 'escanor') {
             target.vx += Math.cos(angleToTarget) * knockback;
             target.vy += Math.sin(angleToTarget) * knockback;
           }
-        }
 
-        // Visual effects (Punch impact animation for CQC combos & Black Flash strikes)
-        if (didDamage !== false) {
+          // Visual effects (Punch impact animation for CQC combos & Black Flash strikes)
           spawnAnimePunchImpactFrame(target.x, target.y, isBlackFlash ? 70 : 60, angleToTarget, 'blackpink');
-        }
 
-        if (isBlackFlash) {
-          if (didDamage !== false) {
+          if (isBlackFlash) {
             spawnBlackFlash(target.x, target.y);
             if (this.blackFlashTimer <= 0) {
               spawnFloatingText(target.x, target.y - target.r - 25, "BLACK FLASH", "#ff0000");
@@ -186,31 +186,31 @@ export function modUpdateMeleeCombat(customTarget = null) {
             }
             target.blackFlashDebuffTimer = CONFIG.blackFlash?.debuff?.healReductionDuration ?? 270;
           }
-        }
 
-        // Queue Divergent Fist delayed shockwave only if attack was not blocked
-        if (this.isSkillEnabled(CONFIG.yuji?.enableDivergentFist, true) && this.delayedShockwaves && didDamage !== false) {
-          let swDamage = CONFIG.yuji?.shockwaveDamage || 10;
-          if (this.soulSwapActive) {
-            swDamage *= (CONFIG.yuji?.soulSwapDamageMultiplier || 2.5);
+          // Queue Divergent Fist delayed shockwave only if attack was not blocked
+          if (this.isSkillEnabled(CONFIG.yuji?.enableDivergentFist, true) && this.delayedShockwaves) {
+            let swDamage = CONFIG.yuji?.shockwaveDamage || 10;
+            if (this.soulSwapActive) {
+              swDamage *= (CONFIG.yuji?.soulSwapDamageMultiplier || 2.5);
+            }
+            this.delayedShockwaves.push({
+              target: target,
+              delay: CONFIG.yuji?.shockwaveDelay || 6,
+              damage: swDamage,
+              x: target.x,
+              y: target.y
+            });
           }
-          this.delayedShockwaves.push({
-            target: target,
-            delay: CONFIG.yuji?.shockwaveDelay || 6,
-            damage: swDamage,
-            x: target.x,
-            y: target.y
-          });
         }
       }
     }
   }
 
-  // Sound effects
-  if (hitAny) {
+  // Sound effects & Black Flash charge management
+  if (actuallyDamagedAny) {
     playYujiPunchSound(isBlackFlash || this.soulSwapActive);
     
-    // Build Black Flash charge / manage zone
+    // Build Black Flash charge / manage zone only when actually dealing damage!
     if (isBlackFlashAllowed) {
       if (isBlackFlash) {
         this.blackFlashCharge = 0; // Reset build-up charge after trigger
@@ -235,11 +235,11 @@ export function modUpdateMeleeCombat(customTarget = null) {
       }
     }
   } else {
-    // Punched the air
-    playYujiPunchSound(isBlackFlash || this.soulSwapActive);
-    // Only reset charge on whiff if we are NOT in the active Black Flash zone
-    if (isBlackFlashAllowed && this.blackFlashTimer <= 0 && CONFIG.yuji?.blackFlashResetOnMiss) {
-      this.blackFlashCharge = 0; // Reset charge on whiff
+    // Attack did not damage any enemy (blocked by barrier, dodged, or punched the air)
+    playYujiPunchSound(this.soulSwapActive);
+    // Only reset charge on complete whiff if we are NOT in the active Black Flash zone
+    if (!hitAny && isBlackFlashAllowed && this.blackFlashTimer <= 0 && CONFIG.yuji?.blackFlashResetOnMiss) {
+      this.blackFlashCharge = 0; // Reset charge on complete whiff
     }
   }
 }

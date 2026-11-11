@@ -6,6 +6,7 @@
 import { state } from '../../core/state.js';
 
 const _cachedWingBuffersMap = new Map();
+const _cachedNecklaceBuffersMap = new Map();
 
 function _getWingBuffers(r) {
   let buffers = _cachedWingBuffersMap.get(r);
@@ -350,25 +351,22 @@ export function drawMahoragaFaceWings(ctx, fighter) {
   ctx.restore();
 }
 
-/**
- * Draws Mahoraga's Ritual Chest Necklace & Tassels.
- */
-export function drawMahoragaChestNecklace(ctx, fighter) {
-  if (!fighter) return;
+function _getNecklaceBuffer(r) {
+  let buf = _cachedNecklaceBuffersMap.get(r);
+  if (buf) return buf;
 
-  ctx.save();
-  ctx.translate(fighter.x, fighter.y);
-  
-  const isWinnerScreen = Boolean(
-    fighter._isWinnerReveal || 
-    fighter.owner?._isWinnerReveal
-  );
-  const isAscending = Boolean(fighter.isAscending || (fighter.spawnTimer && fighter.spawnTimer > 0));
-  const rotAngle = (isWinnerScreen || isAscending) ? 0 : (fighter.angle || 0);
-  ctx.rotate(rotAngle);
-  if (Math.abs(rotAngle) > Math.PI / 2) ctx.scale(1, -1);
+  const w = Math.ceil(r * 2.5);
+  const h = Math.ceil(r * 2.5);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const bCtx = canvas.getContext('2d');
+  bCtx.imageSmoothingEnabled = false;
 
-  const r = fighter.r || 30;
+  const centerX = Math.round(w / 2);
+  const centerY = Math.round(h / 2);
+  bCtx.translate(centerX, centerY);
+
   const chestY = r * 0.15;
   const P = 2.0;
   const snap = (v) => Math.round(v / P) * P;
@@ -383,8 +381,8 @@ export function drawMahoragaChestNecklace(ctx, fighter) {
       const t = s / steps;
       const px = snap(x0 + dx * t);
       const py = snap(y0 + dy * t);
-      ctx.fillStyle = color;
-      ctx.fillRect(px - halfT, py - halfT, halfT * 2, halfT * 2);
+      bCtx.fillStyle = color;
+      bCtx.fillRect(px - halfT, py - halfT, halfT * 2, halfT * 2);
     }
   }
 
@@ -430,11 +428,11 @@ export function drawMahoragaChestNecklace(ctx, fighter) {
         const px = snap(node.x + gx * P);
         const py = snap(node.y + gy * P);
         if (dist > ringR - P * 0.7) {
-          ctx.fillStyle = '#000000';
+          bCtx.fillStyle = '#000000';
         } else {
-          ctx.fillStyle = '#EBEBE6';
+          bCtx.fillStyle = '#EBEBE6';
         }
-        ctx.fillRect(px - P * 0.5, py - P * 0.5, P, P);
+        bCtx.fillRect(px - P * 0.5, py - P * 0.5, P, P);
       }
     }
 
@@ -442,6 +440,38 @@ export function drawMahoragaChestNecklace(ctx, fighter) {
     _neckPixLine(node.x - 1.5, node.y + 3.5, node.x - 3.5, node.y + 16, '#000000', P);
     _neckPixLine(node.x + 1.5, node.y + 3.5, node.x + 3.5, node.y + 16, '#000000', P);
   });
+
+  buf = { canvas, centerX, centerY };
+  _cachedNecklaceBuffersMap.set(r, buf);
+  return buf;
+}
+
+/**
+ * Draws Mahoraga's Ritual Chest Necklace & Tassels.
+ * Pre-baked offscreen canvas quad complying with Mobile 60 FPS standard (Rule 35).
+ */
+export function drawMahoragaChestNecklace(ctx, fighter) {
+  if (!fighter) return;
+
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y);
+  
+  const isWinnerScreen = Boolean(
+    fighter._isWinnerReveal || 
+    fighter.owner?._isWinnerReveal
+  );
+  const isAscending = Boolean(fighter.isAscending || (fighter.spawnTimer && fighter.spawnTimer > 0));
+  const rotAngle = (isWinnerScreen || isAscending) ? 0 : (fighter.angle || 0);
+  ctx.rotate(rotAngle);
+  if (Math.abs(rotAngle) > Math.PI / 2) ctx.scale(1, -1);
+
+  const r = fighter.r || 30;
+  const buf = _getNecklaceBuffer(r);
+
+  const prevSmoothing = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(buf.canvas, -buf.centerX, -buf.centerY);
+  ctx.imageSmoothingEnabled = prevSmoothing;
 
   ctx.restore();
 }

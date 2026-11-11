@@ -506,6 +506,14 @@ class SoundSpriteManager {
     const sheet = this.spriteSheets.get(info.sheetId);
     if (!sheet || !sheet.buffer) return null;
 
+    // Guard against stale or truncated sprite sheet buffers in browser HTTP cache:
+    // if the slice extends beyond the decoded buffer duration, fall back to standalone file.
+    if (typeof sheet.buffer.duration === 'number' && sheet.buffer.duration > 0) {
+      if (info.offset + info.duration * 0.5 > sheet.buffer.duration) {
+        return null;
+      }
+    }
+
     return {
       buffer: sheet.buffer,
       offset: info.offset,

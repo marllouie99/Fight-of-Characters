@@ -7,7 +7,7 @@
 // 1. Official Earclacks Physics Ball Aesthetic: Flat Solid Neutral Grey (#CFCFCF) Sphere
 // 2. Crisp, Bold Jet-Black Circular Outer Border (#000000, ~2px line weight)
 // 3. Iconic Centered Bold Black HP Number ("100" at full health) in Heavy Sans-Serif (Upright Front POV)
-// 4. Super Unarmed Form: Pure white ball (#FFFFFF) with light grey outline (#D4D4D8) (Wiki Canon)
+// 4. Super Unarmed Form: Pure white ball (#FFFFFF) with crisp black outline (#000000) (Rule 32 Standard)
 // 5. Weaponless & Handless Ball Model (this.hideHands = true by default)
 // 6. Ghost Afterimage Trails & Rule 26 Compliant Clean Concentric Supersonic Shockwaves
 // 7. Rule 19 Upright Front POV & Rule 11 Zero shadowBlur
@@ -82,7 +82,7 @@ export function _drawUnarmedHair(ctx, r, facingLeft = false) {
 /**
  * Official Earclacks Model Body Renderer:
  * Solid neutral grey (#CFCFCF) circular sphere with bold jet-black circular outer border (#000000).
- * Super Unarmed (Wiki Canon): Pure white ball (#FFFFFF) with light grey outline (#D4D4D8).
+ * Super Unarmed: Pure white ball (#FFFFFF) with crisp jet-black circular outer border (#000000) (Rule 32 Standard).
  */
 export function drawUnarmedPixelBody(ctx, r, isSuper = false, text = null) {
   ctx.save();
@@ -93,9 +93,9 @@ export function drawUnarmedPixelBody(ctx, r, isSuper = false, text = null) {
   ctx.fillStyle = isSuper ? '#FFFFFF' : '#CFCFCF';
   ctx.fill();
 
-  // 2. Bold circular outer outline border
+  // 2. Bold circular outer outline border (Rule 32 Universal Character Black Outline Standard)
   ctx.lineWidth = Math.max(2, Math.round(r * 0.08));
-  ctx.strokeStyle = isSuper ? '#D4D4D8' : '#000000';
+  ctx.strokeStyle = '#000000';
   ctx.stroke();
 
   // 3. Optional centered text if provided (e.g. in preview states or icons)
@@ -230,9 +230,9 @@ export function drawUnarmedAfterimages(ctx, fighter) {
   const isSuper = fighter.isSuperUnarmed || fighter.isTerminalVelocity;
   const len = fighter.afterimages.length;
   const fillColor = isSuper ? '#FFFFFF' : '#CFCFCF';
-  const strokeColor = isSuper ? '#D4D4D8' : '#000000';
   const cfg = (typeof CONFIG !== 'undefined' && CONFIG.unarmed) || {};
   const peakAlpha = isSuper ? (cfg.afterimageSuperMaxAlpha ?? 0.48) : (cfg.afterimageMaxAlpha ?? 0.38);
+  const strokeColor = isSuper ? (cfg.afterimageSuperStrokeColor || '#D4D4D8') : '#000000';
 
   // Render from oldest (tail) to newest (head) so newer slices naturally overlap older slices
   for (let i = 0; i < len; i++) {
@@ -304,7 +304,7 @@ export function drawUnarmedSkin(ctx, fighter) {
     }
     const handR = getHandSize(r * 0.30);
     const skinColor = isSuper ? '#FFFFFF' : '#CFCFCF';
-    const strokeColor = isSuper ? '#D4D4D8' : '#000000';
+    const strokeColor = '#000000'; // Rule 32 Universal Character Black Outline Standard
 
     let leftHandX = -r * 0.82;
     let leftHandY = r * 0.38;

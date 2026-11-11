@@ -38,7 +38,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  background: #F5EEDC;
+  background: #000000;
   color: #000000;
   display: flex;
   flex-direction: column;
@@ -100,6 +100,7 @@ body.fit-window-mode .game-container {
   align-items: center;
   width: 540px;
   height: 960px;
+  background: #000000;
   margin: 0 auto;
   box-sizing: border-box;
   flex-shrink: 0;
@@ -117,7 +118,7 @@ body.fit-window-mode .game-container {
   text-align: center;
   width: 540px;
   height: 960px;
-  background: #F5EEDC;
+  background: #000000;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3155,7 +3156,12 @@ body.hud-layout-classic .health-card__info > div {
 .game-container.arena-dark-mode,
 .game-box.arena-dark-mode,
 html.arena-dark-mode,
-body.arena-dark-mode {
+body.arena-dark-mode,
+.arena-dark-mode,
+body.arena-dark-mode .game-container,
+body.arena-dark-mode .game-box,
+html.arena-dark-mode .game-container,
+html.arena-dark-mode .game-box {
   background: #000000 !important;
   background-color: #000000 !important;
 }

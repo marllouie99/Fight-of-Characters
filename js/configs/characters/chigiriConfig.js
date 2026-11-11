@@ -52,6 +52,8 @@ export const chigiriConfig = {
   pantherShotMaxRebounds: 1, // Bounces once off arena walls
   kickSlowDuration: 14, // Brief duration in frames (~0.23s) of kick recovery
   kickSlowMultiplier: 0.25, // Agile recovery movement
+  ballHitSlowDuration: 14, // Duration in frames (~0.23s) of slowdown when ball successfully hits enemy
+  ballHitSlowMultiplier: 0.25, // Movement speed multiplier during successful ball hit
   kickAccuracy: 0.80, // 94% kick accuracy (slight spread chance)
   maxKickSpread: (18 * Math.PI) / 180, // Default maximum spread dispersion angle (~18 deg)
 

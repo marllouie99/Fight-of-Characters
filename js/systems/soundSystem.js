@@ -646,21 +646,31 @@ export function isMusicAudio(src) {
 export async function preloadAudioBuffer(src, options = {}) {
   if (!src || typeof src !== 'string') return null;
 
-  // 1. Check sound sprite sheet registry first
-  if (soundSpriteManager.hasSprite(src)) {
+  const isStandaloneFaah = src.toLowerCase().includes('faah');
+
+  // 1. Check sound sprite sheet registry first (except standalone faah.mp3 which is also decoded directly so death SFX never fails or clips)
+  if (!isStandaloneFaah && soundSpriteManager.hasSprite(src)) {
     const info = soundSpriteManager.getSpriteInfo(src);
     if (info) {
       const sheet = soundSpriteManager.spriteSheets.get(info.sheetId);
       if (sheet && sheet.buffer) {
-        // DO NOT set sheet.buffer directly into _cache as src!
-        // sheet.buffer is the entire multi-sound sprite sheet.
-        // Slices are retrieved via soundSpriteManager.getSpriteAudio with correct offset/duration.
-        return sheet.buffer;
+        const validSlice = typeof sheet.buffer.duration !== 'number' || sheet.buffer.duration <= 0 ||
+          (info.offset + info.duration * 0.5 <= sheet.buffer.duration);
+        if (validSlice) {
+          // DO NOT set sheet.buffer directly into _cache as src!
+          // sheet.buffer is the entire multi-sound sprite sheet.
+          // Slices are retrieved via soundSpriteManager.getSpriteAudio with correct offset/duration.
+          return sheet.buffer;
+        }
       } else if (sheet && !sheet.isVirtual && sheet.url && !sheet.url.startsWith('virtual://')) {
         const audioCtx = getAudioContext();
         const sheetBuffer = await soundSpriteManager.loadSpriteSheet(info.sheetId, audioCtx);
         if (sheetBuffer) {
-          return sheetBuffer;
+          const validSlice = typeof sheetBuffer.duration !== 'number' || sheetBuffer.duration <= 0 ||
+            (info.offset + info.duration * 0.5 <= sheetBuffer.duration);
+          if (validSlice) {
+            return sheetBuffer;
+          }
         }
       }
     }
@@ -1463,8 +1473,12 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
     if (!_evictOldestSound()) break;
   }
 
-  const spriteAudio = soundSpriteManager.getSpriteAudio(resolvedSrc) || soundSpriteManager.getSpriteAudio(rawSrc);
-  const cached = customBuffer || (spriteAudio ? spriteAudio.buffer : (_touchCacheKey(resolvedSrc) || _touchCacheKey(rawSrc)));
+  const directCached = _touchCacheKey(resolvedSrc) || _touchCacheKey(rawSrc);
+  const preferStandalone = Boolean(srcLower.includes('faah') && isAudioBufferLike(directCached));
+  const spriteAudio = preferStandalone
+    ? null
+    : (soundSpriteManager.getSpriteAudio(resolvedSrc) || soundSpriteManager.getSpriteAudio(rawSrc));
+  const cached = customBuffer || (spriteAudio ? spriteAudio.buffer : directCached);
   const isSprite = Boolean(spriteAudio);
   const spriteBaseOffset = isSprite ? spriteAudio.offset : 0;
   const spriteMaxDuration = isSprite ? spriteAudio.duration : 0;
@@ -1472,7 +1486,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   // Fast path: AudioBuffer (fully decoded during preload or from sound sprite) — zero latency Web Audio scheduling
   if (isAudioBufferLike(cached) && audioCtx) {
     try {
-      if (audioCtx.state === 'suspended' && _audioUnlocked) {
+      if (audioCtx.state === 'suspended') {
         audioCtx.resume().catch(() => {});
       }
       const source = audioCtx.createBufferSource();

@@ -115,15 +115,17 @@ export function modUpdateMeleeCombat(target, isCombo = false) {
     undodgeable: Boolean(this.justSwappedTimer > 0 || isCombo),
     isBlackFlash
   };
+  const prevHp = target.hp;
   const didDamage = applyDamageToTarget(target, damage, this, hitOpts);
+  const actuallyDamaged = didDamage !== false && (target.hp < prevHp);
 
-  // Consume Black Flash swap buff only on a successful hit
-  if (didDamage !== false && this.justSwappedTimer > 0) {
+  // Consume Black Flash swap buff only on an actually damaging hit
+  if (actuallyDamaged && this.justSwappedTimer > 0) {
     this.justSwappedTimer = 0;
   }
 
-  // Apply velocity pushback impulse & universal physics knockback only if attack wasn't blocked by Infinity
-  if (didDamage !== false && knockback > 0) {
+  // Apply velocity pushback impulse & universal physics knockback only if target was actually damaged
+  if (actuallyDamaged && knockback > 0) {
     if (typeof target.applyKnockback === 'function') {
       target.applyKnockback(Math.cos(angle) * knockback, Math.sin(angle) * knockback);
     } else if (!target.immuneToPush && !target.immuneToKnockback && target.characterId !== 'escanor') {
@@ -134,12 +136,12 @@ export function modUpdateMeleeCombat(target, isCombo = false) {
 
 
   // Effects
-  if (didDamage !== false) {
+  if (actuallyDamaged) {
     spawnAnimePunchImpactFrame(target.x, target.y, isBlackFlash ? 70 : 60, angle, 'purple');
   }
 
   if (isBlackFlash) {
-    if (didDamage !== false) {
+    if (actuallyDamaged) {
       // Full JJK-style Black Flash — void implosion + crimson screen flash + cursed energy bolts
       spawnBlackFlash(target.x, target.y);
       const bfAudioCfg = CONFIG.blackFlash?.audio || {};

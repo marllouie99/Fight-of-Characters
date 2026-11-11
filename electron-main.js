@@ -335,6 +335,7 @@ function createWindow () {
   const win = new BrowserWindow({
     width: 540,
     height: 960,
+    backgroundColor: '#000000',
     useContentSize: true, // Ensures web content viewport is exactly 540x960px
     minWidth: 320,
     minHeight: 480,

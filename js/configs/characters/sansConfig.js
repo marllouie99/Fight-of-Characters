@@ -43,6 +43,7 @@ export const sansConfig = {
   karmaTickInterval: 14,       // Frames between poison ticks (~0.23s)
   karmaMaxStacks: 12,          // Up to 12 stacks for sustained pressure
   karmaDuration: 180,          // Total KR duration (~3.0s)
+  karmaKnockback: 0,           // Knockback force per KR tick (0 = zero push back)
 
   // Passive 2: Teleport Dodge & Stamina
   enableTeleportDodge: true,
@@ -82,11 +83,11 @@ export const sansConfig = {
   blasterHpCost: 0,            // Deprecated: Stamina is consumed instead of HP
   
   // Stamina Recovery on Gaster Blaster Hit
-  blasterStaminaRecoverOnHit: 2,        // Stamina recovered on first impact hit per blaster
-  blasterHitStaminaRecover: 2,          // Backward-compatibility alias
-  blasterContinuousStaminaRecover: 1,   // Stamina recovered on continuous beam contact ticks
+  blasterStaminaRecoverOnHit: 1,        // Stamina recovered on first impact hit per blaster
+  blasterHitStaminaRecover: 0,          // Backward-compatibility alias
+  blasterContinuousStaminaRecover: 0,   // Stamina recovered on continuous beam contact ticks
   blasterGigaStaminaRecoverOnHit: 1,    // Stamina recovered on Gigablaster first impact
-  blasterGigaContinuousStaminaRecover: 1, // Stamina recovered on Gigablaster continuous tick
+  blasterGigaContinuousStaminaRecover: 0, // Stamina recovered on Gigablaster continuous tick
   
   // General Beam Dimension & Height Tuning
   blasterBeamHeight: 36,       // Standard Gaster Blaster beam thickness / vertical height (pixels)

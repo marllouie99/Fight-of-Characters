@@ -166,6 +166,11 @@ export function drawFighterInkOutline(destCtx, fighter) {
   _sourceCtx.save();
   _sourceCtx.translate(HALF_BUFFER - fighterX, HALF_BUFFER - drawY);
 
+  // Circular clip guard prevents any oversized ground effects or wide visuals from producing rectangular buffer boundary crops
+  _sourceCtx.beginPath();
+  _sourceCtx.arc(fighterX, drawY, HALF_BUFFER - 3, 0, Math.PI * 2);
+  _sourceCtx.clip();
+
   const prevIsSilhouette = fighter._isSilhouettePass;
   const prevHideHp = fighter.hideHpText;
   const prevSuppressFreeze = fighter._suppressFreezeTimer;

@@ -10,6 +10,7 @@ import { spawnImpactFlash, spawnSparks, spawnMahitoSoulBubbles, spawnMahitoSoulE
 import { spawnIllusionSpawn } from '../../graphics/particles/illusionSpawnEffect.js';
 import { spawnIllusionDeath } from '../../graphics/particles/illusionDeathEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
+import { stopFighterVoice } from '../../systems/soundSystem.js';
 import { renderMahitoDomainBackground } from '../../graphics/renderers/environmentalRenderer.js';
 import { 
   executeIdleTransfigurationStrike, 
@@ -355,6 +356,18 @@ export class MahitoFighter extends Fighter {
     if ((this.twinScissorAnimTimer > 0 || this.domainChargeTimer > 0) && !forceCancelAll) {
       return;
     }
+    const wasChannelingDomain = Boolean(this.isChannelingDomainExpansion || (this.domainChargeTimer || 0) > 0);
+    if (forceCancelAll) {
+      this.isChannelingDomainExpansion = false;
+      this.domainChargeTimer = 0;
+      if (wasChannelingDomain) {
+        const penaltyCD = CONFIG.mahito?.interruptCooldown ?? 270;
+        this.domainCooldown = Math.max(this.domainCooldown || 0, penaltyCD);
+        if (typeof stopFighterVoice === 'function') {
+          stopFighterVoice(this.characterId || 'mahito', 60, true);
+        }
+      }
+    }
     // Pull back and cancel all stretched limbs, morphs, and special animations immediately
     this.punchAnimTimer = 0;
     this.fleshSurgeAnimTimer = 0;
@@ -372,8 +385,15 @@ export class MahitoFighter extends Fighter {
   }
 
   update(opponent, ownerIndex, arena) {
-    if (this.isDead || this.hp <= 0) {
+    if (this.isDead || this.hp <= 0 || this.dead || this._hasDied) {
       this.punchAnimTimer = 0;
+      if (this.isChannelingDomainExpansion || (this.domainChargeTimer || 0) > 0) {
+        this.isChannelingDomainExpansion = false;
+        this.domainChargeTimer = 0;
+        if (typeof stopFighterVoice === 'function') {
+          stopFighterVoice(this.characterId || 'mahito', 60, true);
+        }
+      }
       return;
     }
 
@@ -517,6 +537,10 @@ export class MahitoFighter extends Fighter {
       this.paralyzeTimer = 0;
       this.isFrozenByInfinity = false;
       this.isWallSlammed = false;
+      this.iceFreezeTimer = 0;
+      this.freezeTimer = 0;
+      this.isFrozenBySnowPea = false;
+      this.isFrozenByBlueBone = false;
     }
 
     // Self-Embodiment of Perfection Domain Progression & Cooldown:
@@ -528,11 +552,20 @@ export class MahitoFighter extends Fighter {
     // ── 1. RULE #1: Freeze / TimeStop Early Exit Guard ──
     const isFrozen = this._handleTimeStop();
     if (isFrozen || this.isTargetOfAmbush) {
-      if (this.isTargetOfAmbush || (this.silenceTimer || 0) > 0) {
+      if (this.isSkillPreservedInStasis()) {
+        return; // Retain channeling state during legitimate stasis (Nanami 7:3 Ratio hit-pause, Naoya 24 FPS Frame Stasis)
+      }
+      // True hard CC / Ambush / Silence interrupts domain channeling!
+      if (this.isChannelingDomainExpansion || (this.domainChargeTimer || 0) > 0) {
         this.isChannelingDomainExpansion = false;
         this.domainChargeTimer = 0;
-        this.interruptAttacks(true);
+        const penaltyCD = CONFIG.mahito?.interruptCooldown ?? 270;
+        this.domainCooldown = Math.max(this.domainCooldown || 0, penaltyCD);
+        if (typeof stopFighterVoice === 'function') {
+          stopFighterVoice(this.characterId || 'mahito', 60, true);
+        }
       }
+      this.interruptAttacks(true);
       return;
     }
 

@@ -1,0 +1,21 @@
+[package]
+name = "circle-mini-battle-rust"
+version = "1.0.0"
+edition = "2021"
+description = "Lightweight Rust + WebView2 (Tauri/Wry) Desktop Shell for Circle Mini-Battle"
+
+[dependencies]
+tao = "0.30"
+wry = "0.47"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.22"
+rfd = "0.15"
+tiny_http = "0.12.0"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"

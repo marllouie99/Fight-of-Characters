@@ -496,8 +496,22 @@ export async function buildAudioSprite(options = {}) {
         currentOffset += rawDuration + paddingSec;
       }
 
-      const maxCoreSrcMtime = Math.max(...validEntries.map(e => fs.statSync(e.fullPath).mtimeMs));
-      const coreNeedsEncode = force || !fs.existsSync(outputFile) || fs.statSync(outputFile).mtimeMs < maxCoreSrcMtime;
+      const maxCoreSrcMtime = Math.max(
+        fs.statSync(__filename).mtimeMs,
+        ...validEntries.map(e => fs.statSync(e.fullPath).mtimeMs)
+      );
+      let coreDurationMismatch = false;
+      if (fs.existsSync(outputFile)) {
+        try {
+          const actualDur = measureExactDuration(outputFile);
+          if (Math.abs(actualDur - currentOffset) > 0.25) {
+            coreDurationMismatch = true;
+          }
+        } catch (_) {
+          coreDurationMismatch = true;
+        }
+      }
+      const coreNeedsEncode = force || !fs.existsSync(outputFile) || coreDurationMismatch || fs.statSync(outputFile).mtimeMs < maxCoreSrcMtime;
 
       if (coreNeedsEncode) {
         const ffmpegArgs = [];
@@ -621,7 +635,11 @@ export async function buildAudioSprite(options = {}) {
     }
 
     const maxSrcMtime = Math.max(...packableEntries.map(e => fs.statSync(e.fullPath).mtimeMs));
-    const needsEncode = force || !fs.existsSync(outFullPath) || fs.statSync(outFullPath).mtimeMs < maxSrcMtime;
+    const prevCharEntry = existingManifest[charKey];
+    const manifestChanged = !prevCharEntry ||
+      prevCharEntry.sliceCount !== packableEntries.length ||
+      Math.abs((prevCharEntry.totalDuration || 0) - Math.round(charOffset * 100) / 100) > 0.05;
+    const needsEncode = force || !fs.existsSync(outFullPath) || manifestChanged || fs.statSync(outFullPath).mtimeMs < maxSrcMtime;
 
     if (needsEncode) {
       const ffmpegArgs = [];

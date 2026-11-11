@@ -6,7 +6,7 @@
 // while preserving 100% of character color identity.
 // ─────────────────────────────────────────────
 
-const CHARS = '0123456789+-.,!%x/KOCRITDGMWSPLNE';
+const CHARS = '0123456789+-.,!%x/KOCRITDGMWSPLNEA';
 const GLYPH_WIDTH = 22;
 const GLYPH_HEIGHT = 28;
 const GLYPH_SPACING = 16; // Kerning advance

@@ -248,25 +248,36 @@ export class IsagiFighter extends Fighter {
 
   /**
    * Damage Pipeline:
-   * Metavision Slip only activates when Isagi is close to the ball.
-   * If Isagi is actively dashing to the ball with invulnerability frames, damage is evaded.
+   * Metavision Slip triggers reactively when an enemy attacks and Skill 1 is UP (cooldown <= 0),
+   * evading the attack completely and granting invulnerability frames and Flow State.
    */
   takeDamage(amount, attacker, opts = {}) {
+    const isGuaranteedHit = Boolean(opts && (opts.isRatioCrit || opts.isNanamiPause || opts.undodgeable || opts.isSureKill || opts.isSaitamaCounter || opts.isSaitamaPunch || opts.isSeriousPunch || opts.bypassShield || opts.bypassEvade || opts.isGuaranteedHit || opts.isDivineFlame || opts.isFuga));
+
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.isagi) ? CONFIG.isagi : isagiConfig;
+    const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
+    const isMetavisionUp = isSkillEnabled(cfg.enableMetavision, true) && (this.metavisionCooldownTimer <= 0) && !isFrozen;
+
+    // Reactive Metavision Slip: When an enemy attacks and Metavision is UP, the skill triggers!
+    if (isMetavisionUp && !isGuaranteedHit) {
+      this._executeMetavisionSlip(this.soccerBall, cfg, attacker);
+      return false;
+    }
+
     if (this.isEgoActive) {
       const egoBuffs = getBlueLockEgoBuffs(this);
-      if (egoBuffs && typeof egoBuffs.dodgeChance === 'number' && Math.random() < egoBuffs.dodgeChance && !opts?.isGuaranteedHit && !opts?.undodgeable) {
+      if (egoBuffs && typeof egoBuffs.dodgeChance === 'number' && Math.random() < egoBuffs.dodgeChance && !isGuaranteedHit) {
         spawnFloatingText('EVADE!', this.x, this.y - 18, this.color || '#00F0FF');
         return false;
       }
     }
-    if (this.metavisionInvulnTimer > 0 && !opts?.isGuaranteedHit && !opts?.undodgeable) {
+    if (this.metavisionInvulnTimer > 0 && !isGuaranteedHit) {
       spawnFloatingText('SLIP!', this.x, this.y - 18, '#00FF88');
       return false;
     }
     const res = super.takeDamage(amount, attacker, opts);
     // Ball Disruption / Poise check when hit while dribbling
     if (res && this.soccerBall && this.soccerBall.dribbler === this) {
-      const cfg = (typeof CONFIG !== 'undefined' && CONFIG.isagi) ? CONFIG.isagi : isagiConfig;
       const control = getFighterDribbleControl(this, cfg);
       if (amount >= 35 || Math.random() > control) {
         this.soccerBall.dribbler = null;
@@ -281,9 +292,16 @@ export class IsagiFighter extends Fighter {
   /**
    * Universal Beam Evasion:
    * If actively dashing with Metavision Slip, slips through continuous beams.
+   * If a beam attacks while Metavision is UP, triggers Metavision Slip reactively!
    */
   dodgeBeam(beamData = {}) {
     if (this.metavisionInvulnTimer > 0) {
+      return true;
+    }
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.isagi) ? CONFIG.isagi : isagiConfig;
+    const isFrozen = this.isTimeStopped || this.isStunned || this.isParalyzed || this.isChainedByMakima;
+    if (isSkillEnabled(cfg.enableMetavision, true) && (this.metavisionCooldownTimer <= 0) && !isFrozen) {
+      this._executeMetavisionSlip(this.soccerBall, cfg, beamData?.attacker || null);
       return true;
     }
     return super.dodgeBeam(beamData);
@@ -534,6 +552,8 @@ export class IsagiFighter extends Fighter {
         this.aim(opponent);
       }
       this.resolveWallBounce(arena, opponent);
+    } else if (this.kickSlowTimer > 0) {
+      this.kickSlowTimer--;
     }
   }
 
@@ -643,30 +663,44 @@ export class IsagiFighter extends Fighter {
   }
 
   /**
-   * Initiates Skill 1: Metavision Slip (Ball Interception Dash).
-   * Activates ONLY when Isagi is close to the loose soccer ball, dashing directly toward it!
+   * Initiates Skill 1: Metavision Slip (Ball Interception Dash & Reactive Attack Evasion).
+   * Activates when Isagi approaches the loose soccer ball, OR reactively when attacked while Metavision is UP!
    */
-  _executeMetavisionSlip(ballTarget, cfg) {
+  _executeMetavisionSlip(ballTarget, cfg, attacker = null) {
     this.metavisionCooldownTimer = this.metavisionCooldownMax;
     this.isMetavisionDashing = true;
     this._hasPassedThroughText = false;
     this.metavisionDashTimer = cfg.metavisionDashFrames || 10;
     this.metavisionInvulnTimer = cfg.metavisionInvulnFrames || 14;
 
-    const target = ballTarget || this.soccerBall;
-    if (target) {
-      const dx = target.x - this.x;
-      const dy = target.y - this.y;
-      const slipAngle = Math.atan2(dy, dx);
-      const dist = Math.hypot(dx, dy);
-      const dashSpeed = Math.max(12, dist / this.metavisionDashTimer);
-      this.vx = Math.cos(slipAngle) * dashSpeed;
-      this.vy = Math.sin(slipAngle) * dashSpeed;
-      this.gunAngle = slipAngle;
-      this.angle = slipAngle;
+    const ball = ballTarget || this.soccerBall;
+    const distToBall = ball ? Math.hypot(ball.x - this.x, ball.y - this.y) : Infinity;
+    let slipAngle;
+    let dashSpeed = cfg.metavisionDashSpeed || 14.0;
+
+    // If loose friendly ball is within interception range on the pitch, slip directly to claim the loose ball!
+    if (ball && distToBall >= 35 && distToBall <= 280 && !isHostileLethalBall(ball, this)) {
+      slipAngle = Math.atan2(ball.y - this.y, ball.x - this.x);
+      dashSpeed = Math.max(12, Math.min(22, distToBall / this.metavisionDashTimer));
+    } else if (attacker && typeof attacker.x === 'number' && typeof attacker.y === 'number') {
+      // Slip into the attacker's blind spot (tangent evasion angle past the attacker)
+      const toAttackerAngle = Math.atan2(attacker.y - this.y, attacker.x - this.x);
+      const side = Math.random() < 0.5 ? 1 : -1;
+      slipAngle = toAttackerAngle + Math.PI + (side * Math.PI * 0.35);
+      dashSpeed = cfg.metavisionEvadeDashSpeed || 15.0;
+    } else if (ball) {
+      slipAngle = Math.atan2(ball.y - this.y, ball.x - this.x);
+      dashSpeed = Math.max(12, Math.min(20, distToBall / this.metavisionDashTimer));
+    } else {
+      slipAngle = this.gunAngle !== undefined ? this.gunAngle : (this.angle || 0);
     }
 
-    spawnFloatingText('METAVISION!', this.x, this.y - 18, '#00F0FF');
+    this.vx = Math.cos(slipAngle) * dashSpeed;
+    this.vy = Math.sin(slipAngle) * dashSpeed;
+    this.gunAngle = slipAngle;
+    this.angle = slipAngle;
+
+    spawnFloatingText(attacker ? 'METAVISION SLIP!' : 'METAVISION!', this.x, this.y - 18, '#00F0FF');
 
     // Flow State Empowerment for the incoming kick
     this.isFlowStateActive = true;

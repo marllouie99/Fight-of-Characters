@@ -622,6 +622,8 @@ export class ChigiriFighter extends Fighter {
         this.aim(opponent);
       }
       this.resolveWallBounce(arena, opponent);
+    } else if (this.kickSlowTimer > 0) {
+      this.kickSlowTimer--;
     }
   }
 

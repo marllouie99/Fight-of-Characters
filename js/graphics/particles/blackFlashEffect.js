@@ -277,6 +277,11 @@ export function clearBlackFlashEffects() {
     _returnBFParticle(_blackFlashParticles[i]);
   }
   _blackFlashParticles.length = 0;
+  _lastBFSpawnTime = 0;
+}
+
+export function getBlackFlashParticleCount() {
+  return _blackFlashParticles.length;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

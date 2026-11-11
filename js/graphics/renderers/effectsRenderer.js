@@ -376,7 +376,7 @@ export function drawUltimateChannelingTexts() {
       const maxCharge = fighter.domainChargeMax || CONFIG.naoya?.curseDomainChannelFrames || 90;
       const progress = Math.min(1.0, Math.max(0, (fighter.domainChargeTimer || 0) / Math.max(1, maxCharge)));
       renderChannelingText(fighter, 'DOMAIN EXPANSION', `rgba(0, 242, 254, ${progress})`, progress, `rgba(118, 224, 66, ${progress * 0.55})`);
-    } else if (isMahito && fighter.isChannelingDomainExpansion && (fighter.timeStopTimer || 0) <= 0) {
+    } else if (isMahito && fighter.isChannelingDomainExpansion && (fighter.domainChargeTimer || 0) > 0 && !fighter.domainActive && (fighter.timeStopTimer || 0) <= 0) {
       const maxCharge = fighter.domainChargeMax || 120;
       const progress = Math.min(1.0, Math.max(0.0, 1.0 - ((fighter.domainChargeTimer || 0) / Math.max(1, maxCharge))));
       renderChannelingText(fighter, 'DOMAIN EXPANSION', `rgba(217, 70, 239, ${progress})`, progress, `rgba(168, 85, 247, ${progress * 0.6})`);

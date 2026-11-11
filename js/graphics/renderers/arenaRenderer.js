@@ -1111,12 +1111,14 @@ export function drawArena() {
     const outerBg = parseColor(isDark ? (CONFIG.darkArenaOuterBgColor || '#000000') : (CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || '#ffffffff'));
     const innerBg = parseColor(isDark ? (CONFIG.darkArenaInnerBgColor || '#000000') : (CONFIG.arenaInnerBgColor || CONFIG.lightArenaInnerBgColor || '#ffffffff'));
 
-    const bleed = 4000;
+    // Colossal bleed margin ensures extreme supersonic out-of-bounds sprints (e.g. Naoya Mach 3 Runway Breach)
+    // never reach the edge of the WebGL outer arena backdrop.
+    const bleed = 20000;
     const bgW = pixiApp.screen.width + bleed * 2;
     const bgH = pixiApp.screen.height + bleed * 2;
 
-    let activeOuterColor = outerBg.color;
-    let activeOuterAlpha = outerBg.alpha;
+    let activeOuterColor = isDark ? 0x000000 : outerBg.color;
+    let activeOuterAlpha = isDark ? 1.0 : outerBg.alpha;
     if (suppressArenaFloor) {
       if (state.globalDimEdgeColor) {
         const parsed = parseColor(state.globalDimEdgeColor);
@@ -1162,9 +1164,12 @@ export function drawArena() {
     // Canvas 2D fallback: Draw outer background in screen space (identity transform).
     // Fills the exact viewport (0, 0, canvas.width, canvas.height) with ZERO wasted overdraw
     // (eliminates 153 megapixels of redundant rasterization per frame on mobile devices).
-    const outerBg = suppressArenaFloor
+    const rawOuterBg = suppressArenaFloor
       ? (state.globalDimEdgeColor || (isDark ? '#000000' : '#080808'))
       : (isDark ? (CONFIG.darkArenaOuterBgColor || '#000000') : (CONFIG.arenaOuterBgColor || CONFIG.lightArenaOuterBgColor || '#ffffff'));
+    const outerBg = (typeof rawOuterBg === 'string' && rawOuterBg.startsWith('#') && rawOuterBg.length === 9 && rawOuterBg.endsWith('ff'))
+      ? rawOuterBg.substring(0, 7)
+      : rawOuterBg;
     ctx.fillStyle = outerBg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }

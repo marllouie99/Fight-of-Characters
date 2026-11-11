@@ -22,7 +22,7 @@ export const unarmedConfig = {
   color: '#CFCFCF', // Official Earclacks neutral grey sphere (#CFCFCF)
   themeColor: '#71717A', // Muted steel silver
   superColor: '#FFFFFF', // Super Unarmed white ball
-  superOutlineColor: '#D4D4D8', // Super Unarmed light grey outline
+  superOutlineColor: '#000000', // Super Unarmed crisp black outline (Rule 32 standard)
   hpOverlayMode: 'percentage', // 'percentage' (100 -> 0 per Earclacks standard) | 'actual' (e.g. 1100 -> 0)
   hudNameColor: '#E4E4E7',
   hudSkillBarColor: '#9CA3AF',
@@ -74,10 +74,10 @@ export const unarmedConfig = {
   collisionKnockbackScale: 1.5,     // Knockback multiplier per unit of velocity
   hitMomentumLoss: 0,               // Stacks are permanent; taking a hit only causes momentary velocity drop
 
-  // ── 2. Basic Attack: Kinetic Bump (Deals damage & gains speed on primed bumps) ──
+  // ── 2. Basic Attack: Kinetic Bump (Deals damage & gains speed on bumps) ──
   enableKineticBump: true,          // Master toggle for Basic Attack: Kinetic Bump
   basicAttackName: 'Kinetic Bump',
-  basicAttackDesc: 'Bumps into the enemy to deal kinetic damage after rebouncing off the wall, permanently scaling speed and damage.',
+  basicAttackDesc: 'Bumps into the enemy to deal kinetic damage, permanently scaling speed and damage.',
   collisionCooldownMax: 18,         // Recovery frames between consecutive bumps (~0.30s)
 
   // ── 3. Hit Slow Dynamics (Momentary movement slow for both fighters on impact) ──
@@ -87,12 +87,12 @@ export const unarmedConfig = {
   enemyHitSlowDuration: 14,         // ~0.23s slow applied to the enemy on impact
   enemyHitSlowMultiplier: 0.35,     // 35% speed multiplier for enemy
 
-  // ── 3.5. Concussive Bump Stun Mechanic (Chance to stun enemy on bump) ──
-  enableBumpStun: true,             // Master toggle for chance to stun the enemy when bumping into them
-  bumpStunChance: 0.25,             // 25% base chance (0.0 to 1.0) to apply stun on a damaging bump
+  // ── 3.5. Concussive Bump Stun & Super Bump Stun Mechanic ──
+  enableBumpStun: false,            // Legacy flat random bump stun (disabled in favor of hit-charged Super Unarmed)
+  bumpStunChance: 0.25,             // 25% base chance (0.0 to 1.0) to apply legacy random stun on a damaging bump
   bumpStunChancePerHit: 0.0,        // Optional bonus stun chance per momentum stack (0.0 = flat chance)
   maxBumpStunChance: 0.60,          // Maximum cap for bump stun chance (60%)
-  bumpStunDuration: 45,             // Stun duration in frames when triggered (45 frames = 0.75s at 60 FPS)
+  bumpStunDuration: 45,             // Stun duration in frames when legacy stun triggered (45 frames = 0.75s at 60 FPS)
 
   // ── 4. Skill 1: Kinetic Surge (Rapid directional rocket propulsion) ──
   enableKineticSurge: true,         // Master toggle for Skill: Kinetic Surge burst dash
@@ -102,9 +102,13 @@ export const unarmedConfig = {
   kineticSurgeDamage: 65,           // Burst impact damage
   kineticSurgeBonusStacks: 2,       // Immediately adds 2 momentum stacks
 
-  // ── 5. Skill 2 / Ultimate: Super Unarmed (Official Earclacks Super Form) ──
-  enableSuperUnarmed: 0,         // Master toggle for Ultimate: Super Unarmed Overdrive
-  superUnarmedCooldownMax: 600,     // 10.0s cooldown
+  // ── 5. Skill 2 / Ultimate: Super Unarmed (Official Earclacks Super Form & Empowered Stun) ──
+  enableSuperUnarmed: true,         // Master toggle for Ultimate: Super Unarmed Overdrive
+  superUnarmedHitsRequired: 10,      // Hits required on enemies to activate Super Unarmed
+  enableSuperBumpStun: true,        // Master toggle for 2X damage and long stun on next bump when Super Unarmed is primed
+  superBumpDamageMultiplier: 2.0,   // 2X multiplier applied to current damage on the empowered Super Bump
+  superBumpStunDuration: 120,        // Long stun duration in frames (90 frames = 1.50s at 60 FPS)
+  superUnarmedCooldownMax: 600,     // 10.0s cooldown fallback
   superUnarmedDuration: 240,        // 4.0s overdrive duration
   superUnarmedSpeed: 18.0,          // Top speed throughout Super Form
   superUnarmedDamageMult: 1.6,      // 60% bonus collision damage
@@ -121,8 +125,8 @@ export const unarmedConfig = {
   afterimageMaxAlpha: 0.38,         // Soft translucent afterimage peak opacity
   afterimageSuperMaxAlpha: 0.48,    // Translucent afterimage peak opacity during Super Form
 
-  // ── 8. Rebound Damage Mechanic (Earclacks Standard) ──
-  requireWallBounceForDamage: true,   // Damage strictly requires rebouncing off the wall first
+  // ── 8. Rebound Damage Mechanic ──
+  requireWallBounceForDamage: false,  // Unarmed does not require rebouncing off the wall to deal damage on the next bump
   wallBounceHoming: 0.0,              // Pure natural specular reflection (0.0 = 100% natural, no homing)
 
   // Melee & Punch parameters

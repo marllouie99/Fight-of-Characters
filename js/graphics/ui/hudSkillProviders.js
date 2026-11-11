@@ -3917,6 +3917,77 @@ export const HUD_SKILL_PROVIDERS = {
 
     return skills;
   },
+
+  // ─────────────────────────────────────────────
+  // UNARMED (The Weaponless Sphere)
+  // ─────────────────────────────────────────────
+  unarmed(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.unarmed) ? CONFIG.unarmed : {};
+    const themeColor = cfg.hudSkillBarColor || cfg.themeColor || f.themeColor || '#71717A';
+    const skills = [];
+
+    // 1. Basic Attack: Kinetic Bump
+    if (isSkillEnabled(cfg.enableKineticBump, true)) {
+      const cdMax = f.collisionCooldownMax || cfg.collisionCooldownMax || 18;
+      const cd = f.collisionCooldown || 0;
+      const pct = Math.max(0, Math.min(100, (1 - cd / cdMax) * 100));
+      skills.push({
+        id: 'kinetic_bump',
+        pct,
+        ready: pct >= 99,
+        color: themeColor,
+        label: 'KINETIC BUMP'
+      });
+    }
+
+    // 2. Skill 1: Kinetic Surge
+    if (isSkillEnabled(cfg.enableKineticSurge, true)) {
+      const cdMax = f.kineticSurgeCooldownMax || cfg.kineticSurgeCooldownMax || 280;
+      const cd = f.kineticSurgeCooldown || 0;
+      const pct = Math.max(0, Math.min(100, (1 - cd / cdMax) * 100));
+      const label = cd > 0 ? `KINETIC SURGE (${(cd / 60).toFixed(1)}S)` : 'KINETIC SURGE';
+      skills.push({
+        id: 'kinetic_surge',
+        pct,
+        ready: pct >= 99,
+        color: themeColor,
+        label
+      });
+    }
+
+    // 3. Ultimate: Super Unarmed (Hit-charged 2X Damage & Long Stun Bump)
+    if (isSkillEnabled(cfg.enableSuperUnarmed, true)) {
+      const hitsReq = cfg.superUnarmedHitsRequired || 5;
+      const curHits = Math.min(hitsReq, f.superUnarmedHits || 0);
+      const isPrimed = Boolean(f.isSuperBumpPrimed || curHits >= hitsReq || f.isSuperUnarmed);
+      let pct = 0;
+      let label = 'SUPER UNARMED';
+
+      if (f.isSuperUnarmed && f.superUnarmedTimer > 0) {
+        pct = Math.max(0, Math.min(100, (f.superUnarmedTimer / (f.superUnarmedDuration || 240)) * 100));
+        label = `SUPER UNARMED (${(f.superUnarmedTimer / 60).toFixed(1)}S)`;
+      } else if (isPrimed) {
+        pct = 100;
+        label = 'SUPER UNARMED';
+      } else {
+        pct = Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+        label = `SUPER UNARMED (${curHits}/${hitsReq})`;
+      }
+
+      skills.push({
+        id: 'super_unarmed',
+        pct,
+        ready: isPrimed || pct >= 99,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
+    }
+
+    return skills;
+  },
 };
 
 /**
@@ -4055,7 +4126,8 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     vegeta: ['final_flash', 'finalflash', 'FINAL FLASH', 'super_saiyan', 'SUPER SAIYAN'],
     isagi: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION', 'ego', 'EGO'],
     chigiri: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'panther_sprint', 'PANTHER SPRINT', 'ego', 'EGO'],
-    warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic']
+    warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic'],
+    unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 
   // Universal Blue Lock "STRIKER!" & "EGO" signature exemption

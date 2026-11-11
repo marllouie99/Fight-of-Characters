@@ -568,8 +568,11 @@ export function resolveFighterCollision(a, b) {
     b && b.isPokemonCompanion && (b.thunderboltState || b.flamethrowerState || (b.specialCastTimer || 0) > 0 || b.isSummonIntro)
   );
 
-  const aIsAbsoluteImmovable = a.isTurret || a.isDispenser || a.isPlantBarrier || a.isWallnut || a.isChessTroop || a.isChessMinion || a.isTypingCheat || aIsFlurrying || aIsYutaBeam || aIsGenosBeam || aIsCounterLocked || (a.fleshSurgeAnimTimer && a.fleshSurgeAnimTimer > 0) || aIsEscanor || aIsEye || aIsDragon || aIsNameless || a.isProtectedByHoneycombBarrier || aIsPokemonCasting;
-  const bIsAbsoluteImmovable = b.isTurret || b.isDispenser || b.isPlantBarrier || b.isWallnut || b.isChessTroop || b.isChessMinion || b.isTypingCheat || bIsFlurrying || bIsYutaBeam || bIsGenosBeam || bIsCounterLocked || (b.fleshSurgeAnimTimer && b.fleshSurgeAnimTimer > 0) || bIsEscanor || bIsEye || bIsDragon || bIsNameless || b.isProtectedByHoneycombBarrier || bIsPokemonCasting;
+  const aIsStunnedImm = Boolean(a && ((a.paralyzeTimer && a.paralyzeTimer > 0) || a.isParalyzed || (a.timeStopTimer && a.timeStopTimer > 0) || a.isFrozenByInfinity));
+  const bIsStunnedImm = Boolean(b && ((b.paralyzeTimer && b.paralyzeTimer > 0) || b.isParalyzed || (b.timeStopTimer && b.timeStopTimer > 0) || b.isFrozenByInfinity));
+
+  const aIsAbsoluteImmovable = a.isTurret || a.isDispenser || a.isPlantBarrier || a.isWallnut || a.isChessTroop || a.isChessMinion || a.isTypingCheat || aIsFlurrying || aIsYutaBeam || aIsGenosBeam || aIsCounterLocked || (a.fleshSurgeAnimTimer && a.fleshSurgeAnimTimer > 0) || aIsEscanor || aIsEye || aIsDragon || aIsNameless || a.isProtectedByHoneycombBarrier || aIsPokemonCasting || aIsStunnedImm;
+  const bIsAbsoluteImmovable = b.isTurret || b.isDispenser || b.isPlantBarrier || b.isWallnut || b.isChessTroop || b.isChessMinion || b.isTypingCheat || bIsFlurrying || bIsYutaBeam || bIsGenosBeam || bIsCounterLocked || (b.fleshSurgeAnimTimer && b.fleshSurgeAnimTimer > 0) || bIsEscanor || bIsEye || bIsDragon || bIsNameless || b.isProtectedByHoneycombBarrier || bIsPokemonCasting || bIsStunnedImm;
 
   let aIsImmovable = aIsAbsoluteImmovable || (a.isMeleeMode && !bIsAbsoluteImmovable);
   let bIsImmovable = bIsAbsoluteImmovable || (b.isMeleeMode && !aIsAbsoluteImmovable);
@@ -658,8 +661,8 @@ export function resolveFighterCollision(a, b) {
   const randA = (Math.random() - 0.5) * 2 * tangentStrength;
   const randB = (Math.random() - 0.5) * 2 * tangentStrength;
 
-  const aIsAnchor = a.isTurret || a.isDispenser || a.isPlantBarrier || a.isWallnut || a.isChessTroop || a.isChessMinion || a.isImmovable || aIsNameless || a.isProtectedByHoneycombBarrier || aIsPokemonCasting || (aIsGojoInfinity && !b.gojoInfinityImmune);
-  const bIsAnchor = b.isTurret || b.isDispenser || b.isPlantBarrier || b.isWallnut || b.isChessTroop || b.isChessMinion || b.isImmovable || bIsNameless || b.isProtectedByHoneycombBarrier || bIsPokemonCasting || (bIsGojoInfinity && !a.gojoInfinityImmune);
+  const aIsAnchor = a.isTurret || a.isDispenser || a.isPlantBarrier || a.isWallnut || a.isChessTroop || a.isChessMinion || a.isImmovable || aIsNameless || a.isProtectedByHoneycombBarrier || aIsPokemonCasting || (aIsGojoInfinity && !b.gojoInfinityImmune) || aIsStunnedImm;
+  const bIsAnchor = b.isTurret || b.isDispenser || b.isPlantBarrier || b.isWallnut || b.isChessTroop || b.isChessMinion || b.isImmovable || bIsNameless || b.isProtectedByHoneycombBarrier || bIsPokemonCasting || (bIsGojoInfinity && !a.gojoInfinityImmune) || bIsStunnedImm;
 
   if (aIsAnchor) {
     a.vx = 0;

@@ -1009,14 +1009,14 @@ export function drawMahitoDomainDimScreen() {
   if (!ctx || !canvas) return;
 
   const mahitoFighter = state.fighters?.find(f =>
-    f && f.hp > 0 && (f.characterId === 'mahito' || f.type === 'mahito' || f._def?.id === 'mahito' || f._def?.type === 'mahito') && (f.domainActive || f._mahitoDomainActive || f.isChannelingDomainExpansion)
+    f && f.hp > 0 && !f.isDead && !f.dead && (f.characterId === 'mahito' || f.type === 'mahito' || f._def?.id === 'mahito' || f._def?.type === 'mahito') && (f.domainActive || f._mahitoDomainActive || (f.isChannelingDomainExpansion && (f.domainChargeTimer || 0) > 0))
   );
 
   let targetOpacity = 0;
   if (mahitoFighter) {
     if (mahitoFighter.domainActive || mahitoFighter._mahitoDomainActive) {
       targetOpacity = 0.92;
-    } else if (mahitoFighter.isChannelingDomainExpansion) {
+    } else if (mahitoFighter.isChannelingDomainExpansion && (mahitoFighter.domainChargeTimer || 0) > 0) {
       const chargeMax = mahitoFighter.domainChargeMax || 120;
       const progress = Math.min(1.0, Math.max(0, 1.0 - (mahitoFighter.domainChargeTimer || 0) / Math.max(1, chargeMax)));
       targetOpacity = 0.35 + progress * 0.55;

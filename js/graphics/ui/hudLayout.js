@@ -75,9 +75,16 @@ export function syncHudPosition() {
   
   const isDark = (typeof state !== 'undefined' && state.arenaTheme === 'dark');
   const outerBgColor = isDark ? (CONFIG.darkArenaOuterBgColor || '#000000') : (CONFIG.arenaOuterBgColor || '#141622');
-  _cachedGameBox.style.backgroundColor = (typeof outerBgColor === 'string' && outerBgColor.startsWith('#') && outerBgColor.length === 9 && outerBgColor.endsWith('ff'))
+  const cleanBg = (typeof outerBgColor === 'string' && outerBgColor.startsWith('#') && outerBgColor.length === 9 && outerBgColor.endsWith('ff'))
     ? outerBgColor.substring(0, 7)
     : outerBgColor;
+  _cachedGameBox.style.backgroundColor = cleanBg;
+  if (isDark && typeof document !== 'undefined') {
+    if (document.body) document.body.style.backgroundColor = '#000000';
+    if (document.documentElement) document.documentElement.style.backgroundColor = '#000000';
+    const container = document.querySelector('.game-container');
+    if (container) container.style.backgroundColor = '#000000';
+  }
 
   const boxRect = _cachedGameBox.getBoundingClientRect();
   const canvasRect = _cachedPixiView.getBoundingClientRect();
@@ -355,9 +362,11 @@ export function updateTopHudCameraTracking(topContainer) {
 }
 
 /**
- * Dynamically anchors the Bottom HUD Container (#healthHud and #hudBottomContainer)
- * containing fighter healthbars, skill progress bars, and combat stats to the arena's
- * bottom wall when zooming or panning.
+ * Dynamically updates the Bottom HUD Container (#healthHud and #hudBottomContainer)
+ * containing fighter healthbars, skill progress bars, and combat stats.
+ * By default, the bottom HUD remains strictly screen-locked in viewport space with
+ * zero arena tethering during camera tracking, unless explicitly configured via
+ * CONFIG.camera.anchorBottomHudToArena = true.
  */
 export function updateBottomHudCameraTracking(bottomContainer) {
   if (!bottomContainer) return;
@@ -381,7 +390,13 @@ export function updateBottomHudCameraTracking(bottomContainer) {
   const isZooming = Boolean(cam && Math.abs((cam.zoom || 1.0) - 1.0) > 0.0005);
   const isCamActive = !state.isMobileDevice && (isDynamic || isZooming);
 
-  if (!isCamActive) {
+  // Bottom HUD remains screen-locked in viewport space unless explicitly configured to anchor to arena
+  const shouldAnchorBottom = Boolean(
+    (CONFIG.camera && CONFIG.camera.anchorBottomHudToArena) ||
+    CONFIG.anchorBottomHudToArena
+  );
+
+  if (!shouldAnchorBottom || !isCamActive) {
     const curStyle = `static_${baseHudScale}`;
     if (_lastBottomHudStyle === curStyle) return;
     _lastBottomHudStyle = curStyle;

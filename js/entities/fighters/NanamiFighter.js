@@ -985,9 +985,6 @@ export class NanamiFighter extends Fighter {
       }
     }
 
-    if (typeof spawnBlackFlash === 'function') {
-      spawnBlackFlash(this.x, this.y);
-    }
     spawnSparks(this.x, this.y, 16, '#FFD700', '#FFFFFF');
     spawnFloatingText(this.x, this.y - this.r - 16, 'BLACK FLASH...', '#D4AF37');
   }
@@ -1219,19 +1216,13 @@ export class NanamiFighter extends Fighter {
     this.slashSwingImpactTimer = Math.floor(maxTimer * 0.50);
     this._chopHitDelivered = true;
 
-    // Spawn spatial Black Flash cursed lightning rift on target and Nanami's cleaver
-    if (typeof spawnBlackFlash === 'function') {
-      spawnBlackFlash(target.x, target.y);
-      spawnBlackFlash(this.x, this.y);
-    }
-    spawnSparks(target.x, target.y, 16, '#FFD700', '#FFFFFF');
-
     // True Damage calculation: 14 + 14 + 14 + 34 = 76 total HP True Damage
     const baseDmg = isFinal ? (cfg.ultimateFinisherDamage || 34) : (cfg.ultimateStrikeDamage || 14);
     const finalDmg = this.isOvertimeActive ? (baseDmg * (cfg.overtimeDamageMultiplier || 1.20)) : baseDmg;
     const knockbackForce = isFinal ? (cfg.ultimateFinisherKnockback || 22) : (cfg.ultimateStrikeKnockback || 6);
 
-    applyDamageToTarget(target, finalDmg, this, {
+    const prevHp = target.hp;
+    const didDamage = applyDamageToTarget(target, finalDmg, this, {
       isSkill: true,
       isMelee: true,
       isTrueDamage: true, // Always True Damage per specification!
@@ -1244,39 +1235,50 @@ export class NanamiFighter extends Fighter {
       knockbackAngle: this.gunAngle
     });
 
-    if (isFinal) {
-      const stunDur = cfg.ultimateFinisherHitStun || 36;
-      if (typeof target.applyHitStun === 'function') target.applyHitStun(stunDur);
-      spawnFloatingText(target.x, target.y - target.r - 10, '4-FOLD BLACK FLASH!', '#D4AF37');
-      triggerGlobalScreenShake(cfg.ultimateFinisherShake || 8.5, cfg.ultimateFinisherShakeDuration || 24);
+    const actuallyDamaged = didDamage !== false && target.hp < prevHp;
 
-      // Apply 4.0s Armor Fracture debuff (+20% bonus damage taken) to surviving enemy
-      if (target && !target.isDead && target.hp > 0) {
-        target.nanamiArmorFractureTimer = cfg.armorFractureDuration || 240;
-        target.nanamiArmorFractureAmount = cfg.armorFractureBonusDamage || 0.20;
-        spawnFloatingText(target.x, target.y - target.r - 26, 'ARMOR FRACTURE (4.0s)', '#FFD700');
+    if (actuallyDamaged) {
+      // Spawn spatial Black Flash cursed lightning rift on target and Nanami's cleaver ONLY when enemy is actually damaged!
+      if (typeof spawnBlackFlash === 'function') {
+        spawnBlackFlash(target.x, target.y);
+        spawnBlackFlash(this.x, this.y);
+      }
+      spawnSparks(target.x, target.y, 16, '#FFD700', '#FFFFFF');
+
+      if (isFinal) {
+        const stunDur = cfg.ultimateFinisherHitStun || 36;
+        if (typeof target.applyHitStun === 'function') target.applyHitStun(stunDur);
+        spawnFloatingText(target.x, target.y - target.r - 10, '4-FOLD BLACK FLASH!', '#D4AF37');
+        triggerGlobalScreenShake(cfg.ultimateFinisherShake || 8.5, cfg.ultimateFinisherShakeDuration || 24);
+
+        // Apply 4.0s Armor Fracture debuff (+20% bonus damage taken) to surviving enemy
+        if (target && !target.isDead && target.hp > 0) {
+          target.nanamiArmorFractureTimer = cfg.armorFractureDuration || 240;
+          target.nanamiArmorFractureAmount = cfg.armorFractureBonusDamage || 0.20;
+          spawnFloatingText(target.x, target.y - target.r - 26, 'ARMOR FRACTURE (4.0s)', '#FFD700');
+        }
+
+        if (!this.ratioImpactEffects) this.ratioImpactEffects = [];
+        this.ratioImpactEffects.push({
+          x: target.x,
+          y: target.y - (target.z || 0),
+          target: target,
+          angle: this.gunAngle,
+          timer: 30,
+          maxTimer: 30
+        });
+      } else {
+        const stunDur = cfg.ultimateTargetHitStun || 16;
+        if (typeof target.applyHitStun === 'function') target.applyHitStun(stunDur);
+        const strikeIndex = (this.blitzStrikeIndex !== undefined) ? this.blitzStrikeIndex : 0;
+        const strikeLabel = `${strikeIndex + 1}-FOLD BLACK FLASH!`;
+        spawnFloatingText(target.x, target.y - target.r - 6, strikeLabel, '#D4AF37');
+        triggerGlobalScreenShake(4.0, 10);
       }
 
-      if (!this.ratioImpactEffects) this.ratioImpactEffects = [];
-      this.ratioImpactEffects.push({
-        x: target.x,
-        y: target.y - (target.z || 0),
-        target: target,
-        angle: this.gunAngle,
-        timer: 30,
-        maxTimer: 30
-      });
-    } else {
-      const stunDur = cfg.ultimateTargetHitStun || 16;
-      if (typeof target.applyHitStun === 'function') target.applyHitStun(stunDur);
-      const strikeIndex = (this.blitzStrikeIndex !== undefined) ? this.blitzStrikeIndex : 0;
-      const strikeLabel = `${strikeIndex + 1}-FOLD BLACK FLASH!`;
-      spawnFloatingText(target.x, target.y - target.r - 6, strikeLabel, '#D4AF37');
-      triggerGlobalScreenShake(4.0, 10);
-    }
-
-    if (cfg.sounds?.blackFlashImpact) {
-      audioSystem.playSFX(cfg.sounds.blackFlashImpact, 1.2);
+      if (cfg.sounds?.blackFlashImpact) {
+        audioSystem.playSFX(cfg.sounds.blackFlashImpact, 1.2);
+      }
     }
   }
 

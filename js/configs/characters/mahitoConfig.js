@@ -231,7 +231,7 @@ export const mahitoConfig = {
   // ── 11. ULTIMATE: DOMAIN EXPANSION ──────────────────────────────
   domainExpansion: {
     enableDomainExpansion: true,   // Master toggle for Domain Expansion
-    cooldown: 3000,                // 33 seconds cooldown
+    cooldown: 1500,                // 33 seconds cooldown
     chargeMax: 120,                // 2 seconds channeling duration before domain opens
     duration: 600,                 // 5.0 seconds of paralyzing stasis
     radius: 9999,                  // Closed barrier - covers the whole screen

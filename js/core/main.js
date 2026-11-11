@@ -748,8 +748,25 @@ export function applyArenaTheme(theme) {
   const cleanOuter = (typeof rawOuter === 'string' && rawOuter.startsWith('#') && rawOuter.length === 9 && rawOuter.endsWith('ff'))
     ? rawOuter.substring(0, 7)
     : rawOuter;
-  const gameBox = document.querySelector('.game-box');
-  if (gameBox) gameBox.style.backgroundColor = cleanOuter;
+  const targetBg = isDark ? '#000000' : (cleanOuter || '#fcfcfc');
+
+  if (typeof document !== 'undefined') {
+    if (document.documentElement) document.documentElement.style.backgroundColor = targetBg;
+    if (document.body) document.body.style.backgroundColor = targetBg;
+    const gameContainer = document.querySelector('.game-container');
+    if (gameContainer) gameContainer.style.backgroundColor = targetBg;
+    const gameBox = document.querySelector('.game-box');
+    if (gameBox) gameBox.style.backgroundColor = targetBg;
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', targetBg);
+  }
+
+  // Synchronize PixiJS WebGL renderer background if active
+  if (state.pixiApp && state.pixiApp.renderer) {
+    const pixiBg = isDark ? 0x000000 : (targetBg ? parseInt(targetBg.replace('#', '').substring(0, 6), 16) : 0xffffff);
+    state.pixiApp.renderer.backgroundColor = pixiBg;
+  }
 
   // Toggle DOM classes
   const _themeEls = [

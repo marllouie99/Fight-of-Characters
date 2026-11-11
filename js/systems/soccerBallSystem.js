@@ -672,6 +672,17 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
   const kickerCfg = (typeof CONFIG !== 'undefined' && kicker.characterId && CONFIG[kicker.characterId])
     ? CONFIG[kicker.characterId]
     : {};
+
+  // 3b. Kick Kinematics Slowdown: Slow Blue Lock kicker's movement upon kicking
+  if (kicker && isBlueLockFighter(kicker)) {
+    const kickSlowDur = options.kickSlowDuration || kickerCfg.kickSlowDuration || 18;
+    const kickSlowMult = options.kickSlowMultiplier || kickerCfg.kickSlowMultiplier || 0.18;
+    kicker.kickSlowTimer = Math.max(kicker.kickSlowTimer || 0, kickSlowDur);
+    kicker.kickSlowMultiplier = kickSlowMult;
+    kicker.vx *= kickSlowMult;
+    kicker.vy *= kickSlowMult;
+  }
+
   ball.baseDamage = options.damage || options.baseDamage || kicker.damage || kickerCfg.damage || kickerCfg.pantherShotDamage || kickerCfg.egoShotDamage || 24;
   ball.reboundDamage = options.reboundDamage || kickerCfg.reboundDamage || kickerCfg.pantherShotReboundDamage || kickerCfg.egoShotReboundDamage || 32;
 
@@ -698,9 +709,10 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
   // Instant seed for Striker ball electric comet trail (frame 0 visual continuity)
   if (isStrikerShot) {
     const spd = Math.hypot(ball.vx, ball.vy);
+    const seedOffset = Math.min(8, (ball.r || 16) * 0.5);
     ball._strikerTrailNodes = [
       { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, speed: spd, angle: finalAngle, age: 0, r: ball.r || 16 },
-      { x: kicker.x, y: kicker.y, vx: ball.vx, vy: ball.vy, speed: spd, angle: finalAngle, age: 0.1, r: ball.r || 16 }
+      { x: ball.x - Math.cos(finalAngle) * seedOffset, y: ball.y - Math.sin(finalAngle) * seedOffset, vx: ball.vx, vy: ball.vy, speed: spd, angle: finalAngle, age: 0.05, r: ball.r || 16 }
     ];
     ball._strikerTrailTimer = 1;
   }
@@ -1178,6 +1190,14 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
               : (ball.isRebound ? (kickerCfg.egoGainPerReboundHit || 35) : (kickerCfg.egoGainPerHit || 25));
             gainBlueLockEgo(activeKicker, egoGain, kickerCfg);
           }
+
+          // Hitstop / Kick Impact Slowdown on the Blue Lock kicker upon successful enemy impact
+          const hitSlowDur = kickerCfg.ballHitSlowDuration || kickerCfg.kickSlowDuration || 18;
+          const hitSlowMult = kickerCfg.ballHitSlowMultiplier || kickerCfg.kickSlowMultiplier || 0.18;
+          activeKicker.kickSlowTimer = Math.max(activeKicker.kickSlowTimer || 0, hitSlowDur);
+          activeKicker.kickSlowMultiplier = hitSlowMult;
+          activeKicker.vx *= hitSlowMult;
+          activeKicker.vy *= hitSlowMult;
         }
 
         // Knockback & Hit Stun Pipeline: Directional Knockback FIRST, then Stun AFTERWARDS
@@ -1712,11 +1732,11 @@ export function attemptBallKickSteal(dribbler, tackler, ball, arena = null, opti
         rotSpeed: 0.28
       });
       tackler.shootCooldown = tackler.shootCooldownMax || 32;
-      spawnFloatingText('STEAL & SHOT!', tackler.x, tackler.y - (tackler.r || 25) - 14, tacklerTheme);
+      spawnFloatingText(tackler.x, tackler.y - (tackler.r || 25) - 14, 'STEAL', tacklerTheme);
     } else {
       // On cooldown: Tackler takes over active dribbling!
       dribbleSoccerBall(tackler, ball, arena, tacklerCfg);
-      spawnFloatingText('BALL STEAL!', tackler.x, tackler.y - (tackler.r || 25) - 14, tacklerTheme);
+      spawnFloatingText(tackler.x, tackler.y - (tackler.r || 25) - 14, 'STEAL', tacklerTheme);
     }
   } else {
     // Tackler is any other fighter: Tackles and kicks the ball loose into space!
@@ -1731,7 +1751,6 @@ export function attemptBallKickSteal(dribbler, tackler, ball, arena = null, opti
     ball.isDirectVolley = false;
     ball.isStriker = false;
     ball.isSuperShot = false;
-    spawnFloatingText('BALL STEAL!', tackler.x, tackler.y - (tackler.r || 25) - 14, '#10B981');
   }
 
   // Feedback on dribbler

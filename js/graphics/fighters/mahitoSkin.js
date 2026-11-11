@@ -584,7 +584,15 @@ function drawBaseMahito(ctx, r, fighter, facingLeft = false) {
  * Renders Phantom Soul Slip Cursed Energy afterimages in world space.
  */
 function drawMahitoDashAfterimages(ctx, fighter) {
-  const isChannelingDomain = Boolean(fighter && (fighter.domainChargeTimer > 0 || fighter.isChannelingDomainExpansion));
+  const isChannelingDomain = Boolean(
+    fighter &&
+    fighter.hp > 0 &&
+    !fighter.isDead &&
+    !fighter.dead &&
+    !fighter.domainActive &&
+    fighter.isChannelingDomainExpansion &&
+    (fighter.domainChargeTimer || 0) > 0
+  );
   if (isChannelingDomain) return;
   const isSuppressed = typeof fighter?.areAttackEffectsSuppressed === 'function' ? fighter.areAttackEffectsSuppressed() : (fighter.isTargetOfAmbush || fighter._suppressFreezeTimer || (fighter.timeStopTimer > 0) || (fighter.paralyzeTimer > 0 && !fighter.isParalyzedByMahito) || fighter.isFrozen || isSuppressedByGetsuga(fighter));
   if (isSuppressed) return;
@@ -623,7 +631,7 @@ function drawMahitoDashAfterimages(ctx, fighter) {
  * on the arena floor beneath Mahito during Domain Expansion channeling.
  */
 function drawMahitoDomainSummoningCircle(ctx, fighter, progress) {
-  if (progress <= 0.001) return;
+  if (progress <= 0.001 || !fighter || fighter._isSilhouettePass) return;
 
   const ringRadius = 175 * progress;
   const now = Date.now();
@@ -768,10 +776,18 @@ function drawMahitoDomainSummoningCircle(ctx, fighter, progress) {
  * Adheres strictly to docs/fighter_hand_positioning_guide.md and Rule #2.
  */
 export function drawMahitoSkin(ctx, fighter) {
-  const isChannelingDomain = Boolean(fighter && (fighter.domainChargeTimer > 0 || fighter.isChannelingDomainExpansion));
+  const isChannelingDomain = Boolean(
+    fighter &&
+    fighter.hp > 0 &&
+    !fighter.isDead &&
+    !fighter.dead &&
+    !fighter.domainActive &&
+    fighter.isChannelingDomainExpansion &&
+    (fighter.domainChargeTimer || 0) > 0
+  );
 
   // 0. Isometric Ground Summoning Ring during Domain Expansion Channeling
-  if (isChannelingDomain && (fighter.timeStopTimer || 0) <= 0) {
+  if (isChannelingDomain && (fighter.timeStopTimer || 0) <= 0 && !fighter._isSilhouettePass) {
     const maxCharge = fighter.domainChargeMax || CONFIG.mahito?.domainExpansion?.chargeMax || 120;
     const progress = Math.min(1.0, Math.max(0.0, 1.0 - (fighter.domainChargeTimer / maxCharge)));
     drawMahitoDomainSummoningCircle(ctx, fighter, progress);
@@ -780,7 +796,7 @@ export function drawMahitoSkin(ctx, fighter) {
   // 1. Render Phantom Soul Slip afterimages in world space
   drawMahitoDashAfterimages(ctx, fighter);
 
-  if (!isChannelingDomain) {
+  if (!isChannelingDomain && !fighter._isSilhouettePass) {
     // 2. Render Subterranean Flesh Surge tendrils in world coordinates
     drawMahitoSubterraneanFleshSurge(ctx, fighter);
 
@@ -1013,51 +1029,53 @@ export function drawMahitoSkin(ctx, fighter) {
       ctx.restore();
 
       // Cursed Soul Singularity Core between palms at chest center
-      const coreProgress = Math.min(1.0, Math.max(0.0, 1.0 - ((fighter.domainChargeTimer || 0) / (fighter.domainChargeMax || 120))));
-      const coreY = backHandY;
-      const coreRadius = (3.5 + Math.sin(Date.now() * 0.015) * 1.5) * (0.6 + coreProgress * 0.8);
+      if (!fighter._isSilhouettePass) {
+        const coreProgress = Math.min(1.0, Math.max(0.0, 1.0 - ((fighter.domainChargeTimer || 0) / (fighter.domainChargeMax || 120))));
+        const coreY = backHandY;
+        const coreRadius = (3.5 + Math.sin(Date.now() * 0.015) * 1.5) * (0.6 + coreProgress * 0.8);
 
-      ctx.save();
-      // Outer violet flare
-      const coreGrad = ctx.createRadialGradient(0, coreY, 0, 0, coreY, coreRadius * 2.8);
-      coreGrad.addColorStop(0.0, `rgba(255, 255, 255, ${(coreProgress * 0.95).toFixed(3)})`);
-      coreGrad.addColorStop(0.3, `rgba(245, 208, 254, ${(coreProgress * 0.85).toFixed(3)})`);
-      coreGrad.addColorStop(0.65, `rgba(217, 70, 239, ${(coreProgress * 0.70).toFixed(3)})`);
-      coreGrad.addColorStop(1.0, 'rgba(147, 51, 234, 0)');
-      ctx.fillStyle = coreGrad;
-      ctx.beginPath();
-      ctx.arc(0, coreY, coreRadius * 2.8, 0, Math.PI * 2);
-      ctx.fill();
+        ctx.save();
+        // Outer violet flare
+        const coreGrad = ctx.createRadialGradient(0, coreY, 0, 0, coreY, coreRadius * 2.8);
+        coreGrad.addColorStop(0.0, `rgba(255, 255, 255, ${(coreProgress * 0.95).toFixed(3)})`);
+        coreGrad.addColorStop(0.3, `rgba(245, 208, 254, ${(coreProgress * 0.85).toFixed(3)})`);
+        coreGrad.addColorStop(0.65, `rgba(217, 70, 239, ${(coreProgress * 0.70).toFixed(3)})`);
+        coreGrad.addColorStop(1.0, 'rgba(147, 51, 234, 0)');
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(0, coreY, coreRadius * 2.8, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Inner intense core
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(0, coreY, Math.max(1, coreRadius * 0.6), 0, Math.PI * 2);
-      ctx.fill();
+        // Inner intense core
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, coreY, Math.max(1, coreRadius * 0.6), 0, Math.PI * 2);
+        ctx.fill();
 
-      // Smooth crackling cursed lightning arcs around core (Zero 1-frame flickering)
-      if (coreProgress > 0.30) {
-        const arcT = Date.now() * 0.006;
-        const arcCount = 3;
-        const arcRadius = coreRadius * 1.4;
-        ctx.lineWidth = 1.2;
-        for (let a = 0; a < arcCount; a++) {
-          const arcAngle = arcT + (a * Math.PI * 2 / arcCount);
-          const startX = Math.cos(arcAngle) * (arcRadius * 0.6);
-          const startY = coreY + Math.sin(arcAngle) * (arcRadius * 0.4);
-          const endX = Math.cos(arcAngle + 1.2) * arcRadius;
-          const endY = coreY + Math.sin(arcAngle + 1.2) * (arcRadius * 0.7);
-          const midX = (startX + endX) / 2 + Math.sin(arcT * 2 + a) * 2.5;
-          const midY = (startY + endY) / 2 + Math.cos(arcT * 2 + a) * 2.5;
+        // Smooth crackling cursed lightning arcs around core (Zero 1-frame flickering)
+        if (coreProgress > 0.30) {
+          const arcT = Date.now() * 0.006;
+          const arcCount = 3;
+          const arcRadius = coreRadius * 1.4;
+          ctx.lineWidth = 1.2;
+          for (let a = 0; a < arcCount; a++) {
+            const arcAngle = arcT + (a * Math.PI * 2 / arcCount);
+            const startX = Math.cos(arcAngle) * (arcRadius * 0.6);
+            const startY = coreY + Math.sin(arcAngle) * (arcRadius * 0.4);
+            const endX = Math.cos(arcAngle + 1.2) * arcRadius;
+            const endY = coreY + Math.sin(arcAngle + 1.2) * (arcRadius * 0.7);
+            const midX = (startX + endX) / 2 + Math.sin(arcT * 2 + a) * 2.5;
+            const midY = (startY + endY) / 2 + Math.cos(arcT * 2 + a) * 2.5;
 
-          ctx.strokeStyle = (a % 2 === 0) ? '#F5D0FE' : '#D946EF';
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.quadraticCurveTo(midX, midY, endX, endY);
-          ctx.stroke();
+            ctx.strokeStyle = (a % 2 === 0) ? '#F5D0FE' : '#D946EF';
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(midX, midY, endX, endY);
+            ctx.stroke();
+          }
         }
+        ctx.restore();
       }
-      ctx.restore();
     } else if (!fighter.hideFrontHand) {
       if (isPunching && fighter.isRightPunch) {
         drawMahitoArmMorph(ctx, fighter, isTransformed, true, morphType, rawProgress, frontHandX, frontHandY);

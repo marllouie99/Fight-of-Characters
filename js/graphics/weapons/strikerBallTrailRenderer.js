@@ -369,10 +369,8 @@ export function drawStrikerBallTrail(ctx, ball, kickerColor) {
       const nx = -ty;
       const ny = tx;
 
-      // 1A. Feathered Radial Plasma Pocket
-      const swell = Math.sin(Math.pow(t, 0.55) * Math.PI);
-      const pocketR = ballR * (0.55 + 1.05 * swell) * (1.0 - t * 0.50);
-      _drawFeatheredBallPlasmaPocket(ctx, node.x, node.y, pocketR, palette, fade * 0.78, i <= 3);
+      // 1A. Plasma Pocket: Prohibit redundant secondary ball drawing behind the ball
+      // (Supersonic wake is rendered via sculpted liquid flame claws, lightning arcs & ember sparks)
 
       // 1B. Alternating Curling / Hooked Flame Claws along the ball wake
       const side = (i % 2 === 0) ? 1 : -1;

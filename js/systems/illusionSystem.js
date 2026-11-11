@@ -110,11 +110,14 @@ export function updateIllusions() {
 
           const dist = Math.hypot(target.x - illusion.x, target.y - illusion.y);
           if (dist <= target.r + explosionRadius) {
+            const prevHp = target.hp;
+            let hitSuccess = false;
             if (typeof applyDamageToTarget === 'function') {
-              applyDamageToTarget(target, explosionDamage, owner, { isSkill: true });
+              hitSuccess = applyDamageToTarget(target, explosionDamage, owner, { isSkill: true });
             } else if (typeof target.takeDamage === 'function') {
-              target.takeDamage(explosionDamage, owner, { isSkill: true });
+              hitSuccess = target.takeDamage(explosionDamage, owner, { isSkill: true });
             }
+            const actuallyDamaged = hitSuccess !== false && (target.hp < prevHp);
 
             const angle = Math.atan2(target.y - illusion.y, target.x - illusion.x);
             const kbX = Math.cos(angle) * explosionKnockback;
@@ -130,8 +133,8 @@ export function updateIllusions() {
               target.applyHitStun(8);
             }
 
-            // Apply +1 stack of Soul Disfigurement (JJK Idle Transfiguration mechanic)
-            if (typeof applySoulDisfigurementStack === 'function' && owner) {
+            // Apply +1 stack of Soul Disfigurement: Gated strictly to actual enemy damage
+            if (actuallyDamaged && typeof applySoulDisfigurementStack === 'function' && owner) {
               applySoulDisfigurementStack(target, owner);
             }
           }
@@ -668,16 +671,26 @@ export function updateIllusions() {
         illusion.isParalyzedByMahito = false;
       }
     }
+    if (illusion.stunTimer > 0) {
+      illusion.stunTimer--;
+      if (illusion.stunTimer <= 0) {
+        illusion.stunTimer = 0;
+      }
+    }
+    if (illusion.paralyzeTimer <= 0 && (!illusion.stunTimer || illusion.stunTimer <= 0)) {
+      illusion.isParalyzed = false;
+    }
 
     if (illusion.isEvasionMinion) {
       illusion.hitStunTimer = 0;
     }
 
-    const isIllusionParalyzed = !illusion.isEvasionMinion && ((illusion.hitStunTimer || 0) > 0 || (illusion.paralyzeTimer || 0) > 0 || illusion.isParalyzedByMahoraga);
+    const isIllusionParalyzed = !illusion.isEvasionMinion && ((illusion.hitStunTimer || 0) > 0 || (illusion.paralyzeTimer || 0) > 0 || (illusion.stunTimer || 0) > 0 || illusion.isParalyzedByMahoraga);
     if (isIllusionParalyzed) {
-      if ((illusion.paralyzeTimer || 0) <= 0 && (illusion.hitStunTimer || 0) <= 0) {
+      if ((illusion.paralyzeTimer || 0) <= 0 && (illusion.stunTimer || 0) <= 0 && (illusion.hitStunTimer || 0) <= 0) {
         illusion.isParalyzedByMahoraga = false;
         illusion.isParalyzedByMahito = false;
+        illusion.isParalyzed = false;
       }
       illusion.vx = 0;
       illusion.vy = 0;

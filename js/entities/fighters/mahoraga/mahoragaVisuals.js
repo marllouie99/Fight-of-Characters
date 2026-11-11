@@ -12,6 +12,49 @@ import { isSuppressedByGetsuga } from '../../fighter.js';
 
 
 
+let _cachedFlameCanvas = null;
+function _getFlameCanvas() {
+  if (_cachedFlameCanvas) return _cachedFlameCanvas;
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 48;
+  const c = canvas.getContext('2d');
+  c.translate(16, 24);
+  const sz = 16;
+  c.beginPath();
+  c.moveTo(0, sz * 0.9);
+  c.quadraticCurveTo(-sz * 0.85, 0, 0, -sz * 1.4);
+  c.quadraticCurveTo(sz * 0.85, 0, 0, sz * 0.9);
+  c.closePath();
+
+  const flameGrad = c.createLinearGradient(0, sz * 0.9, 0, -sz * 1.4);
+  flameGrad.addColorStop(0, 'rgba(123, 44, 191, 0.95)');
+  flameGrad.addColorStop(0.5, 'rgba(157, 78, 221, 0.90)');
+  flameGrad.addColorStop(1, 'rgba(224, 170, 255, 0.70)');
+  c.fillStyle = flameGrad;
+  c.fill();
+
+  c.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+  c.lineWidth = 1.0;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  c.stroke();
+
+  const coreSz = sz * 0.4;
+  c.beginPath();
+  c.moveTo(0, coreSz * 0.8);
+  c.quadraticCurveTo(-coreSz * 0.7, 0, 0, -coreSz * 1.3);
+  c.quadraticCurveTo(coreSz * 0.7, 0, 0, coreSz * 0.8);
+  c.closePath();
+
+  c.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  c.fill();
+
+  _cachedFlameCanvas = canvas;
+  return _cachedFlameCanvas;
+}
+
 /**
  * Draw Dynamic Orbiting Cursed Purple Flame Particles & Embers
  */
@@ -77,38 +120,15 @@ export function drawCursedPurpleFlames(ctx, fighter) {
       ctx.lineWidth = 0.6;
       ctx.stroke();
     } else {
-      const sz = p.size;
-      const alpha = Math.min(1.0, p.life * 1.2);
-
-      ctx.beginPath();
-      ctx.moveTo(0, sz * 0.9);
-      ctx.quadraticCurveTo(-sz * 0.85, 0, 0, -sz * 1.4);
-      ctx.quadraticCurveTo(sz * 0.85, 0, 0, sz * 0.9);
-      ctx.closePath();
-
-      const flameGrad = ctx.createLinearGradient(0, sz * 0.9, 0, -sz * 1.4);
-      flameGrad.addColorStop(0, `rgba(123, 44, 191, ${alpha * 0.95})`);
-      flameGrad.addColorStop(0.5, `rgba(157, 78, 221, ${alpha * 0.90})`);
-      flameGrad.addColorStop(1, `rgba(224, 170, 255, ${alpha * 0.70})`);
-      ctx.fillStyle = flameGrad;
-      ctx.fill();
-
-      // No shadowBlur
-      ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.95})`;
-      ctx.lineWidth = 0.8;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
-
-      const coreSz = sz * 0.4;
-      ctx.beginPath();
-      ctx.moveTo(0, coreSz * 0.8);
-      ctx.quadraticCurveTo(-coreSz * 0.7, 0, 0, -coreSz * 1.3);
-      ctx.quadraticCurveTo(coreSz * 0.7, 0, 0, coreSz * 0.8);
-      ctx.closePath();
-
-      ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.85})`;
-      ctx.fill();
+      const flameCanvas = _getFlameCanvas();
+      if (flameCanvas) {
+        const sz = p.size;
+        const alpha = Math.min(1.0, p.life * 1.2);
+        ctx.globalAlpha = alpha;
+        const scale = sz / 16;
+        ctx.drawImage(flameCanvas, -16 * scale, -24 * scale, 32 * scale, 48 * scale);
+        ctx.globalAlpha = 1.0;
+      }
     }
 
     ctx.restore();

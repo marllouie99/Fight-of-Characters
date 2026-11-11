@@ -1138,6 +1138,7 @@ export class SansFighter extends Fighter {
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
     const tickInterval = cfg.karmaTickInterval || 14;
     const tickDmg = cfg.karmaTickDamage || 1;
+    const karmaKb = cfg.karmaKnockback ?? 0;
 
     for (const [target, kData] of this.karmaTargets.entries()) {
       const isTargetInvincible = Boolean(
@@ -1164,6 +1165,11 @@ export class SansFighter extends Fighter {
         if (target.takeDamage && target.hp > 1) {
           const applied = target.takeDamage(totalTick, this, {
             isKarma: true,
+            skipKnockback: karmaKb <= 0,
+            knockback: karmaKb > 0,
+            knockbackForce: karmaKb,
+            skipHitStun: true,
+            skipInterrupt: true,
             bypassDodge: true,
             damageNumberColor: this.damageNumberColor || '#03d5f1ff',
             skipStandardDamageText: true

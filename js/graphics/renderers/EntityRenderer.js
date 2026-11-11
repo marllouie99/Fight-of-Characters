@@ -525,7 +525,7 @@ export function drawFighters() {
       (fighter.stunTimer && fighter.stunTimer > 0) ||
       (fighter.dubstepStunTimer && fighter.dubstepStunTimer > 0) ||
       (fighter.ratioHitPauseTimer && fighter.ratioHitPauseTimer > 0) ||
-      fighter.isParalyzed ||
+      (fighter.isParalyzed && ((fighter.paralyzeTimer && fighter.paralyzeTimer > 0) || (fighter.stunTimer && fighter.stunTimer > 0))) ||
       fighter.isParalyzedByMahoraga ||
       fighter.isFrozenByInfinity ||
       fighter.frozenByCronos ||
@@ -535,7 +535,14 @@ export function drawFighters() {
     ) && !isChessEntity && !fighter.suppressStunVisual;
 
     if (isFighterStunned && !isParalyzedByMahito && !fighter.isChainedByMakima) {
-      const dur = fighter.paralyzeTimer || fighter.timeStopTimer || fighter.electricStunTimer || fighter.hitStunTimer || 45;
+      const dur = Math.max(
+        fighter.paralyzeTimer || 0,
+        fighter.stunTimer || 0,
+        fighter.timeStopTimer || 0,
+        fighter.electricStunTimer || 0,
+        fighter.dubstepStunTimer || 0,
+        45
+      );
       ctx.save();
       ctx.translate(fighter.x + shiverX, (fighter.y - (fighter.z || 0)) + shiverY);
       drawParalyzeEffect(ctx, fighter.r || 25, false, dur, '#FFEE58', fighter);
@@ -1482,10 +1489,11 @@ export function drawIllusions() {
 
     const isIllusionStunned = Boolean(
       (illusion.paralyzeTimer && illusion.paralyzeTimer > 0) ||
+      (illusion.stunTimer && illusion.stunTimer > 0) ||
       (illusion.timeStopTimer && illusion.timeStopTimer > 0 && !illusion.suppressFreezeOverlay && !illusion.isChainedByMakima) ||
       (illusion.electricStunTimer && illusion.electricStunTimer > 0) ||
       (illusion.hitStunTimer && illusion.hitStunTimer > 0) ||
-      illusion.isParalyzed ||
+      (illusion.isParalyzed && ((illusion.paralyzeTimer && illusion.paralyzeTimer > 0) || (illusion.stunTimer && illusion.stunTimer > 0))) ||
       illusion.isParalyzedByMahoraga ||
       illusion.isFrozenByInfinity ||
       illusion.frozenByCronos ||
@@ -1494,7 +1502,14 @@ export function drawIllusions() {
       illusion.caughtInSaitamaFlurry
     );
     if (isIllusionStunned && !illusion.isChainedByMakima) {
-      const dur = illusion.paralyzeTimer || illusion.timeStopTimer || illusion.electricStunTimer || illusion.hitStunTimer || 45;
+      const dur = Math.max(
+        illusion.paralyzeTimer || 0,
+        illusion.stunTimer || 0,
+        illusion.timeStopTimer || 0,
+        illusion.electricStunTimer || 0,
+        illusion.hitStunTimer || 0,
+        45
+      );
       const isMahito = Boolean(illusion.isParalyzedByMahito);
       const color = isMahito ? '#A855F7' : '#FFEE58';
       drawParalyzeEffect(ctx, illusion.r || 25, isMahito, dur, color, illusion);

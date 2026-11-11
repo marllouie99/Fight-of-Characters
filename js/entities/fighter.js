@@ -762,6 +762,7 @@ export class Fighter {
     this.slowMultiplier = 1;
     this.hitStunTimer = 0;
     this.hitStunMultiplier = 1;
+    this.stunTimer = 0;
     this.dubstepStunTimer = 0;
     this.timeStopTimer = 0;
     this._timeStopFrozenAngle = undefined;
@@ -800,6 +801,8 @@ export class Fighter {
     this.grievousWoundsTimer = 0;
     this.healBlockTimer = 0;
     this.paralyzeTimer = 0;
+    this.stunTimer = 0;
+    this.isParalyzed = false;
     this.caughtInLaserBeamTimer = 0;
     this.caughtInLaylaBeamTimer = 0;
     this.caughtInNamelessBeamTimer = 0;
@@ -919,6 +922,7 @@ export class Fighter {
     if (this._hitByFugaTimer && this._hitByFugaTimer > 0) return true;
     if (this._hitByDivineFlameTimer && this._hitByDivineFlameTimer > 0) return true;
     if (this.timeStopTimer && this.timeStopTimer > 0) return true;
+    if (this.isFrameFrozen || (this.frameFreezeTimer && this.frameFreezeTimer > 0)) return true;
     if (this.paralyzeTimer && this.paralyzeTimer > 0) return true;
     if (this.electricStunTimer && this.electricStunTimer > 0) return true;
     if (this.crimsonElectrifiedTimer && this.crimsonElectrifiedTimer > 0) return true;
@@ -1892,8 +1896,18 @@ export class Fighter {
     }
   }
 
-  applyTimeStop(frames) {
-    this.statusEffects.applyTimeStop(frames);
+  applyTimeStop(frames, opts = {}) {
+    this.statusEffects.applyTimeStop(frames, opts);
+  }
+
+  clearTimeStop() {
+    if (this.statusEffects) {
+      this.statusEffects.clearTimeStop();
+    } else {
+      this.timeStopTimer = 0;
+      this.isFrameFrozen = false;
+      this.frameFreezeTimer = 0;
+    }
   }
 
   applyKnockback(vx, vy, stunFrames = 0) {
@@ -2090,6 +2104,7 @@ export class Fighter {
       if (this.paralyzeTimer > 0) this.paralyzeTimer--;
       if (this.paralyzeTimer <= 0) {
         this.paralyzeTimer = 0;
+        this.stunTimer = 0;
         this.isParalyzed = false;
         this.isParalyzedByMahito = false;
         this.isParalyzedByMahoraga = false;
@@ -2101,6 +2116,7 @@ export class Fighter {
         if (this.statusEffects) {
           this.statusEffects.isParalyzed = false;
           this.statusEffects.paralyzeTimer = 0;
+          this.statusEffects.stunTimer = 0;
         }
         if (!this.isParalyzedByMahoraga && !this.isWallSlammed) {
           if (typeof this.resumeMovement === 'function' && Math.hypot(this.vx, this.vy) < 0.2) {
@@ -2873,9 +2889,16 @@ export class Fighter {
     }
 
     // Evade Buff: Chance to completely miss/evade incoming enemy basic attacks
+    // Stunned / paralyzed / time-stopped fighters CANNOT physically evade or dodge!
+    const isStunnedOrParalyzed = Boolean(
+      (this.paralyzeTimer && this.paralyzeTimer > 0) ||
+      this.isParalyzed ||
+      (this.timeStopTimer && this.timeStopTimer > 0) ||
+      this.isFrozenByInfinity
+    );
     const hasBushEvade = Boolean(this.isBushEvadeActive && this.isHidingInBush);
     const isGhost = Boolean(this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0);
-    if (!isGhost && (this.evadeBuffTimer > 0 || hasBushEvade) && amount > 0 && !isGuaranteedHit && !this.isChainedByMakima) {
+    if (!isGhost && !isStunnedOrParalyzed && (this.evadeBuffTimer > 0 || hasBushEvade) && amount > 0 && !isGuaranteedHit && !this.isChainedByMakima) {
       const isTickOrBeam = Boolean(
         opts && (
           opts.isPureLoveBeam ||
@@ -3003,7 +3026,7 @@ export class Fighter {
 
     // Apply physical directional knockback whenever taking hit damage
     const isDomainHazard = opts.isDomainDPS || opts.isDomain || opts.isDomainSlash || opts.fromDomain || opts.isDomainEmpowered || (opts.projectile && (opts.projectile.isDomainDPS || opts.projectile.fromDomain || opts.projectile.isDomainEmpowered));
-    if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.isDivineFlame && !opts.isContinuous && !isDomainHazard && !opts.fromBlackHole && !this.isTurret && !this.isDispenser && !isInsideRubbickStolenVoid(this)) {
+    if (!opts.isPoison && !opts.isBurn && !opts.isFlame && !opts.isDivineFlame && !opts.isContinuous && !opts.isKarma && !isDomainHazard && !opts.fromBlackHole && !this.isTurret && !this.isDispenser && !isInsideRubbickStolenVoid(this)) {
       let kbAngle = damageAngle;
       if (opts.projectile) {
         kbAngle = Math.atan2(opts.projectile.vy || Math.sin(opts.projectile.angle || 0), opts.projectile.vx || Math.cos(opts.projectile.angle || 0));
@@ -3015,7 +3038,7 @@ export class Fighter {
           : (typeof opts.projectile?.knockbackForce === 'number'
             ? opts.projectile.knockbackForce
             : (attackerConfig.knockbackForce || (opts.isMelee ? 2.5 : (opts.isProjectile ? 1.5 : 1.0))));
-        if (baseKb > 0 && !opts.skipKnockback && (!this.isMeleeMode || opts.isKnockback || opts.isHeavy || opts.isExplosion)) {
+        if (baseKb > 0 && !opts.skipKnockback && opts.knockback !== false && (!this.isMeleeMode || opts.isKnockback || opts.isHeavy || opts.isExplosion)) {
           const kbVx = Math.cos(kbAngle) * baseKb;
           const kbVy = Math.sin(kbAngle) * baseKb;
           const stunFrames = opts.isHeavy ? 15 : ((opts.isKnockback || (opts.isExplosion && !opts.skipHitStun)) ? 10 : 0);
@@ -3043,7 +3066,7 @@ export class Fighter {
                           !opts.isPurpleDPS && !opts.isElectrified && !opts.isDomainDPS && 
                           !opts.isSkill && !opts.isUltimate && !opts.isRikaAttack && 
                           !opts.isExplosion && !opts.isAOE && !opts.isBleed && opts.source !== 'bleed' && 
-                          !opts.isCurse && opts.source !== 'curse';
+                          !opts.isCurse && opts.source !== 'curse' && !opts.isKarma;
     if (isBasicAttack && CONFIG.basicAttackHitPauseDuration > 0 && !this.isTurret && !this.isDispenser && !isSecondTurretHit) {
       if (!this.isPerformingSkill()) {
         this.basicAttackHitPauseTimer = CONFIG.basicAttackHitPauseDuration;
