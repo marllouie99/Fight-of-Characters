@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────
 // SATORU GOJO & RUBBICK DOMAIN EXPANSION (UNLIMITED VOID / MURYŌKŪSHO)
-// Pixel Art Domain Overlay Image Renderer (Assets/Overlays/gojo-domainexpansion.png)
+// High-Resolution Domain Overlay Image Renderer (Assets/model/gojo/gojo_domain_arena_overlay.png)
 // Supports Gojo (Cosmic Cyan/Blue) & Rubbick (Stolen Arcane Emerald Green)
 // ─────────────────────────────────────────────
 import { state } from '../../../core/state.js';
@@ -8,40 +8,80 @@ import { drawCachedDomainHalo, RUBBICK_EMERALD_NEBULA_STOPS } from '../../../gra
 
 let _gojoDomainImg = null;
 let _gojoDomainImgLoading = false;
+let _gojoDomainSplashesImg = null;
+let _gojoDomainSplashesImgLoading = false;
 let _rubbickDomainCanvas = null;
 let _rubbickDomainCanvasReady = false;
+let _rubbickDomainSplashesCanvas = null;
+let _rubbickDomainSplashesCanvasReady = false;
+
+const _GOJO_DOMAIN_SPLASHES_SRC = 'Assets/model/gojo/gojo_domain_splashes_overlay.png';
+
+/**
+ * Lazy-loads an image element once with optional readiness tracking flags.
+ * @param {string} src
+ * @param {() => HTMLImageElement|null} getRef
+ * @param {(img: HTMLImageElement|null) => void} setRef
+ * @param {() => boolean} isLoading
+ * @param {(flag: boolean) => void} setLoading
+ * @returns {HTMLImageElement|null}
+ */
+function _loadCachedImage(src, getRef, setRef, isLoading, setLoading) {
+  const existing = getRef();
+  if (existing && existing.complete && existing.naturalWidth > 0) {
+    return existing;
+  }
+  if (!isLoading() && typeof Image !== 'undefined') {
+    setLoading(true);
+    const img = new Image();
+    img.onload = () => {
+      setRef(img);
+      setLoading(false);
+    };
+    img.onerror = (e) => {
+      console.warn(`Failed to load Gojo domain image at ${src}`, e);
+      setLoading(false);
+    };
+    img.src = src;
+    setRef(img);
+  }
+  return getRef();
+}
 
 /**
  * Preload and retrieve Gojo's pixel art domain expansion overlay image
  */
 function _getGojoDomainImage() {
-  if (_gojoDomainImg && _gojoDomainImg.complete && _gojoDomainImg.naturalWidth > 0) {
-    return _gojoDomainImg;
-  }
-  if (!_gojoDomainImgLoading && typeof Image !== 'undefined') {
-    _gojoDomainImgLoading = true;
-    const img = new Image();
-    img.onload = () => {
-      _gojoDomainImg = img;
-      _gojoDomainImgLoading = false;
-    };
-    img.onerror = (e) => {
-      console.warn('Failed to load Gojo domain overlay image at Assets/Overlays/gojo-domainexpansion.png', e);
-      _gojoDomainImgLoading = false;
-    };
-    img.src = 'Assets/Overlays/gojo-domainexpansion.png';
-    _gojoDomainImg = img;
-  }
-  return _gojoDomainImg;
+  return _loadCachedImage(
+    'Assets/model/gojo/gojo_domain_arena_overlay.png',
+    () => _gojoDomainImg,
+    (img) => { _gojoDomainImg = img; },
+    () => _gojoDomainImgLoading,
+    (flag) => { _gojoDomainImgLoading = flag; }
+  );
 }
 
 /**
- * Pre-renders an Arcane Emerald Green version of Unlimited Void for Rubbick's stolen domain.
- * Transforms the cosmic cyan/sapphire palette into glowing emerald while preserving stars and depth.
+ * Preload and retrieve Gojo's 16-bit cosmic splashes overlay sprite
  */
-function _buildRubbickDomainCanvas(img) {
+function _getGojoDomainSplashesImage() {
+  return _loadCachedImage(
+    _GOJO_DOMAIN_SPLASHES_SRC,
+    () => _gojoDomainSplashesImg,
+    (img) => { _gojoDomainSplashesImg = img; },
+    () => _gojoDomainSplashesImgLoading,
+    (flag) => { _gojoDomainSplashesImgLoading = flag; }
+  );
+}
+
+/**
+ * Remaps cosmic blue/cyan Unlimited Void artwork pixels into Rubbick's Arcane Emerald palette
+ * on a one-time offscreen canvas (Rule 35).
+ * @param {HTMLImageElement} img
+ * @returns {HTMLCanvasElement|null}
+ */
+function _remapCosmicCanvasToEmerald(img) {
   if (typeof document === 'undefined' || !img || !img.naturalWidth || !img.naturalHeight) return null;
-  if (_rubbickDomainCanvasReady && _rubbickDomainCanvas) return _rubbickDomainCanvas;
 
   try {
     const w = img.naturalWidth;
@@ -69,40 +109,32 @@ function _buildRubbickDomainCanvas(img) {
       const sat = max === 0 ? 0 : (max - min) / max;
 
       if (lum < 6) {
-        // Deep space void: pitch black with tiny hint of dark forest
         data[i] = 1;
         data[i + 1] = Math.min(10, Math.round(lum * 0.8));
         data[i + 2] = 2;
       } else if (lum > 220 && sat < 0.22) {
-        // Brilliant white/mint stars and cosmic core glints
         data[i] = Math.round(r * 0.82 + 200 * 0.18);
         data[i + 1] = 255;
         data[i + 2] = Math.round(b * 0.82 + 220 * 0.18);
       } else {
-        // Cosmic nebulae, event horizon rings, celestial eye filaments:
-        // Map luminance smoothly to vibrant Arcane Emerald (#00FF64 / #00CC50 / #059669 / #80FFB0)
         const t = Math.min(1.0, Math.max(0, lum / 255));
         let newR, newG, newB;
         if (t < 0.45) {
           const factor = t / 0.45;
-          // Deep arcane jade shadow -> rich emerald
-          newR = Math.round(0 * (1 - factor) + 0 * factor);
+          newR = 0;
           newG = Math.round(30 * (1 - factor) + 220 * factor);
           newB = Math.round(12 * (1 - factor) + 75 * factor);
         } else if (t < 0.82) {
           const factor = (t - 0.45) / 0.37;
-          // Rich emerald -> Neon Arcane Green (#00FF64)
-          newR = Math.round(0 * (1 - factor) + 20 * factor);
+          newR = Math.round(20 * factor);
           newG = Math.round(220 * (1 - factor) + 255 * factor);
           newB = Math.round(75 * (1 - factor) + 110 * factor);
         } else {
           const factor = (t - 0.82) / 0.18;
-          // Neon Arcane Green -> Mint highlight (#E0FFF0)
           newR = Math.round(20 * (1 - factor) + 224 * factor);
-          newG = Math.round(255 * (1 - factor) + 255 * factor);
+          newG = 255;
           newB = Math.round(110 * (1 - factor) + 240 * factor);
         }
-
         data[i] = newR;
         data[i + 1] = newG;
         data[i + 2] = newB;
@@ -110,9 +142,7 @@ function _buildRubbickDomainCanvas(img) {
     }
 
     ctx.putImageData(imgData, 0, 0);
-    _rubbickDomainCanvas = canvas;
-    _rubbickDomainCanvasReady = true;
-    return _rubbickDomainCanvas;
+    return canvas;
   } catch (err) {
     try {
       const w = img.naturalWidth || 540;
@@ -124,9 +154,7 @@ function _buildRubbickDomainCanvas(img) {
       if (fallbackCtx) {
         fallbackCtx.filter = 'hue-rotate(190deg) saturate(1.8) brightness(0.95)';
         fallbackCtx.drawImage(img, 0, 0, w, h);
-        _rubbickDomainCanvas = canvas;
-        _rubbickDomainCanvasReady = true;
-        return _rubbickDomainCanvas;
+        return canvas;
       }
     } catch (_) {}
     return null;
@@ -142,14 +170,85 @@ function _getRubbickDomainImage() {
   }
   const baseImg = _getGojoDomainImage();
   if (baseImg && baseImg.complete && baseImg.naturalWidth > 0) {
-    return _buildRubbickDomainCanvas(baseImg) || baseImg;
+    const built = _remapCosmicCanvasToEmerald(baseImg);
+    if (built) {
+      _rubbickDomainCanvas = built;
+      _rubbickDomainCanvasReady = true;
+      return _rubbickDomainCanvas;
+    }
+    return baseImg;
   }
   return null;
+}
+
+/**
+ * Retrieve the green-tinted 16-bit splash overlay canvas for Rubbick's stolen domain
+ */
+function _getRubbickDomainSplashesImage() {
+  if (_rubbickDomainSplashesCanvasReady && _rubbickDomainSplashesCanvas) {
+    return _rubbickDomainSplashesCanvas;
+  }
+  const baseImg = _getGojoDomainSplashesImage();
+  if (baseImg && baseImg.complete && baseImg.naturalWidth > 0) {
+    const built = _remapCosmicCanvasToEmerald(baseImg);
+    if (built) {
+      _rubbickDomainSplashesCanvas = built;
+      _rubbickDomainSplashesCanvasReady = true;
+      return _rubbickDomainSplashesCanvas;
+    }
+    return baseImg;
+  }
+  return null;
+}
+
+/**
+ * Renders a loaded domain layer image onto the arena rect, with optional Rubbick emerald fallback tint.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {HTMLImageElement|HTMLCanvasElement|null} img
+ * @param {HTMLImageElement|null} baseImg
+ * @param {boolean} isRubbick
+ * @param {boolean} pixelCrisp
+ * @param {number} ax
+ * @param {number} ay
+ * @param {number} aw
+ * @param {number} ah
+ */
+function _drawDomainLayerImage(ctx, img, baseImg, isRubbick, pixelCrisp, ax, ay, aw, ah) {
+  if (!img || !(img.complete || img.naturalWidth > 0 || img.width > 0)) return false;
+
+  ctx.save();
+  if (pixelCrisp) {
+    ctx.imageSmoothingEnabled = false;
+  } else {
+    ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+  }
+
+  if (isRubbick && img === baseImg) {
+    ctx.save();
+    try {
+      ctx.filter = 'hue-rotate(190deg) saturate(1.8) brightness(0.95)';
+    } catch (_) {}
+    ctx.drawImage(img, ax, ay, aw, ah);
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 255, 100, 0.20)';
+    ctx.globalCompositeOperation = 'color';
+    ctx.fillRect(ax, ay, aw, ah);
+    ctx.restore();
+  } else {
+    ctx.drawImage(img, ax, ay, aw, ah);
+  }
+
+  ctx.restore();
+  return true;
 }
 
 // Preload immediately if running in desktop browser (deferred on mobile until Gojo/Rubbick enters match)
 if (typeof window !== 'undefined' && typeof Image !== 'undefined' && !(typeof state !== 'undefined' && state.isMobileDevice)) {
   _getGojoDomainImage();
+  _getGojoDomainSplashesImage();
 }
 
 /**
@@ -205,33 +304,14 @@ export function renderGojoDomainBackground(fighter, ctx, isClashSecondary = fals
   }
 
   // 2. Base Dark Cosmic Background
-  ctx.fillStyle = isRubbick ? '#011106' : '#000000';
+  ctx.fillStyle = isRubbick ? '#011106' : '#01030a';
   ctx.fillRect(ax, ay, aw, ah);
 
-  // 3. Draw Domain Overlay Image occupying the whole arena
+  // 3. Draw 16-Bit Domain Overlay Image occupying the whole arena with crisp nearest-neighbor pixels
   const img = isRubbick ? _getRubbickDomainImage() : _getGojoDomainImage();
   const baseImg = _getGojoDomainImage();
-  if (img && (img.complete || img.naturalWidth > 0 || img.width > 0)) {
-    ctx.imageSmoothingEnabled = false; // Nearest-neighbor scaling preserves crisp pixel art
-    if (isRubbick && img === baseImg) {
-      // Fallback: If Rubbick's dedicated emerald canvas failed to construct (e.g. cross-origin/tainted canvas),
-      // tint the base image to vivid Arcane Emerald Green via Canvas filter + color overlay
-      ctx.save();
-      try {
-        ctx.filter = 'hue-rotate(190deg) saturate(1.8) brightness(0.95)';
-      } catch (_) {}
-      ctx.drawImage(img, ax, ay, aw, ah);
-      ctx.restore();
-
-      ctx.save();
-      ctx.fillStyle = 'rgba(0, 255, 100, 0.20)';
-      ctx.globalCompositeOperation = 'color';
-      ctx.fillRect(ax, ay, aw, ah);
-      ctx.restore();
-    } else {
-      ctx.drawImage(img, ax, ay, aw, ah);
-    }
-  } else if (isRubbick) {
+  const drewBase = _drawDomainLayerImage(ctx, img, baseImg, isRubbick, true, ax, ay, aw, ah);
+  if (!drewBase && isRubbick) {
     // Procedural Emerald Cosmic Nebula fallback while asset initializes (Pre-baked atlas quad)
     const cx = ax + aw / 2;
     const cy = ay + ah / 2;
@@ -239,9 +319,29 @@ export function renderGojoDomainBackground(fighter, ctx, isClashSecondary = fals
     drawCachedDomainHalo(ctx, cx, cy, maxR, RUBBICK_EMERALD_NEBULA_STOPS);
   }
 
-  // 4. Dark Overlay on top of image
-  ctx.fillStyle = isRubbick ? 'rgba(0, 20, 8, 0.40)' : 'rgba(0, 0, 0, 0.45)';
-  ctx.fillRect(ax, ay, aw, ah);
+  // 4. Composite 16-Bit Cosmic Ink Splashes Overlay with nearest-neighbor pixel fidelity
+  const splashImg = isRubbick ? _getRubbickDomainSplashesImage() : _getGojoDomainSplashesImage();
+  const baseSplashImg = _getGojoDomainSplashesImage();
+  _drawDomainLayerImage(ctx, splashImg, baseSplashImg, isRubbick, true, ax, ay, aw, ah);
+
+  // 5. Subtle Arena Wall Edge Feather Vignette (Keeps corner 16-bit splashes vibrant while preserving fighter readability)
+  const vcx = ax + aw / 2;
+  const vcy = ay + ah / 2;
+  const maxDim = Math.max(aw, ah);
+  const edgeGrad = ctx.createRadialGradient(vcx, vcy, maxDim * 0.36, vcx, vcy, maxDim * 0.72);
+  if (edgeGrad) {
+    if (isRubbick) {
+      edgeGrad.addColorStop(0.0, 'rgba(0, 20, 8, 0.08)');
+      edgeGrad.addColorStop(0.70, 'rgba(0, 14, 5, 0.22)');
+      edgeGrad.addColorStop(1.0, 'rgba(0, 8, 3, 0.38)');
+    } else {
+      edgeGrad.addColorStop(0.0, 'rgba(0, 2, 10, 0.08)');
+      edgeGrad.addColorStop(0.70, 'rgba(0, 2, 8, 0.20)');
+      edgeGrad.addColorStop(1.0, 'rgba(0, 1, 5, 0.36)');
+    }
+    ctx.fillStyle = edgeGrad;
+    ctx.fillRect(ax, ay, aw, ah);
+  }
 
   ctx.restore();
 }

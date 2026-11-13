@@ -6,6 +6,7 @@
 
 export const meguminConfig = {
   assets: {
+    hair: 'Assets/model/megumin/Megumin-hair.png',
     staff: 'Assets/model/megumin/megumin-staff.jpg',
   },
 

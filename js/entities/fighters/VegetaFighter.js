@@ -1218,7 +1218,8 @@ export class VegetaFighter extends Fighter {
       angle: this.gunAngle || this.angle || 0,
       alpha: 0.40,
       duration: 18,
-      timer: 18
+      timer: 18,
+      isSuperSaiyan: Boolean(this.isSuperSaiyan)
     });
   }
 
@@ -1281,7 +1282,7 @@ export class VegetaFighter extends Fighter {
     // 1. Draw Afterimages
     if (this.afterImages && this.afterImages.length > 0) {
       this.afterImages.forEach(img => {
-        drawVegetaGhostSkin(ctx, img.x, img.y, img.angle, this.r, img.alpha);
+        drawVegetaGhostSkin(ctx, img.x, img.y, img.angle, this.r, img.alpha, Boolean(img.isSuperSaiyan));
       });
     }
 

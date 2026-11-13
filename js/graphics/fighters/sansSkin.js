@@ -16,6 +16,9 @@ let _cachedSansR = 0;
 let _cachedSansEyeMode = false;
 let _cachedSansSweat = 0;
 
+let _cachedSansGhostCanvas = null;
+let _cachedSansGhostR = 0;
+
 /**
  * Renders Sans's discrete pixel art body into an axis-aligned offscreen canvas.
  * Fixed discrete grid unit P = 2.0px with 4-neighbor manga ink outline.
@@ -377,23 +380,266 @@ export function drawSansBadTimeAura(ctx, r, auraAlpha = 1.0, now = Date.now()) {
 }
 
 /**
+ * Draws a pixel-art ghost hand for Sans with pure bone-white fill and neon cyan border.
+ */
+function _drawSansGhostHand(ctx, hx, hy, handRadius) {
+  const P = 2.0;
+  const steps = Math.ceil((handRadius + P) / P);
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      const rx = gx * P;
+      const ry = gy * P;
+      if (Math.hypot(rx, ry) > handRadius) continue;
+      const px = hx + rx - P / 2;
+      const py = hy + ry - P / 2;
+      const isBorder = (
+        Math.hypot((gx + 1) * P, gy * P) > handRadius ||
+        Math.hypot((gx - 1) * P, gy * P) > handRadius ||
+        Math.hypot(gx * P, (gy + 1) * P) > handRadius ||
+        Math.hypot(gx * P, (gy - 1) * P) > handRadius
+      );
+      ctx.fillStyle = isBorder ? '#00B4D8' : '#BAE6FD';
+      ctx.fillRect(px, py, P, P);
+      if (!isBorder && Math.abs(rx) <= handRadius * 0.4 && Math.abs(ry) <= handRadius * 0.4) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(px, py, P, P);
+      }
+    }
+  }
+}
+
+/**
+ * Renders Sans's ethereal ghost model into an offscreen canvas.
+ * (High-contrast Bad Time palette: electric cyan, royal blue, ice bone, zero black #18181B / #0E0F14).
+ */
+function _renderSansGhostBodyToCanvas(destCtx, r) {
+  destCtx.imageSmoothingEnabled = false;
+  const P = 2.0;
+  const steps = Math.ceil((r + P) / P);
+
+  // 1. Outer Neon Cyan Glow Ring around body
+  destCtx.beginPath();
+  destCtx.arc(0, 0, r + 1.5, 0, Math.PI * 2);
+  destCtx.strokeStyle = '#00F5FF';
+  destCtx.lineWidth = 2.2;
+  destCtx.stroke();
+
+  // 2. Pixel Body Fill (All vivid tones - High-contrast against white arena floor)
+  for (let gy = -steps; gy <= steps; gy++) {
+    for (let gx = -steps; gx <= steps; gx++) {
+      const rx = gx * P;
+      const ry = gy * P;
+      const dist = Math.hypot(rx, ry);
+      if (dist > r) continue;
+
+      const px = rx - P / 2;
+      const py = ry - P / 2;
+
+      // 4-neighbor boundary test for crisp outer cyan outline (#00B4D8)
+      const isBorder = (
+        Math.hypot((gx + 1) * P, gy * P) > r ||
+        Math.hypot((gx - 1) * P, gy * P) > r ||
+        Math.hypot(gx * P, (gy + 1) * P) > r ||
+        Math.hypot(gx * P, (gy - 1) * P) > r
+      );
+
+      if (isBorder) {
+        destCtx.fillStyle = '#00B4D8'; // Deep electric cyan border (High Contrast)
+        destCtx.fillRect(px, py, P, P);
+        continue;
+      }
+
+      // ──────────────────────────────────────────────────
+      // 1. SKULL & SMILE (ry < +r * 0.15)
+      // ──────────────────────────────────────────────────
+      if (ry < r * 0.15) {
+        const isLeftEye = (rx >= -r * 0.44 && rx <= -r * 0.14) && (ry >= -r * 0.24 && ry <= +r * 0.02);
+        const isRightEye = (rx >= r * 0.14 && rx <= r * 0.44) && (ry >= -r * 0.24 && ry <= +r * 0.02);
+        const isNasalCavity = (Math.abs(rx) <= r * 0.08) && (ry >= -r * 0.02 && ry <= +r * 0.08);
+        const isSmileZone = (Math.abs(rx) <= r * 0.46) && (ry >= +r * 0.04 && ry <= +r * 0.14);
+
+        if (isLeftEye || isRightEye) {
+          // Iconic Undertale Bad Time eye sockets with white pupils
+          destCtx.fillStyle = '#0284C7'; // Rich Bad Time Blue
+          destCtx.fillRect(px, py, P, P);
+          // Pupil highlight glint
+          if (ry >= -r * 0.14 && ry <= -r * 0.06 && Math.abs(rx) >= r * 0.22 && Math.abs(rx) <= r * 0.32) {
+            destCtx.fillStyle = '#FFFFFF';
+            destCtx.fillRect(px, py, P, P);
+          }
+        } else if (isNasalCavity) {
+          destCtx.fillStyle = '#0284C7';
+          destCtx.fillRect(px, py, P, P);
+        } else if (isSmileZone) {
+          const toothIndex = Math.floor((rx + r * 0.44) / (P * 2.0));
+          const isToothDivider = (toothIndex % 2 === 1) && (ry >= r * 0.06 && ry <= r * 0.11);
+          const isSmileOutline = (ry >= r * 0.12 || Math.abs(rx) >= r * 0.40);
+
+          if (isToothDivider || isSmileOutline) {
+            destCtx.fillStyle = '#0284C7'; // Crisp smile divider
+          } else {
+            destCtx.fillStyle = '#FFFFFF';
+          }
+          destCtx.fillRect(px, py, P, P);
+        } else {
+          // Luminous Bad Time Cyan Bone Tone (High contrast against white floor)
+          let boneColor = '#BAE6FD';
+          if (ry < -r * 0.65) {
+            boneColor = '#FFFFFF'; // Crown glint
+          } else if (ry < -r * 0.35) {
+            boneColor = '#E0F2FE'; // Forehead dome
+          } else if (Math.abs(rx) > r * 0.65) {
+            boneColor = '#7DD3FC'; // Cheekbone contour
+          } else if (ry > r * 0.06) {
+            boneColor = '#38BDF8'; // Chin contour
+          }
+          destCtx.fillStyle = boneColor;
+          destCtx.fillRect(px, py, P, P);
+        }
+      }
+      // ──────────────────────────────────────────────────
+      // 2. FLUFFY HOOD COLLAR (ry >= +r * 0.15 && ry < +r * 0.32)
+      // ──────────────────────────────────────────────────
+      else if (ry < r * 0.32) {
+        // Vibrant Sky Blue Fleece Collar
+        let fleeceColor = '#38BDF8';
+        if (ry < r * 0.20 && Math.abs(rx) < r * 0.30) {
+          fleeceColor = '#BAE6FD'; // Top fleece highlight
+        } else if (Math.abs(rx) > r * 0.35 || ry < r * 0.20) {
+          fleeceColor = '#7DD3FC'; // Mid fleece fluff
+        } else {
+          fleeceColor = '#0284C7'; // Neck depth
+        }
+        destCtx.fillStyle = fleeceColor;
+        destCtx.fillRect(px, py, P, P);
+      }
+      // ──────────────────────────────────────────────────
+      // 3. BLUE HOODIE & WHITE UNDERSHIRT (ry >= +r * 0.32 && ry < +r * 0.70)
+      // ──────────────────────────────────────────────────
+      else if (ry < r * 0.70) {
+        const shirtHalfW = r * 0.22 - (ry - r * 0.32) * 0.05;
+        const isWhiteShirt = Math.abs(rx) <= Math.max(P * 1.5, shirtHalfW);
+
+        if (isWhiteShirt) {
+          destCtx.fillStyle = (ry > r * 0.55) ? '#BAE6FD' : '#FFFFFF';
+        } else {
+          // Rich Royal Blue Hoodie (Vivid & Clear)
+          let hoodieCol = '#2563EB';
+          if (Math.abs(rx) > r * 0.72 || ry > r * 0.62) {
+            hoodieCol = '#1D4ED8'; // Lateral rib / hem
+          } else if (Math.abs(rx) < shirtHalfW + P * 1.5) {
+            hoodieCol = '#1E40AF'; // Zipper seam
+          } else if (ry < r * 0.42) {
+            hoodieCol = '#60A5FA'; // Shoulder highlight
+          }
+          destCtx.fillStyle = hoodieCol;
+        }
+        destCtx.fillRect(px, py, P, P);
+      }
+      // ──────────────────────────────────────────────────
+      // 4. GHOST SHORTS (ry >= +r * 0.70 && ry < +r * 0.90)
+      // ──────────────────────────────────────────────────
+      else if (ry < r * 0.90) {
+        // Iconic vertical white side stripes
+        const isLeftStripe = (rx >= -r * 0.56 && rx <= -r * 0.44);
+        const isRightStripe = (rx >= r * 0.44 && rx <= r * 0.56);
+
+        if (isLeftStripe || isRightStripe) {
+          destCtx.fillStyle = '#FFFFFF';
+        } else {
+          // Saturated Deep Cyan-Navy Shorts (High contrast, zero muddy black)
+          let shortsCol = '#0369A1';
+          if (Math.abs(rx) < r * 0.08) {
+            shortsCol = '#075985'; // Center inseam divider
+          } else if (ry > r * 0.82) {
+            shortsCol = '#0284C7'; // Hem highlight
+          }
+          destCtx.fillStyle = shortsCol;
+        }
+        destCtx.fillRect(px, py, P, P);
+      }
+      // ──────────────────────────────────────────────────
+      // 5. PASTEL PINK SLIPPERS & SOCKS (ry >= +r * 0.90)
+      // ──────────────────────────────────────────────────
+      else {
+        const isCenterGap = Math.abs(rx) < r * 0.12;
+        if (isCenterGap) {
+          destCtx.fillStyle = '#0284C7';
+        } else {
+          let slipperCol = '#F472B6'; // Pastel pink base
+          if (ry > r * 0.96) {
+            slipperCol = '#EC4899';
+          } else if (ry < r * 0.93) {
+            slipperCol = '#FBCFE8'; // Fluffy highlight
+          }
+          destCtx.fillStyle = slipperCol;
+        }
+        destCtx.fillRect(px, py, P, P);
+      }
+    }
+  }
+
+  // 3. Draw Canonical Ghost Pixel Hands on front layer
+  const handR = r * 0.30;
+  _drawSansGhostHand(destCtx, -r * 0.82, r * 0.38, handR);
+  _drawSansGhostHand(destCtx, r * 0.82, r * 0.38, handR);
+}
+
+/**
+ * Blits Sans's pre-baked ghost model using high-performance offscreen canvas caching (Rule 35).
+ */
+export function drawSansGhostModel(ctx, r) {
+  if (typeof document === 'undefined') return;
+
+  if (!_cachedSansGhostCanvas || _cachedSansGhostR !== r) {
+    _cachedSansGhostR = r;
+    const P = 2.0;
+    const maxExtent = r * 0.82 + r * 0.35 + P * 2;
+    const extentSteps = Math.ceil(maxExtent / P);
+    const size = (extentSteps * 2 + 1) * P;
+
+    if (!_cachedSansGhostCanvas) {
+      _cachedSansGhostCanvas = document.createElement('canvas');
+    }
+    _cachedSansGhostCanvas.width = size;
+    _cachedSansGhostCanvas.height = size;
+
+    const offCtx = _cachedSansGhostCanvas.getContext('2d');
+    offCtx.imageSmoothingEnabled = false;
+    offCtx.save();
+    offCtx.translate(size / 2, size / 2);
+    _renderSansGhostBodyToCanvas(offCtx, r);
+    offCtx.restore();
+  }
+
+  if (_cachedSansGhostCanvas) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(_cachedSansGhostCanvas, -_cachedSansGhostCanvas.width / 2, -_cachedSansGhostCanvas.height / 2);
+    ctx.restore();
+  }
+}
+
+/**
  * Renders Sans's teleport/dodge afterimages at recorded world coordinates.
+ * Pure luminous cyan and bone spectral ghost model (Zero black shorts, zero dark shadows).
  */
 export function drawSansAfterImages(ctx, fighter) {
   const isSuppressed = typeof fighter?.areAttackEffectsSuppressed === 'function'
     ? fighter.areAttackEffectsSuppressed()
     : isSuppressedByGetsuga(fighter);
 
-  if (!fighter || !fighter.afterImages || fighter.afterImages.length === 0 || isSuppressed) return;
+  if (!fighter || !fighter.afterImages || fighter.afterImages.length === 0 || isSuppressed || fighter._isSilhouettePass) return;
   const r = fighter.r || 25;
 
   ctx.save();
   for (let i = 0; i < fighter.afterImages.length; i++) {
     const ai = fighter.afterImages[i];
     if (!ai || ai.timer <= 0) continue;
-    const progress = ai.timer / (ai.maxTimer || 14);
-    const maxAlpha = (ai.alpha !== undefined) ? ai.alpha : 0.40;
-    const alpha = progress * maxAlpha;
+    const maxTimer = ai.maxTimer || 18;
+    const progress = Math.max(0, Math.min(1.0, ai.timer / maxTimer));
+    const baseAlpha = (ai.alpha !== undefined) ? Math.max(ai.alpha, 0.85) : 0.85;
+    const alpha = Math.pow(progress, 0.6) * baseAlpha; // Smooth non-linear decay: stays punchy & clearly visible
     const angle = ai.gunAngle !== undefined ? ai.gunAngle : (ai.angle || 0);
 
     ctx.save();
@@ -404,16 +650,20 @@ export function drawSansAfterImages(ctx, fighter) {
     const facingLeft = Math.abs(angle) > Math.PI / 2;
     if (facingLeft) ctx.scale(1, -1);
 
-    // Cyan Ghost Silhouette
+    // 1. Radiant Bad Time Cyan Ghost Aura Disc (High-contrast electric cyan halo)
     ctx.beginPath();
-    ctx.arc(0, 0, ai.r || r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 245, 255, 0.35)';
+    ctx.arc(0, 0, (ai.r || r) * 1.20, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.40)';
     ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, (ai.r || r) * 1.05, 0, Math.PI * 2);
     ctx.strokeStyle = '#00F5FF';
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 2.0;
     ctx.stroke();
 
-    drawSansPixelBody(ctx, ai.r || r, { eyeActive: false, sweatLevel: 0 });
+    // 2. Pure Cyan & Bone Ghost Model (Crisp, vibrant, high-contrast against white arena)
+    drawSansGhostModel(ctx, ai.r || r);
 
     ctx.restore();
   }
@@ -539,16 +789,22 @@ export function drawSansSkin(ctx, fighter) {
   const r = fighter.r || 25;
   const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-  // 0. Render teleport / dodge afterimages in absolute world space
-  drawSansAfterImages(ctx, fighter);
+  // 0. Render teleport / dodge afterimages in absolute world space (strictly suppressed during silhouette pass)
+  if (!fighter._isSilhouettePass) {
+    drawSansAfterImages(ctx, fighter);
+  }
 
   ctx.save();
   ctx.translate(fighter.x, fighter.y - (fighter.z || 0));
 
-  // 1. Bad Time Aura Evaluation
-  const isBadTime = Boolean(fighter.isBadTimeActive || fighter.isCastingSkill || (fighter.karmaActive && fighter.karmaTimer > 0) || fighter.gravitySlamTimer > 0);
+  // 1. Bad Time Aura Evaluation (strictly suppressed during silhouette pass)
+  const isBadTime = Boolean(
+    (fighter.isBadTimeActive && (fighter.badTimeTimer || 0) > 0) ||
+    (fighter.karmaActive && (fighter.karmaTimer || 0) > 0) ||
+    (fighter.gravitySlamTimer > 0 && fighter.blueSoulActive && (!fighter.blueSoulVictim || fighter.blueSoulVictim.hp > 0))
+  );
   const auraAlpha = Math.min(1.0, Math.max(0.0, fighter.combatAuraOpacity || (isBadTime ? 0.85 : 0)));
-  if (!fighter._isWinnerReveal && auraAlpha > 0.01) {
+  if (!fighter._isWinnerReveal && !fighter._isSilhouettePass && auraAlpha > 0.01) {
     drawSansBadTimeAura(ctx, r, auraAlpha, now);
   }
 
@@ -574,7 +830,11 @@ export function drawSansSkin(ctx, fighter) {
   }
 
   // 4. Bad Time Eye Active Check
-  const isEyeActive = isBadTime || Boolean(fighter.gasterBlasterFiring || fighter.blueSoulActive || fighter.eyeFlashing || fighter.gravitySlamTimer > 0);
+  const isEyeActive = isBadTime || Boolean(
+    fighter.gasterBlasterFiring ||
+    (fighter.blueSoulActive && (!fighter.blueSoulVictim || fighter.blueSoulVictim.hp > 0)) ||
+    fighter.eyeFlashing
+  );
 
   // ── LAYER 1: BODY CIRCLE MODEL (Rule 3.5 Offscreen Cache) ──
   drawSansPixelBody(ctx, r, {
@@ -582,8 +842,8 @@ export function drawSansSkin(ctx, fighter) {
     sweatLevel: sweatLevel
   });
 
-  // ── LAYER 2: BAD TIME FLASHING FLAME EYE ──
-  if (isEyeActive && !isPodiumPreview) {
+  // ── LAYER 2: BAD TIME FLASHING FLAME EYE (strictly suppressed during silhouette pass) ──
+  if (isEyeActive && !isPodiumPreview && !fighter._isSilhouettePass) {
     drawSansFlameEye(ctx, r, now);
   }
 
@@ -600,10 +860,33 @@ export function drawSansSkin(ctx, fighter) {
     let rightHandX = r * 0.82;
     let rightHandY = r * 0.38;
 
+    // Safety checks for fighter and victim state
+    const isSansAlive = (fighter.hp === undefined || fighter.hp > 0) && !fighter.isDead;
+    const isVictimActive = Boolean(
+      fighter.blueSoulVictim &&
+      (fighter.blueSoulVictim.hp > 0 || fighter.blueSoulVictim.isUndead) &&
+      !fighter.blueSoulVictim.isDead
+    );
+
     // Telekinesis Gesture (Blue Soul Gravity Slam Hand Snap Upward Animation)
-    const isGravitySlam = Boolean(fighter.gravitySlamTimer && fighter.gravitySlamTimer > 0);
-    const isBasicAttack = !isGravitySlam && Boolean(fighter.basicAttackAnimTimer && fighter.basicAttackAnimTimer > 0);
-    const isOtherTelekinesis = Boolean(fighter.gravitySlamActive || fighter.isCastingSkill || (fighter.boneWaveTimer && fighter.boneWaveTimer > 0));
+    const isGravitySlam = Boolean(
+      isSansAlive &&
+      !isPodiumPreview &&
+      fighter.gravitySlamTimer > 0 &&
+      fighter.blueSoulActive &&
+      isVictimActive
+    );
+    const isBasicAttack = !isGravitySlam && Boolean(
+      isSansAlive &&
+      !isPodiumPreview &&
+      fighter.basicAttackAnimTimer &&
+      fighter.basicAttackAnimTimer > 0
+    );
+    const isOtherTelekinesis = !isGravitySlam && !isBasicAttack && Boolean(
+      isSansAlive &&
+      !isPodiumPreview &&
+      (fighter.gravitySlamActive || fighter.isCastingSkill || (fighter.boneWaveTimer && fighter.boneWaveTimer > 0))
+    );
 
     if (isGravitySlam) {
       const slamDuration = fighter.gravitySlamDuration || 80;
@@ -617,8 +900,8 @@ export function drawSansSkin(ctx, fighter) {
         rightHandX = r * 0.82 - easeSnap * (r * 0.40);
         rightHandY = r * 0.38 - easeSnap * (r * 1.25); // Snaps high above head
 
-        // Shockwave Ring pulse emitted on upward snap
-        if (snapT > 0.3) {
+        // Shockwave Ring pulse emitted on upward snap (suppressed during silhouette pass)
+        if (snapT > 0.3 && !fighter._isSilhouettePass) {
           const ringProg = (snapT - 0.3) / 0.7;
           const ringR = handRadius * (1.2 + ringProg * 3.5);
           ctx.save();
@@ -645,23 +928,28 @@ export function drawSansSkin(ctx, fighter) {
         rightHandX = r * 0.45 + dirX * (r * 0.42);
         rightHandY = -r * 0.55 + dirY * (r * 0.35);
 
-        // Constant cyan telekinesis aura surrounding hand
-        ctx.save();
-        const handAuraR = handRadius * (2.0 + Math.sin(now * 0.03) * 0.3);
-        const handAuraGrad = ctx.createRadialGradient(rightHandX, rightHandY, 0, rightHandX, rightHandY, handAuraR);
-        handAuraGrad.addColorStop(0.0, '#FFFFFF');
-        handAuraGrad.addColorStop(0.4, 'rgba(0, 245, 255, 0.90)');
-        handAuraGrad.addColorStop(1.0, 'rgba(0, 245, 255, 0)');
-        ctx.fillStyle = handAuraGrad;
-        ctx.beginPath();
-        ctx.arc(rightHandX, rightHandY, handAuraR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        // Constant cyan telekinesis aura surrounding hand (suppressed during silhouette pass)
+        if (!fighter._isSilhouettePass) {
+          ctx.save();
+          const handAuraR = handRadius * (2.0 + Math.sin(now * 0.03) * 0.3);
+          const handAuraGrad = ctx.createRadialGradient(rightHandX, rightHandY, 0, rightHandX, rightHandY, handAuraR);
+          handAuraGrad.addColorStop(0.0, '#FFFFFF');
+          handAuraGrad.addColorStop(0.4, 'rgba(0, 245, 255, 0.90)');
+          handAuraGrad.addColorStop(1.0, 'rgba(0, 245, 255, 0)');
+          ctx.fillStyle = handAuraGrad;
+          ctx.beginPath();
+          ctx.arc(rightHandX, rightHandY, handAuraR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
       } else {
-        // Stage 3: Impact Clench & Recoil (0.75 to 1.00 prog)
-        const tremble = Math.sin(now * 0.08) * 1.2;
-        rightHandX = r * 0.68 + tremble;
-        rightHandY = -r * 0.25 + tremble;
+        // Stage 3: Impact Clench & Recoil Settle back to default (0.75 to 1.00 prog)
+        const t = (slamProg - 0.75) / 0.25;
+        const easeReturn = Math.sin(t * Math.PI * 0.5);
+        const tremble = (1.0 - t) * Math.sin(now * 0.08) * 1.2;
+
+        rightHandX = (r * 0.68 + tremble) * (1.0 - easeReturn) + (r * 0.82) * easeReturn;
+        rightHandY = (-r * 0.25 + tremble) * (1.0 - easeReturn) + (r * 0.38) * easeReturn;
       }
     } else if (isBasicAttack) {
       const maxAnim = fighter.basicAttackAnimMaxTimer || 16;
@@ -678,8 +966,10 @@ export function drawSansSkin(ctx, fighter) {
         rightHandX = r * 0.82 - easeWindup * (r * 0.20);
         rightHandY = r * 0.38 - easeWindup * (r * 0.15);
 
-        // Draw bone forming in hand
-        _drawHandHeldBone(ctx, rightHandX, rightHandY, handRadius, t, now);
+        // Draw bone forming in hand (suppressed during silhouette pass)
+        if (!fighter._isSilhouettePass) {
+          _drawHandHeldBone(ctx, rightHandX, rightHandY, handRadius, t, now);
+        }
       } else if (animProg < 0.70) {
         // Phase 2: Forward Snap & Throw (0.30 to 0.70)
         const t = (animProg - 0.30) / 0.40;
@@ -687,8 +977,10 @@ export function drawSansSkin(ctx, fighter) {
         rightHandX = r * (0.62 + easeSnap * 0.64); // reaches forward up to +r * 1.26
         rightHandY = r * (0.23 - easeSnap * 0.35); // lifts up to -r * 0.12
 
-        // Throw Release Shockwave & Manga Speed Arc
-        _drawThrowReleaseVFX(ctx, rightHandX, rightHandY, handRadius, t, now);
+        // Throw Release Shockwave & Manga Speed Arc (suppressed during silhouette pass)
+        if (!fighter._isSilhouettePass) {
+          _drawThrowReleaseVFX(ctx, rightHandX, rightHandY, handRadius, t, now);
+        }
       } else {
         // Phase 3: Smooth Recoil & Return (0.70 to 1.00)
         const t = (animProg - 0.70) / 0.30;
@@ -704,18 +996,20 @@ export function drawSansSkin(ctx, fighter) {
       rightHandX = r * 0.65 + easeSnap * (r * 0.25);
       rightHandY = -r * 0.25 - easeSnap * (r * 0.20);
 
-      // Telekinesis Cyan Hand Aura Pulse (Rule 11 compliant)
-      ctx.save();
-      const auraPulse = Math.sin(now * 0.02) * 2;
-      const handAuraGrad = ctx.createRadialGradient(rightHandX, rightHandY, 0, rightHandX, rightHandY, handRadius * 2.2 + auraPulse);
-      handAuraGrad.addColorStop(0.0, 'rgba(0, 245, 255, 0.85)');
-      handAuraGrad.addColorStop(0.5, 'rgba(0, 245, 255, 0.40)');
-      handAuraGrad.addColorStop(1.0, 'rgba(0, 245, 255, 0)');
-      ctx.fillStyle = handAuraGrad;
-      ctx.beginPath();
-      ctx.arc(rightHandX, rightHandY, handRadius * 2.2 + auraPulse, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      // Telekinesis Cyan Hand Aura Pulse (suppressed during silhouette pass)
+      if (!fighter._isSilhouettePass) {
+        ctx.save();
+        const auraPulse = Math.sin(now * 0.02) * 2;
+        const handAuraGrad = ctx.createRadialGradient(rightHandX, rightHandY, 0, rightHandX, rightHandY, handRadius * 2.2 + auraPulse);
+        handAuraGrad.addColorStop(0.0, 'rgba(0, 245, 255, 0.85)');
+        handAuraGrad.addColorStop(0.5, 'rgba(0, 245, 255, 0.40)');
+        handAuraGrad.addColorStop(1.0, 'rgba(0, 245, 255, 0)');
+        ctx.fillStyle = handAuraGrad;
+        ctx.beginPath();
+        ctx.arc(rightHandX, rightHandY, handRadius * 2.2 + auraPulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // Draw Left and Right Symmetrical Hands overlapping the front lower perimeter
@@ -723,8 +1017,8 @@ export function drawSansSkin(ctx, fighter) {
     drawPixelHand(ctx, rightHandX, rightHandY, handRadius, boneColor, outlineColor);
   }
 
-  // Status overlays (stun, freeze, burn)
-  if (typeof fighter.drawStatusOverlays === 'function') {
+  // Status overlays (stun, freeze, burn) (suppressed during silhouette pass)
+  if (typeof fighter.drawStatusOverlays === 'function' && !fighter._isSilhouettePass) {
     fighter.drawStatusOverlays(ctx, r);
   }
 

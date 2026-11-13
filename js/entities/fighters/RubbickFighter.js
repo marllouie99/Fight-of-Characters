@@ -18,6 +18,7 @@ import { getBasicAttackSound } from '../../soundEffects/basicAttackSounds.js';
 import { pushTrailCap } from '../../graphics/particles/visualTrailSystem.js';
 import { drawRubbickSkin, drawRubbickGhostModel, drawRubbickPixelDebrisLayer } from '../../graphics/fighters/rubbickSkin.js';
 import { renderRubbickDomainBackground } from './gojo/gojoDomainVisuals.js';
+import { shouldGojoDomainSlowInsteadOfFreeze } from '../../systems/domainSystem.js';
 
 export class RubbickFighter extends Fighter {
   constructor(def) {
@@ -2160,6 +2161,8 @@ export class RubbickFighter extends Fighter {
 
         // Heavenly Restriction immunity (Toji bypasses domain)
         if (f.domainImmunity || f.characterId === 'toji' || f.type === 'toji') continue;
+        // Under No-Verse-Equalization mode, non-JJK fighters move slowly instead of freezing
+        if (shouldGojoDomainSlowInsteadOfFreeze(f)) continue;
 
         if (typeof f.applyTimeStop === 'function') {
           f.applyTimeStop(15, { isDomain: true, isUltimate: true });
@@ -2201,7 +2204,7 @@ export class RubbickFighter extends Fighter {
 
     // Also freeze direct opponent if passed
     if (opponent && opponent !== this && opponent.hp > 0) {
-      if (!opponent.domainImmunity && opponent.characterId !== 'toji' && opponent.type !== 'toji') {
+      if (!opponent.domainImmunity && opponent.characterId !== 'toji' && opponent.type !== 'toji' && !shouldGojoDomainSlowInsteadOfFreeze(opponent)) {
         if (typeof opponent.applyTimeStop === 'function') {
           opponent.applyTimeStop(15, { isDomain: true, isUltimate: true });
         } else {

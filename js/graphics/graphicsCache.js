@@ -38,8 +38,8 @@ export function warmImageOnGpu(img) {
 
 const FIGHTER_OVERLAY_MAP = {
   mahito: 'Assets/Overlays/mahitos-de.png',
-  gojo: 'Assets/Overlays/gojo-domainexpansion.png',
-  rubbick: 'Assets/Overlays/gojo-domainexpansion.png',
+  gojo: 'Assets/model/gojo/gojo_domain_arena_overlay.png',
+  rubbick: 'Assets/model/gojo/gojo_domain_arena_overlay.png',
   yuta: 'Assets/Overlays/Yuta-domain-overlay.png',
   toji: 'Assets/Overlays/toji-ultimate-overlay.png',
   cj: 'Assets/Overlays/CJ-baguvix-overlay.png',
@@ -366,5 +366,130 @@ export function getFilteredSpriteCanvas(img, filterStr) {
     }
   } catch (e) {}
   return img;
+}
+
+const _glowingGhostQuadCache = new WeakMap();
+
+/**
+ * Pre-bakes a scaled sprite quad surrounded by an offscreen golden aura halo (zero ctx.shadowBlur)
+ * so high-frequency afterimage trails blit a compact cached quad instead of downscaling 1024px+ PNGs per frame.
+ * @param {HTMLImageElement|HTMLCanvasElement} img
+ * @param {number} targetW
+ * @param {number} targetH
+ * @param {string} [glowColor='#FFE84D']
+ * @returns {{ canvas: HTMLCanvasElement, padX: number, padY: number }|null}
+ */
+export function getPrebakedGlowingGhostQuad(img, targetW, targetH, glowColor = '#FFE84D') {
+  if (!img || typeof document === 'undefined') return null;
+  const srcW = img.naturalWidth || img.width || 0;
+  const srcH = img.naturalHeight || img.height || 0;
+  const scaledW = Math.max(1, Math.round(targetW));
+  const scaledH = Math.max(1, Math.round(targetH));
+  if (srcW <= 0 || srcH <= 0) return null;
+
+  const pad = Math.max(4, Math.min(12, Math.round(Math.min(scaledW, scaledH) * 0.08)));
+  const cacheKey = `${scaledW}x${scaledH}:${pad}:${glowColor}`;
+
+  let byKey = _glowingGhostQuadCache.get(img);
+  if (!byKey) {
+    byKey = new Map();
+    _glowingGhostQuadCache.set(img, byKey);
+  }
+  const existing = byKey.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+  if (byKey.size >= 8) {
+    byKey.clear();
+  }
+
+  try {
+    const silhouette = document.createElement('canvas');
+    silhouette.width = scaledW;
+    silhouette.height = scaledH;
+    const sctx = silhouette.getContext('2d');
+    if (!sctx) return null;
+    sctx.imageSmoothingEnabled = false;
+    sctx.drawImage(img, 0, 0, scaledW, scaledH);
+    sctx.globalCompositeOperation = 'source-in';
+    sctx.fillStyle = glowColor;
+    sctx.fillRect(0, 0, scaledW, scaledH);
+
+    const quad = document.createElement('canvas');
+    quad.width = scaledW + pad * 2;
+    quad.height = scaledH + pad * 2;
+    const qctx = quad.getContext('2d');
+    if (!qctx) return null;
+
+    qctx.imageSmoothingEnabled = false;
+    const outerOffset = Math.max(2, pad * 0.6);
+    qctx.globalAlpha = 0.16;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      qctx.drawImage(silhouette, pad + Math.cos(a) * outerOffset, pad + Math.sin(a) * outerOffset);
+    }
+
+    const innerOffset = Math.max(1, pad * 0.28);
+    qctx.globalAlpha = 0.36;
+    qctx.drawImage(silhouette, pad + innerOffset, pad);
+    qctx.drawImage(silhouette, pad - innerOffset, pad);
+    qctx.drawImage(silhouette, pad, pad + innerOffset);
+    qctx.drawImage(silhouette, pad, pad - innerOffset);
+
+    qctx.globalAlpha = 1.0;
+    qctx.drawImage(img, pad, pad, scaledW, scaledH);
+
+    const entry = {
+      canvas: quad,
+      padX: pad * (targetW / scaledW),
+      padY: pad * (targetH / scaledH)
+    };
+    byKey.set(cacheKey, entry);
+    return entry;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Draws a pre-baked image or offscreen canvas with optional local rotation/flipping and nearest-neighbor crispness.
+ */
+export function drawTransformedSpriteQuad(ctx, sprite, drawX, drawY, width, height, rot = 0, flipX = 1, flipY = 1) {
+  if (!sprite) return;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+    ctx.translate(drawX + width / 2, drawY + height / 2);
+    if (rot !== 0) ctx.rotate(rot);
+    if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+    ctx.drawImage(sprite, -width / 2, -height / 2, width, height);
+  } else {
+    ctx.drawImage(sprite, drawX, drawY, width, height);
+  }
+  ctx.restore();
+}
+
+/**
+ * Draws a pre-baked glowing offscreen ghost quad when DOM Canvas is available,
+ * falling back cleanly to direct transformed drawing in headless environments.
+ */
+export function drawGlowingGhostSprite(ctx, srcImg, drawX, drawY, width, height, rot = 0, flipX = 1, flipY = 1, glowColor = '#FFE84D') {
+  if (!srcImg) return;
+  const bakedQuad = getPrebakedGlowingGhostQuad(srcImg, width, height, glowColor);
+  if (bakedQuad) {
+    drawTransformedSpriteQuad(
+      ctx,
+      bakedQuad.canvas,
+      drawX - bakedQuad.padX,
+      drawY - bakedQuad.padY,
+      width + bakedQuad.padX * 2,
+      height + bakedQuad.padY * 2,
+      rot,
+      flipX,
+      flipY
+    );
+    return;
+  }
+  drawTransformedSpriteQuad(ctx, srcImg, drawX, drawY, width, height, rot, flipX, flipY);
 }
 

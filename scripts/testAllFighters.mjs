@@ -3042,6 +3042,11 @@ async function main() {
         // Clean up
         fighter.purpleRecoveryTimer = 0;
         fighter.z = 0;
+        fighter.domainCooldown = CONFIG.gojo?.domainCooldown ?? 1200;
+        fighter.isChannelingDomainExpansion = false;
+        fighter.isDomainPreSlide = false;
+        fighter.domainChargeTimer = 0;
+        fighter.domainActive = false;
         if (fighter.activePurpleProjectile) {
           fighter.activePurpleProjectile.life = 0;
           const pIdx = projectileSystem.projectiles.indexOf(fighter.activePurpleProjectile);
@@ -4148,18 +4153,33 @@ async function main() {
       throw new Error('Saitama dodge was blocked by uncleared _counterPunchTarget after counter cancellation');
     }
 
-    // Test Saitama dodge disabled inside Gojo's domain (Unlimited Void)
+    // Test Saitama vs Gojo's domain (Unlimited Void):
+    // - Under Verse Equalization ON: dodge & freeze are disabled/enforced inside Gojo domain
+    // - Under No-Verse-Equalization (default): Saitama is NOT paralyzed (_handleTimeStop() === false)
     const testGojo = new GojoFighter({ startX: 400, startY: 400, type: 'gojo', color: '#00F0FF' });
     testGojo.domainActive = true;
     testGojo.hp = 1000;
     state.fighters = [testSaitama, testGojo];
-    testSaitama.dodgeCooldown = 0;
-    const dodgeInGojoDomain = testSaitama.executeDodgeTeleport(testGojo);
-    if (dodgeInGojoDomain) {
-      throw new Error('Expected Saitama dodge to be completely disabled inside Gojo domain');
+    const prevGojoVe = CONFIG.gojo.domainVerseEqualization;
+    try {
+      CONFIG.gojo.domainVerseEqualization = true;
+      testSaitama.dodgeCooldown = 0;
+      const dodgeInGojoDomain = testSaitama.executeDodgeTeleport(testGojo);
+      if (dodgeInGojoDomain) {
+        throw new Error('Expected Saitama dodge to be completely disabled inside Gojo domain when Verse Equalization is ON');
+      }
+
+      CONFIG.gojo.domainVerseEqualization = false;
+      testSaitama.timeStopTimer = 0;
+      if (testSaitama._handleTimeStop()) {
+        throw new Error('Expected Saitama NOT to freeze inside Gojo domain when Verse Equalization is OFF');
+      }
+    } finally {
+      CONFIG.gojo.domainVerseEqualization = prevGojoVe;
+      testSaitama.timeStopTimer = 0;
+      testGojo.domainActive = false;
+      state.fighters = [testSaitama, dummyTarget2];
     }
-    testGojo.domainActive = false;
-    state.fighters = [testSaitama, dummyTarget2];
 
     // Test Serious Counter immunity to push back / drag / pull attacks (Lapse Blue / Hollow Purple / Getsuga drag / Black Hole / knockback)
     dummyTarget2.hp = 10000;
@@ -4347,39 +4367,57 @@ async function main() {
     testSaitama._flurryBreatherTimer = 0;
     testSaitama.isFlurrying = false;
 
-    // Test Serious Counter cancellation when Gojo deploys domain (Unlimited Void) in time
-    state.gameState = 'playing';
-    testGojo.hp = 1000;
-    testGojo.domainActive = false;
-    testGojo.isChannelingDomainExpansion = true;
-    testGojo.domainChargeTimer = testGojo.domainChargeMax - 1; // 1 frame away from deploying domain
-    state.fighters = [testSaitama, testGojo];
-    testSaitama.x = 200;
-    testSaitama.y = 200;
-    testGojo.x = 300;
-    testGojo.y = 200;
-    testSaitama.skillPunishCooldown = 0;
-    testSaitama.dodgeCooldown = 0;
-    testSaitama.executeSkillCounterPunish(testGojo);
-    if (!testSaitama.isCountering || testSaitama._counterPunchTimer <= 0) {
-      throw new Error('Expected Serious Counter to be active while Gojo is channeling domain');
-    }
-    // Gojo deploys domain expansion
-    testGojo.update(testSaitama, 1, state.arena);
-    if (!testGojo.domainActive) {
-      throw new Error('Expected Gojo domain to become active after charge completed');
-    }
-    // Saitama updates inside Gojo's active domain
-    testSaitama.update(testGojo, 0, state.arena);
-    if (testSaitama.isCountering || testSaitama._counterPunchTimer > 0 || testSaitama._counterPunchTarget !== null) {
-      throw new Error('Expected Saitama Serious Skill Counter to get cancelled when Gojo deploys domain in time');
-    }
+    // Test Serious Counter behavior when Gojo deploys domain (Unlimited Void):
+    // 1) Under No-Verse-Equalization (default): Serious Counter is NOT cancelled and Saitama is NOT frozen
+    // 2) Under Verse Equalization ON: Serious Counter IS cancelled and Saitama freezes
+    const prevVeDomainCounter = CONFIG.gojo.domainVerseEqualization;
+    try {
+      state.gameState = 'playing';
+      testGojo.hp = 1000;
+      testGojo.domainActive = false;
+      testGojo.isChannelingDomainExpansion = true;
+      testGojo.domainChargeTimer = testGojo.domainChargeMax - 1; // 1 frame away from deploying domain
+      state.fighters = [testSaitama, testGojo];
+      testSaitama.x = 200;
+      testSaitama.y = 200;
+      testGojo.x = 300;
+      testGojo.y = 200;
+      testSaitama.skillPunishCooldown = 0;
+      testSaitama.dodgeCooldown = 0;
 
-    if (testSaitama.timeStopTimer <= 0 && testSaitama.hitStunTimer <= 0) {
-      throw new Error('Expected Saitama to be frozen by Gojo domain after counter cancellation');
+      // Verify No-Verse-Equalization keeps Serious Counter active inside Gojo domain
+      CONFIG.gojo.domainVerseEqualization = false;
+      testSaitama.executeSkillCounterPunish(testGojo);
+      if (!testSaitama.isCountering || testSaitama._counterPunchTimer <= 0) {
+        throw new Error('Expected Serious Counter to be active while Gojo is channeling domain');
+      }
+      testGojo.update(testSaitama, 1, state.arena);
+      if (!testGojo.domainActive) {
+        throw new Error('Expected Gojo domain to become active after charge completed');
+      }
+      testSaitama.update(testGojo, 0, state.arena);
+      if (!testSaitama.isCountering || (testSaitama.timeStopTimer || 0) > 0) {
+        throw new Error('Expected Saitama Serious Counter to remain active and un-frozen under No-Verse-Equalization');
+      }
+
+      // Verify Verse Equalization ON cancels Serious Counter and freezes Saitama
+      CONFIG.gojo.domainVerseEqualization = true;
+      testGojo._applyDomainEffect();
+      testSaitama.update(testGojo, 0, state.arena);
+      if (testSaitama.isCountering || testSaitama._counterPunchTimer > 0 || testSaitama._counterPunchTarget !== null) {
+        throw new Error('Expected Saitama Serious Skill Counter to get cancelled when Gojo deploys domain under Verse Equalization');
+      }
+      if (testSaitama.timeStopTimer <= 0 && testSaitama.hitStunTimer <= 0) {
+        throw new Error('Expected Saitama to be frozen by Gojo domain after counter cancellation under Verse Equalization');
+      }
+    } finally {
+      CONFIG.gojo.domainVerseEqualization = prevVeDomainCounter;
+      testSaitama.interruptAttacks(true);
+      testSaitama.timeStopTimer = 0;
+      testSaitama.hitStunTimer = 0;
+      testGojo.domainActive = false;
+      state.fighters = [testSaitama, dummyTarget2];
     }
-    testGojo.domainActive = false;
-    state.fighters = [testSaitama, dummyTarget2];
 
     // Test Saitama Drawing in All Combat Animation States (Flurry, Finisher, Counter, Idle)
     const mockCtx = state.ctx;

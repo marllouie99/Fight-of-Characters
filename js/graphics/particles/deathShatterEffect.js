@@ -47,6 +47,11 @@ export function spawnDeathShatter(fighter) {
   if (fighter.characterId === 'namelessdeity' || fighter.type === 'namelessdeity' || fighter.characterId === 'nameless_deity') {
     return spawnNamelessDeityShatterDeath(fighter);
   }
+  if (fighter.characterId === 'mahito' || fighter.type === 'mahito') {
+    if (typeof fighter.killTransfiguredHumans === 'function') {
+      fighter.killTransfiguredHumans(true);
+    }
+  }
 
   const isMulti = typeof state !== 'undefined' && state.mode && state.mode !== '1v1' && state.mode !== 'Training';
   

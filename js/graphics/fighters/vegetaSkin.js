@@ -13,10 +13,13 @@
 import { state } from '../../core/state.js';
 import { CONFIG, getHandSize } from '../../core/config.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
-import { getFilteredSpriteCanvas } from '../graphicsCache.js';
+import { getFilteredSpriteCanvas, drawTransformedSpriteQuad, drawGlowingGhostSprite } from '../graphicsCache.js';
 
 let _vegetaHairImage = null;
 let _vegetaHairImageLoading = false;
+
+let _vegetaSuperSaiyanHairImage = null;
+let _vegetaSuperSaiyanHairImageLoading = false;
 
 export function _getVegetaHairImage() {
   if (_vegetaHairImage && _vegetaHairImage.complete && _vegetaHairImage.naturalWidth > 0) {
@@ -43,16 +46,41 @@ export function _getVegetaHairImage() {
   return _vegetaHairImage;
 }
 
+export function _getVegetaSuperSaiyanHairImage() {
+  if (_vegetaSuperSaiyanHairImage && _vegetaSuperSaiyanHairImage.complete && _vegetaSuperSaiyanHairImage.naturalWidth > 0) {
+    return _vegetaSuperSaiyanHairImage;
+  }
+  if (!_vegetaSuperSaiyanHairImageLoading && typeof Image !== 'undefined') {
+    _vegetaSuperSaiyanHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _vegetaSuperSaiyanHairImage = img;
+      _vegetaSuperSaiyanHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _vegetaSuperSaiyanHairImageLoading = false;
+    };
+    const hairPath = (typeof CONFIG !== 'undefined' && CONFIG.vegeta?.assets?.superSaiyanHair) || 'Assets/model/vegeta/Vegeta-ssj-hair.png';
+    img.src = hairPath;
+    _vegetaSuperSaiyanHairImage = img;
+  }
+  return _vegetaSuperSaiyanHairImage;
+}
+
 if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
   _getVegetaHairImage();
+  _getVegetaSuperSaiyanHairImage();
 }
 
 /**
- * Draws Vegeta's upward flame hair silhouette from Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png.
+ * Resolves calibrated hair dimensions, anchor offsets, and source image for Vegeta's base or SSJ form.
  */
-export function _drawVegetaHair(ctx, r, facingLeft = false, isSuperSaiyan = false) {
+function _resolveVegetaHairMetrics(r, isSuperSaiyan = false) {
   const hairImg = _getVegetaHairImage();
-  const custom = (typeof state !== 'undefined' && state.skinCustomizations?.vegeta) || {};
+  const ssjHairImg = isSuperSaiyan ? _getVegetaSuperSaiyanHairImage() : null;
+  const useDedicatedSsjSprite = Boolean(isSuperSaiyan && ssjHairImg && ssjHairImg.complete && ssjHairImg.naturalWidth > 0);
+
+  const custom = (typeof state !== 'undefined' && (useDedicatedSsjSprite ? state.skinCustomizations?.vegeta_ssj : state.skinCustomizations?.vegeta)) || {};
   const wMult = custom.widthScale ?? 1.0;
   const hMult = custom.heightScale ?? 1.0;
   const offX = custom.offsetX ?? 0;
@@ -61,35 +89,29 @@ export function _drawVegetaHair(ctx, r, facingLeft = false, isSuperSaiyan = fals
   const flipX = custom.flipX ? -1 : 1;
   const flipY = custom.flipY ? -1 : 1;
 
-  const targetHairWidth = r * 2.80 * wMult;
-  const targetHairHeight = r * 2.80 * hMult;
-
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-
+  const targetHairWidth = r * (useDedicatedSsjSprite ? 3.12 : 2.80) * wMult;
+  const targetHairHeight = r * (useDedicatedSsjSprite ? 2.72 : 2.80) * hMult;
   const drawX = -targetHairWidth / 2 + offX;
-  const drawY = -r * 2.05 + offY;
+  const drawY = -r * (useDedicatedSsjSprite ? 2.30 : 2.05) + offY;
 
-  if (rot !== 0 || flipX !== 1 || flipY !== 1) {
-    ctx.translate(drawX + targetHairWidth / 2, drawY + targetHairHeight / 2);
-    if (rot !== 0) ctx.rotate(rot);
-    if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
-    if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
-      const srcImg = isSuperSaiyan
-        ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
-        : hairImg;
-      ctx.drawImage(srcImg, -targetHairWidth / 2, -targetHairHeight / 2, targetHairWidth, targetHairHeight);
-    }
-  } else {
-    if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
-      const srcImg = isSuperSaiyan
-        ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
-        : hairImg;
-      ctx.drawImage(srcImg, drawX, drawY, targetHairWidth, targetHairHeight);
-    }
+  let srcImg = null;
+  if (useDedicatedSsjSprite) {
+    srcImg = ssjHairImg;
+  } else if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    srcImg = isSuperSaiyan
+      ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
+      : hairImg;
   }
 
-  ctx.restore();
+  return { srcImg, useDedicatedSsjSprite, targetHairWidth, targetHairHeight, drawX, drawY, rot, flipX, flipY };
+}
+
+/**
+ * Draws Vegeta's upward flame hair silhouette (base black sprite or dedicated Super Saiyan golden sprite).
+ */
+export function _drawVegetaHair(ctx, r, facingLeft = false, isSuperSaiyan = false) {
+  const m = _resolveVegetaHairMetrics(r, isSuperSaiyan);
+  drawTransformedSpriteQuad(ctx, m.srcImg, m.drawX, m.drawY, m.targetHairWidth, m.targetHairHeight, m.rot, m.flipX, m.flipY);
 }
 
 /**
@@ -490,7 +512,7 @@ export function drawVegetaSkin(ctx, fighter) {
 /**
  * Ghost Model Afterimage for Vegeta (Z-Vanish Evasion)
  */
-export function drawVegetaGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5) {
+export function drawVegetaGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5, isSuperSaiyan = false) {
   if (alpha <= 0.01) return;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -503,16 +525,23 @@ export function drawVegetaGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5) {
     ctx.scale(1, -1);
   }
 
-  // Royal Cyan/Violet Vanish Aura
+  // Royal Cyan/Gold Vanish Aura
   ctx.beginPath();
   ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0, 229, 255, 0.30)';
+  ctx.fillStyle = isSuperSaiyan ? 'rgba(255, 224, 77, 0.34)' : 'rgba(0, 229, 255, 0.30)';
   ctx.fill();
 
   drawVegetaPixelBody(ctx, r);
-  _drawVegetaHair(ctx, r, facingLeft, false);
+  const ssjImg = isSuperSaiyan ? _getVegetaSuperSaiyanHairImage() : null;
+  const useSsjGhost = Boolean(isSuperSaiyan && ssjImg && ssjImg.complete && ssjImg.naturalWidth > 0);
+  if (useSsjGhost) {
+    const m = _resolveVegetaHairMetrics(r, true);
+    drawGlowingGhostSprite(ctx, m.srcImg, m.drawX, m.drawY, m.targetHairWidth, m.targetHairHeight, m.rot, m.flipX, m.flipY, '#FFE84D');
+  } else {
+    _drawVegetaHair(ctx, r, facingLeft, false);
+  }
 
-  ctx.strokeStyle = 'rgba(0, 229, 255, 0.80)';
+  ctx.strokeStyle = isSuperSaiyan ? 'rgba(255, 215, 0, 0.85)' : 'rgba(0, 229, 255, 0.80)';
   ctx.lineWidth = 2.0;
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);

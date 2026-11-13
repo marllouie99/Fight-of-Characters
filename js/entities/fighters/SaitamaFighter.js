@@ -5,11 +5,13 @@ import { MODE_SETTINGS } from '../../core/modeConfig.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { spawnImpactFlash, spawnSparks, spawnAnimePunchImpactFrame, spawnMeleeClashShockwave, spawnPunchWindSpeedLines, spawnSaitamaCounterFrontalBlast } from '../../graphics/particles/sparkEffect.js';
 import { triggerSaitamaWallShatter } from '../../graphics/particles/saitamaWallShatter.js';
+import { triggerHudShatter } from '../../graphics/particles/hudShatterEffect.js';
 import { blowAwayArenaDecorations } from '../../systems/arenaDecorationSystem.js';
 import { drawSaitamaSkin } from '../../graphics/fighters/saitamaSkin.js';
 import { fastCleanArray, pushTrailCap } from '../../graphics/particles/visualTrailSystem.js';
 import { fadeOutSound } from '../../systems/soundSystem.js';
 import { interactionManager, isNamelessDeityEntity } from '../../interactions/index.js';
+import { shouldGojoDomainSlowInsteadOfFreeze } from '../../systems/domainSystem.js';
 
 /**
  * Saitama — The Caped Baldy
@@ -285,7 +287,7 @@ export class SaitamaFighter extends Fighter {
    * UNLESS trapped inside Gojo's deployed Unlimited Void domain.
    */
   applyTimeStop(duration, opts = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(opts.isDomain || opts.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(opts.isDomain || opts.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) {
@@ -302,7 +304,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   applyHitStun(frames, opts = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(opts.isDomain || opts.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(opts.isDomain || opts.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) {
@@ -315,7 +317,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   applyParalyze(frames, opts = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(opts.isDomain || opts.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(opts.isDomain || opts.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) {
@@ -328,7 +330,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   applySlow(frames, multiplier, opts = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(opts.isDomain || opts.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(opts.isDomain || opts.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) {
@@ -341,7 +343,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   applyKnockback(vx, vy, options = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(options.isDomain || options.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(options.isDomain || options.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) {
@@ -363,7 +365,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   applyElectricStun(frames, opts = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(opts.isDomain || opts.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(opts.isDomain || opts.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) this.interruptAttacks(true);
@@ -374,7 +376,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   applySilence(frames, opts = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(opts.isDomain || opts.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(opts.isDomain || opts.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState) {
       if (isInsideGojo) this.interruptAttacks(true);
@@ -385,7 +387,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   suppressCombatAndVisuals(options = {}) {
-    const isInsideGojo = this._isInsideGojoDomain() || Boolean(options.isDomain || options.isGojoDomain);
+    const isInsideGojo = this._isParalyzedByGojoDomain() || (Boolean(options.isDomain || options.isGojoDomain) && !shouldGojoDomainSlowInsteadOfFreeze(this));
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState && this.hp > 0 && !isInsideGojo) {
       return; // Cannot be suppressed during Serious Skill Counter unless inside Gojo domain
@@ -511,6 +513,14 @@ export class SaitamaFighter extends Fighter {
   }
 
   /**
+   * Returns true only when an enemy Unlimited Void should fully paralyze Saitama
+   * (disabled under No-Verse-Equalization mode so Saitama slows instead of freezing).
+   */
+  _isParalyzedByGojoDomain() {
+    return this._isInsideGojoDomain() && !shouldGojoDomainSlowInsteadOfFreeze(this);
+  }
+
+  /**
    * Clears all active dodge afterimages.
    */
   clearAllAfterimages() {
@@ -578,8 +588,8 @@ export class SaitamaFighter extends Fighter {
     if (this.hp <= 0 || this.isChainedByMakima) return false;
     if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
-    // DISABLE DODGING COMPLETELY INSIDE GOJO'S DOMAIN (Unlimited Void)
-    if (this._isInsideGojoDomain()) {
+    // DISABLE DODGING COMPLETELY INSIDE GOJO'S DOMAIN (Unlimited Void) when Verse Equalization paralyzes Saitama
+    if (this._isParalyzedByGojoDomain()) {
       return false;
     }
 
@@ -928,7 +938,7 @@ export class SaitamaFighter extends Fighter {
     if (!this.isSkillEnabled(cfg.enableDodge, true)) return false;
     if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
-    if (this._isInsideGojoDomain() || this.isChainedByMakima || this.hp <= 0) return false;
+    if (this._isParalyzedByGojoDomain() || this.isChainedByMakima || this.hp <= 0) return false;
 
     // Dodge is fully DISABLED while winding up the Serious Skill Counter punch (Saitama commits and takes the slash)
     if (this._counterPunchTimer && this._counterPunchTimer > 0) return false;
@@ -1052,7 +1062,7 @@ export class SaitamaFighter extends Fighter {
     if (!this.isSkillEnabled(cfg.enableDodge, true)) return false;
     if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
-    if (this._isInsideGojoDomain() || this.isChainedByMakima || this.hp <= 0 || this.isFrozenByInfinity || this.isTargetOfAmbush) {
+    if (this._isParalyzedByGojoDomain() || this.isChainedByMakima || this.hp <= 0 || this.isFrozenByInfinity || this.isTargetOfAmbush) {
       return false;
     }
 
@@ -1202,7 +1212,7 @@ export class SaitamaFighter extends Fighter {
     if (!this.isSkillEnabled(cfg.enableDodge, true)) return false;
     if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return false;
 
-    if (this._isInsideGojoDomain() || this.isChainedByMakima || this.hp <= 0 || this.isFrozenByInfinity || this.isTargetOfAmbush) {
+    if (this._isParalyzedByGojoDomain() || this.isChainedByMakima || this.hp <= 0 || this.isFrozenByInfinity || this.isTargetOfAmbush) {
       return false;
     }
 
@@ -1397,6 +1407,50 @@ export class SaitamaFighter extends Fighter {
   }
 
   /**
+   * Returns whether Saitama arena wall interaction (overall + optional sub-toggle + per-attack) is enabled.
+   */
+  _isWallInteractionEnabledForAttack(attackKey, subToggleKey = null) {
+    const cfg = CONFIG.saitama;
+    if (!cfg || cfg.enableWallInteraction === false) return false;
+    if (subToggleKey && !cfg[subToggleKey]) return false;
+    return cfg[`${attackKey}WallInteraction`] !== false;
+  }
+
+  /**
+   * Returns whether Saitama HUD shatter interaction (overall + sub-toggle + per-attack) is enabled.
+   */
+  _isHudInteractionEnabledForAttack(attackKey) {
+    const cfg = CONFIG.saitama;
+    if (!cfg || cfg.enableHudInteraction === false || !cfg.enableHudShatter) return false;
+    return cfg[`${attackKey}HudInteraction`] !== false;
+  }
+
+  /**
+   * Marks target for Saitama wall-pin & crack decal resolution when enabled for this attack.
+   */
+  _applyWallPinTargetFlags(target, attackKey) {
+    if (!target || !this._isWallInteractionEnabledForAttack(attackKey, 'enableWallPin')) return;
+    target._knockedBackBySaitamaBasicPunch = true;
+    target.preventKnockbackBounce = true;
+    target.isWallPinnedBySaitama = true;
+  }
+
+  /**
+   * Triggers Saitama's arena wall shatter and HUD shatter effects independently per attack config.
+   */
+  _triggerPunchEnvironmentEffects(originX, originY, punchAngle, arena, attackKey, customHalfArc = undefined) {
+    if (!arena) return;
+    const allowWall = this._isWallInteractionEnabledForAttack(attackKey, 'enableWallShatter');
+    const allowHud = this._isHudInteractionEnabledForAttack(attackKey);
+
+    if (allowWall && typeof triggerSaitamaWallShatter === 'function') {
+      triggerSaitamaWallShatter(originX, originY, punchAngle, arena, customHalfArc, { skipHudShatter: !allowHud });
+    } else if (allowHud && typeof triggerHudShatter === 'function') {
+      triggerHudShatter(originX, originY, punchAngle, arena, null, customHalfArc);
+    }
+  }
+
+  /**
    * Check team alignment in 2v2 / team battle modes.
    */
   _isSameTeam(target) {
@@ -1471,7 +1525,7 @@ export class SaitamaFighter extends Fighter {
     if (this.skillPunishCooldown > 0) return false;
     const isInsideDomain = typeof state !== 'undefined' && (state.activeDomain || state.domainActive);
     const isGlobalHitPausing = isGlobalHitPauseActive(state, this);
-    if (this.timeStopTimer > 0 || this.isChainedByMakima || isGlobalHitPausing || this.isFrozenByInfinity || this.isTargetOfAmbush || isInsideDomain || this._isInsideGojoDomain() || this.isFlurrying) return false;
+    if (this.timeStopTimer > 0 || this.isChainedByMakima || isGlobalHitPausing || this.isFrozenByInfinity || this.isTargetOfAmbush || isInsideDomain || this._isParalyzedByGojoDomain() || this.isFlurrying) return false;
 
     // Check team alignment in 2v2/team modes ONLY.
     if (this._isSameTeam(resolvedTarget)) return false;
@@ -1662,7 +1716,7 @@ export class SaitamaFighter extends Fighter {
    * Delivers the massive counter punch strictly directed toward the locked aim angle.
    */
   _tickCounterPunch() {
-    if (this._isInsideGojoDomain()) {
+    if (this._isParalyzedByGojoDomain()) {
       this.interruptAttacks(true);
       return;
     }
@@ -1811,12 +1865,7 @@ export class SaitamaFighter extends Fighter {
           
           const isTargetImmune = Boolean(target && (target.characterId === 'escanor' || target.type === 'escanor' || target.immuneToKnockback || target.immuneToPush));
           if (!isTargetImmune) {
-            const enableWallPin = Boolean(CONFIG.saitama?.enableWallPin && CONFIG.saitama?.enableWallInteraction !== false);
-            if (enableWallPin) {
-              target._knockedBackBySaitamaBasicPunch = true;
-              target.preventKnockbackBounce = true;
-              target.isWallPinnedBySaitama = true;
-            }
+            this._applyWallPinTargetFlags(target, 'seriousCounter');
             target.vx = kx;
             target.vy = ky;
           }
@@ -1904,12 +1953,7 @@ export class SaitamaFighter extends Fighter {
             const colKy = Math.sin(pushAngle) * (knockbackForce * 1.05);
             const isEnemyImmune = Boolean(enemy && (enemy.characterId === 'escanor' || enemy.type === 'escanor' || enemy.immuneToKnockback || enemy.immuneToPush));
             if (!isEnemyImmune) {
-              const enableWallPin = Boolean(CONFIG.saitama?.enableWallPin && CONFIG.saitama?.enableWallInteraction !== false);
-              if (enableWallPin) {
-                enemy._knockedBackBySaitamaBasicPunch = true;
-                enemy.preventKnockbackBounce = true;
-                enemy.isWallPinnedBySaitama = true;
-              }
+              this._applyWallPinTargetFlags(enemy, 'seriousCounter');
               enemy.vx = colKx;
               enemy.vy = colKy;
             }
@@ -1939,12 +1983,9 @@ export class SaitamaFighter extends Fighter {
         spawnSaitamaCounterFrontalBlast(this.x, this.y, pushAngle, frontalReach, frontalArc);
       }
 
-      // Unique Interaction: Shatter the arena line wall in the punch direction (HUD destruction disabled)
-      const enableWallShatter = Boolean(CONFIG.saitama?.enableWallShatter && CONFIG.saitama?.enableWallInteraction !== false);
+      // Unique Interaction: Arena wall & HUD shatter along punch direction (toggled per attack in saitamaConfig.js)
       const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
-      if (enableWallShatter && arena && typeof triggerSaitamaWallShatter === 'function') {
-        triggerSaitamaWallShatter(this.x, this.y, pushAngle, arena);
-      }
+      this._triggerPunchEnvironmentEffects(this.x, this.y, pushAngle, arena, 'seriousCounter');
       this._blowAwayCrazyDaveLawnmowers(this._counterReleaseOriginX, this._counterReleaseOriginY, pushAngle, frontalReach, halfArc);
       this._blowAwayArenaDecorations(this.x, this.y, pushAngle, frontalReach, halfArc, 3.5, true);
 
@@ -2129,7 +2170,7 @@ export class SaitamaFighter extends Fighter {
   }
 
   interruptAttacks(forceCancelAll = false) {
-    const isInsideGojo = this._isInsideGojoDomain();
+    const isInsideGojo = this._isParalyzedByGojoDomain();
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
     if (isCounteringState && !forceCancelAll && !isInsideGojo && this.hp > 0) {
       return; // IMMUNITY: Serious Skill Counter cannot be interrupted or cancelled by any attacks while Saitama is alive!
@@ -2207,8 +2248,8 @@ export class SaitamaFighter extends Fighter {
    * Intercepts incoming attack damage to execute dodge teleport (0 damage).
    */
   takeDamage(amount, attacker, opts = {}) {
-    // If chained by Makima or inside Gojo's domain (Unlimited Void), dodging and counter punishes are completely disabled!
-    const isInsideGojoDomain = this._isInsideGojoDomain();
+    // If chained by Makima or paralyzed by Gojo's domain (Unlimited Void), dodging and counter punishes are completely disabled!
+    const isInsideGojoDomain = this._isParalyzedByGojoDomain();
     if (isInsideGojoDomain || this.isChainedByMakima) {
       return super.takeDamage(amount, attacker, opts);
     }
@@ -2355,7 +2396,7 @@ export class SaitamaFighter extends Fighter {
    */
   onProjectileApproach(projectile, attacker) {
     if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) return;
-    if (this._isInsideGojoDomain() || this.isChainedByMakima) return;
+    if (this._isParalyzedByGojoDomain() || this.isChainedByMakima) return;
     if (this._counterPunchTimer && this._counterPunchTimer > 0) return; // Sidestep disabled while charging Serious Skill Counter
     if (this.isFlurrying) return; // Sidestep disabled while performing Consecutive Normal Punches
     const src = projectile || attacker;
@@ -2526,12 +2567,9 @@ export class SaitamaFighter extends Fighter {
       spawnSaitamaCounterFrontalBlast(fistX, fistY, aimAngle, punchBlastReach, punchBlastArc);
     }
 
-    // Unique Interaction: Shatter the arena line wall in normal punch trajectory (HUD destruction disabled)
-    const enableWallShatter = Boolean(CONFIG.saitama?.enableWallShatter && CONFIG.saitama?.enableWallInteraction !== false);
+    // Unique Interaction: Arena wall & HUD shatter in normal punch trajectory (toggled per attack in saitamaConfig.js)
     const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
-    if (enableWallShatter && arena && typeof triggerSaitamaWallShatter === 'function') {
-      triggerSaitamaWallShatter(fistX, fistY, aimAngle, arena);
-    }
+    this._triggerPunchEnvironmentEffects(fistX, fistY, aimAngle, arena, 'normalPunch');
     this._blowAwayCrazyDaveLawnmowers(this._normalPunchReleaseOriginX, this._normalPunchReleaseOriginY, aimAngle, punchBlastReach, halfBlastArc);
     this._blowAwayArenaDecorations(fistX, fistY, aimAngle, punchBlastReach, halfBlastArc, 1.2);
 
@@ -2576,12 +2614,7 @@ export class SaitamaFighter extends Fighter {
         const ky = Math.sin(aimAngle) * knockbackForce;
         const isTargetImmune = Boolean(target && (target.characterId === 'escanor' || target.type === 'escanor' || target.immuneToKnockback || target.immuneToPush));
         if (!isTargetImmune) {
-          const enableWallPin = Boolean(CONFIG.saitama?.enableWallPin && CONFIG.saitama?.enableWallInteraction !== false);
-          if (enableWallPin) {
-            target._knockedBackBySaitamaBasicPunch = true;
-            target.preventKnockbackBounce = true; // Pin and stick target to wall for 1 second on wall impact instead of bouncing!
-            target.isWallPinnedBySaitama = true;
-          }
+          this._applyWallPinTargetFlags(target, 'normalPunch');
         }
         if (typeof target.applyKnockback === 'function') {
           target.applyKnockback(kx, ky);
@@ -2711,9 +2744,9 @@ export class SaitamaFighter extends Fighter {
     // Check if Nanami or Escanor is currently executing a cinematic hit-pause mechanic
     const isGlobalHitPausingFighter = isGlobalHitPauseActive(state, this);
 
-    // Mandatory Rule #1: Freeze / TimeStop guard at the top of update loop (bypassed only during active Serious Counter execution unless inside Gojo domain)
+    // Mandatory Rule #1: Freeze / TimeStop guard at the top of update loop (bypassed only during active Serious Counter execution unless paralyzed by Gojo domain)
     const isFrozen = this._handleTimeStop();
-    const isInsideGojoDomain = this._isInsideGojoDomain();
+    const isInsideGojoDomain = this._isParalyzedByGojoDomain();
     const isCounteringState = Boolean((this._counterPunchTimer && this._counterPunchTimer > 0) || (this._postCounterRecoveryTimer && this._postCounterRecoveryTimer > 0) || this.isCountering);
 
     // Cancel Serious Skill Counter immediately if caught in Gojo's deployed domain
@@ -3148,12 +3181,7 @@ export class SaitamaFighter extends Fighter {
                   const ky = Math.sin(aimAngle) * knockbackForce;
                   const isTargetImmune = Boolean(target && (target.characterId === 'escanor' || target.type === 'escanor' || target.immuneToKnockback || target.immuneToPush));
                   if (!isTargetImmune) {
-                    const enableWallPin = Boolean(CONFIG.saitama?.enableWallPin && CONFIG.saitama?.enableWallInteraction !== false);
-                    if (enableWallPin) {
-                      target._knockedBackBySaitamaBasicPunch = true;
-                      target.preventKnockbackBounce = true;
-                      target.isWallPinnedBySaitama = true;
-                    }
+                    this._applyWallPinTargetFlags(target, 'consecutivePunches');
                     target.vx = kx;
                     target.vy = ky;
                   }
@@ -3238,12 +3266,9 @@ export class SaitamaFighter extends Fighter {
           this._flurryFinalPunchReleaseOriginY = this.y - (this.z || 0);
           this._flurryAccumulatedDamage = 0;
 
-          // Unique Interaction: Shatter the arena line wall on flurry final blow (HUD destruction disabled)
-          const enableWallShatter = Boolean(CONFIG.saitama?.enableWallShatter && CONFIG.saitama?.enableWallInteraction !== false);
+          // Unique Interaction: Arena wall & HUD shatter on flurry final blow (toggled per attack in saitamaConfig.js)
           const arena = (typeof state !== 'undefined' && state.arena) ? state.arena : CONFIG.arena;
-          if (enableWallShatter && arena && typeof triggerSaitamaWallShatter === 'function') {
-            triggerSaitamaWallShatter(this.x, this.y, this._flurryFinalPunchReleaseAngle, arena);
-          }
+          this._triggerPunchEnvironmentEffects(this.x, this.y, this._flurryFinalPunchReleaseAngle, arena, 'consecutivePunches');
           this._blowAwayArenaDecorations(this.x, this.y, this._flurryFinalPunchReleaseAngle, 500, Math.PI * 0.45, 2.0);
           if (this.flurryTarget) {
             this.flurryTarget.caughtInSaitamaFlurry = false;

@@ -3,7 +3,7 @@
 // Heavenly Restriction: Complete (Sakurajima Colony)
 // ─────────────────────────────────────────────
 
-import { Fighter, applyDamageToTarget } from '../fighter.js';
+import { Fighter, applyDamageToTarget, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -28,7 +28,7 @@ export class MakiFighter extends Fighter {
     this.maxHp = cfg.maxHp || 440;
     this.speed = cfg.speed || 5.4;
     this.baseSpeed = cfg.speed || 5.4;
-    this.r = cfg.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
     this.hideHands = true; // Weapon & skill animations render dedicated dynamic hands; default model fists hidden
 
     // Heavenly Restriction & Domain Immunity

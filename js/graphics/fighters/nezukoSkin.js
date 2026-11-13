@@ -16,6 +16,76 @@ import { drawNezukoDemonClaws } from '../weapons/demonSlayerWeaponGraphics.js';
 const P = 2.0; // 2.0px authentic retro pixel grid
 const snap = (v) => Math.round(v / P) * P;
 
+let _nezukoHairImage = null;
+let _nezukoHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Nezuko's pixel-art hair asset (Assets/model/nezuko/Nezuko-hair.png).
+ */
+export function _getNezukoHairImage() {
+  if (_nezukoHairImage && _nezukoHairImage.complete && _nezukoHairImage.naturalWidth > 0) {
+    return _nezukoHairImage;
+  }
+  if (!_nezukoHairImageLoading && typeof Image !== 'undefined') {
+    _nezukoHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _nezukoHairImage = img;
+      _nezukoHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _nezukoHairImageLoading = false;
+    };
+    img.src = 'Assets/model/nezuko/Nezuko-hair.png?v=1';
+    _nezukoHairImage = img;
+  }
+  return _nezukoHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getNezukoHairImage();
+}
+
+/**
+ * Draws Nezuko's calibrated pixel-art hair sprite (Assets/model/nezuko/Nezuko-hair.png).
+ */
+export function _drawNezukoHair(ctx, r, facingLeft = false) {
+  const hairImg = _getNezukoHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.nezuko) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for Nezuko-hair.png (1305x1205, opaque bbox: visW 1107, visH 1131, topY 20)
+    const targetHairWidth = r * 2.80 * wMult;
+    const targetHairHeight = r * 2.50 * hMult;
+    const scaleX = targetHairWidth / 1107;
+    const scaleY = targetHairHeight / 1131;
+    const drawW = 1305 * scaleX;
+    const drawH = 1205 * scaleY;
+    const drawX = -645 * scaleX + offX;
+    const drawY = -r * 1.35 - 20 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+  }
+}
+
 /**
  * Discrete Pixel-Art Hairline Grid for Nezuko's Long Flowing Hair
  * 27 columns total (gx = -13 to +13, index = gx + 13)
@@ -63,8 +133,13 @@ export function drawNezukoSkin(ctx, fighter) {
     _drawNezukoBackHand(ctx, fighter, r, isClawSlashing, isPunching, animPhase);
   }
 
-  // 4. LAYER 1: MAIN BODY (Pixel Circle + Kimono + Haori + Bamboo Muzzle + Horn + Hair)
-  drawNezukoPixelBody(ctx, r);
+  // 4. LAYER 1: MAIN BODY (Pixel Circle + Kimono + Haori + Bamboo Muzzle + Horn)
+  const hairImg = _getNezukoHairImage();
+  const hasHairAsset = Boolean(hairImg && hairImg.complete && hairImg.naturalWidth > 0);
+  drawNezukoPixelBody(ctx, r, hasHairAsset);
+
+  // 4.5. LAYER 2: CALIBRATED ANIME HAIR SPRITE
+  _drawNezukoHair(ctx, r, facingLeft);
 
   // 5. LAYER 2: FRONT HAND & DEMON CLAWS (On Top of Body)
   const showFrontHand = !isPodiumPreview && !Boolean(state.showSkinOnly) && !fighter.hideFrontHand && !fighter.hideWeapon;
@@ -81,13 +156,13 @@ export function drawNezukoSkin(ctx, fighter) {
 let _cachedBodyCanvas = null;
 let _cachedBodyKey = '';
 
-export function drawNezukoPixelBody(ctx, r) {
+export function drawNezukoPixelBody(ctx, r, skipRibbon = false) {
   if (typeof document === 'undefined') {
-    _render_drawNezukoPixelBody(ctx, r);
+    _render_drawNezukoPixelBody(ctx, r, skipRibbon);
     return;
   }
   const intR = Math.round(r || 25);
-  const key = `${intR}`;
+  const key = `${intR}_${skipRibbon ? 1 : 0}`;
   if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
     const P = 2.0;
     const steps = Math.ceil((intR * 1.45 + P) / P);
@@ -100,7 +175,7 @@ export function drawNezukoPixelBody(ctx, r) {
       cctx.save();
       cctx.imageSmoothingEnabled = false;
       cctx.translate(size / 2, size / 2);
-      _render_drawNezukoPixelBody(cctx, intR);
+      _render_drawNezukoPixelBody(cctx, intR, skipRibbon);
       cctx.restore();
     }
     _cachedBodyKey = key;
@@ -112,7 +187,7 @@ export function drawNezukoPixelBody(ctx, r) {
   ctx.restore();
 }
 
-function _render_drawNezukoPixelBody(ctx, r) {
+function _render_drawNezukoPixelBody(ctx, r, skipRibbon = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const steps = Math.ceil((r + P) / P);
@@ -216,13 +291,15 @@ function _render_drawNezukoPixelBody(ctx, r) {
   ctx.fillStyle = '#F59E0B'; // Shadow ridge
   ctx.fillRect(hx + 1, hy - 6, 1, 6);
 
-  // ── 7. Pink Hair Ribbon (Left Temple: gx = -9, gy = -6) ──
-  const rx = snap(-r * 0.70);
-  const ry = snap(-r * 0.45);
-  ctx.fillStyle = '#F472B6';
-  ctx.fillRect(rx - 2, ry - 2, 5, 4);
-  ctx.fillStyle = '#BE185D';
-  ctx.fillRect(rx - 1, ry - 1, 3, 2);
+  // ── 7. Pink Hair Ribbon (Left Temple: gx = -9, gy = -6) — skipped when PNG hair asset includes ribbon ──
+  if (!skipRibbon) {
+    const rx = snap(-r * 0.70);
+    const ry = snap(-r * 0.45);
+    ctx.fillStyle = '#F472B6';
+    ctx.fillRect(rx - 2, ry - 2, 5, 4);
+    ctx.fillStyle = '#BE185D';
+    ctx.fillRect(rx - 1, ry - 1, 3, 2);
+  }
 
   ctx.restore();
 }

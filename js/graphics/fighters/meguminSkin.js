@@ -22,17 +22,37 @@ import { state } from '../../core/state.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
 
 let _meguminHairImage = null;
+let _meguminHairImageLoading = false;
 
 /**
- * Megumin's model features complete authentic procedural brunette hair & oversized hat.
- * Returns null as no external PNG hair asset is needed.
+ * Module-level eager loader for Megumin's pixel-art hair asset (Assets/model/megumin/Megumin-hair.png).
  */
 export function _getMeguminHairImage() {
-  return null;
+  if (_meguminHairImage && _meguminHairImage.complete && _meguminHairImage.naturalWidth > 0) {
+    return _meguminHairImage;
+  }
+  if (!_meguminHairImageLoading && typeof Image !== 'undefined') {
+    _meguminHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _meguminHairImage = img;
+      _meguminHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _meguminHairImageLoading = false;
+    };
+    img.src = 'Assets/model/megumin/Megumin-hair.png?v=1';
+    _meguminHairImage = img;
+  }
+  return _meguminHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getMeguminHairImage();
 }
 
 /**
- * Optional Hair PNG Asset Hook if user supplies custom texture.
+ * Draws Megumin's calibrated pixel-art hair sprite (Assets/model/megumin/Megumin-hair.png).
  */
 export function _drawMeguminHair(ctx, r, facingLeft = false) {
   const hairImg = _getMeguminHairImage();
@@ -49,16 +69,15 @@ export function _drawMeguminHair(ctx, r, facingLeft = false) {
     const flipX = custom.flipX ? -1 : 1;
     const flipY = custom.flipY ? -1 : 1;
 
-    const targetHairWidth = r * 2.30 * wMult;
-    const targetHairHeight = r * 2.25 * hMult;
-    const natW = hairImg.naturalWidth || 500;
-    const natH = hairImg.naturalHeight || 500;
-    const scaleX = targetHairWidth / natW;
-    const scaleY = targetHairHeight / natH;
-    const drawW = natW * scaleX;
-    const drawH = natH * scaleY;
-    const drawX = -drawW / 2 + offX;
-    const drawY = -r * 1.28 + offY;
+    // Calibrated crown anchor for Megumin-hair.png (1024x1024, opaque bbox: X [82..942], Y [31..993])
+    const targetHairWidth = r * 2.75 * wMult;
+    const targetHairHeight = r * 2.55 * hMult;
+    const scaleX = targetHairWidth / 860;
+    const scaleY = targetHairHeight / 962;
+    const drawW = 1024 * scaleX;
+    const drawH = 1024 * scaleY;
+    const drawX = -512 * scaleX + offX;
+    const drawY = -r * 1.52 - 31 * scaleY + offY;
 
     if (rot !== 0 || flipX !== 1 || flipY !== 1) {
       ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
@@ -197,63 +216,6 @@ function _renderMeguminPixelBodyToCanvas(destCtx, r) {
           destCtx.fillRect(px, py, P, P);
         }
         continue;
-      }
-
-      // B. Crown Hair Dome & Ahoge Tuft (ny in [-1.22, -0.65], absX <= 1.08)
-      // Discrete lock array defining the top crown silhouette
-      let isCrownHair = false;
-      let isCrownAhoge = false;
-      if (ny >= -1.22 && ny < -0.65 && absX <= 1.08) {
-        // Skull dome curve with discrete triangular anime locks
-        const domeLimitY = -1.02 - (1.0 - Math.pow(absX / 1.08, 2.0)) * 0.16;
-        const leftTuft = (nx >= -0.75 && nx <= -0.35 && ny >= -1.14 - (nx + 0.55) * 0.2);
-        const centerTuft = (nx >= -0.30 && nx <= 0.25 && ny >= -1.18);
-        const rightTuft = (nx >= 0.30 && nx <= 0.75 && ny >= -1.14 + (nx - 0.55) * 0.2);
-        // Signature cute ahoge tuft curling at top right
-        const ahoge = (nx >= 0.08 && nx <= 0.26 && ny >= -1.24 && ny <= -1.12 && Math.abs((ny + 1.18) - (nx - 0.17) * 0.7) <= 0.06);
-
-        if (ny >= domeLimitY || leftTuft || centerTuft || rightTuft) {
-          isCrownHair = true;
-        } else if (ahoge) {
-          isCrownHair = true;
-          isCrownAhoge = true;
-        }
-      }
-
-      if (isCrownHair) {
-        // Outline check for crown hair
-        const isCrownEdge = (ny <= -1.16 || absX >= 0.98 || isCrownAhoge);
-        if (isCrownEdge) {
-          destCtx.fillStyle = '#14080E'; // Dark Manga Ink Outline
-        } else if (ny <= -1.02 && absX <= 0.55) {
-          destCtx.fillStyle = '#6A3B5C'; // Specular Crown Sheen Glint
-        } else if (ny <= -0.85 && absX <= 0.70) {
-          destCtx.fillStyle = '#4D2A42'; // Mid-Tone Hair Highlight
-        } else if (ny >= -0.75) {
-          destCtx.fillStyle = '#22121E'; // Hair Shadow Root
-        } else {
-          destCtx.fillStyle = '#3B2032'; // Brunette Base Tone
-        }
-        destCtx.fillRect(px, py, P, P);
-        continue;
-      }
-
-      // C. Voluminous Brunette Side Locks (absX in [0.65r, 1.15r], ry in [-0.70r, 0.35r])
-      const isSideHair = (absX >= r * 0.65 && absX <= r * 1.15 && ry >= -r * 0.70 && ry <= r * 0.35);
-      if (isSideHair) {
-        const lockTipY = r * 0.35 - (absX - r * 0.65) * 0.45;
-        if (ry <= lockTipY) {
-          if (absX >= r * 1.08 || ry >= lockTipY - P) {
-            destCtx.fillStyle = '#14080E'; // Dark Manga Ink Outline
-          } else if (absX >= r * 0.92) {
-            destCtx.fillStyle = '#22121E'; // Hair Shadow Root
-          } else if (ry <= -r * 0.25) {
-            destCtx.fillStyle = '#582E48'; // Specular Glint
-          } else {
-            destCtx.fillStyle = '#3B2032'; // Brunette Mid-Tone
-          }
-          destCtx.fillRect(px, py, P, P);
-        }
       }
     }
   }

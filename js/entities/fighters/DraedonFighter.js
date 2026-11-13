@@ -2,7 +2,7 @@
 // Draedon Fighter Entity (Terraria: Calamity Mod)
 // ─────────────────────────────────────────────
 
-import { Fighter, applyDamageToTarget, isSkillEnabled } from '../fighter.js';
+import { Fighter, applyDamageToTarget, isSkillEnabled, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { draedonConfig } from '../../configs/characters/draedonConfig.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
@@ -37,7 +37,7 @@ export class DraedonFighter extends Fighter {
     this.maxHp = getDraedonSetting(cfg, 'maxHp');
     this.speed = getDraedonSetting(cfg, 'speed');
     this.baseSpeed = getDraedonSetting(cfg, 'speed');
-    this.r = getDraedonSetting(cfg, 'r') || 28;
+    this.r = computeScaledFighterRadius(def?.radius ?? getDraedonSetting(cfg, 'r') ?? 28);
     this.radius = this.r;
 
     // Combat Stats & Timers

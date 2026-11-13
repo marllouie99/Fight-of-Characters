@@ -14,7 +14,7 @@ import { state, triggerGlobalScreenShake } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
 import { spawnImpactFlash, spawnSparks } from './sparkEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
-import { triggerHudShatter, updateHudShatters, drawBottomHudShatters, clearHudShatters, isInsideSaitamaFrontalBlast } from './hudShatterEffect.js';
+import { triggerHudShatter, updateHudShatters, drawBottomHudShatters, clearHudShatters, isInsideSaitamaFrontalBlast, isSaitamaHudShatterEnabled } from './hudShatterEffect.js';
 import { blowAwayArenaDecorations, blowAwayArenaDecorationsNearWall } from '../../systems/arenaDecorationSystem.js';
 
 /**
@@ -500,8 +500,9 @@ function generateWallSegments(hit, span, punchAngle) {
  * @param {number} punchAngle - Punch release angle
  * @param {object} arena - Arena bounds
  * @param {number} [customHalfArc] - Optional custom frontal half arc (defaults to counterFrontalArc / 2)
+ * @param {object} [options] - Optional behavior overrides (e.g. skipHudShatter)
  */
-export function triggerSaitamaWallShatter(originX, originY, punchAngle, arena, customHalfArc) {
+export function triggerSaitamaWallShatter(originX, originY, punchAngle, arena, customHalfArc, options = {}) {
   if (CONFIG.saitama?.enableWallShatter === false || CONFIG.saitama?.enableWallInteraction === false) return;
   if (!arena && typeof state !== 'undefined') arena = state.arena;
   if (!arena) return;
@@ -733,9 +734,9 @@ export function triggerSaitamaWallShatter(originX, originY, punchAngle, arena, c
     }
   }
 
-  // Trigger Top Names or Bottom HUD Shatter FX (Disabled: Saitama only destroys arena walls)
-  if (CONFIG.saitama?.enableHudShatter) {
-    triggerHudShatter(originX, originY, punchAngle, arena, hits);
+  // Trigger Top Names or Bottom HUD Shatter FX when enabled cleanly via config
+  if (!options?.skipHudShatter && isSaitamaHudShatterEnabled()) {
+    triggerHudShatter(originX, originY, punchAngle, arena, hits, customHalfArc);
   }
 
   // Intense audiovisual feedback
@@ -763,7 +764,7 @@ function generateBrokenTeeth(tangentAngle, isStart) {
  * Updates physics for all active shattered wall effects.
  */
 export function updateSaitamaWallShatters() {
-  if (CONFIG.saitama?.enableHudShatter) {
+  if (isSaitamaHudShatterEnabled()) {
     updateHudShatters();
   }
   if (!state.shatteredWalls || state.shatteredWalls.length === 0) return;
@@ -1165,8 +1166,8 @@ export function drawSaitamaWallShatters(ctx, isDark, arena) {
   }
   }
 
-  // Draw Bottom HUD falling debris & fracture lines (Disabled: only arena walls are destroyed)
-  if (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) {
+  // Draw Bottom HUD falling debris & fracture lines when HUD shatter is enabled
+  if (isSaitamaHudShatterEnabled() && CONFIG.saitama?.enableBottomHudShatter !== false && state.hudShatters && state.hudShatters.bottomHudShatter) {
     drawBottomHudShatters(ctx, isDark, arena);
   }
 }

@@ -14,7 +14,7 @@
 // - Rule 26: Staggered Concentric Water-Ripple Shockwaves
 // ─────────────────────────────────────────────
 
-import { Fighter, applyDamageToTarget, isSkillEnabled } from '../fighter.js';
+import { Fighter, applyDamageToTarget, isSkillEnabled, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { ashConfig } from '../../configs/characters/ashConfig.js';
@@ -1717,7 +1717,7 @@ export class AshFighter extends Fighter {
     if (this.team === undefined && this.teamId !== undefined) this.team = this.teamId;
 
     // Universal Humanoid Radius (Rule 24)
-    this.r = cfg.radius || cfg.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
     this.radius = this.r;
     this.hp = cfg.hp || 360;
     this.maxHp = cfg.maxHp || this.hp;

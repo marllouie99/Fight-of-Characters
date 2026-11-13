@@ -18,7 +18,7 @@ export const mahitoConfig = {
   // ── 1. BASE ATTRIBUTES & CORE STATS ────────────────────────────────────────
   hp: 200,
   damage: 7,
-  speed: 5.8,
+  speed: 6.0,
   moveSpeed: 5.0,
   r: 25,
   radius: 25,
@@ -127,8 +127,8 @@ export const mahitoConfig = {
     enableSoulMultiplicity: true,  // Master toggle for Soul Multiplicity & Body Repel
     cooldown: 1000,                 // Cooldown in frames (approx. 8.3s)
     minDistanceAlt: 250,           // Below this: summon minions. Above this: fire Body Repel projectile.
-    summonCount: 1,                // Summons Transfigured Humans
-    minionHp: 35,                  // HP per summoned Transfigured Human
+    summonCount: 3,                // Summons Transfigured Humans
+    minionHp: 200,                  // HP per summoned Transfigured Human
     minionDamage: 6,               // Base bite damage
     minionSpeed: 1.8,              // Active homing chase speed
     minionBiteCooldown: 10,        // Frames cooldown between bite attacks

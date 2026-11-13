@@ -15,6 +15,76 @@ import { drawPixelHand } from '../renderers/fighterRenderer.js';
 let _powerSkinImage = null;
 let _powerSkinImageLoading = false;
 
+let _powerHairImage = null;
+let _powerHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Power's pixel-art hair + demon horns asset (Assets/model/power/Power-hair.png).
+ */
+export function _getPowerHairImage() {
+  if (_powerHairImage && _powerHairImage.complete && _powerHairImage.naturalWidth > 0) {
+    return _powerHairImage;
+  }
+  if (!_powerHairImageLoading && typeof Image !== 'undefined') {
+    _powerHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _powerHairImage = img;
+      _powerHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _powerHairImageLoading = false;
+    };
+    img.src = 'Assets/model/power/Power-hair.png?v=1';
+    _powerHairImage = img;
+  }
+  return _powerHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getPowerHairImage();
+}
+
+/**
+ * Draws Power's calibrated pixel-art hair + horns sprite (Assets/model/power/Power-hair.png).
+ */
+export function _drawPowerHair(ctx, r, facingLeft = false) {
+  const hairImg = _getPowerHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.power) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for Power-hair.png (1331x1182, opaque bbox: visW 1224, visH 1158, topY 24)
+    const targetHairWidth = r * 2.95 * wMult;
+    const targetHairHeight = r * 2.65 * hMult;
+    const scaleX = targetHairWidth / 1224;
+    const scaleY = targetHairHeight / 1158;
+    const drawW = 1331 * scaleX;
+    const drawH = 1182 * scaleY;
+    const drawX = -645 * scaleX + offX;
+    const drawY = -r * 1.60 - 24 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+  }
+}
+
 export function _getPowerSkinImage() {
   if (_powerSkinImage && _powerSkinImage.complete && _powerSkinImage.naturalWidth > 0) {
     return _powerSkinImage;
@@ -87,21 +157,28 @@ export function drawPowerSkin(ctx, fighter) {
     _drawPowerBackHand(ctx, fighter, r, isHammerSwinging, isScytheSpinning, isPunching, animPhase, comboCycle, now);
   }
 
-  // 4. LAYER 1: MAIN BODY (POWER-MODEL-SKIN.png or procedural fallback)
-  const powerImg = _getPowerSkinImage();
-  if (powerImg && powerImg.complete && powerImg.naturalWidth > 0) {
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    // Scale factor to map 500x500 sprite content (280px core body diameter) flush with fighter radius r
-    const drawW = r * (1000 / 280);
-    const drawH = drawW;
-    const shiftX = r * (479 / 280);
-    const shiftY = r * (506 / 280);
-    ctx.drawImage(powerImg, -shiftX, -shiftY, drawW, drawH);
-    ctx.restore();
+  // 4. LAYER 1: MAIN BODY (Hairless Rule-24 pixel body when PNG hair asset is active, else legacy fallback)
+  const hairImg = _getPowerHairImage();
+  const hasHairAsset = Boolean(hairImg && hairImg.complete && hairImg.naturalWidth > 0);
+  if (hasHairAsset) {
+    drawPowerPixelBody(ctx, r, now, true);
+    _drawPowerHair(ctx, r, facingLeft);
   } else {
-    _drawPowerBackHair(ctx, r);
-    drawPowerPixelBody(ctx, r, now);
+    const powerImg = _getPowerSkinImage();
+    if (powerImg && powerImg.complete && powerImg.naturalWidth > 0) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      // Scale factor to map 500x500 sprite content (280px core body diameter) flush with fighter radius r
+      const drawW = r * (1000 / 280);
+      const drawH = drawW;
+      const shiftX = r * (479 / 280);
+      const shiftY = r * (506 / 280);
+      ctx.drawImage(powerImg, -shiftX, -shiftY, drawW, drawH);
+      ctx.restore();
+    } else {
+      _drawPowerBackHair(ctx, r);
+      drawPowerPixelBody(ctx, r, now, false);
+    }
   }
 
   // 5. LAYER 2: FRONT HAND & BLOOD WEAPON (Front Layer — On Top of Body)
@@ -120,13 +197,13 @@ export function drawPowerSkin(ctx, fighter) {
 let _cachedBodyCanvas = null;
 let _cachedBodyKey = '';
 
-export function drawPowerPixelBody(ctx, r, now) {
+export function drawPowerPixelBody(ctx, r, now, skipProceduralHair = false) {
   if (typeof document === 'undefined') {
-    _render_drawPowerPixelBody(ctx, r, now);
+    _render_drawPowerPixelBody(ctx, r, now, skipProceduralHair);
     return;
   }
   const intR = Math.round(r || 25);
-  const key = `${intR}`;
+  const key = `${intR}_${skipProceduralHair ? 1 : 0}`;
   if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
     const P = 2.0;
     const steps = Math.ceil((intR * 1.65 + P) / P);
@@ -139,7 +216,7 @@ export function drawPowerPixelBody(ctx, r, now) {
       cctx.save();
       cctx.imageSmoothingEnabled = false;
       cctx.translate(size / 2, size / 2);
-      _render_drawPowerPixelBody(cctx, intR, now);
+      _render_drawPowerPixelBody(cctx, intR, now, skipProceduralHair);
       cctx.restore();
     }
     _cachedBodyKey = key;
@@ -151,13 +228,15 @@ export function drawPowerPixelBody(ctx, r, now) {
   ctx.restore();
 }
 
-function _render_drawPowerPixelBody(ctx, r, now) {
+function _render_drawPowerPixelBody(ctx, r, now, skipProceduralHair = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const steps = Math.ceil((r + P) / P);
 
   // ── 0. CROWN HAIR TUFTS & SILHOUETTE BREAKERS (Rule 19.1) ──
-  _drawPowerCrownTufts(ctx, r);
+  if (!skipProceduralHair) {
+    _drawPowerCrownTufts(ctx, r);
+  }
 
   // ── 1. MAIN CIRCULAR PIXEL GRID ──
   for (let gy = -steps; gy <= steps; gy++) {
@@ -187,7 +266,7 @@ function _render_drawPowerPixelBody(ctx, r, now) {
 
       // ── SIGNATURE LEFT FRONT HAIR LOCK (1:1 with Anime Reference Screenshot) ──
       // Drapes from the left temple/bangs down over the left cheek, white collar, and slate-blue jacket
-      const isLeftFrontLock = (
+      const isLeftFrontLock = !skipProceduralHair && (
         (gx >= -6 && gx <= -5 && gy >= 1 && gy <= 7) ||
         (gx >= -6 && gx <= -5 && gy === 8) ||
         (gx === -5 && gy === 9) // Tapered sharp needle tip at mid-chest
@@ -253,7 +332,7 @@ function _render_drawPowerPixelBody(ctx, r, now) {
           (gx === 2 && gy === 4)
         );
 
-        const isHair = isScalpDome || isLeftCheekLock || isRightCheekLock || isLeftBrowFringe || isRightBrowFringe || isCurvedCenterBang;
+        const isHair = !skipProceduralHair && (isScalpDome || isLeftCheekLock || isRightCheekLock || isLeftBrowFringe || isRightBrowFringe || isCurvedCenterBang);
 
         if (isHair) {
           // ── A. POWER'S STRAWBERRY PEACH HAIR (Clean Anime Tones) ──
@@ -319,7 +398,7 @@ function _render_drawPowerPixelBody(ctx, r, now) {
           (gx === 2 && gy === 5)
         );
 
-        if (isUnderBangShadow || (gx === -4 && (gy === 1 || gy === 2)) || (gx === -7 && gy === 2)) {
+        if (!skipProceduralHair && (isUnderBangShadow || (gx === -4 && (gy === 1 || gy === 2)) || (gx === -7 && gy === 2))) {
           skinCol = '#F2C8B8'; // Warm drop shadow under bangs & front lock
         } else if (Math.abs(gx) >= 7 && gy >= 2) {
           skinCol = '#F8CEBA'; // Soft cheek warmth
@@ -437,7 +516,9 @@ function _render_drawPowerPixelBody(ctx, r, now) {
   }
 
   // ── Twin Crimson Demon Horns (Protruding from top crown: Rule 19.1) ──
-  _drawPowerDemonHorns(ctx, r);
+  if (!skipProceduralHair) {
+    _drawPowerDemonHorns(ctx, r);
+  }
 
   ctx.restore();
 }

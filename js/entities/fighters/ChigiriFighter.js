@@ -22,7 +22,7 @@
 // - Rule 18: HUD Skill Bar Theme Consistency & Toggle Gating
 // ─────────────────────────────────────────────
 
-import { Fighter, applyDamageToTarget, isSkillEnabled } from '../fighter.js';
+import { Fighter, applyDamageToTarget, isSkillEnabled, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { chigiriConfig } from '../../configs/characters/chigiriConfig.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
@@ -84,7 +84,7 @@ export class ChigiriFighter extends Fighter {
     this.maxHp = this.hp;
     this.baseSpeed = cfg.speed || 6.4;
     this.speed = this.baseSpeed;
-    this.r = cfg.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
     this.radius = this.r;
     this.attackRange = cfg.attackRange || 340;
 

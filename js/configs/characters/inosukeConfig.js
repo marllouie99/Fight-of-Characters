@@ -4,6 +4,9 @@
 // ─────────────────────────────────────────────
 
 export const inosukeConfig = {
+  assets: {
+    hair: 'Assets/model/inosuke/Inosuke-hair.png',
+  },
   name: 'Inosuke',
   displayName: 'Inosuke',
   grade: 'B',                 // Fighter Grade: 'B' | 'A' | 'S' | 'SS' (cosmetic — see js/configs/gradeConfig.js)

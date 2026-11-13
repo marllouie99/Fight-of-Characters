@@ -6,6 +6,7 @@
 export const ulquiorraConfig = {
   assets: {
     weapon: 'Assets/model/ulquiorra/UlquiorraCifer-weapon.png',
+    hair: 'Assets/model/ulquiorra/Ulquiorra-hair.png',
   },
 
   name: 'Ulquiorra',

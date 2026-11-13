@@ -3,6 +3,9 @@
 // ─────────────────────────────────────────────
 
 export const nobaraConfig = {
+  assets: {
+    hair: 'Assets/model/nobara/Nobara-hair.png',
+  },
   name: 'Nobara',
   displayName: 'Nobara',
   grade: 'B',                 // Fighter Grade: 'B' | 'A' | 'S' | 'SS' (cosmetic — see js/configs/gradeConfig.js)

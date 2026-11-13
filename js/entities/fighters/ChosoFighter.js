@@ -17,7 +17,7 @@
 // - Rule 30: 5-Phase Melee Combat & Physical Force
 // ─────────────────────────────────────────────
 
-import { Fighter, applyDamageToTarget, isSkillEnabled } from '../fighter.js';
+import { Fighter, applyDamageToTarget, isSkillEnabled, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { state, triggerGlobalScreenShake } from '../../core/state.js';
 import { drawChosoSkin } from '../../graphics/fighters/chosoSkin.js';
@@ -53,7 +53,7 @@ export class ChosoFighter extends Fighter {
     this.maxHp = cfg.hp || 420;
     this.baseSpeed = cfg.speed || 5.3;
     this.speed = this.baseSpeed;
-    this.r = cfg.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
 
     // Passive 1: Mugen Ketsuryū (Infinite Blood Reserves & Interactive Nodes)
     this.bloodNodes = []; // Interactive Blood Droplet Nodes scattered across arena

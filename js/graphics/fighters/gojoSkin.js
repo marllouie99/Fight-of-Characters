@@ -197,7 +197,10 @@ export function drawGojoBody(ctx, fighter) {
     const isNaoyaStasisOrUlt = (typeof fighter.isCaughtInNaoyaStasisOrUlt === 'function')
       ? fighter.isCaughtInNaoyaStasisOrUlt()
       : Boolean(fighter.isCaughtInNaoyaUlt || fighter._isFlyingToWallPin || fighter.isCurrentlyWallPinnedByNaoya || (fighter.naoyaWallPinTimer && fighter.naoyaWallPinTimer > 0));
-    const isBarrierSuppressed = Boolean(fighter._isSilhouettePass || fighter.isTargetOfAmbush || isInsideRubbickStolenVoid(fighter) || isPurpleInFlight || fighter.isChainedByMakima || fighter.isMeleeMode || isNaoyaStasisOrUlt || (fighter.infinityCooldown || 0) > 0 || !fighter.infinityActive || (fighter.infinityBarrierHp !== undefined && fighter.infinityBarrierHp <= 0));
+    const isChannelingSuppressed = (typeof fighter.isChannelingRedPurpleOrDomain === 'function')
+      ? fighter.isChannelingRedPurpleOrDomain()
+      : Boolean(isChannelingRed || isChannelingPurple || isChannelingDomain || fighter.isDomainPreSlide || (fighter.domainChargeTimer || 0) > 0 || fighter.domainActive);
+    const isBarrierSuppressed = Boolean(fighter._isSilhouettePass || fighter.isTargetOfAmbush || isInsideRubbickStolenVoid(fighter) || isPurpleInFlight || isChannelingSuppressed || fighter.isChainedByMakima || fighter.isMeleeMode || isNaoyaStasisOrUlt || (fighter.infinityCooldown || 0) > 0 || !fighter.infinityActive || (fighter.infinityBarrierHp !== undefined && fighter.infinityBarrierHp <= 0));
     const fadeOpacity = isBarrierSuppressed ? 0 : (fighter.infinityFadeOpacity || 0);
     if (fadeOpacity > 0.005) {
       const time = Date.now();

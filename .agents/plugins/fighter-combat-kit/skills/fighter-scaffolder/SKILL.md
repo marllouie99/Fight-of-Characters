@@ -76,7 +76,7 @@ super.update(opponent, ownerIndex, arena);
 
 ### 8. Mandatory Universal Character Body Model & Scale Standard (Rule 24 — The Canonical Reference Trio: Toji, Sukuna & Gojo)
 - **Primary Canonical Reference Trio**: ALWAYS reference the Canonical Manga Ink Trio: Toji (`js/graphics/fighters/tojiSkin.js`), Sukuna (`js/graphics/fighters/sukunaSkin.js`), or Gojo (`js/graphics/fighters/gojoSkin.js`) as the primary blueprints and gold standard for all new fighter body models, proportions, and hand layering.
-- **Universal Baseline Body Radius**: All standard humanoid fighters MUST declare `r: 25, radius: 25` in `js/configs/characters/<name>Config.js` and in the fighter constructor.
+- **Universal Baseline Body Radius & Global Scaling (NEVER Overwrite `this.r` with Raw Config Value)**: All standard humanoid fighters MUST declare `r: 25, radius: 25` in `js/configs/characters/<name>Config.js` and `FIGHTER_DEFS`. In the fighter constructor, **NEVER** overwrite `this.r = cfg.r || 25` after `super(def)` — that bypasses `CONFIG.globalFighter.sizeMultiplier` (`1.2`) and `CONFIG.internalScale`, making the fighter render noticeably smaller (`25` instead of `30`). Either leave `this.r` inherited from `super(def)` untouched, or set `this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);` (imported from `../fighter.js`).
 - **1:1 Offscreen Canvas Buffer Architecture (Canonical Standard)**:
   ```javascript
   const P = 2.0;

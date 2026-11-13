@@ -36,7 +36,7 @@ export function _getChosoHairImage() {
     img.onerror = () => {
       _chosoHairImageLoading = false;
     };
-    img.src = 'Assets/model/choso/Choso-hair.png?v=1';
+    img.src = 'Assets/model/choso/Choso-hair.png?v=2';
     _chosoHairImage = img;
   }
   return _chosoHairImage;
@@ -190,15 +190,15 @@ export function _drawChosoHair(ctx, r, facingLeft = false) {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    // Calibrated crown anchor for Choso hair asset
-    const targetHairWidth = r * 3.05 * wMult;
-    const targetHairHeight = r * 2.20 * hMult;
-    const scaleX = targetHairWidth / 1200;
-    const scaleY = targetHairHeight / 900;
-    const drawW = 1200 * scaleX;
-    const drawH = 900 * scaleY;
-    const drawX = -600 * scaleX + offX;
-    const drawY = -r * 1.35 + offY;
+    // Calibrated crown anchor for Choso hair asset (1024x768, opaque bbox: X [36..988], Y [76..691])
+    const targetHairWidth = r * 3.62 * wMult;
+    const targetHairHeight = r * 2.42 * hMult;
+    const scaleX = targetHairWidth / 952;
+    const scaleY = targetHairHeight / 615;
+    const drawW = 1024 * scaleX;
+    const drawH = 768 * scaleY;
+    const drawX = -512 * scaleX + offX;
+    const drawY = -r * 1.86 - 76 * scaleY + offY;
 
     if (rot !== 0 || flipX !== 1 || flipY !== 1) {
       ctx.translate(drawX + drawW / 2, drawY + drawH / 2);

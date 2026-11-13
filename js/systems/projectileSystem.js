@@ -2147,7 +2147,7 @@ class ProjectileSystem {
     p._detonated = true;
 
     const owner = p.ownerFighter || (state.fighters && (typeof p.owner === 'number' ? state.fighters[p.owner] : null)) || (state.fighters && state.fighters.find(f => f && (f.characterId === 'mahito' || f.type === 'mahito'))) || null;
-    if (!owner) return;
+    if (!owner || owner.isDead || owner.dead || owner.hp <= 0 || owner._hasDied) return;
 
     const ownerIndex = (typeof p.owner === 'number') ? p.owner : (state.fighters ? state.fighters.indexOf(owner) : 0);
 

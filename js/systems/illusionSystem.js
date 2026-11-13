@@ -80,62 +80,78 @@ export function updateIllusions() {
         }
 
         // Apply AOE damage and knockback to all valid enemies (Rule #6 compliant)
-        const explosionRadius = multCfg.minionExplosionRadius || 100;
-        const explosionDamage = multCfg.minionExplosionDamage || 24;
-        const explosionKnockback = multCfg.minionExplosionKnockback || 12;
+        // Suppress explosion damage if owner has died or if minion was killed due to owner death or match conclusion
         const owner = illusion.owner;
         const ownerStateIdx = owner ? state.fighters.indexOf(owner) : -1;
         const myTeam = owner ? (typeof state.getFighterTeam === 'function' ? state.getFighterTeam(ownerStateIdx) : owner.team) : null;
 
-        // Iterate fighters and illusions without allocating a merged copy
-        const _fighters = state.fighters;
-        const _illusions = state.illusions;
-        const _candidateCount = _fighters.length + _illusions.length;
-        for (let ci = 0; ci < _candidateCount; ci++) {
-          const target = ci < _fighters.length ? _fighters[ci] : _illusions[ci - _fighters.length];
-          if (!target || target === illusion || target === owner || target.hp <= 0 || target.isDead || target.dead || target.isLawnmower || target.isUntargetable || target.untargetable || target.cannotBeTargeted || target.isTargetable === false) continue;
-          
-          // Team check to make sure we don't hurt teammates or ourselves
-          if (myTeam !== null) {
-            let targetTeam;
-            if (target.isIllusion) {
-              // Illusion — derive team from its owner
-              targetTeam = target.owner ? (typeof state.getFighterTeam === 'function' ? state.getFighterTeam(state.fighters.indexOf(target.owner)) : target.owner.team) : null;
-            } else {
-              // Fighter — use loop index directly (ci < _fighters.length)
-              targetTeam = (typeof state.getFighterTeam === 'function') ? state.getFighterTeam(ci) : target.team;
-            }
-            if (targetTeam === myTeam) continue;
-          }
+        const isOwnerDead = Boolean(
+          !owner ||
+          owner.isDead ||
+          owner.dead ||
+          owner.hp <= 0 ||
+          owner._hasDied
+        );
+        const isMatchConcluded = Boolean(
+          (typeof state !== 'undefined' && (state.roundOver || state.matchEnded || state._isWinnerRevealActive)) ||
+          (owner && owner._isWinnerReveal)
+        );
 
-          const dist = Math.hypot(target.x - illusion.x, target.y - illusion.y);
-          if (dist <= target.r + explosionRadius) {
-            const prevHp = target.hp;
-            let hitSuccess = false;
-            if (typeof applyDamageToTarget === 'function') {
-              hitSuccess = applyDamageToTarget(target, explosionDamage, owner, { isSkill: true });
-            } else if (typeof target.takeDamage === 'function') {
-              hitSuccess = target.takeDamage(explosionDamage, owner, { isSkill: true });
-            }
-            const actuallyDamaged = hitSuccess !== false && (target.hp < prevHp);
+        if (!isOwnerDead && !illusion.killedByOwnerDeath && !isMatchConcluded) {
+          const explosionRadius = multCfg.minionExplosionRadius || 100;
+          const explosionDamage = multCfg.minionExplosionDamage || 24;
+          const explosionKnockback = multCfg.minionExplosionKnockback || 12;
 
-            const angle = Math.atan2(target.y - illusion.y, target.x - illusion.x);
-            const kbX = Math.cos(angle) * explosionKnockback;
-            const kbY = Math.sin(angle) * explosionKnockback;
-            if (typeof target.applyKnockback === 'function') {
-              target.applyKnockback(kbX, kbY);
-            } else {
-              target.vx = (target.vx || 0) + kbX;
-              target.vy = (target.vy || 0) + kbY;
+          // Iterate fighters and illusions without allocating a merged copy
+          const _fighters = state.fighters;
+          const _illusions = state.illusions;
+          const _candidateCount = _fighters.length + _illusions.length;
+          for (let ci = 0; ci < _candidateCount; ci++) {
+            const target = ci < _fighters.length ? _fighters[ci] : _illusions[ci - _fighters.length];
+            if (!target || target === illusion || target === owner || target.hp <= 0 || target.isDead || target.dead || target.isLawnmower || target.isUntargetable || target.untargetable || target.cannotBeTargeted || target.isTargetable === false) continue;
+            
+            // Team check to make sure we don't hurt teammates or ourselves
+            if (myTeam !== null) {
+              let targetTeam;
+              if (target.isIllusion) {
+                // Illusion — derive team from its owner
+                targetTeam = target.owner ? (typeof state.getFighterTeam === 'function' ? state.getFighterTeam(state.fighters.indexOf(target.owner)) : target.owner.team) : null;
+              } else {
+                // Fighter — use loop index directly (ci < _fighters.length)
+                targetTeam = (typeof state.getFighterTeam === 'function') ? state.getFighterTeam(ci) : target.team;
+              }
+              if (targetTeam === myTeam) continue;
             }
 
-            if (typeof target.applyHitStun === 'function') {
-              target.applyHitStun(8);
-            }
+            const dist = Math.hypot(target.x - illusion.x, target.y - illusion.y);
+            if (dist <= target.r + explosionRadius) {
+              const prevHp = target.hp;
+              let hitSuccess = false;
+              if (typeof applyDamageToTarget === 'function') {
+                hitSuccess = applyDamageToTarget(target, explosionDamage, owner, { isSkill: true });
+              } else if (typeof target.takeDamage === 'function') {
+                hitSuccess = target.takeDamage(explosionDamage, owner, { isSkill: true });
+              }
+              const actuallyDamaged = hitSuccess !== false && (target.hp < prevHp);
 
-            // Apply +1 stack of Soul Disfigurement: Gated strictly to actual enemy damage
-            if (actuallyDamaged && typeof applySoulDisfigurementStack === 'function' && owner) {
-              applySoulDisfigurementStack(target, owner);
+              const angle = Math.atan2(target.y - illusion.y, target.x - illusion.x);
+              const kbX = Math.cos(angle) * explosionKnockback;
+              const kbY = Math.sin(angle) * explosionKnockback;
+              if (typeof target.applyKnockback === 'function') {
+                target.applyKnockback(kbX, kbY);
+              } else {
+                target.vx = (target.vx || 0) + kbX;
+                target.vy = (target.vy || 0) + kbY;
+              }
+
+              if (typeof target.applyHitStun === 'function') {
+                target.applyHitStun(8);
+              }
+
+              // Apply +1 stack of Soul Disfigurement: Gated strictly to actual enemy damage
+              if (actuallyDamaged && typeof applySoulDisfigurementStack === 'function' && owner) {
+                applySoulDisfigurementStack(target, owner);
+              }
             }
           }
         }
@@ -174,6 +190,23 @@ export function updateIllusions() {
       }
     }
 
+    // If this is a Transfigured Human and its owner Mahito has died, make it die as well
+    if (illusion.isTransfiguredHuman) {
+      const isOwnerDead = Boolean(
+        !illusion.owner ||
+        illusion.owner.isDead ||
+        illusion.owner.dead ||
+        illusion.owner.hp <= 0 ||
+        illusion.owner._hasDied
+      );
+      if (isOwnerDead) {
+        illusion.hp = 0;
+        illusion.dead = true;
+        illusion.isDead = true;
+        illusion.killedByOwnerDeath = true;
+      }
+    }
+
     // Burn DoT ticking for active illusions and minions
     if (illusion.burnTimer && illusion.burnTimer > 0 && illusion.hp > 0 && !illusion.isDying) {
       illusion.burnTimer--;
@@ -208,12 +241,14 @@ export function updateIllusions() {
       if ((illusion.isTransfiguredHuman || illusion.isEvasionMinion) && !illusion.isDying) {
         const mahitoCfg = (typeof CONFIG !== 'undefined' && CONFIG.mahito) ? CONFIG.mahito : {};
         const multCfg = mahitoCfg.soulMultiplicity || {};
-        const deathDur = illusion.isEvasionMinion ? 24 : (multCfg.minionDeathDuration ?? 50);
+        const deathDur = illusion.isEvasionMinion ? 24 : (illusion.killedByOwnerDeath ? 20 : (multCfg.minionDeathDuration ?? 50));
 
         illusion.isDying = true;
         illusion.deathTimer = deathDur;
         illusion.maxDeathTimer = deathDur;
         illusion.hp = 0; // lock hp to 0
+        illusion.vx = 0;
+        illusion.vy = 0;
         continue; // Wait for expansion to finish before deleting
       }
 
@@ -794,7 +829,7 @@ export function updateIllusions() {
       }
 
       // ── Transfigured Human Minion Periodic Chatter / Noise ──
-      if (illusion.isTransfiguredHuman && !illusion.isDying && illusion.hp > 0) {
+      if (illusion.isTransfiguredHuman && !illusion.isDying && illusion.hp > 0 && !illusion.killedByOwnerDeath) {
         if (illusion.minionNoiseTimer === undefined || illusion.minionNoiseTimer === null) {
           illusion.minionNoiseTimer = 45 + Math.floor(Math.random() * 30);
         }
@@ -1115,8 +1150,8 @@ export function updateIllusions() {
 
 
 
-    // Try to attack nearby fighters (independent targeting, not following owner) (Bypassed for evasion clones)
-    if (illusion.isEvasionMinion) continue;
+    // Try to attack nearby fighters (independent targeting, not following owner) (Bypassed for evasion clones and dying/dead minions)
+    if (illusion.isEvasionMinion || illusion.isDying || illusion.hp <= 0 || illusion.killedByOwnerDeath) continue;
     const attackCandidates = forcedSummonerTarget ? [forcedSummonerTarget] : nearbyEntities;
     for (const entity of attackCandidates) {
       if (!entity || !entity.hp || entity.hp <= 0 || entity.dead || entity.isDead) continue;

@@ -432,8 +432,9 @@ export function drawHUD() {
   const isSideHud1v1 = isHorizontal && !isDuelTopHud && (is1v1Mode || isStandOffMode || isTLFSMode || isFfaMode || (mainFighters && mainFighters.length <= 4 && !is2v2Mode && !is1v2Mode));
 
   // FOC & Tactical modes HUD visibility
+  const isSaitamaHudShatterOn = Boolean(CONFIG.saitama?.enableHudShatter && CONFIG.saitama?.enableHudInteraction !== false && CONFIG.saitama?.enableTopHudShatter !== false);
   let topHudOpacity = hudOpacity;
-  if (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.topNameShatter) {
+  if (isSaitamaHudShatterOn && state.hudShatters && state.hudShatters.topNameShatter) {
     topHudOpacity = 0;
   }
 
@@ -482,8 +483,14 @@ export function drawHUD() {
       hudOpacity = 0;
     }
 
+    const isSaitamaBottomHudShattered = Boolean(
+      CONFIG.saitama?.enableHudShatter &&
+      CONFIG.saitama?.enableHudInteraction !== false &&
+      CONFIG.saitama?.enableBottomHudShatter !== false &&
+      state.hudShatters?.bottomHudShatter
+    );
     let bottomHudOpacity = hudOpacity;
-    if (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) {
+    if (isSaitamaBottomHudShattered) {
       bottomHudOpacity = 0;
     }
 
@@ -522,7 +529,7 @@ export function drawHUD() {
     const isH = isHorizontal;
     const mainF = mainFighters;
     const isSide1v1 = isH && !isDuelTopHud && (mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TLFS || mode === 'TLFS' || mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.HORIZONTAL_1V1 || (mainF && mainF.length <= 4 && mode !== GAME_MODES.TWO_VS_TWO && mode !== '2v2'));
-    const sideOpacity = (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
+    const sideOpacity = (CONFIG.saitama?.enableHudShatter && CONFIG.saitama?.enableHudInteraction !== false && CONFIG.saitama?.enableBottomHudShatter !== false && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
     const hideLeft = Boolean(sideOpacity <= 0 || !containerLeft.children || !containerLeft.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4));
     const leftKey = `${hideLeft ? 0 : 1}_${sideOpacity}`;
     if (containerLeft._hudStateKey !== leftKey) {
@@ -543,7 +550,7 @@ export function drawHUD() {
     const isH = isHorizontal;
     const mainF = mainFighters;
     const isSide1v1 = isH && !isDuelTopHud && (mode === GAME_MODES.ONE_VS_ONE || mode === '1v1' || mode === GAME_MODES.STAND_OFF || mode === 'Stand Off' || mode === GAME_MODES.TLFS || mode === 'TLFS' || mode === GAME_MODES.FFA || mode === 'FFA' || mode === GAME_MODES.HORIZONTAL_1V1 || (mainF && mainF.length <= 4 && mode !== GAME_MODES.TWO_VS_TWO && mode !== '2v2'));
-    const sideOpacity = (CONFIG.saitama?.enableHudShatter && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
+    const sideOpacity = (CONFIG.saitama?.enableHudShatter && CONFIG.saitama?.enableHudInteraction !== false && CONFIG.saitama?.enableBottomHudShatter !== false && state.hudShatters && state.hudShatters.bottomHudShatter) ? 0 : hudOpacity;
     const hideRight = Boolean(sideOpacity <= 0 || !containerRight.children || !containerRight.children.length || (!isSide1v1 && state.mode !== 'FFA' && !isTactical && mainF.length <= 4));
     const rightKey = `${hideRight ? 0 : 1}_${sideOpacity}`;
     if (containerRight._hudStateKey !== rightKey) {

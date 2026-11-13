@@ -11,7 +11,7 @@
 // - Rule 32: Universal character black outline standard
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { Fighter } from '../fighter.js';
+import { Fighter, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { creeperConfig } from '../../configs/characters/creeperConfig.js';
 import { spawnFloatingText, triggerGlobalScreenShake, state } from '../../core/state.js';
@@ -45,7 +45,7 @@ export class CreeperFighter extends Fighter {
     this.damageNumberColor = this.themeColor;
 
     // Base Humanoid Dimensions (Rule 24 Toji Standard)
-    this.r = cfg.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
     this.radius = this.r;
     this.maxHp = def.hp ?? cfg.hp ?? 380;
     this.hp = this.maxHp;

@@ -114,7 +114,10 @@ export function excludeGojoInfinityFromDim(ctx) {
     const isNaoyaStasisOrUlt = (typeof f.isCaughtInNaoyaStasisOrUlt === 'function')
       ? f.isCaughtInNaoyaStasisOrUlt()
       : Boolean(f.isCaughtInNaoyaUlt || f._isFlyingToWallPin || f.isCurrentlyWallPinnedByNaoya || (f.naoyaWallPinTimer && f.naoyaWallPinTimer > 0));
-    const isBarrierSuppressed = Boolean(f.isTargetOfAmbush || f.caughtInSaitamaCounter || isSaitamaCounterActive || isNaoyaStasisOrUlt || (f.infinityFadeOpacity !== undefined && f.infinityFadeOpacity <= 0.005) || isInsideRubbickStolenVoid(f) || f.isChainedByMakima || f.isMeleeMode);
+    const isChannelingSuppressed = (typeof f.isChannelingRedPurpleOrDomain === 'function')
+      ? f.isChannelingRedPurpleOrDomain()
+      : Boolean(f.isChannelingPurple || f.isChannelingDomainExpansion || f.isDomainPreSlide || (f.domainChargeTimer || 0) > 0 || f.redBuildupPhase || (f.redEffectTimer || 0) > 0 || f.isCastingRed || f.domainActive);
+    const isBarrierSuppressed = Boolean(f.isTargetOfAmbush || f.caughtInSaitamaCounter || isSaitamaCounterActive || isChannelingSuppressed || isNaoyaStasisOrUlt || (f.infinityFadeOpacity !== undefined && f.infinityFadeOpacity <= 0.005) || isInsideRubbickStolenVoid(f) || f.isChainedByMakima || f.isMeleeMode);
     if (isBarrierSuppressed) continue;
     const isLimitlessActive = !f.isMeleeMode && (f.infinityActive || (f.infinityBlockTimer || 0) > 0);
     if (!isLimitlessActive) continue;
@@ -580,9 +583,145 @@ export function drawPurpleDimScreen() {
 }
 
 let currentGojoDomainDimOpacity = 0;
+let gojoCelestialStars = [];
+let gojoLimitlessMotes = [];
+
+export function resetGojoDomainDimOpacity() {
+  currentGojoDomainDimOpacity = 0;
+  gojoCelestialStars = [];
+  gojoLimitlessMotes = [];
+}
+
+export function getGojoDomainDimOpacity() {
+  return currentGojoDomainDimOpacity;
+}
 
 /**
- * Draws a dark cosmic blue dim screen overlay when Gojo's Domain Expansion (Unlimited Void) is active.
+ * Draws soft radial nebula cloud discs across the atmospheric void background.
+ */
+function _drawCosmicNebulaDiscs(ctx, discs) {
+  for (const neb of discs) {
+    const nebGrad = createSafeRadialGradient(ctx, neb.x, neb.y, 0, neb.x, neb.y, neb.r);
+    if (!nebGrad) continue;
+    nebGrad.addColorStop(0.0, neb.col);
+    nebGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = nebGrad;
+    ctx.beginPath();
+    ctx.arc(neb.x, neb.y, neb.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/**
+ * Renders twinkling Limitless celestial stardust across Gojo's Unlimited Void atmosphere.
+ */
+function _renderGojoCelestialStars(ctx, w, h, now, opacity) {
+  if (gojoCelestialStars.length === 0) {
+    const palette = ['#FFFFFF', '#E0F7FA', '#00E5FF', '#38BDF8', '#60A5FA', '#A5B4FC'];
+    for (let i = 0; i < 85; i++) {
+      const rand = Math.random();
+      const sr = (rand < 0.70)
+        ? (0.6 + Math.random() * 0.85)
+        : ((rand < 0.92) ? (1.4 + Math.random() * 0.75) : (2.2 + Math.random() * 0.75));
+      gojoCelestialStars.push({
+        nx: Math.random(),
+        ny: Math.random(),
+        r: sr,
+        baseAlpha: 0.35 + Math.random() * 0.55,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.0018 + Math.random() * 0.0032,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        hasHalo: sr >= 1.9
+      });
+    }
+  }
+
+  for (const star of gojoCelestialStars) {
+    const starAlpha = star.baseAlpha * (0.35 + 0.65 * Math.sin(now * star.speed + star.phase)) * opacity;
+    if (starAlpha <= 0.02) continue;
+
+    const sx = star.nx * w;
+    const sy = star.ny * h;
+    if (star.hasHalo) {
+      ctx.fillStyle = star.color;
+      ctx.globalAlpha = starAlpha * 0.30;
+      ctx.beginPath();
+      ctx.arc(sx, sy, star.r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = star.color;
+    ctx.globalAlpha = starAlpha;
+    ctx.beginPath();
+    ctx.arc(sx, sy, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+/**
+ * Renders softly drifting Limitless cyan/sapphire cosmic motes & bokeh light orbs.
+ */
+function _renderGojoLimitlessMotes(ctx, w, h, now, opacity) {
+  if (gojoLimitlessMotes.length === 0) {
+    const motePalette = ['#00E5FF', '#38BDF8', '#7DD3FC', '#E0F7FA', '#60A5FA', '#93C5FD', '#FFFFFF'];
+    for (let i = 0; i < 60; i++) {
+      const isBokeh = Math.random() < 0.14;
+      const mr = isBokeh ? (4.0 + Math.random() * 3.5) : (0.8 + Math.random() * 2.0);
+      gojoLimitlessMotes.push({
+        nx: Math.random(),
+        ny: Math.random(),
+        r: mr,
+        vyNorm: -(0.0004 + Math.random() * 0.0008),
+        vxNorm: (Math.random() - 0.5) * 0.0003,
+        swayAmp: isBokeh ? 7 : (9 + Math.random() * 16),
+        swayFreq: 0.0014 + Math.random() * 0.0022,
+        phase: Math.random() * Math.PI * 2,
+        color: motePalette[Math.floor(Math.random() * motePalette.length)],
+        baseAlpha: isBokeh ? (0.16 + Math.random() * 0.16) : (0.45 + Math.random() * 0.45),
+        isBokeh
+      });
+    }
+  }
+
+  for (const mote of gojoLimitlessMotes) {
+    mote.ny += mote.vyNorm;
+    mote.nx += mote.vxNorm;
+    if (mote.ny < -0.03) {
+      mote.ny = 1.03;
+      mote.nx = Math.random();
+    }
+    if (mote.nx < -0.03) mote.nx = 1.03;
+    if (mote.nx > 1.03) mote.nx = -0.03;
+
+    const curX = mote.nx * w + Math.sin(now * mote.swayFreq + mote.phase) * mote.swayAmp;
+    const curY = mote.ny * h;
+    const moteAlpha = mote.baseAlpha * (0.60 + 0.40 * Math.sin(now * 0.0035 + mote.phase)) * opacity;
+    if (moteAlpha <= 0.02) continue;
+
+    ctx.fillStyle = mote.color;
+    if (mote.isBokeh) {
+      ctx.globalAlpha = moteAlpha;
+      ctx.beginPath();
+      ctx.arc(curX, curY, mote.r, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.globalAlpha = moteAlpha * 0.34;
+      ctx.beginPath();
+      ctx.arc(curX, curY, mote.r * 2.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = moteAlpha;
+      ctx.beginPath();
+      ctx.arc(curX, curY, mote.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+/**
+ * Draws a dark cosmic blue dim screen overlay & Limitless celestial atmosphere when Gojo's Domain Expansion (Unlimited Void) is active.
  */
 export function drawGojoDomainDimScreen() {
   if (typeof state !== 'undefined' && state.disableDimEffects) return;
@@ -618,6 +757,7 @@ export function drawGojoDomainDimScreen() {
   const opacity = currentGojoDomainDimOpacity;
   const w = (canvas && Number.isFinite(canvas.width) && canvas.width > 0) ? canvas.width : 540;
   const h = (canvas && Number.isFinite(canvas.height) && canvas.height > 0) ? canvas.height : 960;
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -654,7 +794,22 @@ export function drawGojoDomainDimScreen() {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // 3. Dark Outer Edge Screen Corner Vignette (Deepens perimeter without blocking center)
+  // 3. Cosmic Limitless Cyan, Sapphire & Astral Indigo Nebula Clouds
+  const limitlessNebulaDiscs = [
+    { x: w * 0.14, y: h * 0.18, r: 220, col: `rgba(0, 175, 255, ${(opacity * 0.12).toFixed(3)})` },
+    { x: w * 0.86, y: h * 0.22, r: 210, col: `rgba(37, 99, 235, ${(opacity * 0.13).toFixed(3)})` },
+    { x: w * 0.10, y: h * 0.56, r: 195, col: `rgba(56, 189, 248, ${(opacity * 0.09).toFixed(3)})` },
+    { x: w * 0.90, y: h * 0.60, r: 205, col: `rgba(0, 210, 255, ${(opacity * 0.10).toFixed(3)})` },
+    { x: w * 0.22, y: h * 0.86, r: 225, col: `rgba(79, 70, 229, ${(opacity * 0.10).toFixed(3)})` },
+    { x: w * 0.80, y: h * 0.84, r: 230, col: `rgba(14, 165, 233, ${(opacity * 0.11).toFixed(3)})` }
+  ];
+  _drawCosmicNebulaDiscs(ctx, limitlessNebulaDiscs);
+
+  // 4. Twinkling Celestial Stardust & Drifting Limitless Bokeh / Light Motes
+  _renderGojoCelestialStars(ctx, w, h, now, opacity);
+  _renderGojoLimitlessMotes(ctx, w, h, now, opacity);
+
+  // 5. Dark Outer Edge Screen Corner Vignette (Deepens perimeter without blocking center)
   const cornerR0 = Math.max(0, Math.min(w, h) * 0.35);
   const cornerR1 = Math.max(cornerR0 + 1, Math.max(w, h) * 0.85);
   const cornerGrad = createSafeRadialGradient(ctx, w / 2, h / 2, cornerR0, w / 2, h / 2, cornerR1);
@@ -666,7 +821,7 @@ export function drawGojoDomainDimScreen() {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // 4. Clear arena interior with subtle edge vignette so Unlimited Void cosmic artwork is 100% visible
+  // 6. Clear arena interior with subtle edge vignette so Unlimited Void cosmic artwork is 100% visible
   if (gojoFighter && gojoFighter.domainActive) {
     applyDomainArenaVignetteCutout(ctx);
   }

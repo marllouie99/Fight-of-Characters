@@ -3,6 +3,7 @@ import { audioSystem } from '../../systems/audioSystem.js';
 import { fastCleanArray } from '../../graphics/particles/visualTrailSystem.js';
 import { spawnBloodEffect } from '../../graphics/particles/bloodEffect.js';
 import { isInsideRubbickStolenVoid } from '../fighters/rubbick/rubbickThemes.js';
+import { shouldGojoDomainSlowInsteadOfFreeze, isInsideEnemyUnlimitedVoid } from '../../systems/domainSystem.js';
 
 export class StatusEffectsManager {
   // Static registry for global debuff / status effect processors
@@ -352,21 +353,11 @@ export class StatusEffectsManager {
     if (!fighter || fighter.isTurret || fighter.isDispenser || fighter.isBuilding || fighter.immuneToDebuffs || fighter.isDebuffImmune) {
       return false;
     }
-    // Check if trapped inside enemy Gojo's Unlimited Void domain (which overrides BAGUVIX and freezes the fighter)
-    const isInsideGojoDomain = typeof state !== 'undefined' && state.fighters && state.fighters.some((g, gIdx) => {
-      if (!g || g === fighter || g.hp <= 0 || !g.domainActive) return false;
-      const isGojo = (g.characterId === 'gojo' || g.type === 'gojo' || g._def?.id === 'gojo' || (g.characterId === 'rubbick' && g.stolenType === 'gojo_domain'));
-      if (!isGojo) return false;
-      if (typeof state.getFighterTeam === 'function') {
-        const myIndex = state.fighters.indexOf(fighter);
-        const myTeam = myIndex >= 0 ? state.getFighterTeam(myIndex) : null;
-        const gTeam = state.getFighterTeam(gIdx);
-        if (myTeam !== null && gTeam !== null && myTeam === gTeam) return false;
-      }
-      return true;
-    }) && !fighter.domainImmunity && !fighter.gojoDomainAdapted && !fighter.gojoAdapted?.domain && fighter.characterId !== 'toji' && fighter.type !== 'toji';
+    // Check if trapped inside enemy Unlimited Void domain (which overrides BAGUVIX and freezes JJK / VE fighters).
+    // Under No-Verse-Equalization mode, non-JJK fighters are heavily slowed instead of frozen.
+    const isInsideGojoDomain = typeof state !== 'undefined' && state.fighters && isInsideEnemyUnlimitedVoid(fighter, state);
 
-    if (isInsideGojoDomain) {
+    if (isInsideGojoDomain && !shouldGojoDomainSlowInsteadOfFreeze(fighter)) {
       fighter.timeStopTimer = Math.max(fighter.timeStopTimer || 0, 15);
       if (typeof fighter._handleFrozenSkillCooldowns === 'function') {
         fighter._handleFrozenSkillCooldowns();
@@ -565,7 +556,7 @@ export class StatusEffectsManager {
         delete fighter._timeStopStartTime;
 
         // Restore baseline movement velocity if fighter is stationary and not channeling/building/in stasis
-        if (fighter.vx === 0 && fighter.vy === 0 && (fighter.speed || 0) > 0 && !fighter.isBuildingTurret && !fighter.isChannelingDomain && !fighter.isCountering && !fighter.isFrameFrozen && !((fighter.frameFreezeTimer || 0) > 0) && !isInsideRubbickStolenVoid(fighter) && (fighter.timeStopTimer || 0) <= 0) {
+        if (fighter.vx === 0 && fighter.vy === 0 && (fighter.speed || 0) > 0 && !fighter.isBuildingTurret && !fighter.isChannelingDomain && !fighter.isCountering && !fighter.isFrameFrozen && !((fighter.frameFreezeTimer || 0) > 0) && (!isInsideRubbickStolenVoid(fighter) || shouldGojoDomainSlowInsteadOfFreeze(fighter)) && (fighter.timeStopTimer || 0) <= 0) {
           const arenaCenterX = (typeof CONFIG !== 'undefined' && CONFIG.arena) ? (CONFIG.arena.x + CONFIG.arena.width / 2) : fighter.x;
           const arenaCenterY = (typeof CONFIG !== 'undefined' && CONFIG.arena) ? (CONFIG.arena.y + CONFIG.arena.height / 2) : fighter.y;
           const recoverAngle = Math.atan2(arenaCenterY - fighter.y, arenaCenterX - fighter.x) + (Math.random() - 0.5) * 0.4;

@@ -16,6 +16,76 @@ import { drawTanjiroNichirinKatana } from '../weapons/demonSlayerWeaponGraphics.
 let _tanjiroSkinImage = null;
 let _tanjiroSkinImageLoading = false;
 
+let _tanjiroHairImage = null;
+let _tanjiroHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Tanjiro's pixel-art hair asset (Assets/model/tanjiro/TANJRO-HAIR-MODEL.png).
+ */
+export function _getTanjiroHairImage() {
+  if (_tanjiroHairImage && _tanjiroHairImage.complete && _tanjiroHairImage.naturalWidth > 0) {
+    return _tanjiroHairImage;
+  }
+  if (!_tanjiroHairImageLoading && typeof Image !== 'undefined') {
+    _tanjiroHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _tanjiroHairImage = img;
+      _tanjiroHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _tanjiroHairImageLoading = false;
+    };
+    img.src = 'Assets/model/tanjiro/TANJRO-HAIR-MODEL.png?v=1';
+    _tanjiroHairImage = img;
+  }
+  return _tanjiroHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getTanjiroHairImage();
+}
+
+/**
+ * Draws Tanjiro's calibrated pixel-art hair sprite (Assets/model/tanjiro/TANJRO-HAIR-MODEL.png).
+ */
+export function _drawTanjiroHair(ctx, r, facingLeft = false) {
+  const hairImg = _getTanjiroHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.tanjiro) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for TANJRO-HAIR-MODEL.png (1446x1087, opaque bbox: visW 1414, visH 1058, centerX 707, topY 29)
+    const targetHairWidth = r * 3.15 * wMult;
+    const targetHairHeight = r * 2.25 * hMult;
+    const scaleX = targetHairWidth / 1414;
+    const scaleY = targetHairHeight / 1058;
+    const drawW = 1446 * scaleX;
+    const drawH = 1087 * scaleY;
+    const drawX = -707 * scaleX + offX;
+    const drawY = -r * 1.38 - 29 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+  }
+}
+
 // Authentic 1:1 pixel art data URI matching the reference Demon Slayer art (56x56 sprite matrix, R=18)
 const _TANJIRO_DATA_URI = 'data:image/png;base64,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';
 
@@ -83,6 +153,9 @@ export function drawTanjiroSkin(ctx, fighter) {
   // 4. LAYER 1: MAIN BODY (Authentic 1:1 Pixel Art Head, Haori & Earrings)
   drawTanjiroPixelBody(ctx, r);
 
+  // 4.5. LAYER 2: CALIBRATED ANIME HAIR SPRITE
+  _drawTanjiroHair(ctx, r, facingLeft);
+
   // 5. LAYER 2: FRONT HAND & NICHIRIN KATANA (On Top of Body)
   const showFrontHand = !isPodiumPreview && !Boolean(state.showSkinOnly) && !fighter.hideFrontHand && !fighter.hideWeapon;
   if (showFrontHand) {
@@ -104,7 +177,10 @@ export function drawTanjiroPixelBody(ctx, r) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
 
-  const img = _getTanjiroSkinImage();
+  // Prefer hairless Rule-24 pixel body whenever dedicated hair PNG is loaded so hair never doubles
+  const hairImg = _getTanjiroHairImage();
+  const hasHairAsset = Boolean(hairImg && hairImg.complete && hairImg.naturalWidth > 0);
+  const img = hasHairAsset ? null : _getTanjiroSkinImage();
   if (img && img.complete && img.naturalWidth > 0) {
     // Exact sprite metrics: 56x56 sprite, circle center (28, 28), circle radius in sprite = 18.0
     const scale = r / 18.0;

@@ -7,7 +7,8 @@ export const gojoConfig = {
     skin: 'Assets/model/gojo/Saturo Gojo.png',
     pixelSkin: 'Assets/model/gojo/Saturo-Gojo-PIXEL-SKIN.png',
     skillIcons: 'Assets/model/gojo/Gojo-Skill-icons.png',
-    domainOverlay: 'Assets/Overlays/gojo-domainexpansion.png',
+    domainOverlay: 'Assets/model/gojo/gojo_domain_arena_overlay.png',
+    domainSplashes: 'Assets/model/gojo/gojo_domain_splashes_overlay.png',
     purpleExplosion: 'Assets/model/gojo/purple_explosion/purple_explosion-b.png',
     purpleTravel: 'Assets/model/gojo/Purple_idle_travel/purple_travel-b.png',
     redReversal: 'Assets/model/gojo/Red_reversal/red_reversal-b.png',
@@ -38,7 +39,7 @@ export const gojoConfig = {
   desc: 'Uses Blue to pull and Reversal Red to repel. Hollow Purple pierces everything, and Unlimited Void stuns all enemies.',
 
   // ── 1. Limitless Infinity Passive Barrier ──
-  enableInfinity: 0,                    // Master toggle for Limitless Infinity barrier
+  enableInfinity: 1,                    // Master toggle for Limitless Infinity barrier
   infinityCooldown: 100,                   // Recharge cooldown in frames before Infinity barrier reactivates after blocking
   infinityActiveDuration: 100,              // Frames Infinity continues to block multiple attacks after first impact
   infinityOnlyActiveInRangedMode: true,     // Infinity barrier is ONLY active in Ranged Mode; disabled in Melee Mode
@@ -142,6 +143,9 @@ export const gojoConfig = {
 
   // ── 5. Ultimate: Domain Expansion (Unlimited Void) ──
   enableDomain: true,                      // Master toggle for Ultimate: Domain Expansion
+  domainVerseEqualization: false,          // false = Non-JJK fighters are NOT paralyzed (can still move very slowly & attack); true = Unlimited Void freezes all non-immune enemies
+  domainNonJjkSlowMultiplier: 0.20,        // Movement speed multiplier for non-JJK fighters inside Unlimited Void when Verse Equalization is off
+  domainNonJjkVelocityDampening: 0.82,     // Velocity dampening per frame applied to non-JJK fighters moving faster than slowed speed inside Unlimited Void
   domainCooldown: 1200,     // 20s Ultimate cooldown
   domainChargeMax: 130,     // 2s Channeling duration before domain opens
   domainDuration: 300,      // Domain lasts ~6.6 seconds (paralyzes enemies)
@@ -162,11 +166,11 @@ export const gojoConfig = {
   rctRevivalHealAmount: 150,               // Flat HP restored on emergency revival
 
   // ── 7. Melee Mode & Hand-to-Hand Martial Arts ──
-  enableMeleeMode: true,                   // Master toggle for Melee Mode & Hand-to-Hand Martial Arts
+  enableMeleeMode: 1,                   // Master toggle for Melee Mode & Hand-to-Hand Martial Arts
   closeRangeRadius: 120,                   // Proximity distance (pixels) to enter Melee Mode (direct contact only)
   leaveMeleeRadius: 150,                   // Distance (pixels) beyond which Melee Mode is instantly disengaged
   initialMeleeDuration: 100,                // Active melee clash duration in frames (~1.0s at 60fps)
-  meleeModeCooldown: 240,                  // Mandatory ranged separation cooldown in frames (~4.0s at 60fps)
+  meleeModeCooldown: 300,                  // Mandatory ranged separation cooldown in frames (~4.0s at 60fps)
   comboDisengageDistance: 260,             // Distance (pixels) teleported away when disengaging after clash
   meleePunchDamage: 6,                     // Damage dealt per martial arts punch strike
   meleePunchCooldown: 16,                  // Frames between consecutive punches (~0.16s at 60fps)

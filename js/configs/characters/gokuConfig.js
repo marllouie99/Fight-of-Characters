@@ -6,6 +6,7 @@
 export const gokuConfig = {
   assets: {
     hair: 'Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png',
+    superSaiyanHair: 'Assets/model/goku/Goku-ssj-hair.png',
   },
 
   name: 'GOKU',

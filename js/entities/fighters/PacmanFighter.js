@@ -2,7 +2,7 @@
 // PAC-MAN (Namco / Retro Arcade Legend) — Character Class Implementation
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { Fighter } from '../fighter.js';
+import { Fighter, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { pacmanConfig } from '../../configs/characters/pacmanConfig.js';
@@ -34,7 +34,7 @@ export class PacmanFighter extends Fighter {
     this.name = def?.name || cfg.name || 'Pac-Man';
     this.displayName = def?.displayName || cfg.displayName || this.name;
     this.themeColor = cfg.themeColor || '#FACC15';
-    this.r = cfg.r ?? 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
     this.radius = this.r;
     this.hideHands = true; // Classic arcade ball form (hands hidden)
     this.hideWeapon = true;

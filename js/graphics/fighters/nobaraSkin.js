@@ -12,6 +12,36 @@ import { getHandSize } from '../../core/config.js';
 import { state, isChampionScreenActive } from '../../core/state.js';
 import { drawNobaraHammer, drawNobaraFloatingNails } from '../weapons/nobaraWeaponGraphics.js';
 
+let _nobaraHairImage = null;
+let _nobaraHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Nobara's pixel-art hair asset (Assets/model/nobara/Nobara-hair.png).
+ */
+export function _getNobaraHairImage() {
+  if (_nobaraHairImage && _nobaraHairImage.complete && _nobaraHairImage.naturalWidth > 0) {
+    return _nobaraHairImage;
+  }
+  if (!_nobaraHairImageLoading && typeof Image !== 'undefined') {
+    _nobaraHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _nobaraHairImage = img;
+      _nobaraHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _nobaraHairImageLoading = false;
+    };
+    img.src = 'Assets/model/nobara/Nobara-hair.png?v=1';
+    _nobaraHairImage = img;
+  }
+  return _nobaraHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getNobaraHairImage();
+}
+
 // Pre-computed normalized hairline points for Nobara's sleek, smooth, non-spiky side-parted bob cut
 // Sweeps in a clean, smooth, straight diagonal from right flank (+X) to left flank (-X)
 const _NOBARA_HAIRLINE = [
@@ -291,6 +321,42 @@ function _renderNobaraPixelBodyToCanvas(ctx, r) {
  * Draws Nobara's sleek side-parted bob cut hair on Layer 2
  */
 export function _drawNobaraHair(ctx, r, facingLeft = false) {
+  const hairImg = _getNobaraHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.nobara) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for Nobara-hair.png (1024x1024, opaque bbox: visW 615, visH 718, topY 153)
+    const targetHairWidth = r * 2.55 * wMult;
+    const targetHairHeight = r * 2.35 * hMult;
+    const scaleX = targetHairWidth / 615;
+    const scaleY = targetHairHeight / 718;
+    const drawW = 1024 * scaleX;
+    const drawH = 1024 * scaleY;
+    const drawX = -500 * scaleX + offX;
+    const drawY = -r * 1.35 - 153 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);

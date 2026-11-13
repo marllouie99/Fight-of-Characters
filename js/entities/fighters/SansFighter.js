@@ -284,8 +284,17 @@ export class SansFighter extends Fighter {
     }
   }
 
-  interruptAttacks() {
-    super.interruptAttacks();
+  interruptAttacks(forceCancelAll = false) {
+    super.interruptAttacks(forceCancelAll);
+    this.gravitySlamTimer = 0;
+    this.basicAttackAnimTimer = 0;
+    if (this.blueSoulVictim) {
+      this.blueSoulVictim.blueSoulActive = false;
+      this.blueSoulVictim.blueSoulTimer = 0;
+      this.blueSoulVictim = null;
+    }
+    this.blueSoulActive = false;
+    this._hasImpactedWall = false;
     // Gaster Blasters and sequential circle spawners are independent summoned entities and persist through CC
   }
 
@@ -1101,6 +1110,17 @@ export class SansFighter extends Fighter {
     // Stamina depleted or CC'd -> take regular damage
     const applied = super.takeDamage(amount, attacker, options);
     if (this.hp <= 0) {
+      this.gravitySlamTimer = 0;
+      this.basicAttackAnimTimer = 0;
+      this.isBadTimeActive = false;
+      this.badTimeTimer = 0;
+      if (this.blueSoulVictim) {
+        this.blueSoulVictim.blueSoulActive = false;
+        this.blueSoulVictim.blueSoulTimer = 0;
+        this.blueSoulVictim = null;
+      }
+      this.blueSoulActive = false;
+      this._hasImpactedWall = false;
       if (typeof state !== 'undefined') state._hadSansDeath = true;
       if (!this._hasTriggeredSelfDeathShatter) {
         this._hasTriggeredSelfDeathShatter = true;
@@ -1801,24 +1821,125 @@ export class SansFighter extends Fighter {
   }
 
   /**
+   * Enforces Gojo's max simultaneous frozen-projectile cap for Sans bones by expiring
+   * the oldest frozen bone if needed, returning an adjusted loop index.
+   */
+  _enforceMaxFrozenBones(excludeBone, loopIndex) {
+    const maxFrozen = CONFIG.gojo?.infinityMaxFrozenProjectiles ?? 2;
+    let activeCount = 0;
+    let oldestIdx = -1;
+    let oldestTimer = Infinity;
+
+    for (let k = 0; k < this.boneProjectiles.length; k++) {
+      const b = this.boneProjectiles[k];
+      if (b && b !== excludeBone && b.isFrozenByInfinity && (b.infinityFreezeTimer || 0) > 0) {
+        activeCount++;
+        if ((b.infinityFreezeTimer || 0) < oldestTimer) {
+          oldestTimer = b.infinityFreezeTimer || 0;
+          oldestIdx = k;
+        }
+      }
+    }
+
+    if (activeCount >= maxFrozen && oldestIdx !== -1) {
+      this.boneProjectiles.splice(oldestIdx, 1);
+      if (oldestIdx < loopIndex) {
+        return loopIndex - 1;
+      }
+    }
+    return loopIndex;
+  }
+
+  /**
+   * Checks if a bone projectile enters any enemy Gojo's active Limitless Infinity barrier
+   * and freezes it in mid-air before it reaches the fighter body.
+   */
+  _tryFreezeBoneOnInfinity(bone, targets, loopIndex) {
+    for (const t of targets) {
+      const isLimitlessActive = (typeof t.hasActiveInfinity === 'function') ? t.hasActiveInfinity() : false;
+      if (!isLimitlessActive) continue;
+
+      const infinityRadius = CONFIG.gojo?.infinityRadius ?? ((t.r || 25) + 30);
+      const dx = bone.x - t.x;
+      const dy = bone.y - (t.y - (t.z || 0));
+      if ((dx * dx + dy * dy) > infinityRadius * infinityRadius) continue;
+
+      if (bone.infinityEvaluated === undefined) {
+        bone.infinityEvaluated = true;
+        const freezeChance = (CONFIG.gojo?.infinityFreezeChance !== undefined) ? CONFIG.gojo.infinityFreezeChance : 0.90;
+        bone.infinityBypassed = (freezeChance <= 0) || (Math.random() > freezeChance);
+      }
+
+      if (!bone.infinityBypassed) {
+        loopIndex = this._enforceMaxFrozenBones(bone, loopIndex);
+        const freezeDuration = CONFIG.gojo?.infinityFreezeDuration ?? 240;
+        bone.isFrozenByInfinity = true;
+        bone.infinityFreezeTimer = freezeDuration;
+        bone.life = freezeDuration;
+        bone.maxLife = freezeDuration;
+        bone.vx = 0;
+        bone.vy = 0;
+        bone.damage = 0;
+        bone.isVisual = true;
+        if (typeof t.triggerInfinityBlock === 'function') {
+          t.triggerInfinityBlock(bone.x, bone.y);
+        }
+        return { frozen: true, loopIndex };
+      }
+    }
+    return { frozen: false, loopIndex };
+  }
+
+  /**
    * Updates active bone projectiles and ground traps.
    */
   _updateBones() {
+    const targets = [];
+    if (state.fighters) targets.push(...state.fighters);
+    if (state.illusions) targets.push(...state.illusions);
+    const enemyTargets = targets.filter((t) =>
+      t && t !== this &&
+      !(t.team && t.team === this.team) &&
+      !(typeof this.isTeammate === 'function' && this.isTeammate(t)) &&
+      t.hp > 0
+    );
+
     // 1. Update Projectiles
     for (let i = this.boneProjectiles.length - 1; i >= 0; i--) {
       const bone = this.boneProjectiles[i];
+
+      // Suspended Limitless Infinity freeze lifecycle (keeps bone frozen at barrier edge)
+      if (bone.isFrozenByInfinity) {
+        bone.vx = 0;
+        bone.vy = 0;
+        bone.damage = 0;
+        bone.isVisual = true;
+        if (bone.infinityFreezeTimer === undefined) {
+          bone.infinityFreezeTimer = CONFIG.gojo?.infinityFreezeDuration ?? 240;
+        }
+        bone.infinityFreezeTimer--;
+        if (bone.infinityFreezeTimer <= 0) {
+          this.boneProjectiles.splice(i, 1);
+        }
+        continue;
+      }
+
       bone.x += bone.vx;
       bone.y += bone.vy;
       bone.life--;
 
-      // Hit check against enemies
-      const targets = [];
-      if (state.fighters) targets.push(...state.fighters);
-      if (state.illusions) targets.push(...state.illusions);
+      // Gojo Limitless Infinity Spatial Interception (Checked before body collision)
+      if (!bone.infinityBypassed && !bone.isVisual && bone.life > 0) {
+        const freezeResult = this._tryFreezeBoneOnInfinity(bone, enemyTargets, i);
+        i = freezeResult.loopIndex;
+        if (freezeResult.frozen) {
+          continue;
+        }
+      }
 
-      for (const t of targets) {
-        if (!t || t === this || (t.team && t.team === this.team) || t.hp <= 0) continue;
-        const dist = Math.hypot(t.x - bone.x, t.y - bone.y);
+      // Hit check against enemies
+      for (const t of enemyTargets) {
+        const dist = Math.hypot(t.x - bone.x, (t.y - (t.z || 0)) - bone.y);
 
         if (dist <= (t.r + 14)) {
           // Blue Bone Logic: Moving targets take full damage + freeze; stationary targets are unharmed
@@ -1828,20 +1949,32 @@ export class SansFighter extends Fighter {
             continue;
           }
 
+          let didDamage = true;
           if (t.takeDamage) {
-            t.takeDamage(bone.damage, this, {
+            didDamage = t.takeDamage(bone.damage, this, {
               projectile: bone,
+              isProjectile: true,
+              hitX: bone.x,
+              hitY: bone.y,
               damageNumberColor: this.damageNumberColor || '#03d5f1ff'
             });
           }
-          this.applyKarma(t);
 
-          if (bone.boneType === 'blue' && t.applyFreeze) {
-            const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
-            t.applyFreeze(cfg.blueBoneFreezeDuration || 24, this, {
-              isBlueBone: true,
-              sfx: (CONFIG.sans?.sounds?.ding || sansConfig.sounds?.ding) || 'Assets/Sound Effects/Sans/Ding.ogg'
-            });
+          // If target's Infinity intercepted and froze this bone inside takeDamage(), preserve it in air
+          if (bone.isFrozenByInfinity) {
+            break;
+          }
+
+          if (didDamage !== false) {
+            this.applyKarma(t);
+
+            if (bone.boneType === 'blue' && t.applyFreeze) {
+              const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
+              t.applyFreeze(cfg.blueBoneFreezeDuration || 24, this, {
+                isBlueBone: true,
+                sfx: (CONFIG.sans?.sounds?.ding || sansConfig.sounds?.ding) || 'Assets/Sound Effects/Sans/Ding.ogg'
+              });
+            }
           }
 
           bone.life = 0;
@@ -1849,7 +1982,7 @@ export class SansFighter extends Fighter {
         }
       }
 
-      if (bone.life <= 0) {
+      if (!bone.isFrozenByInfinity && bone.life <= 0) {
         this.boneProjectiles.splice(i, 1);
       }
     }
@@ -1972,41 +2105,45 @@ export class SansFighter extends Fighter {
     }
 
     // 2. Active Blue Soul Gravity Slam Execution
-    if (this.gravitySlamTimer > 0 && this.blueSoulVictim && this.blueSoulVictim.hp > 0) {
+    const victim = this.blueSoulVictim;
+    const isVictimAlive = Boolean(victim && (victim.hp > 0 || victim.isUndead) && !victim.isDead);
+    const isSansAlive = (this.hp === undefined || this.hp > 0) && !this.isDead;
+
+    if (this.gravitySlamTimer > 0 && isVictimAlive && isSansAlive && !this._isWinnerReveal) {
       this.gravitySlamTimer--;
       const maxDuration = this.gravitySlamDuration || cfg.gravitySlamDuration || 80;
       const slamProg = 1.0 - (this.gravitySlamTimer / maxDuration);
 
-      this.blueSoulVictim.blueSoulActive = true;
-      this.blueSoulVictim.blueSoulTimer = this.gravitySlamTimer;
+      victim.blueSoulActive = true;
+      victim.blueSoulTimer = this.gravitySlamTimer;
 
       const arena = state.arena || { x: 50, y: 50, width: 500, height: 500 };
 
       if (slamProg < 0.22) {
         // Phase 1: Levitation Stasis (Victim is lifted in air, zero velocity)
-        this.blueSoulVictim.vx *= 0.15;
-        this.blueSoulVictim.vy *= 0.15;
-        this.blueSoulVictim.z = Math.min(22, (this.blueSoulVictim.z || 0) + 2.0);
+        victim.vx *= 0.15;
+        victim.vy *= 0.15;
+        victim.z = Math.min(22, (victim.z || 0) + 2.0);
       } else {
         // Phase 2: Violent Directional Gravitational Acceleration
         const force = cfg.gravityForce || 18;
-        this.blueSoulVictim.vx += this.gravitySlamDirX * (force * 0.24);
-        this.blueSoulVictim.vy += this.gravitySlamDirY * (force * 0.26);
-        this.blueSoulVictim.z = Math.max(0, (this.blueSoulVictim.z || 0) - 1.5);
+        victim.vx += this.gravitySlamDirX * (force * 0.24);
+        victim.vy += this.gravitySlamDirY * (force * 0.26);
+        victim.z = Math.max(0, (victim.z || 0) - 1.5);
 
         // Check arena boundary collision
-        const hitLeft = this.blueSoulVictim.x <= arena.x + this.blueSoulVictim.r + 8;
-        const hitRight = this.blueSoulVictim.x >= arena.x + arena.width - this.blueSoulVictim.r - 8;
-        const hitBottom = this.blueSoulVictim.y >= arena.y + arena.height - this.blueSoulVictim.r - 8;
-        const hitTop = this.blueSoulVictim.y <= arena.y + this.blueSoulVictim.r + 8;
+        const hitLeft = victim.x <= arena.x + victim.r + 8;
+        const hitRight = victim.x >= arena.x + arena.width - victim.r - 8;
+        const hitBottom = victim.y >= arena.y + arena.height - victim.r - 8;
+        const hitTop = victim.y <= arena.y + victim.r + 8;
         const hitWall = hitLeft || hitRight || hitBottom || hitTop;
 
-        if (hitWall && (this.gravitySlamTimer % 18 === 0 || slamProg > 0.65 && !this._hasImpactedWall)) {
+        if (hitWall && (this.gravitySlamTimer % 18 === 0 || (slamProg > 0.65 && !this._hasImpactedWall))) {
           this._hasImpactedWall = true;
 
           // Compute impact coordinates & normal angle
-          const impactX = hitLeft ? (arena.x + 4) : (hitRight ? (arena.x + arena.width - 4) : this.blueSoulVictim.x);
-          const impactY = hitTop ? (arena.y + 4) : (hitBottom ? (arena.y + arena.height - 4) : this.blueSoulVictim.y);
+          const impactX = hitLeft ? (arena.x + 4) : (hitRight ? (arena.x + arena.width - 4) : victim.x);
+          const impactY = hitTop ? (arena.y + 4) : (hitBottom ? (arena.y + arena.height - 4) : victim.y);
           const normalAngle = hitLeft ? 0 : (hitRight ? Math.PI : (hitTop ? Math.PI * 0.5 : -Math.PI * 0.5));
 
           if (!this.slamImpacts) this.slamImpacts = [];
@@ -2030,23 +2167,34 @@ export class SansFighter extends Fighter {
           spawnFloatingText(impactX, impactY - 14, 'SLAM!', '#00F5FF');
 
           // Damage & KR Application
-          if (this.blueSoulVictim.takeDamage) {
-            this.blueSoulVictim.takeDamage(cfg.gravityWallImpactDamage || 8, this, {
+          if (victim.takeDamage) {
+            victim.takeDamage(cfg.gravityWallImpactDamage || 8, this, {
               damageNumberColor: this.damageNumberColor || '#03d5f1ff'
             });
-            this.applyKarma(this.blueSoulVictim);
+            this.applyKarma(victim);
           }
 
           // Dampen rebound to keep victim cleanly contained in arena
-          if (hitLeft || hitRight) this.blueSoulVictim.vx *= -0.35;
-          if (hitTop || hitBottom) this.blueSoulVictim.vy *= -0.35;
+          if (hitLeft || hitRight) victim.vx *= -0.35;
+          if (hitTop || hitBottom) victim.vy *= -0.35;
         }
       }
-    } else {
-      if (this.blueSoulVictim) {
-        this.blueSoulVictim.blueSoulActive = false;
-        this.blueSoulVictim.blueSoulTimer = 0;
+
+      if (this.gravitySlamTimer <= 0) {
+        this.gravitySlamTimer = 0;
+        victim.blueSoulActive = false;
+        victim.blueSoulTimer = 0;
+        this.blueSoulVictim = null;
+        this.blueSoulActive = false;
+        this._hasImpactedWall = false;
       }
+    } else {
+      this.gravitySlamTimer = 0;
+      if (victim) {
+        victim.blueSoulActive = false;
+        victim.blueSoulTimer = 0;
+      }
+      this.blueSoulVictim = null;
       this.blueSoulActive = false;
       this._hasImpactedWall = false;
     }
@@ -2165,12 +2313,23 @@ export class SansFighter extends Fighter {
       opponent.owner
     );
 
-    if (opponent && opponent.hp <= 0 && !isMinionOrSummon && !this._hasTriggeredOpponentShatter) {
-      this._hasTriggeredOpponentShatter = true;
-      this.triggerHeartShatter(opponent.x, opponent.y);
-      if (!this._hasSaidWinQuote) {
-        this._hasSaidWinQuote = true;
-        this.speak('take a break, pal.', 140);
+    if (opponent && opponent.hp <= 0 && !isMinionOrSummon) {
+      this.gravitySlamTimer = 0;
+      this.basicAttackAnimTimer = 0;
+      this.blueSoulActive = false;
+      if (this.blueSoulVictim) {
+        this.blueSoulVictim.blueSoulActive = false;
+        this.blueSoulVictim.blueSoulTimer = 0;
+        this.blueSoulVictim = null;
+      }
+      this._hasImpactedWall = false;
+      if (!this._hasTriggeredOpponentShatter) {
+        this._hasTriggeredOpponentShatter = true;
+        this.triggerHeartShatter(opponent.x, opponent.y);
+        if (!this._hasSaidWinQuote) {
+          this._hasSaidWinQuote = true;
+          this.speak('take a break, pal.', 140);
+        }
       }
     }
 

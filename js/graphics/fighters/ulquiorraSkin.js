@@ -14,6 +14,76 @@ import { state } from '../../core/state.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
 import { drawUlquiorraMurcielago, drawLanzaDelRelampago } from '../weapons/ulquiorraWeaponGraphics.js';
 
+let _ulquiorraHairImage = null;
+let _ulquiorraHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Ulquiorra's pixel-art hair + helmet asset (Assets/model/ulquiorra/Ulquiorra-hair.png).
+ */
+export function _getUlquiorraHairImage() {
+  if (_ulquiorraHairImage && _ulquiorraHairImage.complete && _ulquiorraHairImage.naturalWidth > 0) {
+    return _ulquiorraHairImage;
+  }
+  if (!_ulquiorraHairImageLoading && typeof Image !== 'undefined') {
+    _ulquiorraHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _ulquiorraHairImage = img;
+      _ulquiorraHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _ulquiorraHairImageLoading = false;
+    };
+    img.src = 'Assets/model/ulquiorra/Ulquiorra-hair.png?v=1';
+    _ulquiorraHairImage = img;
+  }
+  return _ulquiorraHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getUlquiorraHairImage();
+}
+
+/**
+ * Draws Ulquiorra's calibrated pixel-art hair + Hollow helmet sprite (Assets/model/ulquiorra/Ulquiorra-hair.png).
+ */
+export function _drawUlquiorraHair(ctx, r, facingLeft = false) {
+  const hairImg = _getUlquiorraHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.ulquiorra) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for Ulquiorra-hair.png (1024x1024, opaque bbox: visW 779, visH 841, topY 30)
+    const targetHairWidth = r * 3.10 * wMult;
+    const targetHairHeight = r * 2.55 * hMult;
+    const scaleX = targetHairWidth / 779;
+    const scaleY = targetHairHeight / 841;
+    const drawW = 1024 * scaleX;
+    const drawH = 1024 * scaleY;
+    const drawX = -525 * scaleX + offX;
+    const drawY = -r * 1.62 - 30 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+  }
+}
+
 // Pre-computed normalized coordinates for Ulquiorra's authentic anime bangs
 const _ULQUIORRA_BANGS = [
   { nx: -0.95, ny: -0.32 },
@@ -142,13 +212,13 @@ function getRightWingOuterX(ry, r) {
 let _cachedUlqBodyCanvas = null;
 let _cachedUlqBodyKey = '';
 
-export function drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = false) {
+export function drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = false, skipBakedHairAndHelmet = false) {
   if (typeof document === 'undefined') {
-    _render_drawUlquiorraPixelBody(ctx, r, isSegunda, isStage1);
+    _render_drawUlquiorraPixelBody(ctx, r, isSegunda, isStage1, skipBakedHairAndHelmet);
     return;
   }
   const intR = Math.round(r || 25);
-  const key = `${intR}_${isSegunda ? 1 : 0}_${isStage1 ? 1 : 0}`;
+  const key = `${intR}_${isSegunda ? 1 : 0}_${isStage1 ? 1 : 0}_${skipBakedHairAndHelmet ? 1 : 0}`;
   if (!_cachedUlqBodyCanvas || _cachedUlqBodyKey !== key) {
     const P = 2.0;
     const steps = Math.ceil((intR * 1.25 + P) / P);
@@ -161,7 +231,7 @@ export function drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fal
       cctx.save();
       cctx.imageSmoothingEnabled = false;
       cctx.translate(size / 2, size / 2);
-      _render_drawUlquiorraPixelBody(cctx, intR, isSegunda, isStage1);
+      _render_drawUlquiorraPixelBody(cctx, intR, isSegunda, isStage1, skipBakedHairAndHelmet);
       cctx.restore();
     }
     _cachedUlqBodyKey = key;
@@ -173,7 +243,7 @@ export function drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fal
   ctx.restore();
 }
 
-function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = false) {
+function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = false, skipBakedHairAndHelmet = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false; // Nearest-neighbor scaling for authentic pixel art
   const P = 2.0;
@@ -288,8 +358,8 @@ function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fa
         continue;
       }
 
-      // C. Broken Hollow Helmet
-      if (isInsideHelmetPlate(rx, ry, r)) {
+      // C. Broken Hollow Helmet (skipped when PNG helmet+hair asset is active)
+      if (!skipBakedHairAndHelmet && isInsideHelmetPlate(rx, ry, r)) {
         // Dark grey window bevel
         if (isHelmetWindowBevel(rx, ry, r, P)) {
           ctx.fillStyle = '#333A42';
@@ -307,8 +377,8 @@ function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fa
         continue;
       }
 
-      // D. Jet-Black Anime Hair (ry < hairlineY)
-      if (ry < hairlineY) {
+      // D. Jet-Black Anime Hair (ry < hairlineY — skipped when PNG hair asset is active)
+      if (!skipBakedHairAndHelmet && ry < hairlineY) {
         let col = '#090C11';
         if (ry < -r * 0.70 && rx < 0) {
           col = '#1E2530'; // Crown highlight
@@ -322,7 +392,7 @@ function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fa
 
       // E. Alabaster Pale Skin (Face)
       let col = '#F4F7F6';
-      if (ry < hairlineY + P * 1.5) {
+      if (!skipBakedHairAndHelmet && ry < hairlineY + P * 1.5) {
         col = '#E2ECE8'; // Forehead hair shadow
       } else if (Math.abs(rx) > r * 0.72) {
         col = '#D4DFDB'; // Cheek shadow
@@ -344,13 +414,13 @@ function _render_drawUlquiorraPixelBody(ctx, r, isSegunda = false, isStage1 = fa
 let _cachedUlqHornCanvas = null;
 let _cachedUlqHornKey = '';
 
-function _drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
+function _drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false, leftHornOnly = false) {
   if (typeof document === 'undefined') {
-    _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn);
+    _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn, leftHornOnly);
     return;
   }
   const intR = Math.round(r || 25);
-  const key = `${intR}_${hasLeftHorn ? 1 : 0}`;
+  const key = `${intR}_${hasLeftHorn ? 1 : 0}_${leftHornOnly ? 1 : 0}`;
   if (!_cachedUlqHornCanvas || _cachedUlqHornKey !== key) {
     const P = 2.0;
     const steps = Math.ceil((intR * 1.65 + P) / P);
@@ -363,7 +433,7 @@ function _drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
       cctx.save();
       cctx.imageSmoothingEnabled = false;
       cctx.translate(size / 2, size / 2);
-      _render__drawUlquiorraPixelHorn(cctx, intR, hasLeftHorn);
+      _render__drawUlquiorraPixelHorn(cctx, intR, hasLeftHorn, leftHornOnly);
       cctx.restore();
     }
     _cachedUlqHornKey = key;
@@ -375,7 +445,7 @@ function _drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
   ctx.restore();
 }
 
-function _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
+function _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false, leftHornOnly = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const P = 2.0;
@@ -499,8 +569,10 @@ function _render__drawUlquiorraPixelHorn(ctx, r, hasLeftHorn = false) {
     }
   };
 
-  // Always draw right horn
-  drawOneHorn(1);
+  // Always draw right horn unless PNG helmet+horn asset already renders it
+  if (!leftHornOnly) {
+    drawOneHorn(1);
+  }
 
   // Draw left horn when Stage 1 wings or Segunda Etapa are active
   if (hasLeftHorn) {
@@ -934,16 +1006,26 @@ export function drawUlquiorraSkin(ctx, fighter) {
     drawUlquiorraHand(ctx, r * 0.95, -r * 0.15, handRadius, isSegunda);
   }
 
+  const ulqHairImg = _getUlquiorraHairImage();
+  const hasHairAsset = Boolean(ulqHairImg && ulqHairImg.complete && ulqHairImg.naturalWidth > 0);
+
   // ─────────────────────────────────────────────
   // 3. AUTHENTIC STEPPED PIXEL ART BODY CIRCLE
   // ─────────────────────────────────────────────
-  drawUlquiorraPixelBody(ctx, r, isSegunda, isStage1);
+  drawUlquiorraPixelBody(ctx, r, isSegunda, isStage1, hasHairAsset);
 
   // ─────────────────────────────────────────────
-  // 4. UNCLIPPED STEPPED PIXEL HORN LAYER
+  // 4. UNCLIPPED STEPPED PIXEL HORN & HAIR LAYER
   // ─────────────────────────────────────────────
   const hasDualHorns = Boolean(isStage1 || isSegunda);
-  _drawUlquiorraPixelHorn(ctx, r, hasDualHorns);
+  if (hasHairAsset) {
+    if (hasDualHorns) {
+      _drawUlquiorraPixelHorn(ctx, r, true, true);
+    }
+    _drawUlquiorraHair(ctx, r, facingLeft);
+  } else {
+    _drawUlquiorraPixelHorn(ctx, r, hasDualHorns);
+  }
 
   // ─────────────────────────────────────────────
   // 5. FOREGROUND LAYER: FRONT HAND & WEAPONS
@@ -998,11 +1080,21 @@ export function drawUlquiorraGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5
   // 2. Wings on Ghost
   _drawUlquiorraPixelWings(ctx, r, isSegunda);
 
-  // 3. Stepped Pixel Body Silhouette
-  drawUlquiorraPixelBody(ctx, r, isSegunda, false);
+  const ulqHairImg = _getUlquiorraHairImage();
+  const hasHairAsset = Boolean(ulqHairImg && ulqHairImg.complete && ulqHairImg.naturalWidth > 0);
 
-  // Draw Horn on Ghost
-  _drawUlquiorraPixelHorn(ctx, r, isSegunda);
+  // 3. Stepped Pixel Body Silhouette
+  drawUlquiorraPixelBody(ctx, r, isSegunda, false, hasHairAsset);
+
+  // Draw Horn & Hair on Ghost
+  if (hasHairAsset) {
+    if (isSegunda) {
+      _drawUlquiorraPixelHorn(ctx, r, true, true);
+    }
+    _drawUlquiorraHair(ctx, r, facingLeft);
+  } else {
+    _drawUlquiorraPixelHorn(ctx, r, isSegunda);
+  }
 
   // 4. Spectral Outline
   ctx.strokeStyle = isSegunda ? '#00FF88' : 'rgba(255, 255, 255, 0.85)';

@@ -238,7 +238,11 @@ export function drawBoneProjectile(ctx, bone) {
   let outlineColor = '#0E0F14';
   let capHighlight = '#F8FAFC';
 
-  if (type === 'blue') {
+  if (bone.isFrozenByInfinity) {
+    fillColor = type === 'blue' ? '#00F5FF' : '#CFFAFE';
+    outlineColor = '#00E5FF';
+    capHighlight = '#FFFFFF';
+  } else if (type === 'blue') {
     fillColor = '#00F5FF';
     capHighlight = '#A5F3FC';
   } else if (type === 'orange') {

@@ -16,6 +16,76 @@ import { drawInosukeDualSerratedKatanas } from '../weapons/demonSlayerWeaponGrap
 const P = 2.0; // 2.0px authentic retro pixel grid
 const snap = (v) => Math.round(v / P) * P;
 
+let _inosukeHairImage = null;
+let _inosukeHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Inosuke's unmasked pixel-art hair asset (Assets/model/inosuke/Inosuke-hair.png).
+ */
+export function _getInosukeHairImage() {
+  if (_inosukeHairImage && _inosukeHairImage.complete && _inosukeHairImage.naturalWidth > 0) {
+    return _inosukeHairImage;
+  }
+  if (!_inosukeHairImageLoading && typeof Image !== 'undefined') {
+    _inosukeHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _inosukeHairImage = img;
+      _inosukeHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _inosukeHairImageLoading = false;
+    };
+    img.src = 'Assets/model/inosuke/Inosuke-hair.png?v=1';
+    _inosukeHairImage = img;
+  }
+  return _inosukeHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getInosukeHairImage();
+}
+
+/**
+ * Draws Inosuke's calibrated unmasked pixel-art hair sprite (Assets/model/inosuke/Inosuke-hair.png).
+ */
+export function _drawInosukeHair(ctx, r, facingLeft = false) {
+  const hairImg = _getInosukeHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.inosuke) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for Inosuke-hair.png (1024x1024, opaque bbox: visW 758, visH 748, centerX 512, topY 123)
+    const targetHairWidth = r * 2.95 * wMult;
+    const targetHairHeight = r * 2.35 * hMult;
+    const scaleX = targetHairWidth / 758;
+    const scaleY = targetHairHeight / 748;
+    const drawW = 1024 * scaleX;
+    const drawH = 1024 * scaleY;
+    const drawX = -512 * scaleX + offX;
+    const drawY = -r * 1.35 - 123 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+  }
+}
+
 /**
  * Main Skin Renderer for Inosuke Hashibira (Pixel Art)
  */
@@ -54,8 +124,15 @@ export function drawInosukeSkin(ctx, fighter) {
     _drawInosukeBackHand(ctx, fighter, r, isBladeSwinging, isPunching, animPhase);
   }
 
-  // 4. LAYER 1: MAIN BODY (Pixel Boar Mask + Tusks + Muscular Torso + Fur Pelt + Hakama)
-  drawInosukePixelBody(ctx, r);
+  const isUnmasked = Boolean(fighter.isUnmasked);
+
+  // 4. LAYER 1: MAIN BODY (Pixel Boar Mask or Unmasked Face + Muscular Torso + Fur Pelt + Hakama)
+  drawInosukePixelBody(ctx, r, isUnmasked);
+
+  // 4.5. LAYER 2: UNMASKED ANIME HAIR SPRITE
+  if (isUnmasked) {
+    _drawInosukeHair(ctx, r, facingLeft);
+  }
 
   // 5. LAYER 2: FRONT HAND & DUAL SERRATED KATANAS (On Top of Body)
   const showFrontHand = !isPodiumPreview && !Boolean(state.showSkinOnly) && !fighter.hideFrontHand && !fighter.hideWeapon;
@@ -72,13 +149,13 @@ export function drawInosukeSkin(ctx, fighter) {
 let _cachedBodyCanvas = null;
 let _cachedBodyKey = '';
 
-export function drawInosukePixelBody(ctx, r) {
+export function drawInosukePixelBody(ctx, r, isUnmasked = false) {
   if (typeof document === 'undefined') {
-    _render_drawInosukePixelBody(ctx, r);
+    _render_drawInosukePixelBody(ctx, r, isUnmasked);
     return;
   }
   const intR = Math.round(r || 25);
-  const key = `${intR}`;
+  const key = `${intR}_${isUnmasked ? 1 : 0}`;
   if (!_cachedBodyCanvas || _cachedBodyKey !== key) {
     const P = 2.0;
     const steps = Math.ceil((intR * 1.25 + P) / P);
@@ -91,7 +168,7 @@ export function drawInosukePixelBody(ctx, r) {
       cctx.save();
       cctx.imageSmoothingEnabled = false;
       cctx.translate(size / 2, size / 2);
-      _render_drawInosukePixelBody(cctx, intR);
+      _render_drawInosukePixelBody(cctx, intR, isUnmasked);
       cctx.restore();
     }
     _cachedBodyKey = key;
@@ -103,7 +180,7 @@ export function drawInosukePixelBody(ctx, r) {
   ctx.restore();
 }
 
-function _render_drawInosukePixelBody(ctx, r) {
+function _render_drawInosukePixelBody(ctx, r, isUnmasked = false) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const steps = Math.ceil((r + P) / P);
@@ -134,8 +211,20 @@ function _render_drawInosukePixelBody(ctx, r) {
         continue;
       }
 
-      // ── 2. GREY BOAR MASK HEAD (normY < 0.20) ──
+      // ── 2. GREY BOAR MASK HEAD OR CLEAN UNMASKED FACE (normY < 0.20) ──
       if (normY < 0.20) {
+        if (isUnmasked) {
+          if (normY < -0.45 && Math.abs(normX) < 0.45) {
+            ctx.fillStyle = '#FFEBD6'; // Forehead highlight
+          } else if (Math.abs(normX) > 0.72 || normY > 0.08) {
+            ctx.fillStyle = '#FDBA74'; // Cheek contour
+          } else {
+            ctx.fillStyle = '#FED7AA'; // Warm anime face tone
+          }
+          ctx.fillRect(px, py, P, P);
+          continue;
+        }
+
         // Pointed Boar Ears (gx = -8..-5 and gx = 5..8, gy <= -7)
         const isLeftEar = (gx >= -8 && gx <= -5 && gy <= -7);
         const isRightEar = (gx >= 5 && gx <= 8 && gy <= -7);
@@ -206,18 +295,20 @@ function _render_drawInosukePixelBody(ctx, r) {
   }
 
   // ── 6. Pixelated Twin Curved White Bone Tusks (Cheeks: gx = ±8, gy = -4..0) ──
-  [-1, 1].forEach(side => {
-    const tx = snap(side * r * 0.55);
-    const ty = snap(-r * 0.10);
-    // Ivory Tusk Tip & Curve
-    ctx.fillStyle = '#F8FAFC';
-    ctx.fillRect(tx + side * 2, ty - 6, 3, 3); // Upper curved tip
-    ctx.fillRect(tx + side * 4, ty - 3, 3, 3);
-    ctx.fillRect(tx + side * 2, ty, 4, 3);     // Tusk base
-    // Shadow edge
-    ctx.fillStyle = '#94A3B8';
-    ctx.fillRect(tx, ty + 1, 2, 2);
-  });
+  if (!isUnmasked) {
+    [-1, 1].forEach(side => {
+      const tx = snap(side * r * 0.55);
+      const ty = snap(-r * 0.10);
+      // Ivory Tusk Tip & Curve
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(tx + side * 2, ty - 6, 3, 3); // Upper curved tip
+      ctx.fillRect(tx + side * 4, ty - 3, 3, 3);
+      ctx.fillRect(tx + side * 2, ty, 4, 3);     // Tusk base
+      // Shadow edge
+      ctx.fillStyle = '#94A3B8';
+      ctx.fillRect(tx, ty + 1, 2, 2);
+    });
+  }
 
   ctx.restore();
 }

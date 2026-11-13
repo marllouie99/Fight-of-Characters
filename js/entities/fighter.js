@@ -26,7 +26,7 @@ import { spawnImpactFlash, spawnSparks, spawnMeleeClashShockwave, spawnAnimePunc
 import { drawSlowEffect, drawElectricStunEffect, drawCrimsonElectrifiedEffect, drawPoisonEffect, drawBurnEffect, drawDubstepStunEffect, drawThunderRootsEffect, drawSilenceEffect } from '../graphics/statusEffects.js';
 import { fastCleanArray } from '../graphics/particles/visualTrailSystem.js';
 import { triggerMahitoParalyzeExplosion } from './fighters/mahito/mahitoCombat.js';
-import { clearFighterDomain } from '../systems/domainSystem.js';
+import { clearFighterDomain, shouldGojoDomainSlowInsteadOfFreeze, isInsideEnemyUnlimitedVoid } from '../systems/domainSystem.js';
 import { isInsideRubbickStolenVoid } from './fighters/rubbick/rubbickThemes.js';
 import { BalanceManager } from '../configs/balanceManager.js';
 import { resolveEntityPlusObstacleCollision, getArenaCenterObstacle, isPointInsidePlusObstacle, isLineOfSightBlockedByObstacle } from '../systems/arenaObstacleSystem.js';
@@ -468,6 +468,17 @@ export function applyDamageToTarget(target, amount, attacker, opts = {}) {
   return false;
 }
 
+/**
+ * Computes a fighter's world radius by applying the global size multiplier and internal scale.
+ * @param {number} [baseRadius=25] Unscaled base radius from config or fighter definition.
+ * @returns {number}
+ */
+export function computeScaledFighterRadius(baseRadius = 25) {
+  const sizeMult = CONFIG.globalFighter?.sizeMultiplier ?? 1.0;
+  const internalScale = CONFIG.internalScale ?? 1.0;
+  return baseRadius * sizeMult * internalScale;
+}
+
 export class Fighter {
   constructor(def) {
     this._def = def;
@@ -478,9 +489,7 @@ export class Fighter {
     this.color = def.color;
     this.grade = def.grade || 'B';
     
-    const sizeMult = CONFIG.globalFighter?.sizeMultiplier ?? 1.0;
-    const internalScale = CONFIG.internalScale ?? 1.0;
-    this.r = (def.radius ?? 25) * sizeMult * internalScale;
+    this.r = computeScaledFighterRadius(def.radius ?? 25);
     this.aimbot = def.aimbot || false;
     this.maxHp = def.hp || 100;
     this.damage = def.damage || 10;
@@ -962,12 +971,13 @@ export class Fighter {
     if (this.statusEffects && (this.statusEffects.timeStopTimer > 0 || this.statusEffects.paralyzeTimer > 0 || this.statusEffects.isParalyzed)) return true;
 
     // Trapped in cognitive stasis of enemy domain (e.g. Gojo's Unlimited Void)
+    // Under No-Verse-Equalization mode, non-JJK fighters are heavily slowed instead of frozen.
     if (typeof state !== 'undefined' && state.fighters) {
       const isInsideGojoDomain = state.fighters.some(f => 
-        f && f !== this && (f.isParalyzingDomain || f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo') && f.domainActive && f.hp > 0
+        f && f !== this && (f.isParalyzingDomain || f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo' || (f.stolenType === 'gojo_domain' && (f.domainActive || f.stolenDomainActive))) && (f.domainActive || f.stolenDomainActive) && f.hp > 0
       );
       const isImmune = this.domainImmunity || this.isDomainImmune || this.isParalyzeImmune || this.gojoDomainAdapted || (this.gojoAdapted && this.gojoAdapted.domain) || this.characterId === 'toji' || this.type === 'toji';
-      if (isInsideGojoDomain && !isImmune) {
+      if (isInsideGojoDomain && !isImmune && !shouldGojoDomainSlowInsteadOfFreeze(this)) {
         this._handleFrozenSkillCooldowns();
         return true;
       }
@@ -4219,6 +4229,21 @@ export class Fighter {
       targetSpeed *= slowMult;
       this.vx *= dampMult;
       this.vy *= dampMult;
+    }
+
+    // Gojo / Rubbick Unlimited Void slow for non-JJK fighters when Verse Equalization is off
+    if (
+      typeof state !== 'undefined' &&
+      shouldGojoDomainSlowInsteadOfFreeze(this) &&
+      isInsideEnemyUnlimitedVoid(this, state)
+    ) {
+      const slowMult = CONFIG.gojo?.domainNonJjkSlowMultiplier ?? 0.20;
+      const dampMult = CONFIG.gojo?.domainNonJjkVelocityDampening ?? 0.82;
+      targetSpeed *= slowMult;
+      if (Math.hypot(this.vx, this.vy) > targetSpeed) {
+        this.vx *= dampMult;
+        this.vy *= dampMult;
+      }
     }
     
     targetSpeed *= extraMultiplier;

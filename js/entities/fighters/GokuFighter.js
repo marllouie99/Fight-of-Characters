@@ -1140,7 +1140,8 @@ export class GokuFighter extends Fighter {
       angle: this.gunAngle || this.angle || 0,
       alpha: 0.40,
       duration: 18,
-      timer: 18
+      timer: 18,
+      isSuperSaiyan: Boolean(this.isSuperSaiyan)
     });
   }
 
@@ -1203,7 +1204,7 @@ export class GokuFighter extends Fighter {
     // 1. Draw Afterimages
     if (this.afterImages && this.afterImages.length > 0) {
       this.afterImages.forEach(img => {
-        drawGokuGhostSkin(ctx, img.x, img.y, img.angle, this.r, img.alpha);
+        drawGokuGhostSkin(ctx, img.x, img.y, img.angle, this.r, img.alpha, Boolean(img.isSuperSaiyan));
       });
     }
 

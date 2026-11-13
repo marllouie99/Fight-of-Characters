@@ -43,10 +43,17 @@ export function activateRed(fighter) {
   fighter._hasPlayedRedChannelingSound = false;
   fighter._hasPlayedRedDeploySound = false;
 
-  // Prevent simultaneous attacks during the buildup & blast
+  // Prevent simultaneous attacks and disable Infinity during Reversal: Red channeling & blast
   fighter.shootCooldown = fighter.shootCooldownMax || 40;
   fighter.meleeModeCooldown = Math.max(fighter.meleeModeCooldown || 0, totalFrames + 15);
   fighter.isMeleeMode = false;
+  if (typeof fighter._suppressInfinityBarrier === 'function') {
+    fighter._suppressInfinityBarrier();
+  } else {
+    fighter.infinityActive = false;
+    fighter.infinityFadeOpacity = 0;
+    fighter.infinityBlockTimer = 0;
+  }
 
   // Instantly stop all movement when starting Red buildup
   fighter.vx = 0;

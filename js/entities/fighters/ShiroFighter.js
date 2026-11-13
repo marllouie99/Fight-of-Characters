@@ -10,7 +10,7 @@
 // - Rule 25: Non-Freezing Active Visual Effects Decay at top of update
 // ─────────────────────────────────────────────
 
-import { Fighter, resolveDamageNumberColor } from '../fighter.js';
+import { Fighter, resolveDamageNumberColor, computeScaledFighterRadius } from '../fighter.js';
 import { shiroConfig } from '../../configs/characters/shiroConfig.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { ARENA_TILE_COUNT } from '../../systems/arenaTileGrid.js';
@@ -43,7 +43,7 @@ export class ShiroFighter extends Fighter {
     this.maxHp = shiroConfig.maxHp || 340;
     this.speed = shiroConfig.speed || 5.6;
     this.baseSpeed = shiroConfig.speed || 5.6;
-    this.r = shiroConfig.radius || shiroConfig.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? shiroConfig.radius ?? shiroConfig.r ?? 25);
     this.radius = this.r;
 
     // Basic Attack Cadence (No Skills — 100% Troop Summoning)

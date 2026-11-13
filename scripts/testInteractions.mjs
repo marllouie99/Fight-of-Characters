@@ -6957,6 +6957,36 @@ async function runInteractionTests() {
     naoya.isDomainActive = false;
     resetNaoyaDomainDimOpacity();
 
+    // Test Gojo Unlimited Void Domain Overlay & Limitless Environment Dim Screen
+    const { renderGojoDomainBackground, renderRubbickDomainBackground } = await import('../js/entities/fighters/gojo/gojoDomainVisuals.js');
+    const { drawGojoDomainDimScreen, getGojoDomainDimOpacity, resetGojoDomainDimOpacity } = await import('../js/graphics/renderers/domainDimOverlays.js');
+    const { gojoConfig } = await import('../js/configs/characters/gojoConfig.js');
+    assert(gojoConfig.assets.domainOverlay === 'Assets/model/gojo/gojo_domain_arena_overlay.png', `gojoConfig.assets.domainOverlay must point to Assets/model/gojo/gojo_domain_arena_overlay.png (got ${gojoConfig.assets.domainOverlay})`);
+
+    resetGojoDomainDimOpacity();
+    assert(getGojoDomainDimOpacity() === 0, 'Initial Gojo domain dim opacity must be 0');
+
+    gojo.domainActive = true;
+    mockCtx.resetStackDepth();
+    renderGojoDomainBackground(gojo, mockCtx, false);
+    assert(mockCtx.getStackDepth() === 0, `renderGojoDomainBackground must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+
+    mockCtx.resetStackDepth();
+    renderRubbickDomainBackground(gojo, mockCtx, true);
+    assert(mockCtx.getStackDepth() === 0, `renderRubbickDomainBackground must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+
+    state.fighters = [gojo];
+    state.ctx = mockCtx;
+    state.canvas = mockCtx.canvas;
+    for (let frame = 0; frame < 10; frame++) {
+      mockCtx.resetStackDepth();
+      drawGojoDomainDimScreen();
+      assert(mockCtx.getStackDepth() === 0, `drawGojoDomainDimScreen frame ${frame} must maintain 0 Canvas stack depth (got ${mockCtx.getStackDepth()})`);
+    }
+    assert(getGojoDomainDimOpacity() > 0, `Gojo domain dim opacity must ramp up when domain is active (got ${getGojoDomainDimOpacity()})`);
+    gojo.domainActive = false;
+    resetGojoDomainDimOpacity();
+
     // G. Naoya Vengeful Curse Rebirth & Awakened Jet Cursed Spirit Transformation
     const { naoyaConfig } = await import('../js/configs/characters/naoyaConfig.js');
     const savedEnableCurseRebirth = naoyaConfig.enableCurseRebirth;
@@ -8048,7 +8078,8 @@ async function runInteractionTests() {
         }
         return prevPlaySFX?.(src, vol);
       };
-      sans.karmaTargets.set(target, { stacks: 8, timer: 100, tickTimer: 13 });
+      const krTickInterval = (CONFIG && CONFIG.sans && CONFIG.sans.karmaTickInterval) || 14;
+      sans.karmaTargets.set(target, { stacks: 8, timer: 100, tickTimer: krTickInterval - 1 });
       sans._updateKarma();
       audioSystem.playSFX = prevPlaySFX;
 
@@ -12060,6 +12091,78 @@ async function runInteractionTests() {
     console.log('      ✅ Sans Gaster Blaster beam clamping against Gojo Infinity & Knight Shield verified.');
   }
 
+  // ── TEST 95b: Sans Basic Bone & Bone Zone Frozen by Active Gojo Infinity Barrier ──
+  console.log('   Testing Sans Basic Bone Freeze on Active Gojo Infinity Barrier...');
+  {
+    const SansClass = FIGHTER_CLASS_MAP['sans'];
+    const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+    assert(SansClass && GojoClass, 'Sans and Gojo classes must exist');
+
+    const savedEnableInf = CONFIG.gojo?.enableInfinity;
+    const savedInfChance = CONFIG.gojo?.infinityFreezeChance;
+    const savedInfDuration = CONFIG.gojo?.infinityFreezeDuration;
+    if (CONFIG.gojo) {
+      CONFIG.gojo.enableInfinity = true;
+      CONFIG.gojo.infinityFreezeChance = 1.0;
+      CONFIG.gojo.infinityFreezeDuration = 12;
+    }
+
+    try {
+      const sans = new SansClass({ x: 120, y: 300, team: 0 });
+      const gojo = new GojoClass({ x: 260, y: 300, team: 1 });
+      sans.x = 120; sans.y = 300; sans.team = 0; sans.gunAngle = 0;
+      gojo.x = 260; gojo.y = 300; gojo.team = 1;
+      gojo.infinityActive = true;
+      gojo.infinityCooldown = 0;
+      gojo.isMeleeMode = false;
+      gojo.domainActive = false;
+
+      state.fighters = [sans, gojo];
+      state.illusions = [];
+
+      const initialGojoHp = gojo.hp;
+      sans.castBasicBone(gojo);
+      assert(sans.boneProjectiles.length === 1, 'castBasicBone must spawn 1 white bone projectile');
+
+      let frozeAtBarrier = false;
+      const infR = CONFIG.gojo?.infinityRadius ?? ((gojo.r || 25) + 30);
+      for (let step = 0; step < 30; step++) {
+        sans._updateBones();
+        const bone = sans.boneProjectiles[0];
+        if (bone && bone.isFrozenByInfinity) {
+          frozeAtBarrier = true;
+          assert(bone.vx === 0 && bone.vy === 0, 'Frozen bone must have zero velocity');
+          assert(bone.damage === 0 && bone.isVisual === true, 'Frozen bone must nullify damage and collisions');
+          const distFromGojo = Math.hypot(bone.x - gojo.x, bone.y - gojo.y);
+          assert(distFromGojo <= infR + 0.5 && distFromGojo > gojo.r, `Bone must freeze at Infinity barrier perimeter (${gojo.r} < ${distFromGojo.toFixed(1)} <= ${infR})`);
+          break;
+        }
+      }
+      assert(frozeAtBarrier, 'Sans basic bone MUST freeze in mid-air on active Gojo Infinity barrier instead of vanishing');
+      assert(gojo.hp === initialGojoHp, 'Gojo with active Infinity must take 0 HP damage from blocked bone');
+      assert((gojo.karmaDamage || 0) === 0, 'Gojo with active Infinity must accumulate 0 Karma from blocked bone');
+
+      mockCtx.resetStackDepth();
+      sans.draw(mockCtx);
+      assert(mockCtx.getStackDepth() === 0, 'Sans.draw must maintain 0 Canvas 2D stack depth with frozen bone');
+
+      // Ensure frozen bone stays suspended until infinityFreezeTimer runs down, then cleans up
+      for (let t = 0; t < 15; t++) {
+        sans._updateBones();
+      }
+      assert(sans.boneProjectiles.length === 0, 'Frozen bone must clean up cleanly once infinityFreezeTimer expires');
+      console.log('      ✅ Sans Basic Bone Freeze on Active Gojo Infinity Barrier verified.');
+    } finally {
+      if (CONFIG.gojo) {
+        CONFIG.gojo.enableInfinity = savedEnableInf;
+        CONFIG.gojo.infinityFreezeChance = savedInfChance;
+        CONFIG.gojo.infinityFreezeDuration = savedInfDuration;
+      }
+      state.fighters = [];
+      state.illusions = [];
+    }
+  }
+
   // ── Test 96: Gojo Blue Projectile Trajectory, Pierce Through Enemies & Wall Linger Standard ──
   {
     console.log('🧪 Test 96: Gojo Blue Projectile Trajectory, Pierce & Arena Wall Linger Standard...');
@@ -12776,12 +12879,84 @@ async function runInteractionTests() {
     triggerSaitamaWallShatter(saitama.x, saitama.y, 0, arena);
     assert(state.shatteredWalls.length === 0, 'triggerSaitamaWallShatter must exit early and spawn 0 shattered wall pieces when disabled');
 
-    // 6. Stack Depth Integrity on Saitama
+    // 6. Config-Driven Wall vs HUD Independent & Per-Attack Toggles
+    const { clearSaitamaWallShatters } = await import('../js/graphics/particles/saitamaWallShatter.js');
+    const savedSaitamaFlags = {
+      normalPunchEnabled: CONFIG.saitama.normalPunchEnabled,
+      enableWallInteraction: CONFIG.saitama.enableWallInteraction,
+      enableWallShatter: CONFIG.saitama.enableWallShatter,
+      enableWallPin: CONFIG.saitama.enableWallPin,
+      enableHudInteraction: CONFIG.saitama.enableHudInteraction,
+      enableHudShatter: CONFIG.saitama.enableHudShatter,
+      normalPunchWallInteraction: CONFIG.saitama.normalPunchWallInteraction,
+      normalPunchHudInteraction: CONFIG.saitama.normalPunchHudInteraction,
+      consecutivePunchesWallInteraction: CONFIG.saitama.consecutivePunchesWallInteraction,
+      consecutivePunchesHudInteraction: CONFIG.saitama.consecutivePunchesHudInteraction,
+      seriousCounterWallInteraction: CONFIG.saitama.seriousCounterWallInteraction,
+      seriousCounterHudInteraction: CONFIG.saitama.seriousCounterHudInteraction
+    };
+    try {
+      // 6a. HUD Shatter enabled independently while Wall Shatter & Wall Interaction stay false
+      CONFIG.saitama.normalPunchEnabled = 1;
+      CONFIG.saitama.enableWallInteraction = false;
+      CONFIG.saitama.enableWallShatter = false;
+      CONFIG.saitama.enableHudInteraction = true;
+      CONFIG.saitama.enableHudShatter = true;
+      CONFIG.saitama.normalPunchHudInteraction = true;
+      state.shatteredWalls = [];
+      state.hudShatters = null;
+      saitama._postCounterRecoveryTimer = 0;
+      saitama._counterWindupTimer = 0;
+      saitama._counterPunchTimer = 0;
+      saitama.isCountering = false;
+      saitama.punchCooldownTimer = 0;
+      saitama.gunAngle = -Math.PI / 2; // Upward blast into top wall / top HUD
+      saitama.angle = -Math.PI / 2;
+      dummy.hp = dummy.maxHp;
+      dummy.dead = false;
+      dummy.isDead = false;
+      dummy.x = saitama.x;
+      dummy.y = saitama.y - 40;
+      saitama.executeNormalPunch(dummy);
+      assert(state.shatteredWalls.length === 0, 'Wall shatter must remain disabled when enableWallInteraction is false even if HUD shatter is true');
+      assert(Boolean(state.hudShatters && state.hudShatters.topNameShatter), 'Upward Normal Punch must shatter Top HUD when enableHudInteraction & enableHudShatter are enabled independently');
+
+      // 6b. Per-attack Normal Punch toggle suppression while Serious Counter remains active
+      clearSaitamaWallShatters();
+      CONFIG.saitama.normalPunchHudInteraction = false;
+      CONFIG.saitama.seriousCounterHudInteraction = true;
+      saitama.punchCooldownTimer = 0;
+      saitama.executeNormalPunch(dummy);
+      assert(!state.hudShatters, 'Normal Punch must NOT shatter HUD when normalPunchHudInteraction is false');
+
+      dummy.hp = dummy.maxHp;
+      dummy.dead = false;
+      dummy.isDead = false;
+      dummy.x = saitama.x;
+      dummy.y = saitama.y - 40;
+      saitama.gunAngle = -Math.PI / 2;
+      saitama.angle = -Math.PI / 2;
+      saitama._counterAimAngle = -Math.PI / 2;
+      saitama._counterReleaseAngle = -Math.PI / 2;
+      saitama._counterReleaseOriginX = saitama.x;
+      saitama._counterReleaseOriginY = saitama.y;
+      saitama._counterPunchTarget = dummy;
+      saitama._counterPunchTimer = 1;
+      saitama._tickCounterPunch();
+      assert(Boolean(state.hudShatters && state.hudShatters.topNameShatter), 'Serious Counter must still shatter HUD when normalPunchHudInteraction is false and seriousCounterHudInteraction is true');
+    } finally {
+      Object.assign(CONFIG.saitama, savedSaitamaFlags);
+      clearSaitamaWallShatters();
+      state.gameState = 'playing';
+      state.winner = null;
+    }
+
+    // 7. Stack Depth Integrity on Saitama
     mockCtx.resetStackDepth();
     saitama.draw(mockCtx, dummy);
     assert(mockCtx.getStackDepth() === 0, 'Saitama.draw() must strictly maintain 0 Canvas 2D stack depth');
 
-    console.log('      ✅ Saitama arena wall interaction suppression (zero wall shatter, zero wall pin, zero wall crack) verified.');
+    console.log('      ✅ Saitama arena wall & HUD interaction toggles (suppression, independent toggle & per-attack gating) verified.');
   }
 
   // ── TEST 100: Toji Tactical Handgun / Pistol Basic Attack Standard ──
@@ -15225,13 +15400,27 @@ async function runInteractionTests() {
     assert(yuta.timeStopTimer > 0, 'Yuta MUST receive timeStopTimer from Gojo domain');
     assert(yuta._handleTimeStop() === true, 'Yuta _handleTimeStop() must return true so Yuta is frozen inside Gojo domain');
 
-    // 3. Normal Fighter Without Active Domain (Zenitsu) -> MUST be frozen by Gojo Unlimited Void
+    // 3. Non-JJK Fighter Without Active Domain (Zenitsu):
+    //    - Under No-Verse-Equalization (default): NOT paralyzed (slowed instead of frozen)
+    //    - Under Verse Equalization (domainVerseEqualization = true): fully frozen
     const zenitsu = new ZenitsuClass(360, 300, 1);
-    state.fighters = [gojo, zenitsu];
-    gojo._applyDomainEffect();
+    const prevVe = CONFIG.gojo.domainVerseEqualization;
+    try {
+      CONFIG.gojo.domainVerseEqualization = false;
+      state.fighters = [gojo, zenitsu];
+      gojo._applyDomainEffect();
+      assert((zenitsu.timeStopTimer || 0) === 0, 'Non-JJK fighter MUST NOT receive timeStopTimer when domainVerseEqualization is false');
+      assert(zenitsu._handleTimeStop() === false, 'Non-JJK fighter MUST NOT freeze when domainVerseEqualization is false');
 
-    assert(zenitsu.timeStopTimer > 0, 'Normal enemy without active domain MUST be frozen by Gojo Unlimited Void');
-    assert(zenitsu._handleTimeStop() === true, 'Normal enemy without active domain MUST have _handleTimeStop() return true inside Gojo domain');
+      CONFIG.gojo.domainVerseEqualization = true;
+      gojo._applyDomainEffect();
+      assert(zenitsu.timeStopTimer > 0, 'Non-JJK fighter MUST be frozen by Gojo Unlimited Void when domainVerseEqualization is true');
+      assert(zenitsu._handleTimeStop() === true, 'Non-JJK fighter MUST have _handleTimeStop() return true when domainVerseEqualization is true');
+    } finally {
+      CONFIG.gojo.domainVerseEqualization = prevVe;
+      zenitsu.timeStopTimer = 0;
+      zenitsu.hitStunTimer = 0;
+    }
 
     state.fighters = [];
     console.log('      ✅ Sukuna frozen stasis (zero movement, zero Fuga casting) and non-pausing skill durations verified.');
@@ -16532,6 +16721,7 @@ async function runInteractionTests() {
     const lawnmower = new LawnmowerEntity(410, 300, crazyDave, -1);
 
     state.fighters = [pacman, crazyDave, peashooter, wallnut, lawnmower];
+    const prevGetTeam122 = state.getFighterTeam;
     state.getFighterTeam = (idx) => {
       const f = state.fighters[idx];
       if (!f) return null;
@@ -16599,6 +16789,7 @@ async function runInteractionTests() {
 
     // Clean up
     state.fighters = [];
+    state.getFighterTeam = prevGetTeam122;
     console.log('      ✅ Pac-Man Power Pellet vs Crazy Dave plants (immovable ghost state & 1-hit kill) verified.');
   }
 
@@ -16650,7 +16841,8 @@ async function runInteractionTests() {
     assert(isagi.characterId === 'isagi', 'isagi.characterId must be "isagi"');
     assert(isagi.hp > 0, 'isagi.hp must be positive');
     assert(CONFIG.isagi.hp === 420, 'CONFIG.isagi.hp must be 420');
-    assert(isagi.r === (CONFIG.isagi.r || CONFIG.isagi.radius || 25), 'isagi.r must match config radius');
+    const expectedIsagiRadius = (CONFIG.isagi.r || CONFIG.isagi.radius || 25) * (CONFIG.globalFighter?.sizeMultiplier ?? 1.0) * (CONFIG.internalScale ?? 1.0);
+    assert(isagi.r === expectedIsagiRadius, `isagi.r must match globally scaled config radius (${expectedIsagiRadius}), got ${isagi.r}`);
     assert(isagi.themeColor === '#00F0FF', 'isagi.themeColor must be #00F0FF');
 
     const dummy = {
@@ -16668,6 +16860,7 @@ async function runInteractionTests() {
     };
     const arena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
     state.mode = '1v1';
+    const prevGetTeam124 = state.getFighterTeam;
     state.getFighterTeam = (idx) => (idx === 0 ? 0 : 1);
     state.fighters = [isagi, dummy];
 
@@ -16915,7 +17108,7 @@ async function runInteractionTests() {
 
     // Clean up
     state.fighters = [];
-    delete state.getFighterTeam;
+    state.getFighterTeam = prevGetTeam124;
     console.log('      ✅ Isagi Yoichi (Blue Lock) natural circle movement, physical kicks upon meeting, elastic deflection, One-Two bounce backs & Direct Volley verified.');
   }
 
@@ -16934,6 +17127,7 @@ async function runInteractionTests() {
     const pacman = new PacmanClass(200, 300, 0);
     const eye = new EyeClass(350, 400, 1);
     state.fighters = [pacman, eye];
+    const prevGetTeamEye = state.getFighterTeam;
     state.getFighterTeam = (idx) => idx;
 
     // Create a Servant of Cthulhu minion belonging to the Eye
@@ -17020,7 +17214,7 @@ async function runInteractionTests() {
     // Cleanup
     state.fighters = [];
     state.illusions = [];
-    delete state.getFighterTeam;
+    state.getFighterTeam = prevGetTeamEye;
     console.log('      ✅ Servant of Cthulhu Pac-Man ghost anti-clipping & arena containment verified.');
   }
 
@@ -18059,7 +18253,8 @@ async function runInteractionTests() {
     // 1. Identity & Rule 24 Scale Verification
     assert(chigiri.characterId === 'chigiri', `Chigiri characterId must be 'chigiri', got ${chigiri.characterId}`);
     assert(chigiri.type === 'chigiri', `Chigiri type must be 'chigiri', got ${chigiri.type}`);
-    assert(chigiri.r === (chigiriConfig.radius || 27), `Chigiri radius must match config, got ${chigiri.r}`);
+    const expectedChigiriRadius = (chigiriConfig.radius || 25) * (CONFIG.globalFighter?.sizeMultiplier ?? 1.0) * (CONFIG.internalScale ?? 1.0);
+    assert(chigiri.r === expectedChigiriRadius, `Chigiri radius must match globally scaled config (${expectedChigiriRadius}), got ${chigiri.r}`);
     assert(isBlueLockFighter(chigiri) === true, 'isBlueLockFighter(chigiri) must be true');
     assert(chigiri.damageNumberColor === '#EC4899', `Chigiri damageNumberColor must be #EC4899, got ${chigiri.damageNumberColor}`);
     assert(resolveDamageNumberColor(chigiri) === '#EC4899', `resolveDamageNumberColor(chigiri) must be #EC4899, got ${resolveDamageNumberColor(chigiri)}`);
@@ -21276,6 +21471,591 @@ async function runInteractionTests() {
     }
 
     console.log('      ✅ Goku & Vegeta Smooth Punch Kinematics, Zero-Stretch Floating Pixel Fists, Impact Lock & Stack Balance verified cleanly.');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TEST 164: SANS HAND TELEKINESIS STASIS PREVENTION & GRAVITY SLAM AUTO-RESET STANDARD (RULE 20)
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    console.log('🧪 Test 164: Sans Hand Telekinesis Stasis Prevention & Gravity Slam Auto-Reset Standard (Rule 20)...');
+
+    const { SansFighter } = await import('../js/entities/fighters/SansFighter.js');
+    const { drawSansSkin } = await import('../js/graphics/fighters/sansSkin.js');
+
+    const sans = new SansFighter({ name: 'SANS' });
+    const opponent = {
+      name: 'Dummy',
+      x: 350,
+      y: 300,
+      r: 25,
+      hp: 100,
+      maxHp: 100,
+      vx: 0,
+      vy: 0,
+      takeDamage(amount) { this.hp = Math.max(0, this.hp - amount); },
+      aim() {}
+    };
+
+    const mockCtx = {
+      _stack: 0,
+      save() { this._stack++; },
+      restore() { this._stack--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      rect() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      drawImage() {},
+      setLineDash() {},
+      quadraticCurveTo() {},
+      createRadialGradient() {
+        return { addColorStop() {} };
+      },
+      clip() {},
+      roundRect() {},
+      createLinearGradient() { return { addColorStop() {} }; },
+      createRadialGradient() { return { addColorStop() {} }; },
+      getStackDepth() { return this._stack; },
+      resetStackDepth() { this._stack = 0; }
+    };
+
+    // 1. Initial State: Gravity Slam inactive, hand resting at canonical default coordinates
+    assert(sans.gravitySlamTimer === 0, 'Sans gravitySlamTimer must initialize at 0');
+    assert(sans.blueSoulActive === false, 'Sans blueSoulActive must initialize at false');
+    assert(sans.blueSoulVictim === null, 'Sans blueSoulVictim must initialize at null');
+
+    // 2. Cast Bad Time Gravity Slam
+    sans.castBadTimeGravitySlam(opponent);
+    assert(sans.gravitySlamTimer > 0, 'castBadTimeGravitySlam must activate gravitySlamTimer > 0');
+    assert(sans.blueSoulActive === true, 'castBadTimeGravitySlam must set blueSoulActive to true');
+    assert(sans.blueSoulVictim === opponent, 'castBadTimeGravitySlam must assign blueSoulVictim');
+
+    // 3. Test Opponent Defeat Mid-Slam: Timers & telekinesis states MUST be cleanly extinguished
+    opponent.hp = 0;
+    opponent.isDead = true;
+    sans.update(opponent, 0, state.arena);
+
+    assert(sans.gravitySlamTimer === 0, 'gravitySlamTimer MUST cleanly reset to 0 when opponent dies mid-slam');
+    assert(sans.blueSoulActive === false, 'blueSoulActive MUST cleanly reset to false when opponent dies mid-slam');
+    assert(sans.blueSoulVictim === null, 'blueSoulVictim MUST be cleared to null when opponent dies mid-slam');
+
+    // 4. Verify Sans Skin Rendering after Opponent Defeat with Win Quote ("take a break, pal.")
+    mockCtx.resetStackDepth();
+    drawSansSkin(mockCtx, sans);
+    assert(mockCtx.getStackDepth() === 0, 'drawSansSkin must maintain 0 stack depth after victory');
+
+    // 5. Test Interrupt Mid-Slam (CC / TimeStop / Ambush Stasis)
+    opponent.hp = 100;
+    opponent.isDead = false;
+    sans.castBadTimeGravitySlam(opponent);
+    assert(sans.gravitySlamTimer > 0, 'gravitySlamTimer must be active');
+    sans.interruptAttacks();
+    assert(sans.gravitySlamTimer === 0, 'interruptAttacks must reset gravitySlamTimer to 0');
+    assert(sans.blueSoulActive === false, 'interruptAttacks must reset blueSoulActive to false');
+    assert(sans.blueSoulVictim === null, 'interruptAttacks must clear blueSoulVictim');
+
+    // 6. Test Sans Defeat Mid-Slam (Sans Death)
+    sans.hp = 1;
+    sans.stamina = 0; // Exhaust stamina so dodge does not trigger
+    sans.castBadTimeGravitySlam(opponent);
+    assert(sans.gravitySlamTimer > 0, 'gravitySlamTimer must be active');
+    sans.takeDamage(999, opponent);
+    assert(sans.gravitySlamTimer === 0, 'takeDamage resulting in death must reset gravitySlamTimer to 0');
+    assert(sans.blueSoulActive === false, 'takeDamage resulting in death must reset blueSoulActive to false');
+    assert(sans.blueSoulVictim === null, 'takeDamage resulting in death must clear blueSoulVictim');
+
+    // 7. Verify Winner Reveal Safety Gate in drawSansSkin
+    sans._isWinnerReveal = true;
+    sans.gravitySlamTimer = 50; // Mock lingering timer
+    mockCtx.resetStackDepth();
+    drawSansSkin(mockCtx, sans);
+    assert(mockCtx.getStackDepth() === 0, 'drawSansSkin must maintain 0 stack depth during Winner Reveal');
+
+    console.log('      ✅ Sans Hand Telekinesis Stasis Prevention, Gravity Slam Auto-Reset & Stack Balance verified cleanly.');
+  }
+
+  // ── TEST 165: Mahito Summoned Transfigured Humans Auto-Death & Detonation Suppression on Master Death ──
+  console.log('🧪 Test 165: Mahito Transfigured Humans Auto-Death & Detonation Suppression on Master Death...');
+  {
+    const MahitoClass = FIGHTER_CLASS_MAP.mahito;
+    const GojoClass = FIGHTER_CLASS_MAP.gojo;
+    assert(MahitoClass, 'Mahito class must be registered in FIGHTER_CLASS_MAP');
+    assert(GojoClass, 'Gojo class must be registered in FIGHTER_CLASS_MAP');
+
+    const testArena = state.arena || { x: 45, y: 240, width: 450, height: 450, wallWidth: 4 };
+    state.arena = testArena;
+    state.gameState = 'playing';
+    state.roundOver = false;
+    state.matchEnded = false;
+    state._isWinnerRevealActive = false;
+
+    const { updateIllusions } = await import('../js/systems/illusionSystem.js');
+    const { drawIllusions } = await import('../js/graphics/renderers/EntityRenderer.js');
+    const { projectileSystem } = await import('../js/systems/projectileSystem.js');
+
+    const mahito = new MahitoClass({ radius: 25, x: 200, y: 465, hp: 300, maxHp: 300, color: '#D946EF' });
+    const opponent = new GojoClass({ radius: 25, x: 300, y: 465, hp: 500, maxHp: 500, color: '#262039' });
+    mahito.team = 0;
+    opponent.team = 1;
+    state.fighters = [mahito, opponent];
+    state.illusions = [];
+
+    // 1. Summon Transfigured Humans
+    mahito.executeSoulMultiplicity(opponent);
+    const summonedCount = state.illusions.filter(il => il && il.isTransfiguredHuman && il.owner === mahito).length;
+    assert(summonedCount > 0, `Mahito must summon Transfigured Humans via Soul Multiplicity, got ${summonedCount}`);
+
+    // Verify minions are active and alive
+    for (const minion of state.illusions) {
+      assert(minion.isTransfiguredHuman === true, 'Minion must have isTransfiguredHuman === true');
+      assert(minion.hp > 0, 'Minion must start with hp > 0');
+      assert(!minion.isDying, 'Minion must not be dying upon spawn');
+      assert(!minion.killedByOwnerDeath, 'Minion must not have killedByOwnerDeath upon spawn');
+    }
+
+    // 2. Mahito takes lethal damage and dies
+    const initialOpponentHp = opponent.hp;
+    mahito.takeDamage(9999, opponent);
+    assert(mahito.hp <= 0 || mahito.isDead, 'Mahito must be dead after lethal damage');
+
+    // 3. Verify all of Mahito's active transfigured humans immediately enter death state
+    for (const minion of state.illusions) {
+      if (minion.isTransfiguredHuman && minion.owner === mahito) {
+        assert(minion.hp === 0, 'Transfigured Human hp must be set to 0 on master death');
+        assert(minion.isDying === true, 'Transfigured Human must enter isDying state on master death');
+        assert(minion.killedByOwnerDeath === true, 'Transfigured Human must be marked with killedByOwnerDeath');
+        assert(minion.vx === 0 && minion.vy === 0, 'Transfigured Human movement velocity must be zeroed immediately');
+      }
+    }
+
+    // 4. Advance frames to let the dying swelling animation finish and trigger explosion
+    for (let f = 0; f < 30; f++) {
+      updateIllusions();
+    }
+
+    // 5. Verify all transfigured humans are now fully purged from state.illusions
+    const remainingTransfigured = state.illusions.filter(il => il && il.isTransfiguredHuman && il.owner === mahito);
+    assert(remainingTransfigured.length === 0, `All transfigured humans must be removed after death explosion, but ${remainingTransfigured.length} remained`);
+
+    // 6. Verify opponent HP was NOT damaged by the death explosions of minions killed by owner death
+    assert(opponent.hp === initialOpponentHp, `Opponent HP must be unharmed by minions dying due to Mahito defeat, expected ${initialOpponentHp} got ${opponent.hp}`);
+
+    // 7. Verify Body Repel projectile detonation does not spawn minions when owner is dead
+    const fakeBodyRepel = {
+      x: 250,
+      y: 465,
+      angle: 0,
+      owner: 0,
+      ownerFighter: mahito,
+      _detonated: false
+    };
+    projectileSystem.triggerMahitoBodyRepelSummon(fakeBodyRepel);
+    const postBodyRepelCount = state.illusions.filter(il => il && il.isTransfiguredHuman && il.owner === mahito).length;
+    assert(postBodyRepelCount === 0, 'Body Repel must not spawn transfigured humans after Mahito is dead');
+
+    // 8. Test Immediate Purge mode (killTransfiguredHumans(true))
+    mahito.hp = 300;
+    mahito.isDead = false;
+    mahito.dead = false;
+    mahito._hasDied = false;
+    mahito.executeSoulMultiplicity(opponent);
+    assert(state.illusions.length > 0, 'Minions must spawn again for immediate purge test');
+    mahito.killTransfiguredHumans(true);
+    assert(state.illusions.length === 0, 'killTransfiguredHumans(true) must immediately purge all active transfigured humans');
+
+    // 9. Canvas 2D transform stack balance verification
+    const mockCtx = {
+      _stack: 0,
+      save() { this._stack++; },
+      restore() { this._stack--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      rect() {},
+      fillRect() {},
+      strokeRect() {},
+      clearRect() {},
+      drawImage() {},
+      setLineDash() {},
+      quadraticCurveTo() {},
+      bezierCurveTo() {},
+      ellipse() {},
+      clip() {},
+      roundRect() {},
+      createLinearGradient() { return { addColorStop() {} }; },
+      createRadialGradient() { return { addColorStop() {} }; },
+      getStackDepth() { return this._stack; },
+      resetStackDepth() { this._stack = 0; }
+    };
+    state.ctx = mockCtx;
+    mockCtx.resetStackDepth();
+    mahito.executeSoulMultiplicity(opponent);
+    drawIllusions();
+    assert(mockCtx.getStackDepth() === 0, 'drawIllusions must maintain 0 Canvas 2D stack depth');
+    mahito.killTransfiguredHumans(true);
+
+    console.log('      ✅ Mahito Transfigured Humans Auto-Death & Detonation Suppression on Master Death verified cleanly.');
+  }
+
+  // =========================================================================
+  // Test 166: Afterimages Ground Shadow Suppression & Ethereal Ghost Rendering Standard
+  // =========================================================================
+  {
+    console.log('🧪 Test 166: Afterimages Ground Shadow Suppression & Ethereal Ghost Rendering Standard...');
+    const { drawAfterimages } = await import('../js/entities/fighters/mahoraga/mahoragaVisuals.js');
+
+    const mahoragaDummy = {
+      r: 32,
+      adaptationAfterimages: [
+        { x: 150, y: 150, timer: 12, maxTimer: 20, gunAngle: 0.5, fromX: 100, fromY: 100, toX: 150, toY: 150 }
+      ],
+      areAttackEffectsSuppressed: () => false
+    };
+
+    let groundShadowDrawn = false;
+    let stackDepth = 0;
+    const testCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      ellipse(x, y, rx, ry) {
+        // Ground drop shadow previously checked y > 0 with r * 0.75 offset
+        if (y > 10 && rx > 20) {
+          groundShadowDrawn = true;
+        }
+      },
+      set fillStyle(val) {
+        if (typeof val === 'string' && val.includes('rgba(0, 0, 0') && groundShadowDrawn) {
+          groundShadowDrawn = true;
+        }
+      },
+      set strokeStyle(val) {},
+      set lineWidth(val) {},
+      set globalAlpha(val) {}
+    };
+
+    drawAfterimages(testCtx, mahoragaDummy);
+
+    assert(!groundShadowDrawn, 'drawAfterimages must NOT draw ground drop shadows under afterimage ghost positions');
+    assert(stackDepth === 0, 'drawAfterimages must preserve 0 Canvas 2D transform stack depth');
+
+    console.log('      ✅ Afterimages Ground Shadow Suppression & Ethereal Ghost Rendering Standard verified cleanly.');
+  }
+
+  // =========================================================================
+  // Test 167: Sans Teleport Dodge Afterimages Luminous Ghost Model (Zero Dark Shadows / Zero Black Shorts)
+  // =========================================================================
+  {
+    console.log('🧪 Test 167: Sans Teleport Dodge Afterimages Luminous Ghost Model...');
+    const { drawSansAfterImages, drawSansGhostModel } = await import('../js/graphics/fighters/sansSkin.js');
+
+    const sansDummy = {
+      r: 25,
+      afterImages: [
+        { x: 200, y: 200, timer: 14, maxTimer: 20, angle: 0, gunAngle: 0, r: 25, alpha: 0.40 }
+      ],
+      areAttackEffectsSuppressed: () => false
+    };
+
+    let stackDepth = 0;
+    let darkShadowDrawn = false;
+    let imageDrawn = false;
+
+    const testCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      stroke() {},
+      fill() {},
+      arc() {},
+      rect() {},
+      fillRect() {},
+      drawImage() {
+        imageDrawn = true;
+      },
+      set fillStyle(val) {
+        if (typeof val === 'string') {
+          // Verify no pitch black or dark charcoal fills are assigned during ghost silhouette rendering
+          if (val === '#0E0F14' || val === '#18181B' || val === '#09090B' || val === '#0F0F12') {
+            darkShadowDrawn = true;
+          }
+        }
+      },
+      set strokeStyle(val) {},
+      set lineWidth(val) {},
+      set globalAlpha(val) {}
+    };
+
+    drawSansAfterImages(testCtx, sansDummy);
+
+    assert(!darkShadowDrawn, 'drawSansAfterImages must NOT draw dark black/charcoal pixels or shadows');
+    assert(stackDepth === 0, 'drawSansAfterImages must strictly preserve Canvas 2D transform stack depth');
+    assert(imageDrawn, 'drawSansAfterImages must blit pre-baked ghost canvas quad adhering to Rule 35');
+
+    // Verify _isSilhouettePass suppression (ensures fighterOutlineRenderer never turns afterimages or aura into black silhouettes)
+    sansDummy._isSilhouettePass = true;
+    let silhouettePassDrawn = false;
+    const silTestCtx = {
+      save() {},
+      restore() {},
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      arc() { silhouettePassDrawn = true; },
+      drawImage() { silhouettePassDrawn = true; }
+    };
+    drawSansAfterImages(silTestCtx, sansDummy);
+    assert(!silhouettePassDrawn, 'drawSansAfterImages must immediately return with ZERO drawing when _isSilhouettePass is true');
+
+    console.log('      ✅ Sans Teleport Dodge Afterimages Luminous Ghost Model (Zero Dark Shadows/Shorts & Zero Silhouette Pass Leaks) verified cleanly.');
+  }
+
+  // ─── Test 114: Gojo Unlimited Void No-Verse-Equalization (Slow + Attacks for Non-JJK, Freeze for JJK, Immune for Toji) ───
+  {
+    console.log('🧪 Test 114: Gojo Unlimited Void No-Verse-Equalization Standard...');
+    const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+    const SaitamaClass = FIGHTER_CLASS_MAP['saitama'];
+    const ZenitsuClass = FIGHTER_CLASS_MAP['zenitsu'];
+    const SukunaClass = FIGHTER_CLASS_MAP['sukuna'];
+    const TojiClass = FIGHTER_CLASS_MAP['toji'];
+    const RubbickClass = FIGHTER_CLASS_MAP['rubbick'];
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+
+    const prevVe = CONFIG.gojo.domainVerseEqualization;
+    const prevSlow = CONFIG.gojo.domainNonJjkSlowMultiplier;
+
+    try {
+      CONFIG.gojo.domainVerseEqualization = false;
+      CONFIG.gojo.domainNonJjkSlowMultiplier = 0.20;
+
+      const gojo = new GojoClass({ x: 160, y: 400, controls: {} });
+      const saitama = new SaitamaClass({ x: 320, y: 400, controls: {} });
+      const zenitsu = new ZenitsuClass(350, 460, 1);
+      const sukuna = new SukunaClass({ x: 260, y: 340, controls: {} });
+      const toji = new TojiClass({ x: 260, y: 500, controls: {} });
+
+      gojo.hp = 1000;
+      saitama.hp = 1000;
+      zenitsu.hp = 1000;
+      sukuna.hp = 1000;
+      toji.hp = 1000;
+
+      // Baseline pre-domain speeds
+      saitama.vx = saitama.speed;
+      saitama.vy = 0;
+      zenitsu.vx = zenitsu.speed;
+      zenitsu.vy = 0;
+      toji.vx = toji.speed;
+      toji.vy = 0;
+
+      state.fighters = [gojo, saitama, zenitsu, sukuna, toji];
+      gojo._activateDomain(testArena);
+
+      // JJK Sukuna is frozen; Non-JJK Saitama & Zenitsu are NOT frozen
+      assert(sukuna._handleTimeStop() === true && sukuna.timeStopTimer > 0, 'JJK fighter Sukuna must still freeze in Unlimited Void');
+      assert(saitama._handleTimeStop() === false && (saitama.timeStopTimer || 0) === 0, 'Saitama must NOT freeze when VE is false');
+      assert(zenitsu._handleTimeStop() === false && (zenitsu.timeStopTimer || 0) === 0, 'Zenitsu must NOT freeze when VE is false');
+
+      // Step 25 frames of movement physics inside active Unlimited Void
+      const saitamaStartX = saitama.x;
+      const saitamaStartY = saitama.y;
+      for (let i = 0; i < 25; i++) {
+        state.frameCount = (state.frameCount || 0) + 1;
+        saitama.applyMovementPhysics(1);
+        zenitsu.applyMovementPhysics(1);
+        toji.applyMovementPhysics(1);
+      }
+
+      const saitamaSpeedAfter = Math.hypot(saitama.vx, saitama.vy);
+      const zenitsuSpeedAfter = Math.hypot(zenitsu.vx, zenitsu.vy);
+      const tojiSpeedAfter = Math.hypot(toji.vx, toji.vy);
+      const saitamaMovedDist = Math.hypot(saitama.x - saitamaStartX, saitama.y - saitamaStartY);
+
+      assert(saitamaMovedDist > 1, 'Saitama must still move inside Unlimited Void rather than freezing at 0');
+      assert(saitamaSpeedAfter > 0.1 && saitamaSpeedAfter <= saitama.speed * 0.35, `Saitama speed must slow down heavily (got ${saitamaSpeedAfter.toFixed(2)} vs base ${saitama.speed})`);
+      assert(zenitsuSpeedAfter > 0.1 && zenitsuSpeedAfter <= zenitsu.speed * 0.35, `Zenitsu speed must slow down heavily (got ${zenitsuSpeedAfter.toFixed(2)} vs base ${zenitsu.speed})`);
+      assert(tojiSpeedAfter >= toji.speed * 0.90, `Toji must remain completely un-slowed inside Unlimited Void (got ${tojiSpeedAfter.toFixed(2)} vs base ${toji.speed})`);
+
+      // Saitama can still trigger attacks (e.g. punch animation / Serious Counter) inside Unlimited Void
+      saitama.skillPunishCooldown = 0;
+      const counterStarted = saitama.executeSkillCounterPunish(gojo);
+      assert(counterStarted === true || saitama.isCountering === true, 'Saitama must still be able to execute attacks/skills inside Unlimited Void when VE is off');
+      saitama.interruptAttacks(true);
+
+      // Step Saitama's update() cleanly inside Unlimited Void (must NOT early-return freeze or zero velocity)
+      saitama.vx = saitama.speed * 0.20;
+      saitama.vy = 0;
+      const preUpdateX = saitama.x;
+      const preUpdateY = saitama.y;
+      saitama.update(gojo, 1, testArena);
+      assert(Math.hypot(saitama.x - preUpdateX, saitama.y - preUpdateY) > 0.05, 'Saitama update() must continue advancing position when VE is false');
+
+      // Saitama must still be able to dodge Gojo's punches inside Unlimited Void when VE is false
+      const prevDodgeChance = CONFIG.saitama.domainDodgeChance;
+      CONFIG.saitama.domainDodgeChance = 1.0;
+      try {
+        saitama.dodgeCooldown = 0;
+        gojo.x = saitama.x - 20;
+        gojo.y = saitama.y;
+        gojo.gunAngle = 0;
+        const hpBeforeDomainPunch = saitama.hp;
+        gojo._meleePunch(saitama);
+        assert(saitama.hp === hpBeforeDomainPunch, 'Saitama MUST be able to dodge Gojo Domain punches when VE is false');
+      } finally {
+        CONFIG.saitama.domainDodgeChance = prevDodgeChance;
+      }
+
+      // Domain expiry restores full normal speed smoothly
+      gojo.domainActive = false;
+      for (let i = 0; i < 30; i++) {
+        saitama.applyMovementPhysics(1);
+        zenitsu.applyMovementPhysics(1);
+      }
+      assert(Math.hypot(saitama.vx, saitama.vy) >= saitama.speed * 0.85, 'Saitama speed must recover after Unlimited Void expires');
+      assert(Math.hypot(zenitsu.vx, zenitsu.vy) >= zenitsu.speed * 0.85, 'Zenitsu speed must recover after Unlimited Void expires');
+
+      // Rubbick stolen Gojo Domain also respects No-Verse-Equalization
+      const rubbick = new RubbickClass({ x: 180, y: 360, controls: {} });
+      rubbick.stolenType = 'gojo_domain';
+      rubbick.stolenDomainActive = true;
+      rubbick.domainActive = true;
+      rubbick.stolenDomainTimer = 120;
+      saitama.timeStopTimer = 0;
+      sukuna.timeStopTimer = 0;
+      state.fighters = [rubbick, saitama, sukuna];
+      rubbick._updateStolenDomain(saitama, 0, testArena);
+      assert((saitama.timeStopTimer || 0) === 0 && saitama._handleTimeStop() === false, 'Rubbick stolen Unlimited Void must NOT freeze Saitama when VE is false');
+      assert(sukuna._handleTimeStop() === true, 'Rubbick stolen Unlimited Void must still freeze JJK fighter Sukuna');
+
+      // Toggling Verse Equalization ON restores full paralysis on non-JJK fighters
+      CONFIG.gojo.domainVerseEqualization = true;
+      state.fighters = [gojo, saitama];
+      gojo.domainActive = true;
+      gojo._applyDomainEffect();
+      assert(saitama.timeStopTimer > 0 && saitama._handleTimeStop() === true, 'Saitama must freeze when domainVerseEqualization is toggled ON');
+
+      state.fighters = [];
+      console.log('      ✅ Gojo Unlimited Void No-Verse-Equalization (slow + attacks for non-JJK, full freeze for JJK, immunity for Toji, VE toggle) verified cleanly.');
+    } finally {
+      CONFIG.gojo.domainVerseEqualization = prevVe;
+      CONFIG.gojo.domainNonJjkSlowMultiplier = prevSlow;
+      state.fighters = [];
+    }
+  }
+
+
+  // ─── Test 115: Gojo Infinity Barrier Disabled While Channeling Red, Purple, or Domain ───
+  {
+    console.log('🧪 Test 115: Gojo Infinity Disabled During Red, Purple & Domain Channeling...');
+    const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+    const YujiClass = FIGHTER_CLASS_MAP['yuji'];
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    const gojo = new GojoClass({ x: 180, y: 400, controls: {} });
+    const yuji = new YujiClass({ x: 420, y: 400, controls: {} });
+    gojo.hp = 1000;
+    gojo.maxHp = 1000;
+    yuji.hp = 1000;
+    yuji.maxHp = 1000;
+    gojo.infinityActive = true;
+    gojo.infinityCooldown = 0;
+    gojo.infinityBarrierHp = 210; // Partial crack HP should be preserved across skill channels
+    gojo.infinityFadeOpacity = 1;
+    state.arena = testArena;
+    state.gameState = 'playing';
+    state.fighters = [gojo, yuji];
+
+    try {
+      // Baseline: Infinity active in neutral ranged stance
+      assert(gojo.hasActiveInfinity() === true, 'Gojo must have active Infinity in neutral stance');
+
+      // 1. Reversal: Red channeling disables Infinity immediately & permits incoming damage
+      gojo._activateRed();
+      assert(gojo.infinityActive === false, 'Gojo infinityActive must drop immediately on Red start');
+      assert(gojo.hasActiveInfinity() === false, 'Gojo hasActiveInfinity() must be false while channeling Red');
+      assert(gojo.infinityFadeOpacity === 0, 'Gojo infinityFadeOpacity must be 0 while channeling Red');
+      assert(gojo.triggerInfinityBlock(gojo.x + 20, gojo.y, yuji) === false, 'triggerInfinityBlock must return false during Red channeling');
+      const hpBeforeRedHit = gojo.hp;
+      gojo.takeDamage(25, yuji, { isMelee: true });
+      assert(gojo.hp === hpBeforeRedHit - 25, `Gojo must take direct damage while channeling Red (expected ${hpBeforeRedHit - 25}, got ${gojo.hp})`);
+      assert(gojo.infinityActive === false, 'Gojo infinityActive must stay false after taking a hit during Red channeling');
+      gojo.update(yuji, 0, testArena);
+      assert(gojo.hasActiveInfinity() === false && gojo.infinityActive === false, 'Gojo update() must keep Infinity disabled during Red channeling');
+
+      // Finishing Red re-arms Infinity cleanly without resetting partial barrier HP
+      gojo.cancelRed(false);
+      gojo.redEffectTimer = 0;
+      gojo.redBuildupPhase = false;
+      gojo.update(yuji, 0, testArena);
+      assert(gojo.infinityActive === true && gojo.hasActiveInfinity() === true, 'Gojo Infinity must re-arm after Red ends');
+      assert(gojo.infinityBarrierHp === 210, `Partial Infinity barrier HP (210) must be preserved after Red ends (got ${gojo.infinityBarrierHp})`);
+
+      // 2. Hollow Purple channeling disables Infinity & permits incoming damage
+      gojo.isChannelingPurple = true;
+      gojo.purpleChargeTimer = 10;
+      gojo.update(yuji, 0, testArena);
+      assert(gojo.infinityActive === false && gojo.hasActiveInfinity() === false && gojo.infinityFadeOpacity === 0, 'Gojo Infinity must be disabled while channeling Purple');
+      const hpBeforePurpleHit = gojo.hp;
+      gojo.takeDamage(30, yuji, { isProjectile: true });
+      assert(gojo.hp === hpBeforePurpleHit - 30, 'Gojo must take direct damage while channeling Purple');
+      gojo.isChannelingPurple = false;
+      gojo.purpleChargeTimer = 0;
+      gojo.z = 0;
+      gojo.update(yuji, 0, testArena);
+      assert(gojo.hasActiveInfinity() === true, 'Gojo Infinity must re-arm cleanly when Purple channeling stops cleanly');
+
+      // 3. Domain Expansion channeling (pre-slide & hand-sign channel) disables Infinity & permits incoming damage
+      gojo._beginDomainChannel(yuji);
+      assert(gojo.infinityActive === false, 'Gojo infinityActive must drop immediately on _beginDomainChannel');
+      assert(gojo.hasActiveInfinity() === false, 'Gojo hasActiveInfinity() must be false while channeling Domain');
+      assert(gojo.infinityFadeOpacity === 0, 'Gojo infinityFadeOpacity must be 0 while channeling Domain');
+      const hpBeforeDomainHit = gojo.hp;
+      gojo.takeDamage(35, yuji, { isMelee: true });
+      assert(gojo.hp === hpBeforeDomainHit - 35, 'Gojo must take direct damage while channeling Domain');
+      gojo.update(yuji, 0, testArena);
+      assert(gojo.infinityActive === false && gojo.hasActiveInfinity() === false && gojo.infinityFadeOpacity === 0, 'Gojo update() must keep Infinity disabled during Domain channeling');
+
+      console.log('      ✅ Gojo Infinity disabled across Red, Purple & Domain channeling verified cleanly.');
+    } finally {
+      gojo.cancelRed(false);
+      gojo.isChannelingPurple = false;
+      gojo.purpleChargeTimer = 0;
+      gojo.isChannelingDomainExpansion = false;
+      gojo.isDomainPreSlide = false;
+      gojo.domainChargeTimer = 0;
+      gojo.domainActive = false;
+      state.fighters = [];
+    }
   }
 
 

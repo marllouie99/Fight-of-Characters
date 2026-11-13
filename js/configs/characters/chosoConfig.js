@@ -10,6 +10,10 @@ export const chosoConfig = {
   bossTitle: 'Death Painting Womb: Eldest Brother',
   title: 'Master of Blood Manipulation',
 
+  assets: {
+    hair: 'Assets/model/choso/Choso-hair.png',
+  },
+
   // Base Attributes (Rule 24 Humanoid Standard)
   hp: 420,
   speed: 5.3,

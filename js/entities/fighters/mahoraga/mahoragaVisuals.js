@@ -183,15 +183,7 @@ export function drawAfterimages(ctx, fighter) {
     ctx.translate(img.x, img.y);
     ctx.rotate(img.gunAngle || 0);
 
-    // 2. DARK GROUND DROP SHADOW
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(0, fighter.r * 0.75, fighter.r * 1.2, fighter.r * 0.45, 0, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.4})`;
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Divine Aura Energy Glow Circles
+    // 2. Divine Aura Energy Glow Circles
     ctx.beginPath();
     ctx.arc(0, 0, fighter.r * 1.5, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(30, 41, 59, ${alpha * 0.25})`;
@@ -202,7 +194,7 @@ export function drawAfterimages(ctx, fighter) {
     ctx.fillStyle = `rgba(224, 232, 255, ${alpha * 0.45})`;
     ctx.fill();
 
-    // 4. HIGH-CONTRAST BODY SILHOUETTE
+    // 3. HIGH-CONTRAST BODY SILHOUETTE
     ctx.beginPath();
     ctx.arc(0, 0, fighter.r, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(15, 23, 42, ${alpha * 0.50})`;
@@ -216,7 +208,7 @@ export function drawAfterimages(ctx, fighter) {
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // 5. 3D WHEEL SILHOUETTE
+    // 4. 3D WHEEL SILHOUETTE
     ctx.beginPath();
     ctx.ellipse(0, -fighter.r - 20, 16, 6, 0, 0, Math.PI * 2);
     ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.55})`;

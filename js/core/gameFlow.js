@@ -165,10 +165,15 @@ export function preloadFighterAssets(fighterOrId, isPriority = false) {
     paths.push(...extractSoundsFromObject(cfg));
   }
 
-  // 5. Preload character hair model asset if configured in character assets
+  // 5. Preload character hair model assets if configured in character assets
   if (typeof Image !== 'undefined' && cfg?.assets?.hair) {
     try {
       preloadImage(cfg.assets.hair);
+    } catch (e) {}
+  }
+  if (typeof Image !== 'undefined' && cfg?.assets?.superSaiyanHair) {
+    try {
+      preloadImage(cfg.assets.superSaiyanHair);
     } catch (e) {}
   }
 

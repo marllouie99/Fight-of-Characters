@@ -30,10 +30,10 @@ export const saitamaConfig = {
   desc: 'Hero for fun. Ignores basic hit flinches. Basic hits deal massive damage. Serious Punch ultimate obliterates anything across the arena.',
 
   // Basic Attack: Normal Punch
-  normalPunchEnabled: 0,        // Set to false to disable Normal Punch basic attack
+  normalPunchEnabled: 1,        // Set to false to disable Normal Punch basic attack
   punchEnabled: true,              // Alias toggle
   disableNormalPunch: false,       // If true, disables Normal Punch basic attack
-  punchDamage: 0.50,               // Punch damage as % ratio of game mode fixed HP (0.90 = 90% of fixed HP)
+  punchDamage: 0.25,               // Punch damage as % ratio of game mode fixed HP (0.90 = 90% of fixed HP)
   punchKnockback: 100, // Massive knockback force
   punchReach: 50,
   punchArcAngle: Math.PI * 0.5, // 90 degree arc angle
@@ -154,11 +154,23 @@ export const saitamaConfig = {
   counterPunchChargingEnabled: true,
   counterPunchImpactEnabled: true,
 
-  // Arena Wall & Environmental Destruction
-  enableWallInteraction: false,   // Master toggle: disables all custom interactions between Saitama and arena walls
-  enableWallShatter: false,       // Saitama shatters and breaches arena walls on punches (disabled)
-  enableWallPin: false,           // Saitama pins enemies against arena walls on punch knockback (disabled)
-  enableHudShatter: false,        // Strictly disabled: Saitama only destroys arena walls, never the HUD
+  // Arena Wall & HUD Interactions (Master + Per-Attack Toggles)
+  // ── Arena Wall Toggles ──
+  enableWallInteraction: false,             // Master toggle: set to true to allow Saitama attacks to interact with arena walls
+  enableWallShatter: false,                 // Shatters and breaches arena walls along punch blast trajectories
+  enableWallPin: false,                     // Pins knocked-back enemies against arena walls & spawns wall crack decals
+  // ── HUD Interaction Toggles ──
+  enableHudInteraction: false,              // Master toggle: set to true to allow Saitama attacks to interact with HUD elements
+  enableHudShatter: false,                  // Shatters Top Match Names & Bottom/Side HUD elements on upward/downward punches (works even if Wall Shatter is false)
+  enableTopHudShatter: true,                // Allows Top Arena Match Names to shatter when HUD Shatter is enabled
+  enableBottomHudShatter: true,             // Allows Bottom/Side HUD elements to shatter when HUD Shatter is enabled
+  // ── Per-Attack Wall & HUD Toggles ──
+  normalPunchWallInteraction: true,         // Normal Punch (Basic Attack): allow Wall Shatter & Wall Pin (requires Wall toggles above)
+  normalPunchHudInteraction: true,          // Normal Punch (Basic Attack): allow HUD Shatter (requires HUD toggles above)
+  consecutivePunchesWallInteraction: true,  // Consecutive Normal Punches (Skill 1 Finisher): allow Wall Shatter & Wall Pin (requires Wall toggles above)
+  consecutivePunchesHudInteraction: true,   // Consecutive Normal Punches (Skill 1 Finisher): allow HUD Shatter (requires HUD toggles above)
+  seriousCounterWallInteraction: true,      // Serious Counter Punch (Passive): allow Wall Shatter & Wall Pin (requires Wall toggles above)
+  seriousCounterHudInteraction: true,       // Serious Counter Punch (Passive): allow HUD Shatter (requires HUD toggles above)
 
   // Audio configuration, volume & timing delay adjustments (delays measured in frames @ 60fps)
   sounds: {

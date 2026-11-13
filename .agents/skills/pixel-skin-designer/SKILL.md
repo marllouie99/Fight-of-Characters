@@ -149,7 +149,21 @@ Use this skill when designing or coding character skins, hair silhouettes, headw
 2. **Hair Drawing Pipeline**:
    - MUST implement `_draw[Name]Hair(ctx, r, facingLeft)` with `ctx.imageSmoothingEnabled = false;`.
    - Apply `state.skinCustomizations?.[characterId]` scaling and offsets.
-   - Calibrate visible bounds to frame crown at `-1.15r` to `-1.30r`.
+   - Calibrate visible bounds to frame crown at `-1.15r` to `-1.30r` (or calibrated `baseCrownY` matching the sprite's opaque bounding box).
+3. **Mandatory Hair Generation, Active Skin Wiring & Hair Studio Import Checklist**:
+   Whenever generating or replacing a hair asset sprite (`<Name>-hair.png`) for any character, ALWAYS complete all 4 steps before finishing:
+   - **Step A — Clean RGBA Asset**: Remove pure white/enclosed background pockets with zero edge halo, verify the opaque bounding box (`x0, y0, x1, y1`, `visW`, `visH`, `centerX`, `topY`), and save to `Assets/model/<characterId>/<Name>-hair.png`.
+   - **Step B — Use as Active Fighter Hair**:
+     - Register `assets.hair: 'Assets/model/<characterId>/<Name>-hair.png'` in `js/configs/characters/<name>Config.js`.
+     - Wire `_get[Name]HairImage()` and calibrated `_draw[Name]Hair(ctx, r, facingLeft)` inside `js/graphics/fighters/<name>Skin.js`, and call `_draw[Name]Hair` in both `draw[Name]Skin` and `draw[Name]GhostSkin`.
+     - If the fighter previously used baked procedural hair inside `_render[Name]PixelBodyToCanvas`, remove those procedural crown/bang/sidelock pixels (or gate them as fallback only when the hair image is not loaded) so the new PNG hair renders cleanly without double hair artifacts.
+   - **Step C — Import & Register in Hair / Skin Studio (`js/graphics/ui/SkinStudioScreen.js`)**:
+     - Import `{ draw[Name]Skin, _draw[Name]Hair, _get[Name]HairImage }` from `'../fighters/<name>Skin.js'`.
+     - Add or update the character's entry in `SKIN_STUDIO_FIGHTERS` (`asset`, `assetDims`, `baseW`, `baseH`, `baseCrownY`, `visW`, `visH`, `centerX`, `topY`) and verify its category in `SKIN_STUDIO_CATEGORIES`.
+     - Ensure BOTH the full-body preview branch (`draw[Name]Skin(ctx, dummyFighter)`) AND the isolated hair-only branch (`_draw[Name]Hair(ctx, baseRadius, isFacingLeft)` when `showBody === false`) handle the character key.
+     - Add or update the character's calibration code generator branch (`generateCalibrationCode`) to match the asset's true dimensions and opaque bounding box.
+   - **Step D — Register Default Entry in `js/configs/skinCustomizationsDatabase.js`**:
+     - Ensure `SKIN_CUSTOMIZATIONS_DATABASE` includes `<characterId>: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false }` so studio save, reset, and export work cleanly.
 
 ## Phase 6: Mandatory Universal Character Black Outline Standard (Rule 32)
 Whenever creating, scaffolding, designing, or rendering any character skin, ALWAYS apply a crisp black manga ink outline around the body circle and pixel hands:

@@ -16,12 +16,15 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   yuji: { widthScale: 0.90, heightScale: 1.00, offsetX: 0, offsetY: -2, angleOffset: 0, flipX: false, flipY: false },
   toji: { widthScale: 0.84, heightScale: 0.96, offsetX: 0, offsetY: 2, angleOffset: 0, flipX: false, flipY: false },
   goku: { widthScale: 1.40, heightScale: 1.12, offsetX: 1, offsetY: -18, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
+  goku_ssj: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   vegeta: { widthScale: 1.20, heightScale: 1.00, offsetX: 0, offsetY: -9, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
+  vegeta_ssj: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   todo: { widthScale: 0.96, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   nanami: { widthScale: 1.06, heightScale: 1.08, offsetX: 0, offsetY: -2, angleOffset: 0, flipX: false, flipY: false },
   mahito: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   naoya: { widthScale: 0.76, heightScale: 0.78, offsetX: 0, offsetY: 8, angleOffset: 0.0349, flipX: false, flipY: false },
   maki: { widthScale: 0.80, heightScale: 1.04, offsetX: 1, offsetY: 2, angleOffset: 0, flipX: false, flipY: false },
+  choso: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   genos: { widthScale: 0.94, heightScale: 0.82, offsetX: 0, offsetY: 3, angleOffset: 0, flipX: false, flipY: false },
   escanor: { widthScale: 0.86, heightScale: 0.82, offsetX: -1, offsetY: -1, angleOffset: 0, flipX: false, flipY: false },
   john_wick: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 6, angleOffset: 0, flipX: false, flipY: false },
@@ -74,7 +77,11 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   guts: { widthScale: 1.06, heightScale: 0.86, offsetX: 0, offsetY: 4, angleOffset: 0, flipX: false, flipY: false },
   bomberman: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: -15, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   pacman: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
-  ash: { widthScale: 0.74, heightScale: 0.70, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 }
+  ash: { widthScale: 0.74, heightScale: 0.70, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
+  megumi: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
+  nobara: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
+  inosuke: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
+  ulquiorra: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false }
 };
 
 export const DEFAULT_SKIN_CUSTOMIZATIONS = SKIN_CUSTOMIZATIONS_DATABASE;

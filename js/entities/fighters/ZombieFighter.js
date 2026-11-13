@@ -11,7 +11,7 @@
 // - Rule 30: 5-Phase melee combat animation, impact lock, & physical force drive
 // ─────────────────────────────────────────────
 
-import { Fighter } from '../fighter.js';
+import { Fighter, computeScaledFighterRadius } from '../fighter.js';
 import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { zombieConfig } from '../../configs/characters/zombieConfig.js';
 import { drawZombieSkin } from '../../graphics/fighters/zombieSkin.js';
@@ -47,7 +47,7 @@ export class ZombieFighter extends Fighter {
     this.type = 'zombie';
 
     // Core stats from centralized config
-    this.r = zombieConfig.r || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? zombieConfig.radius ?? zombieConfig.r ?? 25);
     this.radius = this.r;
     this.maxHp = zombieConfig.maxHp || 420;
     this.hp = this.maxHp;

@@ -6,6 +6,7 @@
 export const vegetaConfig = {
   assets: {
     hair: 'Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png',
+    superSaiyanHair: 'Assets/model/vegeta/Vegeta-ssj-hair.png',
   },
 
   name: 'VEGETA',

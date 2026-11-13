@@ -28,10 +28,14 @@ import { drawYujiSkin, _drawYujiHair, _getYujiHairImage } from '../fighters/yuji
 import { drawYutaSkin, _drawYutaHair, _getYutaHairImage } from '../fighters/yutaSkin.js';
 import { drawTojiSkin, _drawTojiHair, _getTojiHairImage } from '../fighters/tojiSkin.js';
 import { drawShiroSkin, _drawShiroHair, _getShiroHairImage, _drawShiroCrown, _getShiroCrownImage } from '../fighters/shiroSkin.js';
-import { drawTanjiroSkin } from '../fighters/tanjiroSkin.js';
+import { drawTanjiroSkin, _drawTanjiroHair, _getTanjiroHairImage } from '../fighters/tanjiroSkin.js';
 import { drawZenitsuSkin } from '../fighters/zenitsuSkin.js';
-import { drawNezukoSkin } from '../fighters/nezukoSkin.js';
-import { drawPowerSkin } from '../fighters/powerSkin.js';
+import { drawNezukoSkin, _drawNezukoHair, _getNezukoHairImage } from '../fighters/nezukoSkin.js';
+import { drawPowerSkin, _drawPowerHair, _getPowerHairImage } from '../fighters/powerSkin.js';
+import { drawMegumiSkin, _drawMegumiHair, _getMegumiHairImage } from '../fighters/megumiSkin.js';
+import { drawNobaraSkin, _drawNobaraHair, _getNobaraHairImage } from '../fighters/nobaraSkin.js';
+import { drawInosukeSkin, _drawInosukeHair, _getInosukeHairImage } from '../fighters/inosukeSkin.js';
+import { drawUlquiorraSkin, _drawUlquiorraHair, _getUlquiorraHairImage } from '../fighters/ulquiorraSkin.js';
 import { drawZeusSkin, _drawZeusHair, _getZeusHairImage, _drawZeusCrown, _getZeusCrownImage } from '../fighters/zeusSkin.js';
 import { drawCronosSkin } from '../fighters/cronosSkin.js';
 import { drawBomberPixelBody } from '../fighters/bomberSkin.js';
@@ -64,8 +68,8 @@ import { drawCreeperSkin, _drawCreeperHair } from '../fighters/creeperSkin.js';
 import { drawIsagiSkin, _drawIsagiHair, _getIsagiHairImage } from '../fighters/isagiSkin.js';
 import { drawChigiriSkin, _drawChigiriHair, _getChigiriHairImage } from '../fighters/chigiriSkin.js';
 import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighters/wardenSkin.js';
-import { drawGokuSkin, _drawGokuHair, _getGokuHairImage } from '../fighters/gokuSkin.js';
-import { drawVegetaSkin, _drawVegetaHair, _getVegetaHairImage } from '../fighters/vegetaSkin.js';
+import { drawGokuSkin, _drawGokuHair, _getGokuHairImage, _getGokuSuperSaiyanHairImage } from '../fighters/gokuSkin.js';
+import { drawVegetaSkin, _drawVegetaHair, _getVegetaHairImage, _getVegetaSuperSaiyanHairImage } from '../fighters/vegetaSkin.js';
 
 
 
@@ -145,10 +149,10 @@ let _copyToastTimer = 0;
 // Fighter Category Tabs in Skin Studio Modal
 export const SKIN_STUDIO_CATEGORIES = [
   { id: 'ALL', label: 'ALL', filter: () => true },
-  { id: 'JJK', label: 'JJK', filter: (f) => ['ichigo', 'gojo', 'sukuna', 'yuji', 'yuta', 'toji', 'todo', 'nanami', 'mahito', 'naoya', 'maki', 'choso'].includes(f.key) },
+  { id: 'JJK', label: 'JJK', filter: (f) => ['ichigo', 'ulquiorra', 'gojo', 'sukuna', 'yuji', 'yuta', 'toji', 'todo', 'nanami', 'mahito', 'naoya', 'maki', 'choso', 'megumi', 'nobara'].includes(f.key) },
     { id: 'NGNL', label: 'NGNL', filter: (fighter) => fighter.key === 'shiro' },
   { id: 'CHAINSAW', label: 'CSM', filter: (f) => ['makima', 'reze', 'power'].includes(f.key) },
-  { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko'].includes(f.key) },
+  { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko', 'inosuke'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
   { id: 'BLUELOCK', label: 'BLUE LOCK', filter: (f) => ['isagi', 'chigiri'].includes(f.key) },
   { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'goku', 'vegeta'].includes(f.key) },
@@ -215,15 +219,15 @@ export const SKIN_STUDIO_FIGHTERS = [
   {
     key: 'megumin',
     label: 'MEGUMIN',
-    asset: 'Procedural Pixel Art',
-    assetDims: 'Procedural Model',
-    baseW: 2.85,
-    baseH: 2.20,
-    baseCrownY: -1.75,
-    visW: 300,
-    visH: 300,
-    centerX: 250,
-    topY: 60,
+    asset: 'Megumin-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 2.75,
+    baseH: 2.55,
+    baseCrownY: -1.52,
+    visW: 860,
+    visH: 962,
+    centerX: 512,
+    topY: 31,
     themeColor: '#c81d25',
     forms: [
       { id: 'default', label: 'WIZARD ROBES' }
@@ -389,10 +393,14 @@ export const SKIN_STUDIO_FIGHTERS = [
     key: 'tanjiro',
     label: 'TANJIRO',
     asset: 'TANJRO-HAIR-MODEL.png',
-    assetDims: '56 x 56 Pixel Model',
-    baseW: 2.30,
-    baseH: 2.00,
-    baseCrownY: -1.20,
+    assetDims: '1446 x 1087',
+    baseW: 3.15,
+    baseH: 2.25,
+    baseCrownY: -1.38,
+    visW: 1414,
+    visH: 1058,
+    centerX: 707,
+    topY: 29,
     themeColor: '#10b981',
     forms: [
       { id: 'default', label: 'STANDARD' }
@@ -419,23 +427,49 @@ export const SKIN_STUDIO_FIGHTERS = [
     key: 'nezuko',
     label: 'NEZUKO',
     asset: 'Nezuko-hair.png',
-    assetDims: '56 x 56 Pixel Model',
-    baseW: 2.30,
-    baseH: 2.00,
-    baseCrownY: -1.20,
+    assetDims: '1305 x 1205',
+    baseW: 2.80,
+    baseH: 2.50,
+    baseCrownY: -1.35,
+    visW: 1107,
+    visH: 1131,
+    centerX: 645,
+    topY: 20,
     themeColor: '#f472b6',
     forms: [
       { id: 'default', label: 'STANDARD' }
     ]
   },
   {
+    key: 'inosuke',
+    label: 'INOSUKE',
+    asset: 'Inosuke-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 2.95,
+    baseH: 2.35,
+    baseCrownY: -1.35,
+    visW: 758,
+    visH: 748,
+    centerX: 512,
+    topY: 123,
+    themeColor: '#3B82F6',
+    forms: [
+      { id: 'hair', label: 'UNMASKED HAIR' },
+      { id: 'default', label: 'BOAR MASK' }
+    ]
+  },
+  {
     key: 'power',
     label: 'POWER',
     asset: 'Power-hair.png',
-    assetDims: 'Procedural / PNG',
-    baseW: 2.30,
-    baseH: 2.00,
-    baseCrownY: -1.20,
+    assetDims: '1331 x 1182',
+    baseW: 2.95,
+    baseH: 2.65,
+    baseCrownY: -1.60,
+    visW: 1224,
+    visH: 1158,
+    centerX: 645,
+    topY: 24,
     themeColor: '#fb923c',
     forms: [
       { id: 'default', label: 'STANDARD' }
@@ -634,17 +668,70 @@ export const SKIN_STUDIO_FIGHTERS = [
     key: 'choso',
     label: 'CHOSO',
     asset: 'Choso-hair.png',
-    assetDims: '1200 x 900',
-    baseW: 3.05,
-    baseH: 2.20,
-    baseCrownY: -1.35,
-    visW: 1000,
-    visH: 750,
-    centerX: 600,
-    topY: 50,
+    assetDims: '1024 x 768',
+    baseW: 3.62,
+    baseH: 2.42,
+    baseCrownY: -1.86,
+    visW: 952,
+    visH: 615,
+    centerX: 512,
+    topY: 76,
     themeColor: '#A31D1D',
     forms: [
       { id: 'default', label: 'BLOOD MANIPULATION' }
+    ]
+  },
+  {
+    key: 'megumi',
+    label: 'MEGUMI',
+    asset: 'Megumi-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 3.30,
+    baseH: 2.15,
+    baseCrownY: -1.48,
+    visW: 800,
+    visH: 595,
+    centerX: 512,
+    topY: 163,
+    themeColor: '#1C2D4A',
+    forms: [
+      { id: 'default', label: 'TEN SHADOWS' }
+    ]
+  },
+  {
+    key: 'nobara',
+    label: 'NOBARA',
+    asset: 'Nobara-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 2.55,
+    baseH: 2.35,
+    baseCrownY: -1.35,
+    visW: 615,
+    visH: 718,
+    centerX: 500,
+    topY: 153,
+    themeColor: '#D94E68',
+    forms: [
+      { id: 'default', label: 'STRAW DOLL' }
+    ]
+  },
+  {
+    key: 'ulquiorra',
+    label: 'ULQUIORRA',
+    asset: 'Ulquiorra-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 3.10,
+    baseH: 2.55,
+    baseCrownY: -1.62,
+    visW: 779,
+    visH: 841,
+    centerX: 525,
+    topY: 30,
+    themeColor: '#00FF88',
+    forms: [
+      { id: 'default', label: 'ESPADA #4' },
+      { id: 'stage1', label: 'MURCIELAGO' },
+      { id: 'segunda', label: 'SEGUNDA ETAPA' }
     ]
   },
   {
@@ -1017,6 +1104,99 @@ function ensureFighterCustom(key) {
 }
 
 /**
+ * Resolves the active customization database key for the currently selected fighter/part/form.
+ * Supports multi-part sub-targets (Nameless Deity, Avatar, Uryu, Shiro, Alucard) and SSJ hair forms.
+ */
+function _resolveStudioCustomKey(fDef) {
+  if (!fDef) return '';
+  if (fDef.key === 'nameless_deity') {
+    const partId = state.studioSkinNamelessPart || 'overall';
+    if (partId !== 'overall') return `nameless_deity_${partId}`;
+  }
+  if (fDef.key === 'avatar_of_emptiness' || fDef.key === 'avatarofemptiness') {
+    const avatarPartId = state.studioSkinAvatarPart || 'overall';
+    if (avatarPartId !== 'overall') return `avatar_of_emptiness_${avatarPartId}`;
+  }
+  if (fDef.key === 'uryu' && (state.studioSkinUryuPart || 'hair') === 'glasses') {
+    return 'uryu_glasses';
+  }
+  if (fDef.key === 'shiro' && (state.studioSkinShiroPart || 'hair') === 'crown') {
+    return 'shiro_crown';
+  }
+  if ((fDef.key === 'gunslinger' || fDef.key === 'alucard') && (state.studioSkinAlucardPart || 'hat') === 'glasses') {
+    return 'alucard_glasses';
+  }
+  if (fDef.key === 'goku' && state.studioSkinForm === 'super_saiyan') {
+    return 'goku_ssj';
+  }
+  if (fDef.key === 'vegeta' && state.studioSkinForm === 'super_saiyan') {
+    return 'vegeta_ssj';
+  }
+  return fDef.key;
+}
+
+/**
+ * Resolves active asset metadata, base scale multipliers, and crown anchor Y (in canvas pixels)
+ * for the selected fighter/part/form inside Skin Studio.
+ */
+function _resolveStudioActiveMetrics(fDef, baseRadius = 25) {
+  const customKey = _resolveStudioCustomKey(fDef);
+  const form = state.studioSkinForm;
+  if (customKey === 'goku_ssj') {
+    return {
+      customKey,
+      displayLabel: `${fDef.label} (SSJ)`,
+      asset: 'Assets/model/goku/Goku-ssj-hair.png',
+      assetDims: '1024 x 1024',
+      baseW: 3.15,
+      baseH: 2.75,
+      baseCrownY: -baseRadius * 2.05
+    };
+  }
+  if (customKey === 'vegeta_ssj') {
+    return {
+      customKey,
+      displayLabel: `${fDef.label} (SSJ)`,
+      asset: 'Assets/model/vegeta/Vegeta-ssj-hair.png',
+      assetDims: '1024 x 1024',
+      baseW: 3.12,
+      baseH: 2.72,
+      baseCrownY: -baseRadius * 2.30
+    };
+  }
+  if (fDef.key === 'guts' && form === 'hair') {
+    return {
+      customKey,
+      displayLabel: fDef.label,
+      asset: 'Assets/model/guts/Guts-hair.png',
+      assetDims: '44 x 41',
+      baseW: 2.20,
+      baseH: 2.05,
+      baseCrownY: -baseRadius * 1.30
+    };
+  }
+  let baseCrownY = fDef.baseCrownY ? fDef.baseCrownY * baseRadius : -baseRadius * 1.3;
+  if (customKey.startsWith('nameless_deity_') || customKey.startsWith('avatar_of_emptiness_')) {
+    baseCrownY = 0;
+  } else if (customKey === 'uryu_glasses') {
+    baseCrownY = -baseRadius * 0.04;
+  } else if (customKey === 'shiro_crown') {
+    baseCrownY = -baseRadius * 0.90;
+  } else if (customKey === 'alucard_glasses') {
+    baseCrownY = -baseRadius * 0.02;
+  }
+  return {
+    customKey,
+    displayLabel: fDef.label,
+    asset: fDef.asset,
+    assetDims: fDef.assetDims || 'Standard',
+    baseW: fDef.baseW,
+    baseH: fDef.baseH,
+    baseCrownY
+  };
+}
+
+/**
  * Generates copy-pasteable JavaScript code block reflecting current customizations.
  */
 function generateJsCode(fDef, custom) {
@@ -1063,15 +1243,15 @@ function generateJsCode(fDef, custom) {
            `const drawX = -249.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 43 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'megumin') {
-    return `// Calibrated Hair for Megumin (Assets/model/Megumin-hair.png)\n` +
+    return `// Calibrated Hair for Megumin (Assets/model/megumin/Megumin-hair.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
            `const targetHairHeight = r * ${targetH};\n` +
-           `const scaleX = targetHairWidth / 300;\n` +
-           `const scaleY = targetHairHeight / 300;\n` +
-           `const drawW = 500 * scaleX;\n` +
-           `const drawH = 500 * scaleY;\n` +
-           `const drawX = -250 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
-           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 60 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+           `const scaleX = targetHairWidth / 860;\n` +
+           `const scaleY = targetHairHeight / 962;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -512 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 31 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'crazydave') {
     return `// Calibrated Hair/Pan for Crazy Dave (Assets/model/crazyDave/crazydave-hair.png)\n` +
            `const targetDomeWidth = r * ${targetW};\n` +
@@ -1251,6 +1431,86 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1045 * scaleY;\n` +
            `const drawX = -740 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 30 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'choso') {
+    return `// Calibrated Hair for Choso (Assets/model/choso/Choso-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 952;\n` +
+           `const scaleY = targetHairHeight / 615;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 768 * scaleY;\n` +
+           `const drawX = -512 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 76 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'megumi') {
+    return `// Calibrated Hair for Megumi (Assets/model/megumi/Megumi-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 800;\n` +
+           `const scaleY = targetHairHeight / 595;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -512 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 163 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'nobara') {
+    return `// Calibrated Hair for Nobara (Assets/model/nobara/Nobara-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 615;\n` +
+           `const scaleY = targetHairHeight / 718;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -500 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 153 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'inosuke') {
+    return `// Calibrated Hair for Inosuke (Assets/model/inosuke/Inosuke-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 758;\n` +
+           `const scaleY = targetHairHeight / 748;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -512 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 123 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'ulquiorra') {
+    return `// Calibrated Hair for Ulquiorra (Assets/model/ulquiorra/Ulquiorra-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 779;\n` +
+           `const scaleY = targetHairHeight / 841;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -525 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 30 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'tanjiro') {
+    return `// Calibrated Hair for Tanjiro (Assets/model/tanjiro/TANJRO-HAIR-MODEL.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 1414;\n` +
+           `const scaleY = targetHairHeight / 1058;\n` +
+           `const drawW = 1446 * scaleX;\n` +
+           `const drawH = 1087 * scaleY;\n` +
+           `const drawX = -707 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 29 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'nezuko') {
+    return `// Calibrated Hair for Nezuko (Assets/model/nezuko/Nezuko-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 1107;\n` +
+           `const scaleY = targetHairHeight / 1131;\n` +
+           `const drawW = 1305 * scaleX;\n` +
+           `const drawH = 1205 * scaleY;\n` +
+           `const drawX = -645 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 20 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'power') {
+    return `// Calibrated Hair for Power (Assets/model/power/Power-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 1224;\n` +
+           `const scaleY = targetHairHeight / 1158;\n` +
+           `const drawW = 1331 * scaleX;\n` +
+           `const drawH = 1182 * scaleY;\n` +
+           `const drawX = -645 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 24 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'genos') {
     return `// Calibrated Hair for Genos (Assets/model/genos/Genos-hair.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
@@ -1351,12 +1611,30 @@ function generateJsCode(fDef, custom) {
            `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 262 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'goku') {
+    if (state.studioSkinForm === 'super_saiyan') {
+      const ssjW = (3.15 * Number(wMult)).toFixed(2);
+      const ssjH = (2.75 * Number(hMult)).toFixed(2);
+      return `// Calibrated Super Saiyan Hair for Goku (Assets/model/goku/Goku-ssj-hair.png)\n` +
+             `const targetHairWidth = r * ${ssjW};\n` +
+             `const targetHairHeight = r * ${ssjH};\n` +
+             `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+             `const drawY = -r * 2.05${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+    }
     return `// Calibrated Hair for Goku (Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
            `const targetHairHeight = r * ${targetH};\n` +
            `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'vegeta') {
+    if (state.studioSkinForm === 'super_saiyan') {
+      const ssjW = (3.12 * Number(wMult)).toFixed(2);
+      const ssjH = (2.72 * Number(hMult)).toFixed(2);
+      return `// Calibrated Super Saiyan Hair for Vegeta (Assets/model/vegeta/Vegeta-ssj-hair.png)\n` +
+             `const targetHairWidth = r * ${ssjW};\n` +
+             `const targetHairHeight = r * ${ssjH};\n` +
+             `const drawX = -targetHairWidth / 2${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+             `const drawY = -r * 2.30${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+    }
     return `// Calibrated Hair for Vegeta (Assets/model/vegeta/Pixel Art Spiky Black Hair Sprite.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
            `const targetHairHeight = r * ${targetH};\n` +
@@ -1556,17 +1834,7 @@ export function drawSkinStudioScreen() {
   const activeAlucardPartId = isAlucard ? (state.studioSkinAlucardPart || 'hat') : 'hat';
   const activeAlucardPartDef = isAlucard ? (ALUCARD_PARTS.find(p => p.id === activeAlucardPartId) || ALUCARD_PARTS[0]) : null;
 
-  const activeCustomKey = (isNamelessDeity && activePartId !== 'overall')
-    ? `nameless_deity_${activePartId}`
-    : (isAvatarOfEmptiness && activeAvatarPartId !== 'overall')
-      ? `avatar_of_emptiness_${activeAvatarPartId}`
-      : (isUryu && activeUryuPartId === 'glasses')
-        ? 'uryu_glasses'
-        : (isShiro && activeShiroPartId === 'crown')
-          ? 'shiro_crown'
-          : (isAlucard && activeAlucardPartId === 'glasses')
-            ? 'alucard_glasses'
-            : fDef.key;
+  const activeCustomKey = _resolveStudioCustomKey(fDef);
   const custom = ensureFighterCustom(activeCustomKey);
 
   // ── Tier 1: Header Section ──
@@ -1796,6 +2064,18 @@ export function drawSkinStudioScreen() {
         drawMakiSkin(ctx, dummyFighter);
       } else if (fDef.key === 'choso') {
         drawChosoSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'megumi') {
+        drawMegumiSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'nobara') {
+        drawNobaraSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'inosuke') {
+        dummyFighter.isUnmasked = (state.studioSkinForm === 'hair');
+        drawInosukeSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'ulquiorra') {
+        dummyFighter.stage1Active = (state.studioSkinForm === 'stage1');
+        dummyFighter.segundaEtapaActive = (state.studioSkinForm === 'segunda');
+        dummyFighter.isSegundaEtapa = dummyFighter.segundaEtapaActive;
+        drawUlquiorraSkin(ctx, dummyFighter);
       } else if (fDef.key === 'genos') {
         drawGenosSkin(ctx, dummyFighter);
         drawGenosHands(ctx, dummyFighter);
@@ -1907,6 +2187,22 @@ export function drawSkinStudioScreen() {
       _drawNaoyaHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'maki') {
       _drawMakiHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'choso') {
+      _drawChosoHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'megumi') {
+      _drawMegumiHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'nobara') {
+      _drawNobaraHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'inosuke') {
+      _drawInosukeHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'ulquiorra') {
+      _drawUlquiorraHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'tanjiro') {
+      _drawTanjiroHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'nezuko') {
+      _drawNezukoHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'power') {
+      _drawPowerHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'genos') {
       _drawGenosHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'escanor') {
@@ -1959,18 +2255,9 @@ export function drawSkinStudioScreen() {
   }
 
   // Interactive Drag Handles & Guide Overlays on Hero Hair
+  const studioMetrics = _resolveStudioActiveMetrics(fDef, baseRadius);
   if (state.studioSkinShowGuides) {
-    const baseCrownY = (isNamelessDeity && activePartId !== 'overall')
-      ? 0
-      : (isUryu && activeUryuPartId === 'glasses')
-        ? -baseRadius * 0.04
-        : (isShiro && activeShiroPartId === 'crown')
-          ? -baseRadius * 0.90
-          : (isAlucard && activeAlucardPartId === 'glasses')
-            ? -baseRadius * 0.02
-            : (fDef.key === 'guts' && state.studioSkinForm === 'hair')
-              ? -baseRadius * 1.30
-              : (fDef.baseCrownY ? fDef.baseCrownY * baseRadius : -baseRadius * 1.3);
+    const baseCrownY = studioMetrics.baseCrownY;
     const handleCenterX = custom.offsetX;
     const handleCenterY = baseCrownY + custom.offsetY;
 
@@ -2530,15 +2817,10 @@ export function drawSkinStudioScreen() {
     ctx.fillStyle = '#64748b';
     ctx.fillText(`TARGET: ${activeCustomKey}`, infoCardX + 8, infoCardY + 56);
   } else {
-    const isGutsHair = (fDef.key === 'guts' && state.studioSkinForm === 'hair');
-    const assetName = isGutsHair ? 'Assets/model/guts/Guts-hair.png' : fDef.asset;
-    const assetDims = isGutsHair ? '44 x 41' : (fDef.assetDims || 'Standard');
-    const baseW = isGutsHair ? 2.20 : fDef.baseW;
-    const baseH = isGutsHair ? 2.05 : fDef.baseH;
-    ctx.fillText(`MODEL: ${fDef.label}`, infoCardX + 8, infoCardY + 8);
-    ctx.fillText(`ASSET: ${assetName}`, infoCardX + 8, infoCardY + 24);
-    ctx.fillText(`DIMS: ${assetDims}`, infoCardX + 8, infoCardY + 40);
-    ctx.fillText(`BASE: ${baseW}r W | ${baseH}r H`, infoCardX + 8, infoCardY + 56);
+    ctx.fillText(`MODEL: ${studioMetrics.displayLabel}`, infoCardX + 8, infoCardY + 8);
+    ctx.fillText(`ASSET: ${studioMetrics.asset}`, infoCardX + 8, infoCardY + 24);
+    ctx.fillText(`DIMS: ${studioMetrics.assetDims}`, infoCardX + 8, infoCardY + 40);
+    ctx.fillText(`BASE: ${studioMetrics.baseW}r W | ${studioMetrics.baseH}r H`, infoCardX + 8, infoCardY + 56);
   }
 
   // Right Console: Parameter Controls
@@ -2558,7 +2840,7 @@ export function drawSkinStudioScreen() {
     ctx.stroke();
     ctx.restore();
 
-    const activeBaseW = (fDef.key === 'guts' && state.studioSkinForm === 'hair') ? 2.20 : fDef.baseW;
+    const activeBaseW = studioMetrics.baseW;
     const curW = (activeBaseW * (custom.widthScale ?? 1.0)).toFixed(2);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
@@ -2597,7 +2879,7 @@ export function drawSkinStudioScreen() {
     ctx.stroke();
     ctx.restore();
 
-    const activeBaseH = (fDef.key === 'guts' && state.studioSkinForm === 'hair') ? 2.05 : fDef.baseH;
+    const activeBaseH = studioMetrics.baseH;
     const curH = (activeBaseH * (custom.heightScale ?? 1.0)).toFixed(2);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
@@ -3879,45 +4161,14 @@ if (typeof window !== 'undefined') {
 
       const activeKey = state.studioSelectedSkinFighter || 'ichigo';
       const fDef = SKIN_STUDIO_FIGHTERS.find(f => f.key === activeKey) || SKIN_STUDIO_FIGHTERS[0];
-      const isNamelessDeity = (fDef.key === 'nameless_deity');
-      const activePartId = isNamelessDeity ? (state.studioSkinNamelessPart || 'overall') : 'overall';
-      const isAvatarOfEmptiness = (fDef.key === 'avatar_of_emptiness' || fDef.key === 'avatarofemptiness');
-      const activeAvatarPartId = isAvatarOfEmptiness ? (state.studioSkinAvatarPart || 'overall') : 'overall';
-      const isUryu = (fDef.key === 'uryu');
-      const activeUryuPartId = isUryu ? (state.studioSkinUryuPart || 'hair') : 'hair';
-      const isShiro = (fDef.key === 'shiro');
-      const activeShiroPartId = isShiro ? (state.studioSkinShiroPart || 'hair') : 'hair';
-      const isAlucard = (fDef.key === 'gunslinger' || fDef.key === 'alucard');
-      const activeAlucardPartId = isAlucard ? (state.studioSkinAlucardPart || 'hat') : 'hat';
-
-      const activeCustomKey = (isNamelessDeity && activePartId !== 'overall')
-        ? `nameless_deity_${activePartId}`
-        : (isAvatarOfEmptiness && activeAvatarPartId !== 'overall')
-          ? `avatar_of_emptiness_${activeAvatarPartId}`
-          : (isUryu && activeUryuPartId === 'glasses')
-            ? 'uryu_glasses'
-            : (isShiro && activeShiroPartId === 'crown')
-              ? 'shiro_crown'
-              : (isAlucard && activeAlucardPartId === 'glasses')
-                ? 'alucard_glasses'
-                : fDef.key;
+      const activeCustomKey = _resolveStudioCustomKey(fDef);
       const custom = ensureFighterCustom(activeCustomKey);
 
       // Local hero coordinate space
       const localX = (mx - heroX) / currentScale;
       const localY = (my - heroY) / currentScale;
 
-      const baseCrownY = ((isNamelessDeity && activePartId !== 'overall') || (isAvatarOfEmptiness && activeAvatarPartId !== 'overall'))
-        ? 0
-        : (isUryu && activeUryuPartId === 'glasses')
-          ? -baseRadius * 0.04
-          : (isShiro && activeShiroPartId === 'crown')
-            ? -baseRadius * 0.90
-            : (isAlucard && activeAlucardPartId === 'glasses')
-              ? -baseRadius * 0.02
-              : (fDef.key === 'guts' && state.studioSkinForm === 'hair')
-                ? -baseRadius * 1.30
-                : (fDef.baseCrownY ? fDef.baseCrownY * baseRadius : -baseRadius * 1.3);
+      const { baseCrownY } = _resolveStudioActiveMetrics(fDef, baseRadius);
       const handleCenterX = custom.offsetX;
       const handleCenterY = baseCrownY + custom.offsetY;
 
@@ -3994,43 +4245,12 @@ if (typeof window !== 'undefined') {
 
       const activeKey = state.studioSelectedSkinFighter || 'ichigo';
       const fDef = SKIN_STUDIO_FIGHTERS.find(f => f.key === activeKey) || SKIN_STUDIO_FIGHTERS[0];
-      const isNamelessDeity = (fDef.key === 'nameless_deity');
-      const activePartId = isNamelessDeity ? (state.studioSkinNamelessPart || 'overall') : 'overall';
-      const isAvatarOfEmptiness = (fDef.key === 'avatar_of_emptiness' || fDef.key === 'avatarofemptiness');
-      const activeAvatarPartId = isAvatarOfEmptiness ? (state.studioSkinAvatarPart || 'overall') : 'overall';
-      const isUryu = (fDef.key === 'uryu');
-      const activeUryuPartId = isUryu ? (state.studioSkinUryuPart || 'hair') : 'hair';
-      const isShiro = (fDef.key === 'shiro');
-      const activeShiroPartId = isShiro ? (state.studioSkinShiroPart || 'hair') : 'hair';
-      const isAlucard = (fDef.key === 'gunslinger' || fDef.key === 'alucard');
-      const activeAlucardPartId = isAlucard ? (state.studioSkinAlucardPart || 'hat') : 'hat';
-
-      const activeCustomKey = (isNamelessDeity && activePartId !== 'overall')
-        ? `nameless_deity_${activePartId}`
-        : (isAvatarOfEmptiness && activeAvatarPartId !== 'overall')
-          ? `avatar_of_emptiness_${activeAvatarPartId}`
-          : (isUryu && activeUryuPartId === 'glasses')
-            ? 'uryu_glasses'
-            : (isShiro && activeShiroPartId === 'crown')
-              ? 'shiro_crown'
-              : (isAlucard && activeAlucardPartId === 'glasses')
-                ? 'alucard_glasses'
-                : fDef.key;
+      const activeCustomKey = _resolveStudioCustomKey(fDef);
       const custom = ensureFighterCustom(activeCustomKey);
 
       const localX = (mx - heroX) / currentScale;
       const localY = (my - heroY) / currentScale;
-      const baseCrownY = ((isNamelessDeity && activePartId !== 'overall') || (isAvatarOfEmptiness && activeAvatarPartId !== 'overall'))
-        ? 0
-        : (isUryu && activeUryuPartId === 'glasses')
-          ? -baseRadius * 0.04
-          : (isShiro && activeShiroPartId === 'crown')
-            ? -baseRadius * 0.90
-            : (isAlucard && activeAlucardPartId === 'glasses')
-              ? -baseRadius * 0.02
-              : (fDef.key === 'guts' && state.studioSkinForm === 'hair')
-                ? -baseRadius * 1.30
-                : (fDef.baseCrownY ? fDef.baseCrownY * baseRadius : -baseRadius * 1.3);
+      const { baseCrownY } = _resolveStudioActiveMetrics(fDef, baseRadius);
 
       if (isDraggingHairCenter) {
         custom.offsetX = Math.round(localX);

@@ -9,7 +9,7 @@
 //  - Ultimate: Invincible (Immune to incoming enemy attacks while active)
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { Fighter, applyDamageToTarget } from '../fighter.js';
+import { Fighter, applyDamageToTarget, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { ARENA_VERTICAL } from '../../configs/arenaConstants.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
@@ -46,7 +46,7 @@ export class BombermanFighter extends Fighter {
     this.type = 'bomberman';
     this.name = def?.name || cfg.name || 'Bomber Man';
     this.displayName = def?.displayName || cfg.displayName || this.name;
-    this.r = cfg.r ?? 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
     this.radius = this.r;
 
     // ── Passive: Bomb Up (Max. 10 — +1 Active Bomb Capacity Every Basic Attack CD) ──

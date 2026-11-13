@@ -10,7 +10,7 @@
 
 import { state } from '../../core/state.js';
 import { CONFIG } from '../../core/config.js';
-import { findArenaWallIntersection } from './saitamaWallShatter.js';
+import { findArenaWallIntersection, findAllArenaWallIntersections } from './saitamaWallShatter.js';
 import { getSkillDataForFighter, shouldShowFighterSkill, shouldShowHudSkillBars, shouldShowHudStats } from '../ui/hudSkillProviders.js';
 import { getFighterHealthBarColor } from '../hudManager.js';
 import { getArenaTopWallBlockThickness } from '../../systems/arenaThemeSystem.js';
@@ -50,22 +50,34 @@ export function isInsideSaitamaFrontalBlast(px, py, originX, originY, punchAngle
 }
 
 /**
+ * Returns true when Saitama's custom HUD shatter interaction is enabled via config.
+ */
+export function isSaitamaHudShatterEnabled() {
+  return Boolean(CONFIG.saitama?.enableHudShatter && CONFIG.saitama?.enableHudInteraction !== false);
+}
+
+/**
  * Triggers a natural directional HUD shatter effect based on punch trajectory.
  * @param {number} originX - Shockwave origin X
  * @param {number} originY - Shockwave origin Y
  * @param {number} punchAngle - Serious Punch release angle
  * @param {object} arena - Arena bounds
  * @param {object|Array} [hits=null] - Precalculated wall intersection details (single hit or array)
+ * @param {number} [customHalfArc] - Optional custom frontal half arc angle
  */
-export function triggerHudShatter(originX, originY, punchAngle, arena, hits = null) {
-  // Saitama interaction with HUD is disabled — he can only destroy arena walls
-  if (!CONFIG.saitama?.enableHudShatter) {
+export function triggerHudShatter(originX, originY, punchAngle, arena, hits = null, customHalfArc = undefined) {
+  if (!isSaitamaHudShatterEnabled()) {
     return;
   }
   if (!arena && typeof state !== 'undefined') arena = state.arena;
   if (!arena) return;
 
-  const hitList = Array.isArray(hits) ? hits : (hits ? [hits] : []);
+  const halfArc = customHalfArc !== undefined ? customHalfArc : ((CONFIG.saitama?.counterFrontalArc ?? ((28 * Math.PI) / 180)) / 2);
+  let hitList = Array.isArray(hits) ? hits : (hits ? [hits] : []);
+  if (hitList.length === 0 && typeof findAllArenaWallIntersections === 'function') {
+    const coneHits = findAllArenaWallIntersections(originX, originY, punchAngle, arena, halfArc);
+    if (coneHits && coneHits.length > 0) hitList = coneHits;
+  }
   if (hitList.length === 0) {
     const singleHit = findArenaWallIntersection(originX, originY, punchAngle, arena);
     if (singleHit) hitList.push(singleHit);
@@ -75,12 +87,14 @@ export function triggerHudShatter(originX, originY, punchAngle, arena, hits = nu
   const sinA = Math.sin(punchAngle);
   const isUpward = sinA < -0.30;
   const isDownward = sinA > 0.30;
+  const allowTop = CONFIG.saitama?.enableTopHudShatter !== false;
+  const allowBottom = CONFIG.saitama?.enableBottomHudShatter !== false;
 
   // Strict Directional Target Determination:
   // - Top Target: ONLY when punch trajectory is directed UPWARDS into top wall / upper dome
-  const topHit = isUpward ? hitList.find(h => h.wallType === 'top' || (h.wallType === 'circle' && h.y <= (arena.y + arena.height * 0.35))) : null;
+  const topHit = (allowTop && isUpward) ? hitList.find(h => h.wallType === 'top' || (h.wallType === 'circle' && h.y <= (arena.y + arena.height * 0.35))) : null;
   // - Bottom Target: ONLY when punch trajectory is directed DOWNWARDS into bottom wall / lower dome
-  const bottomHit = isDownward ? hitList.find(h => h.wallType === 'bottom' || (h.wallType === 'circle' && h.y >= (arena.y + arena.height * 0.65))) : null;
+  const bottomHit = (allowBottom && isDownward) ? hitList.find(h => h.wallType === 'bottom' || (h.wallType === 'circle' && h.y >= (arena.y + arena.height * 0.65))) : null;
 
   const isTopTarget = Boolean(topHit);
   const isBottomTarget = Boolean(bottomHit);
@@ -886,7 +900,7 @@ function generateBottomHudShatters(arena, punchAngle, hitX, maxLife, originX, or
  * Updates physics for all active HUD shatter effects.
  */
 export function updateHudShatters() {
-  if (!CONFIG.saitama?.enableHudShatter || !state.hudShatters) return;
+  if (!isSaitamaHudShatterEnabled() || !state.hudShatters) return;
 
   const hs = state.hudShatters;
 
@@ -985,7 +999,7 @@ export function updateHudShatters() {
  * @returns {boolean} Whether shattered names were rendered
  */
 export function drawTopHudNameShatters(ctx, isDark, arena) {
-  if (!CONFIG.saitama?.enableHudShatter || !state.hudShatters || !state.hudShatters.topNameShatter) {
+  if (!isSaitamaHudShatterEnabled() || CONFIG.saitama?.enableTopHudShatter === false || !state.hudShatters || !state.hudShatters.topNameShatter) {
     return false;
   }
 
@@ -1051,7 +1065,7 @@ export function drawTopHudNameShatters(ctx, isDark, arena) {
  * @param {object} arena - Arena object
  */
 export function drawBottomHudShatters(ctx, isDark, arena) {
-  if (!CONFIG.saitama?.enableHudShatter || !state.hudShatters || !state.hudShatters.bottomHudShatter) {
+  if (!isSaitamaHudShatterEnabled() || CONFIG.saitama?.enableBottomHudShatter === false || !state.hudShatters || !state.hudShatters.bottomHudShatter) {
     return;
   }
 

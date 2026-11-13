@@ -7,6 +7,7 @@ import { CONFIG } from '../../core/config.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
 import { drawMahitoSkin } from '../../graphics/fighters/mahitoSkin.js';
 import { spawnImpactFlash, spawnSparks, spawnMahitoSoulBubbles, spawnMahitoSoulExplosion } from '../../graphics/particles/sparkEffect.js';
+import { spawnBloodEffect } from '../../graphics/particles/bloodEffect.js';
 import { spawnIllusionSpawn } from '../../graphics/particles/illusionSpawnEffect.js';
 import { spawnIllusionDeath } from '../../graphics/particles/illusionDeathEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -338,7 +339,65 @@ export class MahitoFighter extends Fighter {
       this.activateDistortedKilling();
     }
 
+    if (this.hp <= 0 || this.isDead || this.dead || this._hasDied) {
+      this.killTransfiguredHumans();
+    }
+
     return res;
+  }
+
+  /**
+   * Overrides base Fighter.onDeath() to guarantee all active Transfigured Humans
+   * summoned by Mahito die when Mahito is defeated.
+   */
+  onDeath() {
+    this.killTransfiguredHumans();
+    super.onDeath();
+  }
+
+  /**
+   * Kills all active Transfigured Humans summoned by Mahito when Mahito dies.
+   * @param {boolean} [immediate=false] - If true, immediately bursts and removes them from state.illusions.
+   */
+  killTransfiguredHumans(immediate = false) {
+    if (typeof state === 'undefined' || !Array.isArray(state.illusions) || state.illusions.length === 0) return;
+    const isWinnerScreen = Boolean(this._isWinnerReveal || state.roundOver || state.matchEnded);
+    const shouldBeImmediate = immediate || isWinnerScreen;
+
+    for (let i = state.illusions.length - 1; i >= 0; i--) {
+      const ill = state.illusions[i];
+      if (!ill) continue;
+      const isMyMinion = Boolean(
+        ill.isTransfiguredHuman &&
+        (ill.owner === this || ill.ownerIndex === this.fighterIndex || !ill.owner || ill.owner?.characterId === 'mahito')
+      );
+      if (!isMyMinion) continue;
+
+      ill.hp = 0;
+      ill.dead = true;
+      ill.isDead = true;
+      ill.killedByOwnerDeath = true;
+
+      if (shouldBeImmediate) {
+        ill.isDying = false;
+        if (typeof spawnMahitoSoulExplosion === 'function') {
+          spawnMahitoSoulExplosion(ill.x, ill.y, (ill.r || 30) * 1.8);
+        }
+        if (typeof spawnBloodEffect === 'function') {
+          spawnBloodEffect({ x: ill.x, y: ill.y, r: ill.r || 30, color: '#e60000' }, 20);
+        }
+        if (typeof spawnIllusionDeath === 'function') {
+          spawnIllusionDeath({ ...ill, color: '#D946EF' });
+        }
+        state.illusions.splice(i, 1);
+      } else if (!ill.isDying) {
+        ill.isDying = true;
+        ill.deathTimer = 20; // Swift, responsive swell before popping on master death
+        ill.maxDeathTimer = 20;
+        ill.vx = 0;
+        ill.vy = 0;
+      }
+    }
   }
 
   /**
@@ -381,11 +440,15 @@ export class MahitoFighter extends Fighter {
     this.soulPhaseDashVector = null;
     this.hideFrontHand = false;
     this.hideBackHand = false;
+    if (forceCancelAll && (this.isDead || this.hp <= 0 || this.dead || this._hasDied)) {
+      this.killTransfiguredHumans();
+    }
     super.interruptAttacks(forceCancelAll);
   }
 
   update(opponent, ownerIndex, arena) {
     if (this.isDead || this.hp <= 0 || this.dead || this._hasDied) {
+      this.killTransfiguredHumans();
       this.punchAnimTimer = 0;
       if (this.isChannelingDomainExpansion || (this.domainChargeTimer || 0) > 0) {
         this.isChannelingDomainExpansion = false;

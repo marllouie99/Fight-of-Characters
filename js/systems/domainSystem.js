@@ -6,6 +6,71 @@ import { CONFIG } from '../core/config.js';
 import { triggerHaptic } from './mobileAppBridge.js';
 import { stopFighterVoice } from './soundSystem.js';
 
+export const JJK_FIGHTER_IDS = new Set([
+  'choso',
+  'gojo',
+  'mahito',
+  'mahoraga',
+  'maki',
+  'megumi',
+  'nanami',
+  'naoya',
+  'nobara',
+  'sukuna',
+  'todo',
+  'toji',
+  'yuji',
+  'yuta',
+  'rika'
+]);
+
+/**
+ * Checks whether Verse Equalization is enabled for Gojo's Unlimited Void.
+ * @returns {boolean}
+ */
+export function isGojoDomainVerseEqualizationEnabled() {
+  return Boolean(CONFIG?.gojo?.domainVerseEqualization ?? false);
+}
+
+/**
+ * Checks whether a fighter/summon belongs to the Jujutsu Kaisen (JJK) universe.
+ * Supports owner lookup for summons, shikigami, and illusions.
+ * @param {Object} fighter
+ * @param {number} [depth=0]
+ * @returns {boolean}
+ */
+export function isJjkFighter(fighter, depth = 0) {
+  if (!fighter || depth > 2) return false;
+  const ids = [
+    fighter.characterId,
+    fighter.type,
+    fighter._def?.id,
+    fighter._def?.type
+  ];
+  for (const id of ids) {
+    if (typeof id === 'string' && JJK_FIGHTER_IDS.has(id.toLowerCase())) {
+      return true;
+    }
+  }
+  const owner = fighter.owner || fighter.master || fighter.caster;
+  if (owner && owner !== fighter) {
+    return isJjkFighter(owner, depth + 1);
+  }
+  return false;
+}
+
+/**
+ * Returns true if the target should receive heavy movement slow instead of full paralysis
+ * when inside Unlimited Void (when Verse Equalization is disabled and target is non-JJK).
+ * @param {Object} fighter
+ * @returns {boolean}
+ */
+export function shouldGojoDomainSlowInsteadOfFreeze(fighter) {
+  if (!fighter) return false;
+  if (isGojoDomainVerseEqualizationEnabled()) return false;
+  return !isJjkFighter(fighter);
+}
+
 /**
  * Checks if a fighter is immune to Domain Expansions (e.g. Toji Heavenly Restriction / Zero Cursed Energy).
  * @param {Object} fighter 
@@ -25,6 +90,65 @@ export function isDomainImmune(fighter) {
     fighter.type === 'toji' ||
     fighter._def?.id === 'toji'
   );
+}
+
+/**
+ * Checks whether an entity is inside an active enemy Unlimited Void
+ * (Gojo's Domain Expansion or Rubbick's stolen Gojo Domain) and not domain-immune.
+ * @param {Object} fighter
+ * @param {Object} gameState
+ * @returns {boolean}
+ */
+export function isInsideEnemyUnlimitedVoid(fighter, gameState) {
+  if (!fighter || !gameState || !gameState.fighters) return false;
+  if (
+    fighter.domainImmunity ||
+    fighter.isDomainImmune ||
+    fighter.isParalyzeImmune ||
+    fighter.gojoDomainAdapted ||
+    fighter.gojoAdapted?.domain ||
+    fighter.characterId === 'toji' ||
+    fighter.type === 'toji' ||
+    fighter._def?.id === 'toji'
+  ) {
+    return false;
+  }
+
+  const fighters = gameState.fighters;
+  const myIndex = fighters.indexOf(fighter);
+  const teamEntityIndex = myIndex >= 0
+    ? myIndex
+    : (fighter.owner ? fighters.indexOf(fighter.owner) : -1);
+  const myTeam = (teamEntityIndex >= 0 && typeof gameState.getFighterTeam === 'function')
+    ? gameState.getFighterTeam(teamEntityIndex)
+    : (fighter.team !== undefined ? fighter.team : null);
+
+  return fighters.some((f, fIdx) => {
+    if (!f || f === fighter || f.hp <= 0) return false;
+    if (fighter.owner === f) return false;
+
+    const isGojoCaster = (
+      f.characterId === 'gojo' ||
+      f.type === 'gojo' ||
+      f._def?.id === 'gojo'
+    );
+    const isRubbickVoidCaster = (
+      (f.characterId === 'rubbick' || f.type === 'rubbick' || f.characterId === 'trickster' || f.type === 'trickster' || f._def?.id === 'rubbick' || f._def?.id === 'trickster') &&
+      f.stolenType === 'gojo_domain'
+    );
+    const isUnlimitedVoidActive = Boolean(
+      (isGojoCaster && f.domainActive) ||
+      (isRubbickVoidCaster && (f.domainActive || f.stolenDomainActive)) ||
+      (f.isParalyzingDomain && (f.domainActive || f.stolenDomainActive))
+    );
+    if (!isUnlimitedVoidActive) return false;
+
+    if (myTeam !== null && typeof gameState.getFighterTeam === 'function') {
+      const fTeam = gameState.getFighterTeam(fIdx);
+      if (fTeam !== null && fTeam === myTeam) return false;
+    }
+    return true;
+  });
 }
 
 /**

@@ -10,7 +10,7 @@
 // - Rule 30: 5-Phase melee combat animation & impact lock standard
 // ─────────────────────────────────────────────
 
-import { Fighter, isSkillEnabled } from '../fighter.js';
+import { Fighter, isSkillEnabled, computeScaledFighterRadius } from '../fighter.js';
 import { CONFIG } from '../../core/config.js';
 import { gutsConfig } from '../../configs/characters/gutsConfig.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/state.js';
@@ -32,8 +32,8 @@ export class GutsFighter extends Fighter {
     this.color = cfg.color || '#18181b';
     this.damageNumberColor = cfg.damageNumberColor || '#dc2626';
 
-    this.r = cfg.r || 25;
-    this.radius = cfg.radius || 25;
+    this.r = computeScaledFighterRadius(def?.radius ?? cfg.radius ?? cfg.r ?? 25);
+    this.radius = this.r;
     this.hp = cfg.hp || 460;
     this.maxHp = cfg.maxHp || 460;
     this.speed = cfg.speed || 4.6;

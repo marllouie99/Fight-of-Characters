@@ -12,6 +12,8 @@ import { CONFIG } from '../../core/config.js';
 
 let _mahitoClawsImage = null;
 let _mahitoClawsImageLoading = false;
+let _mahitoTransformedClawCanvas = null;
+let _mahitoTransformedClawSource = null;
 
 export function _getMahitoClawsWeaponImage() {
   if (_mahitoClawsImage && _mahitoClawsImage.complete && _mahitoClawsImage.naturalWidth > 0) {
@@ -28,10 +30,60 @@ export function _getMahitoClawsWeaponImage() {
       console.warn('Failed to load Mahito claws weapon image at Assets/model/mahito/MAHITO-CLAWS-WEAPON.png', e);
       _mahitoClawsImageLoading = false;
     };
-    img.src = 'Assets/model/mahito/MAHITO-CLAWS-WEAPON.png?v=1';
+    img.src = 'Assets/model/mahito/MAHITO-CLAWS-WEAPON.png?v=2';
     _mahitoClawsImage = img;
   }
   return _mahitoClawsImage;
+}
+
+/**
+ * One-time offscreen cache baking Mahito's 16-bit Transfiguration Claw sprite
+ * into his Transformed Instant Spirit Body obsidian/magenta palette (Rule 35).
+ */
+function _getMahitoTransformedClawCanvas(img) {
+  if (!img || typeof document === 'undefined') return img;
+  if (_mahitoTransformedClawCanvas && _mahitoTransformedClawSource === img) {
+    return _mahitoTransformedClawCanvas;
+  }
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  if (!w || !h) return img;
+  try {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const cctx = c.getContext('2d');
+    if (!cctx) return img;
+    cctx.imageSmoothingEnabled = false;
+    cctx.filter = 'brightness(0.62) contrast(1.25) saturate(1.45) hue-rotate(-14deg)';
+    cctx.drawImage(img, 0, 0, w, h);
+    cctx.filter = 'none';
+    cctx.globalCompositeOperation = 'source-atop';
+    cctx.fillStyle = 'rgba(192, 38, 211, 0.22)';
+    cctx.fillRect(0, 0, w, h);
+    _mahitoTransformedClawCanvas = c;
+    _mahitoTransformedClawSource = img;
+    return c;
+  } catch (_) {
+    return img;
+  }
+}
+
+/**
+ * Draws the 16-bit pixel art Transfiguration Claw sprite anchored cleanly on the fist/wrist socket.
+ */
+function _drawMahitoClawSprite(ctx, clawImg, clawScale, isTransformed) {
+  const src = isTransformed ? _getMahitoTransformedClawCanvas(clawImg) : clawImg;
+  const natW = src.naturalWidth || src.width || 600;
+  const natH = src.naturalHeight || src.height || 262;
+  const targetWorldW = 104 * (clawScale / 0.70);
+  const scale = targetWorldW / natW;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.scale(scale, scale);
+  ctx.drawImage(src, -natW * 0.30, -natH * 0.46, natW, natH);
+  ctx.restore();
 }
 
 if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
@@ -216,15 +268,10 @@ function drawClawMorphArm(ctx, r, handX, handY, isTransformed, progress, isRight
     tipY: (b.tipY || 0) * clawScale
   }));
 
-  // 3. Render Pixel Art Claws or Procedural Fallback
+  // 3. Render 16-Bit Pixel Art Transfiguration Claws or Procedural Fallback
   const clawImg = _getMahitoClawsWeaponImage();
   if (clawImg && clawImg.complete && clawImg.naturalWidth > 0) {
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    const imgScale = (clawScale / 0.70) * 0.180;
-    ctx.scale(imgScale, imgScale);
-    ctx.drawImage(clawImg, -70, -230);
-    ctx.restore();
+    _drawMahitoClawSprite(ctx, clawImg, clawScale, isTransformed);
   } else {
     // 3. Side-Profile Stitched Hand Fist Base
     ctx.beginPath();
@@ -1406,10 +1453,7 @@ export function drawMahitoStaticClawBlades(ctx, r, handX, handY, isTransformed, 
   if (clawImg && clawImg.complete && clawImg.naturalWidth > 0) {
     ctx.save();
     ctx.translate(handX, handY);
-    ctx.imageSmoothingEnabled = false;
-    const imgScale = (clawScale / 0.70) * 0.180;
-    ctx.scale(imgScale, imgScale);
-    ctx.drawImage(clawImg, -70, -230);
+    _drawMahitoClawSprite(ctx, clawImg, clawScale, isTransformed);
     ctx.restore();
     return;
   }

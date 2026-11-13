@@ -86,12 +86,15 @@ export function triggerInfinityBlock(fighter, hitX, hitY, attacker, spawnEffects
     return false;
   }
 
-  // If Gojo is trapped inside Rubbick's stolen Unlimited Void, Purple is active/in flight/in breather, or chained by Makima, Limitless Infinity is disabled
+  // If Gojo is trapped inside Rubbick's stolen Unlimited Void, channeling Red/Purple/Domain, in Purple flight/breather, or chained by Makima, Limitless Infinity is disabled
   const isPurpleInFlight = (typeof fighter.isPurpleActive === 'function' && fighter.isPurpleActive()) || 
     ((fighter.purpleRecoveryTimer || 0) > 0) || 
     ((fighter.purpleRetreatTimer || 0) > 0) || 
     ((fighter.z || 0) > 0 && !fighter.isChannelingPurple);
-  if (isInsideRubbickStolenVoid(fighter) || isPurpleInFlight || fighter.isChainedByMakima || fighter.isMeleeMode) {
+  const isChannelingSuppressed = (typeof fighter.isChannelingRedPurpleOrDomain === 'function')
+    ? fighter.isChannelingRedPurpleOrDomain()
+    : Boolean(fighter.redBuildupPhase || (fighter.redEffectTimer || 0) > 0 || fighter.isCastingRed || fighter.isChannelingPurple || fighter.isDomainPreSlide || fighter.isChannelingDomainExpansion || (fighter.domainChargeTimer || 0) > 0 || fighter.domainActive);
+  if (isInsideRubbickStolenVoid(fighter) || isPurpleInFlight || isChannelingSuppressed || fighter.isChainedByMakima || fighter.isMeleeMode) {
     fighter.infinityActive = false;
     fighter.infinityFadeOpacity = 0;
     fighter.infinityBlockTimer = 0;
@@ -114,17 +117,11 @@ export function triggerInfinityBlock(fighter, hitX, hitY, attacker, spawnEffects
     }
   }
 
-  const isDomainChanneling = fighter.isDomainPreSlide || fighter.isChannelingDomainExpansion;
-  if (!isPurpleInFlight && !fighter.isChainedByMakima && isDomainChanneling && (fighter.infinityCooldown || 0) <= 0 && (fighter.infinityBarrierHp === undefined || fighter.infinityBarrierHp > 0)) {
-    fighter.infinityActive = true;
-    fighter.isMeleeMode = false;
-  }
-
   const isInsideEnemyDomain = !fighter.domainActive && state.fighters && state.fighters.some(f => f && f !== fighter && f.domainActive && !f.stolenDomainActive && f.stolenType !== 'gojo_domain' && f.hp > 0);
-  if (isInsideEnemyDomain && !fighter.isMeleeMode && !isPurpleInFlight && !fighter.isChainedByMakima && (fighter.infinityCooldown || 0) <= 0 && (fighter.infinityBarrierHp === undefined || fighter.infinityBarrierHp > 0)) {
+  if (isInsideEnemyDomain && !isChannelingSuppressed && !fighter.isMeleeMode && !isPurpleInFlight && !fighter.isChainedByMakima && (fighter.infinityCooldown || 0) <= 0 && (fighter.infinityBarrierHp === undefined || fighter.infinityBarrierHp > 0)) {
     fighter.infinityActive = true;
   }
-  if (fighter.isMeleeMode || fighter.isChannelingPurple || isPurpleInFlight || fighter.domainActive || (fighter.infinityCooldown || 0) > 0 || !fighter.infinityActive || (fighter.infinityBarrierHp !== undefined && fighter.infinityBarrierHp <= 0)) return false;
+  if (fighter.isMeleeMode || isChannelingSuppressed || fighter.isChannelingPurple || isPurpleInFlight || fighter.domainActive || (fighter.infinityCooldown || 0) > 0 || !fighter.infinityActive || (fighter.infinityBarrierHp !== undefined && fighter.infinityBarrierHp <= 0)) return false;
 
   const barrierRadius = CONFIG.gojo?.infinityRadius ?? (fighter.r + 30);
   const gojoY = fighter.y - (fighter.z || 0);

@@ -596,8 +596,47 @@ export function drawAnamorphicLensFlare(ctx, x, y, flareP, colorType = 'purple')
 }
 
 // ─────────────────────────────────────────────
-// Gojo Hollow Purple 12-Frame Explosion Animation
+// Gojo Limitless Technique Sprite Sequences & Per-Set Cache Versions
 // ─────────────────────────────────────────────
+const GOJO_SPRITE_CACHE_VERSIONS = {
+  purpleExplosion: 1,
+  purpleTravel: 1,
+  redReversal: 1,
+  blueTravel: 2,
+};
+
+function _loadFrames(paths, targetArr, setLoadingFlag, cacheVersion = 1, label = 'frame') {
+  if (typeof Image === 'undefined') return targetArr;
+  setLoadingFlag(true);
+  targetArr.length = 0;
+  paths.forEach((src, idx) => {
+    const img = new Image();
+    img.onload = () => {
+      targetArr[idx] = img;
+    };
+    img.onerror = (e) => {
+      console.warn(`Failed to load ${label} ${idx + 1} at ${src}:`, e);
+    };
+    img.src = `${src}?v=${cacheVersion}`;
+    targetArr[idx] = img;
+  });
+  return targetArr;
+}
+
+function _getCachedFrames(framePaths, cacheArr, expectedCount, isLoading, setLoading, cacheVersion, label) {
+  if (
+    cacheArr.length === expectedCount &&
+    cacheArr.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
+  ) {
+    return cacheArr;
+  }
+  if (!isLoading()) {
+    _loadFrames(framePaths, cacheArr, setLoading, cacheVersion, label);
+  }
+  return cacheArr;
+}
+
+// Gojo Hollow Purple 12-Frame Explosion Animation
 const GOJO_PURPLE_EXPLOSION_FRAME_COUNT = 12;
 const GOJO_PURPLE_EXPLOSION_FRAME_PATHS = Array.from(
   { length: 12 },
@@ -608,28 +647,15 @@ let _gojoPurpleExplosionFrames = [];
 let _gojoPurpleExplosionFramesLoading = false;
 
 export function _getGojoPurpleExplosionFrames() {
-  if (
-    _gojoPurpleExplosionFrames.length === GOJO_PURPLE_EXPLOSION_FRAME_COUNT &&
-    _gojoPurpleExplosionFrames.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
-  ) {
-    return _gojoPurpleExplosionFrames;
-  }
-  if (!_gojoPurpleExplosionFramesLoading && typeof Image !== 'undefined') {
-    _gojoPurpleExplosionFramesLoading = true;
-    _gojoPurpleExplosionFrames = [];
-    GOJO_PURPLE_EXPLOSION_FRAME_PATHS.forEach((src, idx) => {
-      const img = new Image();
-      img.onload = () => {
-        _gojoPurpleExplosionFrames[idx] = img;
-      };
-      img.onerror = (e) => {
-        console.warn(`Failed to load Gojo Purple explosion frame ${idx + 1} at ${src}:`, e);
-      };
-      img.src = `${src}?v=1`;
-      _gojoPurpleExplosionFrames[idx] = img;
-    });
-  }
-  return _gojoPurpleExplosionFrames;
+  return _getCachedFrames(
+    GOJO_PURPLE_EXPLOSION_FRAME_PATHS,
+    _gojoPurpleExplosionFrames,
+    GOJO_PURPLE_EXPLOSION_FRAME_COUNT,
+    () => _gojoPurpleExplosionFramesLoading,
+    v => { _gojoPurpleExplosionFramesLoading = v; },
+    GOJO_SPRITE_CACHE_VERSIONS.purpleExplosion,
+    'Gojo Purple explosion frame'
+  );
 }
 
 // Proactive eager initialization in browser environment
@@ -737,61 +763,40 @@ let _gojoRedReversalFramesLoading = false;
 let _gojoBlueTravelFrames = [];
 let _gojoBlueTravelFramesLoading = false;
 
-function _loadFrames(paths, targetArr, count, setLoadingFlag) {
-  if (typeof Image === 'undefined') return targetArr;
-  setLoadingFlag(true);
-  targetArr.length = 0;
-  paths.forEach((src, idx) => {
-    const img = new Image();
-    img.onload = () => {
-      targetArr[idx] = img;
-    };
-    img.onerror = (e) => {
-      console.warn(`Failed to load frame ${idx + 1} at ${src}:`, e);
-    };
-    img.src = `${src}?v=1`;
-    targetArr[idx] = img;
-  });
-  return targetArr;
-}
-
 export function _getGojoPurpleTravelFrames() {
-  if (
-    _gojoPurpleTravelFrames.length === GOJO_PURPLE_TRAVEL_FRAME_COUNT &&
-    _gojoPurpleTravelFrames.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
-  ) {
-    return _gojoPurpleTravelFrames;
-  }
-  if (!_gojoPurpleTravelFramesLoading) {
-    _loadFrames(GOJO_PURPLE_TRAVEL_FRAME_PATHS, _gojoPurpleTravelFrames, GOJO_PURPLE_TRAVEL_FRAME_COUNT, v => { _gojoPurpleTravelFramesLoading = v; });
-  }
-  return _gojoPurpleTravelFrames;
+  return _getCachedFrames(
+    GOJO_PURPLE_TRAVEL_FRAME_PATHS,
+    _gojoPurpleTravelFrames,
+    GOJO_PURPLE_TRAVEL_FRAME_COUNT,
+    () => _gojoPurpleTravelFramesLoading,
+    v => { _gojoPurpleTravelFramesLoading = v; },
+    GOJO_SPRITE_CACHE_VERSIONS.purpleTravel,
+    'Gojo Purple travel frame'
+  );
 }
 
 export function _getGojoRedReversalFrames() {
-  if (
-    _gojoRedReversalFrames.length === GOJO_RED_REVERSAL_FRAME_COUNT &&
-    _gojoRedReversalFrames.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
-  ) {
-    return _gojoRedReversalFrames;
-  }
-  if (!_gojoRedReversalFramesLoading) {
-    _loadFrames(GOJO_RED_REVERSAL_FRAME_PATHS, _gojoRedReversalFrames, GOJO_RED_REVERSAL_FRAME_COUNT, v => { _gojoRedReversalFramesLoading = v; });
-  }
-  return _gojoRedReversalFrames;
+  return _getCachedFrames(
+    GOJO_RED_REVERSAL_FRAME_PATHS,
+    _gojoRedReversalFrames,
+    GOJO_RED_REVERSAL_FRAME_COUNT,
+    () => _gojoRedReversalFramesLoading,
+    v => { _gojoRedReversalFramesLoading = v; },
+    GOJO_SPRITE_CACHE_VERSIONS.redReversal,
+    'Gojo Red reversal frame'
+  );
 }
 
 export function _getGojoBlueTravelFrames() {
-  if (
-    _gojoBlueTravelFrames.length === GOJO_BLUE_TRAVEL_FRAME_COUNT &&
-    _gojoBlueTravelFrames.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
-  ) {
-    return _gojoBlueTravelFrames;
-  }
-  if (!_gojoBlueTravelFramesLoading) {
-    _loadFrames(GOJO_BLUE_TRAVEL_FRAME_PATHS, _gojoBlueTravelFrames, GOJO_BLUE_TRAVEL_FRAME_COUNT, v => { _gojoBlueTravelFramesLoading = v; });
-  }
-  return _gojoBlueTravelFrames;
+  return _getCachedFrames(
+    GOJO_BLUE_TRAVEL_FRAME_PATHS,
+    _gojoBlueTravelFrames,
+    GOJO_BLUE_TRAVEL_FRAME_COUNT,
+    () => _gojoBlueTravelFramesLoading,
+    v => { _gojoBlueTravelFramesLoading = v; },
+    GOJO_SPRITE_CACHE_VERSIONS.blueTravel,
+    'Gojo Blue travel frame'
+  );
 }
 
 // Proactive eager initialization in browser environment

@@ -40,9 +40,9 @@ export const sansConfig = {
   // Passive 1: Karmic Retribution (KR)
   enableKarma: 1,
   karmaTickDamage: 1,
-  karmaTickInterval: 14,       // Frames between poison ticks (~0.23s)
+  karmaTickInterval: 20,       // Frames between poison ticks (~0.23s)
   karmaMaxStacks: 12,          // Up to 12 stacks for sustained pressure
-  karmaDuration: 180,          // Total KR duration (~3.0s)
+  karmaDuration: 70,          // Total KR duration (~3.0s)
   karmaKnockback: 0,           // Knockback force per KR tick (0 = zero push back)
 
   // Passive 2: Teleport Dodge & Stamina
@@ -63,7 +63,7 @@ export const sansConfig = {
   dodgeAfterimages: 2,        // Alias for dodgeAfterimageCount
   dodgeMaxAfterimages: 16,    // Maximum simultaneous active afterimages in arena buffer
   dodgeAfterimageDuration: 20,// Lifespan of each dodge afterimage ghost (frames)
-  dodgeAfterimageAlpha: 0.40, // Base opacity / visibility of afterimage ghosts
+  dodgeAfterimageAlpha: 0.90, // Base opacity / visibility of afterimage ghosts
   dodgeStallDuration: 12,     // Frames movement stops during a dodge (repositioning is done solely by teleport)
   dodgeText: 'MISS',
 
@@ -79,14 +79,14 @@ export const sansConfig = {
   blasterCooldown: 300,        // ~5.3s cooldown
   initialBlasterCooldown: 320, // Initial cooldown at round start (~3.0s at 60fps) before first Gaster Blaster barrage
   blasterInitialCooldown: 180, // Alias for initialBlasterCooldown
-  blasterStaminaCost: 10,      // Stamina exhaustion cost per Gaster Blaster barrage (25 / 100 Stamina)
+  blasterStaminaCost: 5,      // Stamina exhaustion cost per Gaster Blaster barrage (25 / 100 Stamina)
   blasterHpCost: 0,            // Deprecated: Stamina is consumed instead of HP
   
   // Stamina Recovery on Gaster Blaster Hit
-  blasterStaminaRecoverOnHit: 1,        // Stamina recovered on first impact hit per blaster
+  blasterStaminaRecoverOnHit: 0.5,        // Stamina recovered on first impact hit per blaster
   blasterHitStaminaRecover: 0,          // Backward-compatibility alias
   blasterContinuousStaminaRecover: 0,   // Stamina recovered on continuous beam contact ticks
-  blasterGigaStaminaRecoverOnHit: 1,    // Stamina recovered on Gigablaster first impact
+  blasterGigaStaminaRecoverOnHit: 0.5,    // Stamina recovered on Gigablaster first impact
   blasterGigaContinuousStaminaRecover: 0, // Stamina recovered on Gigablaster continuous tick
   
   // General Beam Dimension & Height Tuning

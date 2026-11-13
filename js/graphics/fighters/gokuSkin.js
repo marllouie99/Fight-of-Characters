@@ -13,10 +13,13 @@
 import { state } from '../../core/state.js';
 import { CONFIG, getHandSize } from '../../core/config.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
-import { getFilteredSpriteCanvas } from '../graphicsCache.js';
+import { getFilteredSpriteCanvas, drawTransformedSpriteQuad, drawGlowingGhostSprite } from '../graphicsCache.js';
 
 let _gokuHairImage = null;
 let _gokuHairImageLoading = false;
+
+let _gokuSuperSaiyanHairImage = null;
+let _gokuSuperSaiyanHairImageLoading = false;
 
 export function _getGokuHairImage() {
   if (_gokuHairImage && _gokuHairImage.complete && _gokuHairImage.naturalWidth > 0) {
@@ -43,16 +46,41 @@ export function _getGokuHairImage() {
   return _gokuHairImage;
 }
 
+export function _getGokuSuperSaiyanHairImage() {
+  if (_gokuSuperSaiyanHairImage && _gokuSuperSaiyanHairImage.complete && _gokuSuperSaiyanHairImage.naturalWidth > 0) {
+    return _gokuSuperSaiyanHairImage;
+  }
+  if (!_gokuSuperSaiyanHairImageLoading && typeof Image !== 'undefined') {
+    _gokuSuperSaiyanHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _gokuSuperSaiyanHairImage = img;
+      _gokuSuperSaiyanHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _gokuSuperSaiyanHairImageLoading = false;
+    };
+    const hairPath = (typeof CONFIG !== 'undefined' && CONFIG.goku?.assets?.superSaiyanHair) || 'Assets/model/goku/Goku-ssj-hair.png';
+    img.src = hairPath;
+    _gokuSuperSaiyanHairImage = img;
+  }
+  return _gokuSuperSaiyanHairImage;
+}
+
 if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
   _getGokuHairImage();
+  _getGokuSuperSaiyanHairImage();
 }
 
 /**
- * Draws Goku's iconic Saiyan hair silhouette from Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png.
+ * Resolves calibrated hair dimensions, anchor offsets, and source image for Goku's base or SSJ form.
  */
-export function _drawGokuHair(ctx, r, facingLeft = false, isSuperSaiyan = false) {
+function _resolveGokuHairMetrics(r, isSuperSaiyan = false) {
   const hairImg = _getGokuHairImage();
-  const custom = (typeof state !== 'undefined' && state.skinCustomizations?.goku) || {};
+  const ssjHairImg = isSuperSaiyan ? _getGokuSuperSaiyanHairImage() : null;
+  const useDedicatedSsjSprite = Boolean(isSuperSaiyan && ssjHairImg && ssjHairImg.complete && ssjHairImg.naturalWidth > 0);
+
+  const custom = (typeof state !== 'undefined' && (useDedicatedSsjSprite ? state.skinCustomizations?.goku_ssj : state.skinCustomizations?.goku)) || {};
   const wMult = custom.widthScale ?? 1.0;
   const hMult = custom.heightScale ?? 1.0;
   const offX = custom.offsetX ?? 0;
@@ -61,35 +89,29 @@ export function _drawGokuHair(ctx, r, facingLeft = false, isSuperSaiyan = false)
   const flipX = custom.flipX ? -1 : 1;
   const flipY = custom.flipY ? -1 : 1;
 
-  const targetHairWidth = r * 3.10 * wMult;
-  const targetHairHeight = r * 2.07 * hMult;
-
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-
+  const targetHairWidth = r * (useDedicatedSsjSprite ? 3.15 : 3.10) * wMult;
+  const targetHairHeight = r * (useDedicatedSsjSprite ? 2.75 : 2.07) * hMult;
   const drawX = -targetHairWidth / 2 + offX;
-  const drawY = -r * 1.38 + offY;
+  const drawY = -r * (useDedicatedSsjSprite ? 2.05 : 1.38) + offY;
 
-  if (rot !== 0 || flipX !== 1 || flipY !== 1) {
-    ctx.translate(drawX + targetHairWidth / 2, drawY + targetHairHeight / 2);
-    if (rot !== 0) ctx.rotate(rot);
-    if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
-    if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
-      const srcImg = isSuperSaiyan
-        ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
-        : hairImg;
-      ctx.drawImage(srcImg, -targetHairWidth / 2, -targetHairHeight / 2, targetHairWidth, targetHairHeight);
-    }
-  } else {
-    if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
-      const srcImg = isSuperSaiyan
-        ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
-        : hairImg;
-      ctx.drawImage(srcImg, drawX, drawY, targetHairWidth, targetHairHeight);
-    }
+  let srcImg = null;
+  if (useDedicatedSsjSprite) {
+    srcImg = ssjHairImg;
+  } else if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    srcImg = isSuperSaiyan
+      ? getFilteredSpriteCanvas(hairImg, 'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.2)')
+      : hairImg;
   }
 
-  ctx.restore();
+  return { srcImg, useDedicatedSsjSprite, targetHairWidth, targetHairHeight, drawX, drawY, rot, flipX, flipY };
+}
+
+/**
+ * Draws Goku's iconic Saiyan hair silhouette (base black sprite or dedicated Super Saiyan golden sprite).
+ */
+export function _drawGokuHair(ctx, r, facingLeft = false, isSuperSaiyan = false) {
+  const m = _resolveGokuHairMetrics(r, isSuperSaiyan);
+  drawTransformedSpriteQuad(ctx, m.srcImg, m.drawX, m.drawY, m.targetHairWidth, m.targetHairHeight, m.rot, m.flipX, m.flipY);
 }
 
 /**
@@ -484,7 +506,7 @@ export function drawGokuSkin(ctx, fighter) {
 /**
  * Ghost Model Afterimage for Goku (Z-Vanish Evasion)
  */
-export function drawGokuGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5) {
+export function drawGokuGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5, isSuperSaiyan = false) {
   if (alpha <= 0.01) return;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -500,11 +522,18 @@ export function drawGokuGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5) {
   // Golden Vanish Aura
   ctx.beginPath();
   ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 215, 0, 0.30)';
+  ctx.fillStyle = isSuperSaiyan ? 'rgba(255, 224, 77, 0.36)' : 'rgba(255, 215, 0, 0.30)';
   ctx.fill();
 
   drawGokuPixelBody(ctx, r);
-  _drawGokuHair(ctx, r, facingLeft, false);
+  const ssjImg = isSuperSaiyan ? _getGokuSuperSaiyanHairImage() : null;
+  const useSsjGhost = Boolean(isSuperSaiyan && ssjImg && ssjImg.complete && ssjImg.naturalWidth > 0);
+  if (useSsjGhost) {
+    const m = _resolveGokuHairMetrics(r, true);
+    drawGlowingGhostSprite(ctx, m.srcImg, m.drawX, m.drawY, m.targetHairWidth, m.targetHairHeight, m.rot, m.flipX, m.flipY, '#FFE84D');
+  } else {
+    _drawGokuHair(ctx, r, facingLeft, false);
+  }
 
   ctx.strokeStyle = 'rgba(255, 215, 0, 0.80)';
   ctx.lineWidth = 2.0;

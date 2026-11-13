@@ -11,6 +11,36 @@ import { getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { drawMegumiShadowBlade } from '../weapons/megumiWeaponGraphics.js';
 
+let _megumiHairImage = null;
+let _megumiHairImageLoading = false;
+
+/**
+ * Module-level eager loader for Megumi's pixel-art hair asset (Assets/model/megumi/Megumi-hair.png).
+ */
+export function _getMegumiHairImage() {
+  if (_megumiHairImage && _megumiHairImage.complete && _megumiHairImage.naturalWidth > 0) {
+    return _megumiHairImage;
+  }
+  if (!_megumiHairImageLoading && typeof Image !== 'undefined') {
+    _megumiHairImageLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _megumiHairImage = img;
+      _megumiHairImageLoading = false;
+    };
+    img.onerror = () => {
+      _megumiHairImageLoading = false;
+    };
+    img.src = 'Assets/model/megumi/Megumi-hair.png?v=1';
+    _megumiHairImage = img;
+  }
+  return _megumiHairImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getMegumiHairImage();
+}
+
 // Pre-computed normalized coordinates for Megumi's organic anime bangs (stylized fringe)
 const _MEGUMI_BANGS = [
   { nx:  0.88, ny: -0.32 },
@@ -402,41 +432,50 @@ export function drawMegumiGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.5) {
   ctx.closePath();
   ctx.fill();
 
-  // Spiky Hair & Bangs
-  ctx.fillStyle = '#0E1017';
-  ctx.beginPath();
-  ctx.moveTo(-r * 1.05, -r * 1.05);
-  ctx.lineTo(r * 1.05, -r * 1.05);
-  ctx.lineTo(r * 1.05, -r * 0.32);
-  for (let i = 0; i < _MEGUMI_BANGS.length; i++) {
-    const pt = _MEGUMI_BANGS[i];
-    ctx.lineTo(r * pt.nx, r * pt.ny);
+  const hairImg = _getMegumiHairImage();
+  const hasHairAsset = Boolean(hairImg && hairImg.complete && hairImg.naturalWidth > 0);
+
+  if (!hasHairAsset) {
+    // Spiky Hair & Bangs (procedural fallback before PNG loads)
+    ctx.fillStyle = '#0E1017';
+    ctx.beginPath();
+    ctx.moveTo(-r * 1.05, -r * 1.05);
+    ctx.lineTo(r * 1.05, -r * 1.05);
+    ctx.lineTo(r * 1.05, -r * 0.32);
+    for (let i = 0; i < _MEGUMI_BANGS.length; i++) {
+      const pt = _MEGUMI_BANGS[i];
+      ctx.lineTo(r * pt.nx, r * pt.ny);
+    }
+    ctx.lineTo(-r * 1.05, -r * 0.32);
+    ctx.closePath();
+    ctx.fill();
   }
-  ctx.lineTo(-r * 1.05, -r * 0.32);
-  ctx.closePath();
-  ctx.fill();
 
   ctx.restore();
 
-  // 3. Protruding Spiky Crown Tufts
-  ctx.fillStyle = '#0E1017';
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.75, -r * 0.42);
-  ctx.lineTo(-r * 1.15, -r * 0.65);
-  ctx.lineTo(-r * 0.65, -r * 0.70);
-  ctx.moveTo(-r * 0.62, -r * 0.72);
-  ctx.lineTo(-r * 0.82, -r * 1.12);
-  ctx.lineTo(-r * 0.32, -r * 0.88);
-  ctx.moveTo(-r * 0.26, -r * 0.90);
-  ctx.lineTo(0, -r * 1.22);
-  ctx.lineTo(r * 0.24, -r * 0.92);
-  ctx.moveTo(r * 0.32, -r * 0.88);
-  ctx.lineTo(r * 0.80, -r * 1.10);
-  ctx.lineTo(r * 0.65, -r * 0.70);
-  ctx.moveTo(r * 0.68, -r * 0.65);
-  ctx.lineTo(r * 1.15, -r * 0.62);
-  ctx.lineTo(r * 0.78, -r * 0.40);
-  ctx.fill();
+  if (hasHairAsset) {
+    _drawMegumiHair(ctx, r, facingLeft, true);
+  } else {
+    // 3. Protruding Spiky Crown Tufts (procedural fallback)
+    ctx.fillStyle = '#0E1017';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.75, -r * 0.42);
+    ctx.lineTo(-r * 1.15, -r * 0.65);
+    ctx.lineTo(-r * 0.65, -r * 0.70);
+    ctx.moveTo(-r * 0.62, -r * 0.72);
+    ctx.lineTo(-r * 0.82, -r * 1.12);
+    ctx.lineTo(-r * 0.32, -r * 0.88);
+    ctx.moveTo(-r * 0.26, -r * 0.90);
+    ctx.lineTo(0, -r * 1.22);
+    ctx.lineTo(r * 0.24, -r * 0.92);
+    ctx.moveTo(r * 0.32, -r * 0.88);
+    ctx.lineTo(r * 0.80, -r * 1.10);
+    ctx.lineTo(r * 0.65, -r * 0.70);
+    ctx.moveTo(r * 0.68, -r * 0.65);
+    ctx.lineTo(r * 1.15, -r * 0.62);
+    ctx.lineTo(r * 0.78, -r * 0.40);
+    ctx.fill();
+  }
 
   // 4. Spectral Outline
   ctx.strokeStyle = 'rgba(46, 230, 168, 0.85)';
@@ -558,6 +597,42 @@ function _renderMegumiPixelBodyToCanvas(ctx, r) {
  * Draws Megumi's signature sea-urchin hair on Layer 2
  */
 export function _drawMegumiHair(ctx, r, facingLeft = false, isLowQuality = false) {
+  const hairImg = _getMegumiHairImage();
+  if (hairImg && hairImg.complete && hairImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const custom = (typeof state !== 'undefined' && state.skinCustomizations?.megumi) || {};
+    const wMult = custom.widthScale ?? 1.0;
+    const hMult = custom.heightScale ?? 1.0;
+    const offX = custom.offsetX ?? 0;
+    const offY = custom.offsetY ?? 0;
+    const rot = custom.angleOffset ?? 0;
+    const flipX = custom.flipX ? -1 : 1;
+    const flipY = custom.flipY ? -1 : 1;
+
+    // Calibrated crown anchor for Megumi-hair.png (1024x1024, opaque bbox: visW 800, visH 595, topY 163)
+    const targetHairWidth = r * 3.30 * wMult;
+    const targetHairHeight = r * 2.15 * hMult;
+    const scaleX = targetHairWidth / 800;
+    const scaleY = targetHairHeight / 595;
+    const drawW = 1024 * scaleX;
+    const drawH = 1024 * scaleY;
+    const drawX = -512 * scaleX + offX;
+    const drawY = -r * 1.48 - 163 * scaleY + offY;
+
+    if (rot !== 0 || flipX !== 1 || flipY !== 1) {
+      ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+      if (rot !== 0) ctx.rotate(rot);
+      if (flipX !== 1 || flipY !== 1) ctx.scale(flipX, flipY);
+      ctx.drawImage(hairImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(hairImg, drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
 
   // 1. Clipped Bangs Layer
