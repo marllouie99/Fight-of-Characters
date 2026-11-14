@@ -19,6 +19,7 @@ import { audioSystem } from '../../systems/audioSystem.js';
 import { drawCreeperSkin } from '../../graphics/fighters/creeperSkin.js';
 import { drawCreeperExplosion } from '../../graphics/weapons/creeperWeaponGraphics.js';
 import { drawZeusThunderstrike } from '../../graphics/weapons/zeusWeaponGraphics.js';
+import { spawnMinecraftExplosion, spawnGroundScorch } from '../../graphics/particles/sparkEffect.js';
 
 export class CreeperFighter extends Fighter {
   constructor(def = {}) {
@@ -340,15 +341,22 @@ export class CreeperFighter extends Fighter {
     const blastR = (isCharged ? this.baseBlastRadius * 1.85 : this.baseBlastRadius) * (isDeathNuke ? 1.2 : 1.0);
     const blastDmg = (isCharged ? this.baseBlastDamage * 2.47 : this.baseBlastDamage) * (isDeathNuke ? 1.15 : 1.0);
 
-    // 1. Visual explosion entity
-    this.activeVisualExplosions.push({
-      x: this.x,
-      y: this.y,
-      radius: blastR,
-      timer: 30,
-      maxTimer: 30,
-      isCharged: isCharged
-    });
+    // 1. Visual explosion entity (world-space ParticleSystem on death nuke so explosion finishes after Creeper dies)
+    if (typeof spawnGroundScorch === 'function') {
+      spawnGroundScorch(this.x, this.y, blastR * 0.45, 90);
+    }
+    if (isDeathNuke) {
+      spawnMinecraftExplosion(this.x, this.y, blastR, { isCharged, durationFrames: 34 });
+    } else {
+      this.activeVisualExplosions.push({
+        x: this.x,
+        y: this.y,
+        radius: blastR,
+        timer: 34,
+        maxTimer: 34,
+        isCharged: isCharged
+      });
+    }
 
     // 2. Audio & Impact Screen Rumble
     triggerGlobalScreenShake(isCharged ? 10.0 : 7.0, isCharged ? 18 : 12);

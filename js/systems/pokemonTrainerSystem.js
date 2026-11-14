@@ -1647,10 +1647,15 @@ export function findBestPokemonTarget(trainer, fallbackOpponent = null, originEn
  */
 export function isPokemonStationarySkill(pokemon) {
   if (!pokemon) return false;
+  const stationaryMethodActive = typeof pokemon.isStationarySkillActive === 'function'
+    ? Boolean(pokemon.isStationarySkillActive())
+    : Boolean(pokemon.isStationarySkillActive);
   return Boolean(
     pokemon.thunderboltState ||
     pokemon.flamethrowerState ||
-    pokemon.isStationarySkillActive ||
+    pokemon.meleeMoveState ||
+    ((pokemon.specialCastTimer || 0) > 0) ||
+    stationaryMethodActive ||
     (typeof pokemon.stationarySkillTimer === 'number' && pokemon.stationarySkillTimer > 0)
   );
 }
@@ -1658,7 +1663,7 @@ export function isPokemonStationarySkill(pokemon) {
 /**
  * Centralized companion movement physics for current and future Pokémon:
  * Preserves standard Fighter bounce momentum across wall and fighter collisions,
- * recovering launch speed if velocity ever stalls near zero while not channeling a stationary skill.
+ * recovering launch speed when not attacking or channeling a stationary skill.
  *
  * @param {Object} pokemon - The Pokémon companion entity
  * @param {Object} [target=null] - The target being pursued/attacked
@@ -1669,10 +1674,12 @@ export function updatePokemonCompanionMovement(pokemon, target, arena) {
 
   const curSpeed = Math.hypot(pokemon.vx || 0, pokemon.vy || 0);
   if (curSpeed < 0.2) {
-    const resumeAngle = pokemon.gunAngle || pokemon.angle || (Math.random() * Math.PI * 2);
+    const baseAngle = pokemon.gunAngle || pokemon.angle || (Math.random() * Math.PI * 2);
+    const resumeAngle = baseAngle + (Math.random() - 0.5) * 0.8;
     const speed = pokemon.speed || pokemon.baseSpeed || 5.5;
     pokemon.vx = Math.cos(resumeAngle) * speed;
     pokemon.vy = Math.sin(resumeAngle) * speed;
+    pokemon._stationaryStallFrames = 0;
   } else if (typeof pokemon.normalizeSpeed === 'function') {
     pokemon.normalizeSpeed();
   }
@@ -1687,6 +1694,8 @@ export function updatePokemonCompanionAnimState(pokemon) {
   if (!pokemon) return;
   if (pokemon.hurtAnimTimer > 0 && !isPokemonStationarySkill(pokemon)) {
     pokemon.animState = 'hurt';
+  } else if (pokemon.thunderboltState || pokemon.flamethrowerState || (pokemon.specialCastTimer || 0) > 0) {
+    pokemon.animState = 'special';
   } else if (pokemon.actionAnimTimer > 0 || pokemon.meleeMoveState) {
     pokemon.animState = 'attack';
   } else if (Math.hypot(pokemon.vx || 0, pokemon.vy || 0) > 0.6) {

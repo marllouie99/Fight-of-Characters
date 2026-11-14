@@ -11,6 +11,118 @@ import { ashConfig } from '../../configs/characters/ashConfig.js';
 import { drawMinionHealthBar } from '../statusEffects.js';
 import { POKEMON_FRAME_ANCHORS } from './pokemonAnchors.js';
 import { renderPokemonHitFlash } from '../../systems/pokemonTrainerSystem.js';
+import { _drawPunchAttackAnimatedSprite } from '../particles/renderers/blastShockwaveRenderers.js';
+
+// ---------------------------------------------------------------------------
+// Rule 35 Cached Offscreen Radial Glow Sprite & Dedicated 16-Bit Pokémon Slash Loader
+// ---------------------------------------------------------------------------
+const _radialGlowCache = new Map();
+
+function _getCachedRadialGlowCanvas(key, innerRgba, midRgba, size = 64) {
+  if (typeof document === 'undefined') return null;
+  if (typeof process !== 'undefined' && process.versions && process.versions.node) return null;
+  const cached = _radialGlowCache.get(key);
+  if (cached) return cached;
+  try {
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const octx = off.getContext('2d');
+    if (!octx) return null;
+    const half = size / 2;
+    const grad = octx.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, innerRgba);
+    grad.addColorStop(0.55, midRgba);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    octx.fillStyle = grad;
+    octx.fillRect(0, 0, size, size);
+    _radialGlowCache.set(key, off);
+    return off;
+  } catch (_) {
+    return null;
+  }
+}
+
+const POKEMON_SLASH_FRAME_COUNT = 12;
+const POKEMON_SLASH_PATH_BUILDERS = {
+  dragonClaw: (i) => `Assets/model/ash/pokemon/charizard/Dragon_claw/dragon_claw-${i + 1}.png`,
+  nightSlash: (i) => `Assets/model/ash/pokemon/greninja/Night_slash/night_slash-${i + 1}.png`,
+  ironTail: (i) => `Assets/model/ash/pokemon/pikachu/Iron_tail/iron_tail-${i + 1}.png`
+};
+
+const _pokemonSlashFramesByKey = new Map();
+const _pokemonSlashLoadingByKey = new Set();
+
+export function _getSlashAttackFrames(tintKey = 'dragonClaw') {
+  const key = POKEMON_SLASH_PATH_BUILDERS[tintKey] ? tintKey : 'dragonClaw';
+  const existing = _pokemonSlashFramesByKey.get(key) || [];
+  if (
+    existing.length === POKEMON_SLASH_FRAME_COUNT &&
+    existing.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
+  ) {
+    return existing;
+  }
+  if (!_pokemonSlashLoadingByKey.has(key) && typeof Image !== 'undefined') {
+    _pokemonSlashLoadingByKey.add(key);
+    const builder = POKEMON_SLASH_PATH_BUILDERS[key];
+    const frames = [];
+    for (let idx = 0; idx < POKEMON_SLASH_FRAME_COUNT; idx++) {
+      const src = builder(idx);
+      const img = new Image();
+      img.onload = () => {
+        frames[idx] = img;
+      };
+      img.src = encodeURI(`${src}?v=1`);
+      frames[idx] = img;
+    }
+    _pokemonSlashFramesByKey.set(key, frames);
+    return frames;
+  }
+  return existing;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getSlashAttackFrames('dragonClaw');
+  _getSlashAttackFrames('nightSlash');
+  _getSlashAttackFrames('ironTail');
+}
+
+function _areSlashFramesReady(tintKey = 'dragonClaw') {
+  const frames = _getSlashAttackFrames(tintKey);
+  return (
+    frames.length === POKEMON_SLASH_FRAME_COUNT &&
+    frames.some(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
+  );
+}
+
+function _drawPokemonSlashSprite(ctx, pivotX, pivotY, angle, bladeReach, frameIdx, tintKey, facingLeft, isReverseSweep, alpha = 1.0) {
+  const frames = _getSlashAttackFrames(tintKey);
+  const clampedIdx = Math.max(0, Math.min(POKEMON_SLASH_FRAME_COUNT - 1, Math.floor(frameIdx)));
+  const drawImg = frames[clampedIdx];
+  if (!drawImg || !drawImg.complete || ((drawImg.naturalWidth || drawImg.width || 0) <= 0)) {
+    return false;
+  }
+
+  // Dedicated 64x64 -> 256x256 16-bit sprites anchored at (24, 32) -> (96, 128) with ~85px arc reach
+  const scale = (bladeReach || 80) / 85.0;
+  const drawW = 256 * scale;
+  const drawH = 256 * scale;
+  const anchorX = 96 * scale;
+  const anchorY = 128 * scale;
+
+  ctx.save();
+  ctx.translate(pivotX, pivotY);
+  ctx.rotate(angle);
+  if (facingLeft) ctx.scale(1, -1);
+  if (isReverseSweep) ctx.scale(1, -1);
+  ctx.imageSmoothingEnabled = false;
+  if (alpha < 0.999) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  }
+  ctx.drawImage(drawImg, -anchorX, -anchorY, drawW, drawH);
+  ctx.restore();
+  return true;
+}
 
 /**
  * Computes maximum ray distance from (startX, startY) along angle to the arena walls.
@@ -1017,6 +1129,280 @@ export function drawAshHoneycombBarrier(ctx, fighter) {
   ctx.restore();
 }
 
+function _drawProjectileWakeTrail(ctx, proj, outerCol, innerCol, maxHalfW) {
+  const trail = proj.trail;
+  if (!Array.isArray(trail) || trail.length < 2) return;
+  const n = trail.length;
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    const p0 = trail[i - 1];
+    const p1 = trail[i];
+    ctx.strokeStyle = outerCol;
+    ctx.globalAlpha = 0.22 + 0.50 * t;
+    ctx.lineWidth = Math.max(1.5, maxHalfW * 1.45 * t);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p0.x - proj.x, p0.y - proj.y);
+    ctx.lineTo(p1.x - proj.x, p1.y - proj.y);
+    ctx.stroke();
+
+    ctx.strokeStyle = innerCol;
+    ctx.globalAlpha = 0.30 + 0.65 * t;
+    ctx.lineWidth = Math.max(0.8, maxHalfW * 0.62 * t);
+    ctx.beginPath();
+    ctx.moveTo(p0.x - proj.x, p0.y - proj.y);
+    ctx.lineTo(p1.x - proj.x, p1.y - proj.y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+function _drawWaterShurikenProjectile(ctx, proj, tick) {
+  const sr = proj.r || 14;
+  _drawProjectileWakeTrail(ctx, proj, 'rgba(56, 189, 248, 0.72)', 'rgba(224, 242, 254, 0.90)', sr * 0.55);
+
+  const glowCanvas = _getCachedRadialGlowCanvas('waterShurikenGlow', 'rgba(56, 189, 248, 0.55)', 'rgba(14, 165, 233, 0.18)', 64);
+  if (glowCanvas) {
+    const gs = sr * 3.1;
+    ctx.drawImage(glowCanvas, -gs * 0.5, -gs * 0.5, gs, gs);
+  }
+
+  // Spinning outer hydro vortex rim
+  ctx.save();
+  ctx.rotate(-(proj.rot || 0) * 0.55);
+  ctx.strokeStyle = 'rgba(186, 230, 253, 0.68)';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.arc(0, 0, sr * 1.05, 0, Math.PI * 1.35);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, sr * 1.05, Math.PI, Math.PI * 2.35);
+  ctx.stroke();
+  ctx.restore();
+
+  // 4 sculpted hydro shuriken blades with crisp #0E0F14 ink outline
+  ctx.save();
+  ctx.rotate(proj.rot || 0);
+  ctx.fillStyle = '#38BDF8';
+  ctx.strokeStyle = '#0E0F14';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  for (let b = 0; b < 4; b++) {
+    const ba = (Math.PI / 2) * b;
+    const midA = ba + 0.26;
+    const notchA = ba + Math.PI / 4;
+    if (b === 0) {
+      ctx.moveTo(Math.cos(ba) * sr * 1.15, Math.sin(ba) * sr * 1.15);
+    } else {
+      ctx.lineTo(Math.cos(ba) * sr * 1.15, Math.sin(ba) * sr * 1.15);
+    }
+    ctx.quadraticCurveTo(
+      Math.cos(midA) * sr * 0.86,
+      Math.sin(midA) * sr * 0.86,
+      Math.cos(notchA) * sr * 0.34,
+      Math.sin(notchA) * sr * 0.34
+    );
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Bright hydro gleam edge + white center pin
+  ctx.strokeStyle = '#E0F2FE';
+  ctx.lineWidth = 1.4;
+  for (let b = 0; b < 4; b++) {
+    const ba = (Math.PI / 2) * b;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ba) * sr * 0.35, Math.sin(ba) * sr * 0.35);
+    ctx.lineTo(Math.cos(ba) * sr * 1.02, Math.sin(ba) * sr * 1.02);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#FFFFFF';
+  ctx.strokeStyle = '#0284C7';
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(2.6, sr * 0.22), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function _drawAuraSphereProjectile(ctx, proj, tick) {
+  const ar = proj.r || 15;
+  _drawProjectileWakeTrail(ctx, proj, 'rgba(34, 211, 238, 0.72)', 'rgba(236, 254, 255, 0.92)', ar * 0.62);
+
+  const glowCanvas = _getCachedRadialGlowCanvas('auraSphereGlow', 'rgba(34, 211, 238, 0.68)', 'rgba(37, 99, 235, 0.22)', 72);
+  if (glowCanvas) {
+    const gs = ar * 3.4;
+    ctx.drawImage(glowCanvas, -gs * 0.5, -gs * 0.5, gs, gs);
+  }
+
+  // Deep Aura outer ring + bright cyan core + crisp ink outline
+  ctx.fillStyle = '#0284C7';
+  ctx.strokeStyle = '#0E0F14';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.arc(0, 0, ar, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#22D3EE';
+  ctx.beginPath();
+  ctx.arc(0, 0, ar * 0.78, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#ECFEFF';
+  ctx.beginPath();
+  ctx.arc(0, 0, ar * 0.44, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Counter-rotating Aura ribbons + orbiting motes
+  ctx.save();
+  ctx.rotate(tick * 0.24);
+  ctx.strokeStyle = 'rgba(236, 254, 255, 0.88)';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(0, 0, ar * 1.18, 0.2, Math.PI * 0.85);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, ar * 1.18, Math.PI + 0.2, Math.PI * 1.85);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.rotate(-tick * 0.19);
+  ctx.fillStyle = '#A5F3FC';
+  for (let k = 0; k < 4; k++) {
+    const ka = (Math.PI / 2) * k;
+    ctx.beginPath();
+    ctx.arc(Math.cos(ka) * (ar * 1.28), Math.sin(ka) * (ar * 1.28), 2.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function _drawFireBlastProjectile(ctx, proj, tick) {
+  const fr = proj.r || 14;
+  _drawProjectileWakeTrail(ctx, proj, 'rgba(249, 115, 22, 0.72)', 'rgba(254, 240, 138, 0.90)', fr * 0.56);
+
+  const glowCanvas = _getCachedRadialGlowCanvas('fireBlastGlow', 'rgba(251, 146, 60, 0.62)', 'rgba(239, 68, 68, 0.20)', 64);
+  if (glowCanvas) {
+    const gs = fr * 3.1;
+    ctx.drawImage(glowCanvas, -gs * 0.5, -gs * 0.5, gs, gs);
+  }
+
+  ctx.fillStyle = '#EA580C';
+  ctx.strokeStyle = '#0E0F14';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.arc(0, 0, fr, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#FB923C';
+  ctx.beginPath();
+  ctx.arc(0, 0, fr * 0.74, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#FEF08A';
+  ctx.beginPath();
+  ctx.arc(0, 0, fr * 0.42, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#FEF9C3';
+  const flickerA = tick * 0.35;
+  for (let k = 0; k < 2; k++) {
+    const a = flickerA + k * Math.PI;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * fr * 1.15, Math.sin(a) * fr * 1.15, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function _drawPokemonSlashVisualEffect(ctx, fx, progress) {
+  let frameIdx = 0;
+  if (progress < 0.25) {
+    frameIdx = Math.min(2, Math.floor((progress / 0.25) * 3));
+  } else if (progress < 0.48) {
+    frameIdx = progress < 0.37 ? 3 : 4;
+  } else {
+    frameIdx = 5 + Math.min(6, Math.floor(((progress - 0.48) / 0.52) * 7));
+  }
+  const popIn = Math.min(1, progress / 0.08);
+  const fadeOut = progress > 0.52 ? Math.pow(Math.max(0, 1 - (progress - 0.52) / 0.48), 1.3) : 1.0;
+  const alpha = Math.max(0, Math.min(1, popIn * fadeOut));
+  if (alpha <= 0.01) return;
+
+  const angle = fx.angle || 0;
+  const reach = fx.reach || 70;
+  const tintKey = fx.tintKey || 'dragonClaw';
+  const isReverseSweep = Boolean(fx.isReverseSweep);
+
+  const drewSprite = _drawPokemonSlashSprite(
+    ctx,
+    fx.x,
+    fx.y,
+    angle,
+    reach,
+    frameIdx,
+    tintKey,
+    Boolean(fx.facingLeft),
+    isReverseSweep,
+    alpha
+  );
+  if (drewSprite) return;
+
+  // Rule 15 double-tapered crescent fallback when sprite frames are unavailable (Node/loading)
+  const palette = tintKey === 'nightSlash'
+    ? { outer: '#7C3AED', core: '#EDE9FE' }
+    : (tintKey === 'ironTail'
+      ? { outer: '#94A3B8', core: '#FEF08A' }
+      : { outer: '#10B981', core: '#DCFCE7' });
+  const arcHalf = Math.PI * 0.48;
+  const wipe = progress > 0.45 ? Math.pow(Math.max(0, 1 - (progress - 0.45) / 0.55), 1.4) : 1.0;
+  const aStart = isReverseSweep ? arcHalf : -arcHalf;
+  const aEnd = isReverseSweep ? (arcHalf - arcHalf * 2 * wipe) : (-arcHalf + arcHalf * 2 * wipe);
+  const minA = Math.min(aStart, aEnd);
+  const maxA = Math.max(aStart, aEnd);
+  if (maxA - minA < 0.05) return;
+
+  ctx.save();
+  ctx.translate(fx.x, fx.y);
+  ctx.rotate(angle);
+  ctx.globalAlpha = alpha;
+  const segs = 12;
+  const maxThick = Math.max(8, reach * 0.22);
+  ctx.beginPath();
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const a = minA + (maxA - minA) * t;
+    const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.3 + 0.7 * t);
+    const rr = reach * 0.88 + maxThick * taper * 0.5;
+    if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  for (let i = segs; i >= 0; i--) {
+    const t = i / segs;
+    const a = minA + (maxA - minA) * t;
+    const taper = Math.pow(Math.sin(t * Math.PI), 1.15) * (0.3 + 0.7 * t);
+    const rr = reach * 0.88 - maxThick * taper * 0.5;
+    ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fillStyle = palette.outer;
+  ctx.strokeStyle = '#0E0F14';
+  ctx.lineWidth = 1.6;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = palette.core;
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.arc(0, 0, reach * 0.88, minA, maxA);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /**
  * Draws the in-flight thrown Poké Ball and any active elemental projectiles/shockwaves (Rule 26).
  */
@@ -1122,51 +1508,18 @@ export function drawAshVisualEffects(ctx, fighter) {
         // Retro Pokémon pixel diamond spark head
         _drawPixelElectricSpark(ctx, 0, 0, tr * 0.85);
       } else if (proj.kind === 'waterShuriken') {
-        ctx.rotate(proj.rot || 0);
-        const sr = proj.r || 13;
-        ctx.fillStyle = '#38BDF8';
-        ctx.strokeStyle = '#E0F2FE';
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        for (let b = 0; b < 4; b++) {
-          const ba = (Math.PI / 2) * b;
-          ctx.lineTo(Math.cos(ba) * sr, Math.sin(ba) * sr);
-          ctx.lineTo(Math.cos(ba + Math.PI / 4) * (sr * 0.36), Math.sin(ba + Math.PI / 4) * (sr * 0.36));
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        _drawWaterShurikenProjectile(ctx, proj, tick);
       } else if (proj.kind === 'auraSphere') {
-        const ar = proj.r || 15;
-        ctx.fillStyle = 'rgba(6, 182, 212, 0.35)';
-        ctx.beginPath();
-        ctx.arc(0, 0, ar * 1.25, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#22D3EE';
-        ctx.strokeStyle = '#ECFEFF';
-        ctx.lineWidth = 2.0;
-        ctx.beginPath();
-        ctx.arc(0, 0, ar, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        _drawAuraSphereProjectile(ctx, proj, tick);
       } else {
-        // Fire Blast / Dragon Flame Orb
-        const fr = proj.r || 14;
-        ctx.fillStyle = '#F97316';
-        ctx.strokeStyle = '#FEF08A';
-        ctx.lineWidth = 2.0;
-        ctx.beginPath();
-        ctx.arc(0, 0, fr, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        _drawFireBlastProjectile(ctx, proj, tick);
       }
 
       ctx.restore();
     }
   }
 
-  // 3. Staggered Water-Ripple Shockwaves, Thunderbolt Strikes & Recall Beams (Rule 26 Compliant — Zero Radial Spokes)
+  // 3. Staggered Water-Ripple Shockwaves, Thunderbolt Strikes, Slashes & Recall Beams (Rule 26 Compliant — Zero Radial Spokes)
   if (Array.isArray(fighter.activeVisualEffects)) {
     const tick = fighter._animTick || 0;
     for (let i = 0; i < fighter.activeVisualEffects.length; i++) {
@@ -1190,6 +1543,8 @@ export function drawAshVisualEffects(ctx, fighter) {
         ctx.lineTo(fx.toX, fx.toY);
         ctx.stroke();
         ctx.restore();
+      } else if (fx.type === 'pokemonSlash') {
+        _drawPokemonSlashVisualEffect(ctx, fx, progress);
       } else {
         // Rule 26: Sequential Water-Ripple Wavefront Staggering (t0 = 0.00, t1 = 0.12, t2 = 0.24)
         ctx.save();
@@ -1273,6 +1628,118 @@ export function drawAshVisualEffects(ctx, fighter) {
       }
     }
   }
+}
+
+function _hasActivePokemonSlashVfx(pokemon) {
+  const effects = pokemon?.owner?.activeVisualEffects;
+  return Array.isArray(effects) && effects.some(
+    (fx) => fx && fx.type === 'pokemonSlash' && fx.ownerPokemon === pokemon && fx.timer > 0 && _areSlashFramesReady(fx.tintKey)
+  );
+}
+
+function _drawLucarioCloseCombatEffects(ctx, r, groundY, castAngle, cosA, sinA, enemyRelX, enemyRelY, hasEnemy, tick) {
+  ctx.save();
+  const auraCol = '#22D3EE';
+  const auraWash = 'rgba(34, 211, 238, 0.22)';
+  const enemyCenterX = hasEnemy ? enemyRelX : (cosA * (r + 35));
+  const enemyCenterY = hasEnemy ? enemyRelY : (groundY - 16 + sinA * (r + 35));
+
+  if (tick >= 7 && tick <= 29) {
+    ctx.save();
+    ctx.translate(enemyCenterX, enemyCenterY);
+    ctx.rotate(castAngle);
+
+    const flurryStep = Math.floor((tick - 7) / 6);
+    const lateralDir = (flurryStep % 2 === 0) ? -1 : 1;
+    const stepTick = (tick - 7) % 6;
+    const punchProgress = stepTick / 5;
+    const punchDepth = -10 + punchProgress * 12;
+    const punchLateral = lateralDir * (7 + (flurryStep === 2 ? 4 : 0));
+
+    // Rule 16 kinetic speed-needle thrust leading into contact point
+    const tailX = punchDepth - 24;
+    ctx.fillStyle = '#0E0F14';
+    ctx.beginPath();
+    ctx.moveTo(tailX, punchLateral);
+    ctx.lineTo(punchDepth - 8, punchLateral - 5.2);
+    ctx.lineTo(punchDepth + 3, punchLateral);
+    ctx.lineTo(punchDepth - 8, punchLateral + 5.2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = flurryStep === 2 ? '#38BDF8' : auraCol;
+    ctx.beginPath();
+    ctx.moveTo(tailX + 2, punchLateral);
+    ctx.lineTo(punchDepth - 8, punchLateral - 3.4);
+    ctx.lineTo(punchDepth + 2, punchLateral);
+    ctx.lineTo(punchDepth - 8, punchLateral + 3.4);
+    ctx.closePath();
+    ctx.fill();
+
+    // 12-frame Punch Attack VFX sprite centered at contact point (fallback if loading/Node)
+    ctx.save();
+    ctx.translate(punchDepth, punchLateral);
+    const punchColor = flurryStep === 2 ? 'blue' : 'cyan';
+    const drewPunch = _drawPunchAttackAnimatedSprite(ctx, flurryStep === 2 ? 32 : 26, punchProgress, 0.95, punchColor);
+    if (!drewPunch) {
+      const ringR = 7 + punchProgress * 13;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#0E0F14';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, 5.0 * (1 - punchProgress * 0.3), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(34, 211, 238, ${(1 - punchProgress).toFixed(3)})`;
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
+  if (tick >= 30 && tick <= 44) {
+    const palmP = (tick - 30) / 14;
+    const alpha = Math.max(0, 1.0 - palmP);
+    ctx.globalAlpha = alpha;
+    const blastX = hasEnemy ? enemyRelX : (cosA * (r + 40));
+    const blastY = hasEnemy ? enemyRelY : (groundY - 16 + sinA * (r + 40));
+
+    ctx.save();
+    ctx.translate(blastX, blastY);
+    _drawPunchAttackAnimatedSprite(ctx, r * 2.1, palmP, alpha, 'cyan');
+
+    const maxR = r * 2.2;
+    for (let k = 0; k < 2; k++) {
+      const offset = k * 0.2;
+      if (palmP <= offset) continue;
+      const lp = (palmP - offset) / (1 - offset);
+      const curR = maxR * Math.pow(lp, 0.7);
+      if (k === 0) {
+        ctx.fillStyle = auraWash;
+        ctx.beginPath();
+        ctx.arc(0, 0, curR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = k === 0 ? '#FFFFFF' : auraCol;
+      ctx.lineWidth = (k === 0 ? 3.0 : 2.0) * (1 - lp * 0.5);
+      ctx.beginPath();
+      ctx.arc(0, 0, curR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (let s = 0; s < 6; s++) {
+      const sa = (s / 6) * Math.PI * 2 + palmP * 2.0;
+      const sDist = maxR * 0.6 * palmP + (s % 2) * 6;
+      ctx.fillStyle = (s % 2 === 0) ? '#FFFFFF' : auraCol;
+      ctx.fillRect(Math.round(Math.cos(sa) * sDist - 1.5), Math.round(Math.sin(sa) * sDist - 1.5), 3, 3);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 /**
@@ -1426,9 +1893,9 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
         _drawPixelElectricSpark(ctx, sx, sy, 3);
       }
     }
-    // Ticks 18–36: Heavy Metallic Crescent Slash Arc & Impact Lock (Rule 15 & Rule 30)
-    // Slices directly through the center of the enemy target body
+    // Ticks 18–36: Heavy Metallic Crescent Slash Arc & Impact Lock (12f Slash sprite primary; crescent fallback)
     if (tick >= 18 && tick <= 36) {
+      const useSpriteSlash = _hasActivePokemonSlashVfx(pokemon);
       const slashProgress = Math.min(1.0, (tick - 18) / 8);
       const lockHold = tick >= 26;
       const alpha = lockHold ? Math.max(0, 1.0 - (tick - 26) / 10) : 1.0;
@@ -1436,19 +1903,12 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
 
       const slashCenterX = hasEnemy ? enemyRelX : (cosA * (r + 35));
       const slashCenterY = hasEnemy ? enemyRelY : (groundY - 14 + sinA * (r + 35));
-
-      // Diagonal slash angle across the enemy body
-      const slashTilt = 0.45;
-      const slashAngle = castAngle + slashTilt;
-
-      // Arc radius calibrated so apex passes right through (0, 0)
+      const slashAngle = castAngle + 0.45;
       const arcR = 38;
       const spanA = 0.95;
 
       let curStartA = -spanA;
       let curEndA = -spanA + slashProgress * (spanA * 2);
-
-      // Eraser wipe during recovery settle (Rule 15)
       if (lockHold) {
         const recP = (tick - 26) / 10;
         curStartA = -spanA + Math.pow(recP, 1.4) * (spanA * 2);
@@ -1459,37 +1919,31 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
       ctx.translate(slashCenterX, slashCenterY);
       ctx.rotate(slashAngle);
 
-      // Center of curvature is at (-arcR, 0) so at angle 0, x = -arcR + arcR = 0, y = 0
-      // Passing directly through the center of the enemy body!
       const centerOffsetX = -arcR;
+      if (!useSpriteSlash) {
+        ctx.strokeStyle = '#0E0F14';
+        ctx.lineWidth = 7.5;
+        ctx.beginPath();
+        ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
+        ctx.stroke();
 
-      // Outer ink stroke
-      ctx.strokeStyle = '#0E0F14';
-      ctx.lineWidth = 7.5;
-      ctx.beginPath();
-      ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
-      ctx.stroke();
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.lineWidth = 4.8;
+        ctx.beginPath();
+        ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
+        ctx.stroke();
 
-      // Steel silver body
-      ctx.strokeStyle = '#E2E8F0';
-      ctx.lineWidth = 4.8;
-      ctx.beginPath();
-      ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
-      ctx.stroke();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
+        ctx.stroke();
+      }
 
-      // Pure white razor core
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 2.0;
-      ctx.beginPath();
-      ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
-      ctx.stroke();
-
-      // Electric spark star at cutting tip
       const tipX = centerOffsetX + Math.cos(curEndA) * arcR;
       const tipY = Math.sin(curEndA) * arcR;
       _drawPixelElectricSpark(ctx, tipX, tipY, 4.5);
 
-      // Electrical detonation starburst directly at enemy center on impact (ticks 20-28)
       if (tick >= 20 && tick <= 28) {
         _drawPixelElectricSpark(ctx, 0, 0, 6.0);
       }
@@ -1503,6 +1957,7 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
     ctx.save();
     const clawColor = '#10B981';
     const clawCore = '#ECFDF5';
+    const useSpriteSlash = _hasActivePokemonSlashVfx(pokemon);
 
     // Strike & Lock Window (ticks 17–40)
     if (tick >= 17 && tick <= 40) {
@@ -1513,7 +1968,6 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
 
       const cx = hasEnemy ? enemyRelX : (cosA * (r + 40));
       const cy = hasEnemy ? enemyRelY : (groundY - 18 + sinA * (r + 40));
-
       const clawSpacing = 6.5;
       const arcR = 38;
       const spanA = 0.58;
@@ -1521,8 +1975,7 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
       ctx.save();
       ctx.translate(cx, cy);
 
-      // Claw 1: Right Claw (sweeps diagonal downward-left, slicing directly through enemy center)
-      if (hit1Progress > 0) {
+      if (!useSpriteSlash && hit1Progress > 0) {
         ctx.save();
         ctx.rotate(castAngle - 0.65);
 
@@ -1559,8 +2012,7 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
         ctx.restore();
       }
 
-      // Claw 2: Left Claw (sweeps opposite diagonal downward-right, crossing in an emerald "X" directly at (0, 0))
-      if (hit2Progress > 0) {
+      if (!useSpriteSlash && hit2Progress > 0) {
         ctx.save();
         ctx.rotate(castAngle + 0.65);
 
@@ -1617,6 +2069,7 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
   // 3. Greninja: Night Slash (Violet Ninja Shadow Step & Crossed Dark Blades Directly on Enemy)
   else if (key === 'nightSlash') {
     ctx.save();
+    const useSpriteSlash = _hasActivePokemonSlashVfx(pokemon);
     // Shadow afterimages during dash (ticks 1–10)
     if (tick <= 10) {
       ctx.fillStyle = 'rgba(76, 29, 149, 0.40)';
@@ -1636,50 +2089,49 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
       ctx.save();
       ctx.translate(cx, cy);
 
-      const arcR = 36;
-      const spanA = 0.65;
-      let curStartA = -spanA;
-      let curEndA = -spanA + strikeP * (spanA * 2);
+      if (!useSpriteSlash) {
+        const arcR = 36;
+        const spanA = 0.65;
+        let curStartA = -spanA;
+        let curEndA = -spanA + strikeP * (spanA * 2);
 
-      // Eraser wipe during recovery (Rule 15)
-      if (tick >= 20) {
-        const recP = (tick - 20) / 12;
-        curStartA = -spanA + Math.pow(recP, 1.4) * (spanA * 2);
-        curEndA = spanA;
-      }
+        if (tick >= 20) {
+          const recP = (tick - 20) / 12;
+          curStartA = -spanA + Math.pow(recP, 1.4) * (spanA * 2);
+          curEndA = spanA;
+        }
 
-      // Blade 1 & 2 (Crossing in a dark violet "X" directly through (0, 0))
-      for (const dir of [1, -1]) {
-        ctx.save();
-        ctx.rotate(castAngle + dir * 0.55);
+        for (const dir of [1, -1]) {
+          ctx.save();
+          ctx.rotate(castAngle + dir * 0.55);
 
-        const centerOffsetX = -arcR;
+          const centerOffsetX = -arcR;
 
-        ctx.strokeStyle = '#0E0F14';
-        ctx.lineWidth = 6.4;
-        ctx.beginPath();
-        ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
-        ctx.stroke();
+          ctx.strokeStyle = '#0E0F14';
+          ctx.lineWidth = 6.4;
+          ctx.beginPath();
+          ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
+          ctx.stroke();
 
-        ctx.strokeStyle = '#8B5CF6';
-        ctx.lineWidth = 4.0;
-        ctx.beginPath();
-        ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
-        ctx.stroke();
+          ctx.strokeStyle = '#8B5CF6';
+          ctx.lineWidth = 4.0;
+          ctx.beginPath();
+          ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
+          ctx.stroke();
 
-        ctx.strokeStyle = '#EDE9FE';
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
-        ctx.stroke();
+          ctx.strokeStyle = '#EDE9FE';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.arc(centerOffsetX, 0, arcR, curStartA, curEndA);
+          ctx.stroke();
 
-        // Tip spark
-        const tipX = centerOffsetX + Math.cos(curEndA) * arcR;
-        const tipY = Math.sin(curEndA) * arcR;
-        ctx.fillStyle = '#EDE9FE';
-        ctx.fillRect(Math.round(tipX - 1.5), Math.round(tipY - 1.5), 3, 3);
+          const tipX = centerOffsetX + Math.cos(curEndA) * arcR;
+          const tipY = Math.sin(curEndA) * arcR;
+          ctx.fillStyle = '#EDE9FE';
+          ctx.fillRect(Math.round(tipX - 1.5), Math.round(tipY - 1.5), 3, 3);
 
-        ctx.restore();
+          ctx.restore();
+        }
       }
 
       // Dark ninja cross energy burst at enemy center (0, 0)
@@ -1701,104 +2153,7 @@ function _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, scale) {
   }
   // 4. Lucario: Close Combat (4-Hit Flurry Barrage & Aura Palm Finisher Directly on Enemy)
   else if (key === 'closeCombat') {
-    ctx.save();
-    const auraCol = '#22D3EE';
-    const auraWash = 'rgba(34, 211, 238, 0.22)';
-
-    const enemyCenterX = hasEnemy ? enemyRelX : (cosA * (r + 35));
-    const enemyCenterY = hasEnemy ? enemyRelY : (groundY - 16 + sinA * (r + 35));
-
-    // Flurry Punches / Kick (ticks 7–29)
-    if (tick >= 7 && tick <= 29) {
-      ctx.save();
-      ctx.translate(enemyCenterX, enemyCenterY);
-      ctx.rotate(castAngle);
-
-      // Alternating 4-hit flurry barrage: Left jab, Right cross, Roundhouse, Double thrust
-      const flurryStep = Math.floor((tick - 7) / 6); // 0, 1, 2, 3
-      const lateralDir = (flurryStep % 2 === 0) ? -1 : 1;
-      const stepTick = (tick - 7) % 6;
-      const punchProgress = stepTick / 5; // 0 to 1
-
-      // Punch drives directly into enemy center (-6px front -> +2px core)
-      const punchDepth = -6 + punchProgress * 8;
-      const punchLateral = lateralDir * (7 + (flurryStep === 2 ? 3 : 0));
-
-      // Trailing aura fist disc
-      ctx.fillStyle = auraCol;
-      ctx.beginPath();
-      ctx.arc(punchDepth, punchLateral, 8.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(punchDepth, punchLateral, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Supersonic impact ring popping at contact point on enemy body
-      const ringR = 6 + punchProgress * 12;
-      ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - punchProgress).toFixed(3)})`;
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.arc(punchDepth, punchLateral, ringR, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Impact spark motes
-      if (stepTick >= 2) {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(Math.round(punchDepth - 1), Math.round(punchLateral - 1), 3, 3);
-      }
-
-      ctx.restore();
-    }
-    // Finisher Aura Palm Blast (ticks 30–44) -> Concentric Water-Ripple Shockwave Directly Centered on Enemy (Rule 26)
-    if (tick >= 30 && tick <= 44) {
-      const palmP = (tick - 30) / 14;
-      const alpha = Math.max(0, 1.0 - palmP);
-      ctx.globalAlpha = alpha;
-
-      const blastX = hasEnemy ? enemyRelX : (cosA * (r + 40));
-      const blastY = hasEnemy ? enemyRelY : (groundY - 16 + sinA * (r + 40));
-
-      ctx.save();
-      ctx.translate(blastX, blastY);
-
-      // Concentric rings expanding outward directly from enemy center (0, 0) (Rule 26)
-      const maxR = r * 2.2;
-      for (let k = 0; k < 2; k++) {
-        const offset = k * 0.2;
-        if (palmP > offset) {
-          const lp = (palmP - offset) / (1 - offset);
-          const curR = maxR * Math.pow(lp, 0.7);
-
-          if (k === 0) {
-            ctx.fillStyle = auraWash;
-            ctx.beginPath();
-            ctx.arc(0, 0, curR, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          ctx.strokeStyle = k === 0 ? '#FFFFFF' : auraCol;
-          ctx.lineWidth = (k === 0 ? 3.0 : 2.0) * (1 - lp * 0.5);
-          ctx.beginPath();
-          ctx.arc(0, 0, curR, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-
-      // Discrete aura spark motes radiating from center (Rule 26: zero radial spokes!)
-      for (let s = 0; s < 6; s++) {
-        const sa = (s / 6) * Math.PI * 2 + palmP * 2.0;
-        const sDist = maxR * 0.6 * palmP + (s % 2) * 6;
-        const sx = Math.cos(sa) * sDist;
-        const sy = Math.sin(sa) * sDist;
-        ctx.fillStyle = (s % 2 === 0) ? '#FFFFFF' : auraCol;
-        ctx.fillRect(Math.round(sx - 1.5), Math.round(sy - 1.5), 3, 3);
-      }
-
-      ctx.restore();
-    }
-    ctx.restore();
+    _drawLucarioCloseCombatEffects(ctx, r, groundY, castAngle, cosA, sinA, enemyRelX, enemyRelY, hasEnemy, tick);
   }
 }
 
@@ -1970,6 +2325,162 @@ function _drawPokemonSummonIntroOverlayEffects(ctx, pokemon, r, groundY, drawW, 
   ctx.restore();
 }
 
+function _resolvePokemonMeleeFrameCol(pokemon, clipSpec) {
+  const tick = pokemon.meleeMoveTick || 0;
+  const key = pokemon.meleeMoveKey;
+  const maxFrames = Math.max(1, clipSpec.frames || 1);
+
+  if (pokemon.speciesId === 'pikachu' && key === 'quickAttack') {
+    if (tick <= 4) return 0;
+    if (tick <= 12) return 1 + Math.min(2, Math.floor(((tick - 4) / 8) * 3));
+    if (tick <= 24) return 4 + Math.min(3, Math.floor(((tick - 12) / 12) * 4));
+    return Math.min(maxFrames - 1, 8 + (tick > 30 ? 1 : 0));
+  }
+  if (pokemon.speciesId === 'pikachu' && key === 'ironTail') {
+    if (tick <= 14) return Math.min(2, Math.floor((tick / 14) * 3));
+    if (tick <= 26) return 3 + Math.min(3, Math.floor(((tick - 14) / 12) * 4));
+    if (tick <= 34) return Math.min(maxFrames - 1, tick <= 30 ? 7 : 8);
+    return Math.min(maxFrames - 1, 9);
+  }
+  if (pokemon.speciesId === 'charizard' && key === 'dragonClaw') {
+    if (tick <= 13) return Math.min(3, Math.floor((tick / 13) * 4));
+    if (tick <= 16) return 4;
+    if (tick <= 19) return 5 + Math.min(2, Math.floor(((tick - 16) / 3) * 3));
+    if (tick <= 28) return 8 + Math.min(3, Math.floor(((tick - 19) / 9) * 4));
+    if (tick <= 40) return Math.min(maxFrames - 1, 12);
+    return Math.min(maxFrames - 1, 13);
+  }
+  if (pokemon.speciesId === 'greninja' && key === 'nightSlash') {
+    if (tick <= 11) return Math.min(2, Math.floor((tick / 11) * 3));
+    if (tick <= 23) return 3 + Math.min(4, Math.floor(((tick - 11) / 12) * 5));
+    if (tick <= 32) return Math.min(maxFrames - 1, tick <= 27 ? 8 : 9);
+    return Math.min(maxFrames - 1, tick <= 36 ? 10 : 11);
+  }
+  if (pokemon.speciesId === 'lucario' && key === 'closeCombat') {
+    if (tick <= 6) return Math.min(3, Math.floor((tick / 6) * 4));
+    if (tick <= 29) return Math.min(maxFrames - 1, 4 + (Math.floor((tick - 7) / 3) % 7));
+    if (tick <= 40) return Math.min(maxFrames - 1, tick <= 35 ? 11 : 12);
+    return Math.min(maxFrames - 1, tick <= 46 ? 13 : 14);
+  }
+
+  const progress = Math.min(1.0, tick / Math.max(1, pokemon.meleeMoveMaxTicks || 1));
+  return Math.min(maxFrames - 1, Math.floor(progress * maxFrames));
+}
+
+function _resolvePokemonSpecialFrameCol(pokemon, clipSpec, isSummonIntro, summonIntroP) {
+  const maxFrames = Math.max(1, clipSpec.frames || 1);
+  if (pokemon.speciesId === 'charizard') {
+    if (isSummonIntro && !pokemon.flamethrowerState) {
+      return summonIntroP < 0.45 ? 0 : 1;
+    }
+    if (pokemon.flamethrowerState === 'windup') {
+      const p = 1.0 - Math.max(0, pokemon.flamethrowerTimer / Math.max(1, pokemon.flamethrowerMaxWindup || 28));
+      return p < 0.5 ? 0 : 1;
+    }
+    if (pokemon.flamethrowerState === 'active') {
+      const activeTick = (pokemon.flamethrowerMaxActive || 120) - pokemon.flamethrowerTimer;
+      return activeTick < 6
+        ? 2 + Math.floor((activeTick / 6) * 2)
+        : 4 + (Math.floor(activeTick / 4) % 6);
+    }
+    if (pokemon.flamethrowerState === 'recovery') return Math.min(maxFrames - 1, 10);
+  }
+  if (pokemon.speciesId === 'pikachu' && pokemon.thunderboltState) {
+    if (pokemon.thunderboltState === 'windup') {
+      const p = 1.0 - Math.max(0, pokemon.thunderboltTimer / Math.max(1, pokemon.thunderboltMaxWindup || 20));
+      return Math.min(2, Math.floor(p * 3));
+    }
+    if (pokemon.thunderboltState === 'active') {
+      const activeTick = Math.max(0, (pokemon.thunderboltMaxActive || 32) - pokemon.thunderboltTimer);
+      return Math.min(maxFrames - 1, 3 + (activeTick % 7));
+    }
+    const maxRec = Math.max(1, pokemon.spec?.skills?.special?.recoveryFrames || 18);
+    const recP = 1.0 - Math.max(0, pokemon.thunderboltTimer / maxRec);
+    return Math.min(maxFrames - 1, 10 + Math.min(2, Math.floor(recP * 3)));
+  }
+  if ((pokemon.speciesId === 'greninja' || pokemon.speciesId === 'lucario') && (pokemon.specialCastTimer || 0) > 0) {
+    const maxT = Math.max(1, pokemon.specialCastMax || 28);
+    const p = Math.max(0, Math.min(1, 1.0 - (pokemon.specialCastTimer / maxT)));
+    if (pokemon.speciesId === 'greninja') {
+      if (p < 0.35) return Math.min(2, Math.floor((p / 0.35) * 3));
+      if (p < 0.70) return 3 + Math.min(3, Math.floor(((p - 0.35) / 0.35) * 4));
+      return Math.min(maxFrames - 1, 7 + Math.min(4, Math.floor(((p - 0.70) / 0.30) * 5)));
+    }
+    return p < 0.40
+      ? Math.min(3, Math.floor((p / 0.40) * 4))
+      : Math.min(maxFrames - 1, 4 + Math.floor(((p - 0.40) / 0.60) * 8));
+  }
+  return Math.floor((pokemon.animTick || 0) / (clipSpec.ticksPerFrame || 6)) % maxFrames;
+}
+
+function _drawPokemonDashAfterImages(ctx, pokemon, sheetImg, sx, sy, clipSpec, ax, ay, scale, drawW, drawH, groundY, z, spriteAlpha) {
+  const ghosts = pokemon.dashAfterImages;
+  if (!Array.isArray(ghosts) || ghosts.length === 0) return;
+  const hasSheet = sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0;
+  for (let i = 0; i < ghosts.length; i++) {
+    const g = ghosts[i];
+    const lifeFrac = Math.max(0, Math.min(1, (g.life || 0) / Math.max(1, g.maxLife || 10)));
+    if (lifeFrac <= 0.02) continue;
+    const dx = g.x - pokemon.x;
+    const dy = (g.y - (g.z || 0)) - (pokemon.y - z);
+    ctx.save();
+    ctx.translate(dx, dy);
+    ctx.globalAlpha = spriteAlpha * 0.34 * lifeFrac;
+    if (hasSheet) {
+      ctx.fillStyle = g.color || pokemon.themeColor || '#FACC15';
+      ctx.beginPath();
+      ctx.ellipse(0, groundY - (pokemon.r || 22) * 0.3, (pokemon.r || 22) * 0.68, (pokemon.r || 22) * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(sheetImg, sx, sy, clipSpec.fw, clipSpec.fh, -ax * scale, groundY - (ay * scale), drawW, drawH);
+    } else {
+      ctx.fillStyle = g.color || pokemon.themeColor || '#FACC15';
+      ctx.beginPath();
+      ctx.arc(0, 0, (pokemon.r || 22) * 0.72, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function _drawPokemonSpecialCastAura(ctx, pokemon, r, groundY) {
+  if ((pokemon.specialCastTimer || 0) <= 10) return;
+  if (pokemon.speciesId !== 'greninja' && pokemon.speciesId !== 'lucario') return;
+  const maxT = Math.max(1, pokemon.specialCastMax || 28);
+  const chargeP = Math.max(0, Math.min(1, 1 - (pokemon.specialCastTimer - 10) / Math.max(1, maxT - 10)));
+  const tick = pokemon.animTick || 0;
+  const cy = groundY - r * 0.65;
+  ctx.save();
+  ctx.translate(0, cy);
+  if (pokemon.speciesId === 'greninja') {
+    const vr = r * (0.95 - chargeP * 0.30);
+    ctx.rotate(tick * 0.35);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, vr, 0, Math.PI * 1.15);
+    ctx.stroke();
+    ctx.strokeStyle = '#E0F2FE';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, vr * 0.72, Math.PI, Math.PI * 2.15);
+    ctx.stroke();
+  } else {
+    const ar = r * (1.05 - chargeP * 0.35);
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.85)';
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, ar, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#ECFEFF';
+    for (let k = 0; k < 4; k++) {
+      const ka = tick * 0.25 + (Math.PI / 2) * k;
+      ctx.fillRect(Math.round(Math.cos(ka) * ar - 1.5), Math.round(Math.sin(ka) * ar - 1.5), 3, 3);
+    }
+  }
+  ctx.restore();
+}
+
 /**
  * Renders the active Pokémon companion with 8-directional PMD sprite sheets & overhead minion HP bar.
  */
@@ -2059,68 +2570,10 @@ export function drawPokemonCompanion(ctx, pokemon) {
       } else {
         frameCol = Math.min(clipSpec.frames - 1, Math.floor(hTick / (clipSpec.ticksPerFrame || 6)));
       }
-    } else if (stateKey === 'special' && pokemon.speciesId === 'charizard' && isSummonIntro && !pokemon.flamethrowerState) {
-      frameCol = summonIntroP < 0.45 ? 0 : 1;
-    } else if (stateKey === 'special' && pokemon.speciesId === 'charizard' && pokemon.flamethrowerState) {
-      if (pokemon.flamethrowerState === 'windup') {
-        const p = 1.0 - Math.max(0, pokemon.flamethrowerTimer / Math.max(1, pokemon.flamethrowerMaxWindup || 28));
-        frameCol = p < 0.5 ? 0 : 1;
-      } else if (pokemon.flamethrowerState === 'active') {
-        const activeTick = (pokemon.flamethrowerMaxActive || 120) - pokemon.flamethrowerTimer;
-        if (activeTick < 6) {
-          frameCol = 2 + Math.floor((activeTick / 6) * 2);
-        } else {
-          frameCol = 4 + (Math.floor(activeTick / 4) % 6);
-        }
-      } else if (pokemon.flamethrowerState === 'recovery') {
-        frameCol = 10;
-      }
+    } else if (stateKey === 'special') {
+      frameCol = _resolvePokemonSpecialFrameCol(pokemon, clipSpec, isSummonIntro, summonIntroP);
     } else if (stateKey === 'attack' && pokemon.meleeMoveState && (pokemon.meleeMoveMaxTicks || 0) > 0) {
-      if (pokemon.speciesId === 'pikachu' && pokemon.meleeMoveKey === 'quickAttack') {
-        const tick = pokemon.meleeMoveTick || 0;
-        if (tick <= 4) {
-          frameCol = 0; // Low compression crouch
-        } else if (tick <= 12) {
-          // Stage 1: The Hop (frames 1 -> 3)
-          const hopP = (tick - 4) / 8;
-          frameCol = 1 + Math.min(2, Math.floor(hopP * 3));
-        } else if (tick <= 24) {
-          // Stage 2: The Leapforth (frames 4 -> 7, soaring forward leap)
-          const leapP = (tick - 12) / 12;
-          frameCol = 4 + Math.min(3, Math.floor(leapP * 4));
-        } else {
-          // Stage 3 & 4: Touchdown impact lock & recovery (frames 8 -> 9)
-          frameCol = Math.min(clipSpec.frames - 1, 8 + (tick > 30 ? 1 : 0));
-        }
-      } else if (pokemon.speciesId === 'charizard' && pokemon.meleeMoveKey === 'dragonClaw') {
-        const tick = pokemon.meleeMoveTick || 0;
-        // 5-Phase Melee Kinematics (Rule 30) for Charizard's Dragon Claw (52 ticks, 14 frames)
-        if (tick <= 13) {
-          // Phase 1 (Coil & Lunge): Grounded windup crouch & rearing back (frames 0 -> 3)
-          const p = tick / 13;
-          frameCol = Math.min(3, Math.floor(p * 4));
-        } else if (tick <= 16) {
-          // Phase 2 (Poised Hold): Coiled anticipation hold at apex (frame 4)
-          frameCol = 4;
-        } else if (tick <= 19) {
-          // Phase 3a (Hit 1: Right Claw Rend): Explosive strike acceleration (frames 5 -> 7)
-          const p = (tick - 16) / 3;
-          frameCol = 5 + Math.min(2, Math.floor(p * 3));
-        } else if (tick <= 28) {
-          // Phase 3b (Hit 2: Left Claw Cross-Rend & follow-through): (frames 8 -> 11)
-          const p = (tick - 19) / 9;
-          frameCol = 8 + Math.min(3, Math.floor(p * 4));
-        } else if (tick <= 40) {
-          // Phase 4 (Impact Lock): Locked at impact apex (frame 12)
-          frameCol = 12;
-        } else {
-          // Phase 5 (Recovery Settle): Returning smoothly to ground stance (frame 13)
-          frameCol = 13;
-        }
-      } else {
-        const progress = Math.min(1.0, (pokemon.meleeMoveTick || 0) / pokemon.meleeMoveMaxTicks);
-        frameCol = Math.min(clipSpec.frames - 1, Math.floor(progress * clipSpec.frames));
-      }
+      frameCol = _resolvePokemonMeleeFrameCol(pokemon, clipSpec);
     } else if (clipSpec.durations && Array.isArray(clipSpec.durations)) {
       let total = 0;
       for (let i = 0; i < clipSpec.durations.length; i++) total += clipSpec.durations[i];
@@ -2157,6 +2610,8 @@ export function drawPokemonCompanion(ctx, pokemon) {
         ay = clipAnchors[anchorBase + 1];
       }
     }
+
+    _drawPokemonDashAfterImages(ctx, pokemon, sheetImg, sx, sy, clipSpec, ax, ay, scale, drawW, drawH, groundY, z, spriteAlpha);
 
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = spriteAlpha;
@@ -2238,6 +2693,8 @@ export function drawPokemonCompanion(ctx, pokemon) {
       ctx.restore();
     }
   } else {
+    _drawPokemonDashAfterImages(ctx, pokemon, null, clipSpec, 0, 0, 0, 0, pokemon.spriteScale || 1.5, 0, 0, groundY, z, spriteAlpha);
+
     // Procedural elemental emblem fallback while image loads
     ctx.fillStyle = pokemon.themeColor || '#FACC15';
     ctx.strokeStyle = '#0E0F14';
@@ -2265,7 +2722,11 @@ export function drawPokemonCompanion(ctx, pokemon) {
         summonIntroP
       );
     }
+
+    _drawPokemonMeleeAttackEffects(ctx, pokemon, r, groundY, pokemon.spriteScale || 1.5);
   }
+
+  _drawPokemonSpecialCastAura(ctx, pokemon, r, groundY);
 
   // 3. Pikachu Thunderbolt Charging Windup & Continuous Lightning Torrent Beam
   if (pokemon.thunderboltState) {
@@ -2414,6 +2875,7 @@ export function drawPokemonCompanion(ctx, pokemon) {
       const p = Math.max(0, Math.min(1.0, 1.0 - Math.max(0, pokemon.flamethrowerTimer / Math.max(1, pokemon.flamethrowerMaxWindup || 28))));
       const windupMouth = getCharizardWindupMouthLocalOffset(pokemon, castAngle, p);
       _drawCharizard16BitWindupFlame(ctx, windupMouth.originX, windupMouth.originY, windupMouth.flameAngle, p, tick);
+      _drawCharizardFlameChargeSprite(ctx, windupMouth.originX, windupMouth.originY, windupMouth.flameAngle, Math.min(11, Math.floor(p * 12)), 0.95);
     } else if (pokemon.flamethrowerState === 'active') {
       const fixedStreamLen = 260;
       const fixedStreamW = 48;

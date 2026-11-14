@@ -29,6 +29,10 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
     return { finalAmount: amount, type, pendingAdaptation: null };
   }
 
+  if (opts.isKarma && (fighter.adaptedKarma || (fighter.adaptedSkills && fighter.adaptedSkills['karma']))) {
+    return { finalAmount: 0, type, pendingAdaptation: null };
+  }
+
   // ── General / Skill Shot Adaptation Detection ──
   let skillShotId = null;
   let skillShotColor = null;
@@ -99,6 +103,9 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
   } else if (opts.isSoulDisfigurement) {
     skillShotId = 'soulDisfigurement';
     skillShotColor = '#C026D3';
+  } else if (opts.isGasterBlaster || opts.skillShotId === 'gasterBlaster') {
+    skillShotId = 'gasterBlaster';
+    skillShotColor = '#03d5f1ff';
   }
 
   let finalAmount = amount;
@@ -269,6 +276,18 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
     isAdaptedAbility = true;
   }
 
+  // ── 25% Damage Taken (75% Reduction) when Adapted to Sans's Gaster Blaster ──
+  const isGasterBlasterHit = Boolean(opts.isGasterBlaster || opts.skillShotId === 'gasterBlaster' || (opts.projectile && opts.projectile.skillShotId === 'gasterBlaster'));
+  const isGasterBlasterAdapted = Boolean(
+    fighter.adaptedGasterBlaster ||
+    (fighter.adaptedSkills && fighter.adaptedSkills['gasterBlaster']) ||
+    (fighter.gojoAdaptColorHistory && fighter.gojoAdaptColorHistory.includes('#03d5f1ff'))
+  );
+  if (isGasterBlasterHit && isGasterBlasterAdapted) {
+    finalAmount = amount * adaptedMult; // 25% damage taken (75% reduction) when adapted to Gaster Blaster!
+    isAdaptedAbility = true;
+  }
+
   // ── 25% Damage Taken (75% Reduction) when Adapted to Lawnmower ──
   const isLawnmowerAdapted = Boolean(
     fighter.adaptedLawnmower || 
@@ -362,6 +381,8 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
           else if (opts.isRika) specificConfig = charConfig.rika;
         } else if (charId === 'toji') {
           if (opts.isSoulSplit) specificConfig = charConfig.ssk;
+        } else if (charId === 'sans') {
+          if (opts.isGasterBlaster || opts.skillShotId === 'gasterBlaster') specificConfig = charConfig.gasterBlaster;
         }
         
         if (specificConfig) {
@@ -416,6 +437,10 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
       fighter._lastSkillShotColor = skillShotColor;
     }
 
+    if (opts.isKarma && !fighter.adaptedKarma) {
+      fighter.karmaTickExposureCount = (fighter.karmaTickExposureCount || 0) + 1;
+    }
+
     // If incoming damage is lethal (deals >= fighter's remaining hp) before adapting,
     // Mahoraga is destroyed in one blow before he can adapt!
     const isLethalHit = finalAmount >= fighter.hp;
@@ -447,7 +472,24 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
       ))
     );
 
-    if (fighter.totalAccumDamage >= threshold && (fighter.fatalAdaptCooldown || 0) <= 0) {
+    const requiredKarmaTicks = mahoragaAdaptationConfig.sans?.karma?.requiredTicks ?? 8;
+    const isKarmaThresholdMet = Boolean(
+      opts.isKarma &&
+      !fighter.adaptedKarma &&
+      (fighter.karmaTickExposureCount || 0) >= requiredKarmaTicks &&
+      (fighter.fatalAdaptCooldown || 0) <= 0
+    );
+
+    if (isKarmaThresholdMet && !isCaughtInNamelessBeam && !isInsideGojoDomain) {
+      pendingAdaptation = {
+        type: 'skill',
+        attacker,
+        isKarma: true
+      };
+      if (!fighter._inMahoragaTakeDamage) {
+        adaptToKarma(fighter, attacker);
+      }
+    } else if (fighter.totalAccumDamage >= threshold && (fighter.fatalAdaptCooldown || 0) <= 0) {
       if (isCaughtInNamelessBeam) {
         // While caught in the Nameless Deity's active super-beam, the wheel MUST NOT trigger until the beam finishes!
         if (!fighter.pendingNamelessBeamAdaptation) {
@@ -480,11 +522,14 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
         fighter.fatalAdaptCooldownMax = fighter.fatalAdaptCooldown;
         // pendingAdaptation remains null so Mahoraga does NOT get fatal damage immunity or 1 HP revival inside the domain!
       } else {
+        const gasterThresholdPct = (skillShotId === 'gasterBlaster') ? thresholdPct : undefined;
+        fighter._pendingAdaptThresholdPct = gasterThresholdPct ?? null;
         pendingAdaptation = {
           type,
           attacker,
           isPureLoveBeam: Boolean(isPureLoveBeamHit && !fighter.adaptedPureLoveBeam),
-          isSaitamaCounter: Boolean(isSaitamaCounterHit && !fighter.adaptedSaitamaCounter)
+          isSaitamaCounter: Boolean(isSaitamaCounterHit && !fighter.adaptedSaitamaCounter),
+          thresholdPct: gasterThresholdPct
         };
         if (!fighter._inMahoragaTakeDamage) {
           if (pendingAdaptation.isPureLoveBeam) {
@@ -492,7 +537,7 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
           } else if (pendingAdaptation.isSaitamaCounter) {
             adaptToSaitamaCounter(fighter, attacker);
           } else {
-            triggerAdaptation(fighter, type, attacker);
+            triggerAdaptation(fighter, type, attacker, gasterThresholdPct !== undefined ? { thresholdPct: gasterThresholdPct } : undefined);
           }
         }
       }
@@ -509,7 +554,7 @@ export function handleAdaptationDamage(fighter, amount, attacker, opts = {}) {
  * Increments the adaptation stage, performs cinematic pause,
  * freezes enemies, heals via RCT, and checks for Level 8 awakening.
  */
-export function triggerAdaptation(fighter, type, attacker) {
+export function triggerAdaptation(fighter, type, attacker, opts = {}) {
   if (!fighter || fighter.hp <= 0 || fighter.dead || fighter.isDead || !fighter.isSkillEnabled(CONFIG.mahoraga?.enableAdaptation, true)) return;
   // If caught in Pure Love Beam or beam stasis, unfreeze immediately upon adaptation click!
   if (fighter.caughtInPureLoveBeam || (fighter.pureLoveBeamTimer || 0) > 0 || (fighter.pureLoveBeamRecoveryTimer || 0) > 0) {
@@ -524,7 +569,9 @@ export function triggerAdaptation(fighter, type, attacker) {
   // Exceptions: Limitless Infinity 5-freeze exposure or Unlimited Void Domain survival.
   const isInfinityAdaptation = fighter.gojoInfinityImmune && fighter._lastGojoHitType === 'infinity';
   const isDomainAdaptation = fighter.gojoDomainAdapted || fighter._lastGojoHitType === 'domain';
-  const threshold = fighter.maxHp * (CONFIG.mahoraga?.fatalDamageThresholdPct ?? 0.15);
+  const effectiveThresholdPct = opts?.thresholdPct ?? fighter._pendingAdaptThresholdPct ?? CONFIG.mahoraga?.fatalDamageThresholdPct ?? 0.15;
+  fighter._pendingAdaptThresholdPct = null;
+  const threshold = fighter.maxHp * effectiveThresholdPct;
 
   if (!isInfinityAdaptation && !isDomainAdaptation && (fighter.totalAccumDamage || 0) < threshold) {
     return;
@@ -1079,6 +1126,15 @@ export function applySkillShotAdaptation(fighter, skillShotId, color) {
     fighter.adapted.skill = true;
     spawnFloatingText(fighter.x, wheelY - 35, '⚙️ ADAPTED: SOUL DISFIGUREMENT!', color || '#C026D3');
     spawnFloatingText(fighter.x, wheelY - 52, '🛡️ Immune to Soul Disfigurement debuffs!', '#FFFFFF');
+  } else if (skillShotId === 'gasterBlaster') {
+    fighter.adaptedGasterBlaster = true;
+    if (!fighter.adaptedSkills) fighter.adaptedSkills = {};
+    fighter.adaptedSkills['gasterBlaster'] = true;
+    if (!fighter.adapted) fighter.adapted = {};
+    fighter.adapted.skill = true;
+    fighter.skillDodgeReady['gasterBlaster'] = false;
+    spawnFloatingText(fighter.x, wheelY - 35, '⚙️ ADAPTED: GASTER BLASTER!', color || '#03d5f1ff');
+    spawnFloatingText(fighter.x, wheelY - 52, '🛡️ 75% Blaster Damage Reduction!', '#FFFFFF');
   } else {
     const displayName = skillShotId.toUpperCase().replace('_', ' ');
     spawnFloatingText(fighter.x, wheelY - 35, `🛡️ ADAPTED: ${displayName} RESISTANCE (25% DAMAGE)!`, color);
@@ -1486,6 +1542,78 @@ export function adaptToSaitamaCounter(fighter, attacker) {
   spawnFloatingText(fighter.x, wheelY - 35, '⚙️ ADAPTED: SERIOUS COUNTER!', adaptColor);
   spawnFloatingText(fighter.x, wheelY - 52, '🛡️ Adapted to Saitama\'s Serious Strike!', '#FFFFFF');
 
+  spawnImpactFlash(fighter.x, fighter.y, 50, 'lightningTrail');
+  spawnSparks(fighter.x, fighter.y, 25, 'arcane', adaptColor);
+
+  applyRCTHeal(fighter);
+  applyWheelClickBuff(fighter);
+}
+
+/**
+ * Adapt Mahoraga to Sans's Karmic Retribution (KR) DoT.
+ * Grants permanent KR immunity, clears active KR stacks, and clicks the wheel.
+ */
+export function adaptToKarma(fighter, attacker = null) {
+  if (!fighter || fighter.hp <= 0 || fighter.dead || fighter.isDead || fighter.adaptedKarma) return;
+  if (!fighter.isSkillEnabled(CONFIG.mahoraga?.enableAdaptation, true)) return;
+  if ((fighter.fatalAdaptCooldown || 0) > 0) return;
+
+  fighter.adaptedKarma = true;
+  fighter._pendingAdaptThresholdPct = null;
+  if (!fighter.adaptedSkills) fighter.adaptedSkills = {};
+  fighter.adaptedSkills['karma'] = true;
+  if (!fighter.adapted) fighter.adapted = {};
+  fighter.adapted.skill = true;
+  if (!fighter.adaptationStage) fighter.adaptationStage = { melee: 0, ranged: 0, skill: 0 };
+  fighter.adaptationStage.skill = (fighter.adaptationStage.skill || 0) + 1;
+  if (!fighter.goldAdaptationStage) fighter.goldAdaptationStage = { melee: 0, ranged: 0, skill: 0 };
+  fighter.goldAdaptationStage.skill = (fighter.goldAdaptationStage.skill || 0) + 1;
+
+  const totalStages = (fighter.adaptationStage.melee || 0) + (fighter.adaptationStage.ranged || 0) + (fighter.adaptationStage.skill || 0);
+  if (totalStages >= 8) fighter.isMaxAdapted = true;
+
+  if (attacker && attacker.karmaTargets instanceof Map) attacker.karmaTargets.delete(fighter);
+  if (typeof state !== 'undefined' && state.fighters) {
+    state.fighters.forEach(f => {
+      if (f && f.karmaTargets instanceof Map) f.karmaTargets.delete(fighter);
+    });
+  }
+
+  const adaptColor = mahoragaAdaptationConfig.sans?.karma?.color || '#A855F7';
+  if (!fighter.gojoAdaptColorHistory) fighter.gojoAdaptColorHistory = [];
+  if (!fighter.gojoAdaptColorHistory.includes(adaptColor)) fighter.gojoAdaptColorHistory.push(adaptColor);
+
+  fighter.wheelGlowColor = adaptColor;
+  fighter.wheelGlowTimer = 65;
+  const pauseFrames = CONFIG.mahoraga?.wheelClickDuration ?? 25;
+  fighter.adaptationPauseTimer = pauseFrames;
+  fighter.adaptationPauseMax = pauseFrames;
+  fighter.wheelClickTimer = pauseFrames;
+  fighter.wheelClickMax = pauseFrames;
+  fighter.wheelStartRotation = fighter.wheelRotation || 0;
+  fighter.wheelTargetRotation = fighter.wheelStartRotation + (Math.PI / 4);
+
+  triggerMahoragaGammaRayRainbow(fighter);
+  if (typeof state !== 'undefined' && state.fighters) {
+    state.fighters.forEach(f => {
+      if (f && f !== fighter && f.hp > 0 && !(fighter.isTeammate?.(f)) && !(fighter.owner && (f === fighter.owner || f.owner === fighter.owner))) {
+        f.mahoragaAdaptationFreezeTimer = pauseFrames;
+        f.vx = 0;
+        f.vy = 0;
+      }
+    });
+  }
+
+  playSkillEffectSound('mahoraga', 'wheelclick');
+  triggerGlobalScreenShake(6, 18);
+  fighter.fatalAdaptCooldown = CONFIG.mahoraga?.fatalAdaptCooldownFrames ?? 180;
+  fighter.fatalAdaptCooldownMax = fighter.fatalAdaptCooldown;
+  fighter.totalAccumDamage = 0;
+  fighter.accumTimer = 0;
+
+  const wheelY = fighter.y - fighter.r - 28;
+  spawnFloatingText(fighter.x, wheelY - 35, '⚙️ ADAPTED: KARMIC RETRIBUTION!', adaptColor);
+  spawnFloatingText(fighter.x, wheelY - 52, '🛡️ Immune to Karma (KR) DoT!', '#FFFFFF');
   spawnImpactFlash(fighter.x, fighter.y, 50, 'lightningTrail');
   spawnSparks(fighter.x, fighter.y, 25, 'arcane', adaptColor);
 

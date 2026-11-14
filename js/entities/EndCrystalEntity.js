@@ -6,7 +6,7 @@
 
 import { Fighter, applyDamageToTarget, resolveDamageNumberColor } from './fighter.js';
 import { state, triggerGlobalScreenShake, spawnFloatingText } from '../core/state.js';
-import { spawnSparks, spawnImpactFlash } from '../graphics/particles/sparkEffect.js';
+import { spawnSparks, spawnImpactFlash, spawnGroundScorch, spawnMinecraftExplosion } from '../graphics/particles/sparkEffect.js';
 import { audioSystem } from '../systems/audioSystem.js';
 import { ARENA_VERTICAL } from '../configs/arenaConstants.js';
 
@@ -30,7 +30,7 @@ export function getEndCrystal60FrameStrip() {
   if (!_crystal60FrameStrip && typeof Image !== 'undefined') {
     _crystal60FrameStrip = new Image();
     _crystal60FrameStrip.onload = () => { _crystal60FrameLoaded = true; };
-    _crystal60FrameStrip.src = encodeURI('Assets/model/enderDragon/end_crystal/end_crystal-b.png?v=2');
+    _crystal60FrameStrip.src = encodeURI('Assets/model/enderDragon/end_crystal/end_crystal-b.png?v=3');
   }
   return _crystal60FrameStrip;
 }
@@ -344,49 +344,71 @@ export class EndCrystalEntity extends Fighter {
     this.dead = true;
     this.isDead = true;
 
-    // Visual & Audio Detonation Explosion
-    triggerGlobalScreenShake(8, 24);
-    spawnImpactFlash(this.x, this.y, 90, '#F5D0FE');
-    spawnSparks(this.x, this.y, '#C026D3', 24, 7.0);
-    spawnSparks(this.x, this.y, '#E879F9', 18, 5.5);
-    spawnSparks(this.x, this.y, '#FFFFFF', 12, 4.0);
+    const dragons = (state.fighters || []).filter(f => f && (f.characterId === 'ender_dragon' || f.type === 'ender_dragon') && f.hp > 0);
+    let dragon = this.tetherDragonTarget && this.tetherDragonTarget.hp > 0 ? this.tetherDragonTarget : null;
+    if (!dragon) {
+      let closestDist = Infinity;
+      for (const d of dragons) {
+        const dist = Math.hypot(d.x - this.x, d.y - this.y);
+        if (dist < closestDist) {
+          closestDist = dist;
+          dragon = d;
+        }
+      }
+    }
+
+    const cfg = (dragon && typeof dragon._getConfig === 'function' ? dragon._getConfig() : null)
+      || (typeof CONFIG !== 'undefined' ? CONFIG.ender_dragon : null);
+    const blastRadius = (cfg && Number.isFinite(cfg.crystalExplosionRadius)) ? cfg.crystalExplosionRadius : 125;
+    const blastDamage = (cfg && Number.isFinite(cfg.crystalExplosionDamage)) ? cfg.crystalExplosionDamage : 35;
+    const blastKnockback = (cfg && Number.isFinite(cfg.crystalExplosionKnockback)) ? cfg.crystalExplosionKnockback : 18.0;
+
+    // Visual & Audio Detonation AOE Explosion (authentic Minecraft blocky crescent & starburst explosion)
+    triggerGlobalScreenShake(9, 24);
+    spawnSparks(this.x, this.y, 8, 'default', '#E879F9');
+    spawnSparks(this.x, this.y, 6, 'default', '#FFFFFF');
+    spawnGroundScorch(this.x, this.y, blastRadius * 0.45, 90);
+    spawnImpactFlash(this.x, this.y, Math.round(blastRadius * 0.65), '#F5D0FE');
+    spawnMinecraftExplosion(this.x, this.y, blastRadius, { isEndCrystal: true });
 
     if (typeof audioSystem !== 'undefined' && audioSystem.playSFX) {
       const expIdx = Math.floor(Math.random() * 4) + 1;
       audioSystem.playSFX(`Assets/Sound Effects/EnderdragonSFX/Explosion${expIdx}.ogg`, 0.95);
     }
 
-    // Radial Blast Damage to nearby opponents/entities (excluding the dragon which takes dedicated backlash)
-    const blastRadius = 110;
-    const blastDamage = 28;
-    const blastKnockback = 16.0;
-    const targets = (state.fighters || []).filter(f => f && f !== this && f.hp > 0 && f.characterId !== 'ender_dragon' && f.type !== 'ender_dragon');
+    // Radial AOE Blast Damage to all nearby combatants & summons/illusions (excluding End Crystals and Ender Dragon which takes backlash)
+    const candidateTargets = new Set([
+      ...(state.fighters || []),
+      ...(state.illusions || [])
+    ]);
 
-    for (let target of targets) {
-      const dist = Math.hypot(target.x - this.x, target.y - this.y);
-      if (dist <= blastRadius) {
-        const angle = Math.atan2(target.y - this.y, target.x - this.x);
-        applyDamageToTarget(target, blastDamage, source || this);
+    for (const target of candidateTargets) {
+      if (!target || target === this || target.isEndCrystal) continue;
+      if (target.hp <= 0 || target.dead || target.isDead) continue;
+      if (target.characterId === 'ender_dragon' || target.type === 'ender_dragon') continue;
+
+      const dx = target.x - this.x;
+      const dy = target.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      const targetRadius = Number.isFinite(target.r) ? target.r : (Number.isFinite(target.radius) ? target.radius : 20);
+      const edgeDist = Math.max(0, dist - targetRadius);
+
+      if (edgeDist <= blastRadius) {
+        const angle = dist > 0.001 ? Math.atan2(dy, dx) : 0;
+        applyDamageToTarget(target, blastDamage, this, {
+          isExplosion: true,
+          isAOE: true,
+          knockbackForce: blastKnockback,
+          damageAngle: angle
+        });
         if (typeof target.applyKnockback === 'function') {
-          target.applyKnockback(Math.cos(angle) * blastKnockback, Math.sin(angle) * blastKnockback, 12);
+          target.applyKnockback(Math.cos(angle) * blastKnockback, Math.sin(angle) * blastKnockback, 14);
         }
       }
     }
 
     // ── Dragon Backlash & Enrage Trigger ──
-    const dragons = (state.fighters || []).filter(f => f && (f.characterId === 'ender_dragon' || f.type === 'ender_dragon') && f.hp > 0);
-    let dragon = null;
-    let closestDist = Infinity;
-    for (let d of dragons) {
-      const dist = Math.hypot(d.x - this.x, d.y - this.y);
-      if (dist < closestDist) {
-        closestDist = dist;
-        dragon = d;
-      }
-    }
-
     if (dragon) {
-      const cfg = typeof dragon._getConfig === 'function' ? dragon._getConfig() : (typeof CONFIG !== 'undefined' ? CONFIG.ender_dragon : null);
       const backlashDmg = (cfg && cfg.crystalBacklashDamage) || 60;
       applyDamageToTarget(dragon, backlashDmg, source || this);
       if (typeof spawnFloatingText === 'function') {
@@ -425,16 +447,17 @@ export class EndCrystalEntity extends Fighter {
       ? (state.fighters.find(f => f && (f.characterId === 'ender_dragon' || f.type === 'ender_dragon'))?._getConfig?.() || (typeof CONFIG !== 'undefined' ? CONFIG.ender_dragon : null))
       : (typeof CONFIG !== 'undefined' ? CONFIG.ender_dragon : null);
     const drawSize = (cfg && cfg.crystalDrawSize) || 140;
+    // Center the floating crystal core (y≈95/256 in the bedrock-free sheet) directly at (this.x, this.y)
     const dx = -drawSize / 2;
-    const dy = -Math.round(drawSize * 0.832);
-    const coreOffsetY = Math.round(drawSize * 0.449);
+    const dy = -Math.round(drawSize * 0.37);
+    const coreOffsetY = 0;
 
-    // 0. Subtle Floor Contact Shadow (Anchored under the 3D bedrock base)
+    // 0. Subtle Floating Floor Contact Shadow beneath the hovering crystal
     ctx.save();
     ctx.translate(this.x, this.y);
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.40)';
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.32)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, Math.round(drawSize * 0.23), Math.round(drawSize * 0.065), 0, 0, Math.PI * 2);
+    ctx.ellipse(0, Math.round(drawSize * 0.19), Math.round(drawSize * 0.14), Math.round(drawSize * 0.045), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -571,8 +594,7 @@ export function drawCrystalHealingTetherBeams(ctx, dragon) {
   const hasBeamImg = Boolean(beamImg && beamImg.complete && beamImg.naturalWidth > 0);
 
   const cfg = typeof targetDragon._getConfig === 'function' ? targetDragon._getConfig() : (typeof CONFIG !== 'undefined' ? CONFIG.ender_dragon : null);
-  const crystalDrawSize = (cfg && cfg.crystalDrawSize) || 140;
-  const coreOffsetY = Math.round(crystalDrawSize * 0.449);
+  const coreOffsetY = 0;
 
   for (let crystal of crystals) {
     const startX = crystal.x;

@@ -410,7 +410,9 @@ export const ashConfig = {
       sleep: 'Assets/model/ash/pokemon/pikachu/Sleep-Anim.png',
       victory: 'Assets/model/ash/pokemon/pikachu/Pose-Anim.png',
       thunderbolt: 'Assets/model/ash/pokemon/pikachu/Thunderbolt/thunderbolt-b.png',
-      thunderboltImpact: 'Assets/model/ash/pokemon/pikachu/Thunderbolt_impact/impact-b.png'
+      thunderboltImpact: 'Assets/model/ash/pokemon/pikachu/Thunderbolt_impact/impact-b.png',
+      ironTail: 'Assets/model/ash/pokemon/pikachu/Iron_tail/iron_tail-b.png',
+      ironTailFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/pikachu/Iron_tail/iron_tail-${i + 1}.png`)
     },
     charizard: {
       idle: 'Assets/model/ash/pokemon/charizard/Idle-Anim.png',
@@ -428,7 +430,9 @@ export const ashConfig = {
       flameFrames: Array.from({ length: 18 }, (_, i) => `Assets/model/ash/pokemon/charizard/Flame/flamethrower-${i + 1}.png`),
       flameCharge: 'Assets/model/ash/pokemon/charizard/Flame_charge/flame_charge-b.png',
       flameChargeSheet: 'Assets/model/ash/pokemon/charizard/Flame_charge/flame_charge-sheet.png',
-      flameChargeFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/charizard/Flame_charge/flame_charge-${i + 1}.png`)
+      flameChargeFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/charizard/Flame_charge/flame_charge-${i + 1}.png`),
+      dragonClaw: 'Assets/model/ash/pokemon/charizard/Dragon_claw/dragon_claw-b.png',
+      dragonClawFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/charizard/Dragon_claw/dragon_claw-${i + 1}.png`)
     },
     greninja: {
       idle: 'Assets/model/ash/pokemon/greninja/Idle-Anim.png',
@@ -441,7 +445,9 @@ export const ashConfig = {
       charge: 'Assets/model/ash/pokemon/greninja/Charge-Anim.png',
       rearUp: 'Assets/model/ash/pokemon/greninja/RearUp-Anim.png',
       sleep: 'Assets/model/ash/pokemon/greninja/Sleep-Anim.png',
-      victory: 'Assets/model/ash/pokemon/greninja/RearUp-Anim.png'
+      victory: 'Assets/model/ash/pokemon/greninja/RearUp-Anim.png',
+      nightSlash: 'Assets/model/ash/pokemon/greninja/Night_slash/night_slash-b.png',
+      nightSlashFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Night_slash/night_slash-${i + 1}.png`)
     },
     lucario: {
       idle: 'Assets/model/ash/pokemon/lucario/Idle-Anim.png',

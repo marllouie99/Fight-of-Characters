@@ -101,5 +101,18 @@ export const SKILL_REGISTRY = {
     adaptationWindowFrames: 300,
     adaptationDelayFrames: 45,
     dodgeType: 'perpendicular',
+  },
+
+  // Sans's Gaster Blaster
+  'gasterBlaster': {
+    id: 'gasterBlaster',
+    name: 'Gaster Blaster',
+    ownerType: 'sans',
+    skillShotColor: '#03d5f1ff',
+    dodgeRadius: 160,
+    adaptationThresholdPct: 0.15,
+    adaptationWindowFrames: 400,
+    adaptationDelayFrames: 45,
+    dodgeType: 'perpendicular',
   }
 };

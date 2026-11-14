@@ -26,7 +26,7 @@ import {
   drawAshVisualEffects,
   drawPokemonCompanion, getCharizardMouthLocalOffset, updateCharizardFlameChain
 } from '../../graphics/weapons/ashPokemonGraphics.js';
-import { spawnImpactFlash, spawnSparks } from '../../graphics/particles/sparkEffect.js';
+import { spawnImpactFlash, spawnSparks, spawnPunchAttackImpact } from '../../graphics/particles/sparkEffect.js';
 import {
   initPokemonTrainerState,
   resetPokemonTrainerState,
@@ -308,13 +308,20 @@ export class PokemonCompanionEntity extends Fighter {
    * - Close combat melee moves lock aim during execution.
    */
   canAim() {
-    if (this.thunderboltState || this.meleeMoveState) return false;
+    if (this.thunderboltState || this.meleeMoveState || (this.specialCastTimer || 0) > 0) return false;
     if (this.flamethrowerState === 'windup' || this.flamethrowerState === 'recovery') return false;
     return super.canAim();
   }
 
   isStationarySkillActive() {
-    return Boolean(this.thunderboltState || this.flamethrowerState || (this.meleeMoveState === 'lock') || (this.animState === 'special' && (this.actionAnimTimer > 0 || (this.specialCastTimer || 0) > 0)) || super.isStationarySkillActive?.());
+    return Boolean(
+      this.thunderboltState ||
+      this.flamethrowerState ||
+      this.meleeMoveState ||
+      ((this.specialCastTimer || 0) > 0) ||
+      (this.animState === 'special' && (this.actionAnimTimer > 0 || (this.specialCastTimer || 0) > 0)) ||
+      super.isStationarySkillActive?.()
+    );
   }
 
   isChannelingSkill() {
@@ -473,6 +480,9 @@ export class PokemonCompanionEntity extends Fighter {
     this.meleeMoveKey = null;
     this.specialCastTimer = 0;
     this.actionAnimTimer = 0;
+    if (Array.isArray(this.dashAfterImages)) {
+      this.dashAfterImages.length = 0;
+    }
     if (this.animState === 'special' || this.animState === 'attack') {
       this.animState = 'idle';
     }
@@ -1259,11 +1269,22 @@ export class PokemonCompanionEntity extends Fighter {
       return;
     }
 
-    // ── Dedicated Close Combat Multi-Phase Combo Lifecycles (Rule 30) ──
-    // Pokémon continues moving and rebouncing off walls & entity collisions like a standard Fighter while executing melee attacks
+    // ── Dedicated Close Combat & Special Cast Movement Lock ──
+    // Whenever a Pokémon attacks (melee or special), stop movement cleanly during the attack
+    // and resume natural bounce movement once the attack finishes.
     if (this.meleeMoveState) {
-      const target = this._acquireTarget(opponent);
-      this._updateMeleeMove(target, arena);
+      const meleeTarget = this._acquireTarget(opponent);
+      this._updateMeleeMove(meleeTarget, arena);
+      if (this.meleeMoveState) {
+        this._haltMovementForAttack(arena, meleeTarget);
+        return;
+      }
+    }
+
+    if ((this.specialCastTimer || 0) > 0) {
+      const castTarget = this._acquireTarget(opponent);
+      this._haltMovementForAttack(arena, castTarget);
+      return;
     }
 
     // Acquire priority enemy target (focusing active enemy Pokémon first in Pokémon battles)
@@ -1273,8 +1294,10 @@ export class PokemonCompanionEntity extends Fighter {
       const dy = target.y - this.y;
       const dist = Math.hypot(dx, dy);
       const targetAngle = Math.atan2(dy, dx);
-      this.gunAngle = targetAngle;
-      this.angle = targetAngle;
+      if (this.canAim()) {
+        this.gunAngle = targetAngle;
+        this.angle = targetAngle;
+      }
 
       const reach = (this.spec.meleeReach || 68) + (target.r || 25);
 
@@ -1294,7 +1317,7 @@ export class PokemonCompanionEntity extends Fighter {
           }
         }
       }
-      // 2. Close Range (Special on cooldown) -> Melee Combo Strike while preserving natural bounce physics!
+      // 2. Close Range (Special on cooldown) -> Melee Combo Strike
       else if (dist <= reach + 20 && this.meleeCooldown <= 0 && !this.meleeMoveState) {
         this._startCloseCombatMove(target);
       }
@@ -1307,6 +1330,16 @@ export class PokemonCompanionEntity extends Fighter {
     super.update(target, ownerIndex, arena);
   }
 
+  _haltMovementForAttack(arena, target = null) {
+    this.vx = 0;
+    this.vy = 0;
+    this.knockbackVx = 0;
+    this.knockbackVy = 0;
+    this._stationaryStallFrames = 0;
+    updatePokemonCompanionAnimState(this);
+    this.resolveWallBounce(arena, target);
+  }
+
   /**
    * Overrides base Fighter._decrementSkillCooldowns() and _tickCooldowns() to prevent
    * generic property scanning (key.endsWith('Cooldown')) from double-decrementing companion cooldowns.
@@ -1315,6 +1348,59 @@ export class PokemonCompanionEntity extends Fighter {
   _decrementSkillCooldowns() {}
 
   _tickCooldowns() {}
+
+  _updateVisualEffects() {
+    if (Array.isArray(this.dashAfterImages) && this.dashAfterImages.length > 0) {
+      for (let i = this.dashAfterImages.length - 1; i >= 0; i--) {
+        this.dashAfterImages[i].life--;
+        if (this.dashAfterImages[i].life <= 0) {
+          this.dashAfterImages.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  _spawnMeleePunchImpact(tgt, angle, radius = 52, color = 'cyan', lateralOffset = 0) {
+    if (!tgt || typeof tgt.x !== 'number') return;
+    const dx = tgt.x - this.x;
+    const dy = tgt.y - this.y;
+    const dist = Math.hypot(dx, dy);
+    const contactDist = Math.max(this.r || 22, dist - (tgt.r || 25) * 0.45);
+    const perpX = -Math.sin(angle) * lateralOffset;
+    const perpY = Math.cos(angle) * lateralOffset;
+    const cx = this.x + Math.cos(angle) * contactDist + perpX;
+    const cy = this.y + Math.sin(angle) * contactDist + perpY;
+    spawnPunchAttackImpact(cx, cy, radius, angle, color);
+  }
+
+  _spawnMeleeSlashVfx(tgt, angle, opts = {}) {
+    if (!this.owner || !Array.isArray(this.owner.activeVisualEffects)) return;
+    const bladeReach = opts.bladeReach || 78;
+    const slashAngle = angle + (opts.angleOffset || 0);
+    const hasTgt = tgt && typeof tgt.x === 'number' && typeof tgt.y === 'number';
+    const impactDist = hasTgt
+      ? Math.max((this.r || 22) + 12, Math.min(bladeReach * 1.1, Math.hypot(tgt.x - this.x, tgt.y - this.y)))
+      : (this.r || 22) + bladeReach * 0.45;
+    const targetX = this.x + Math.cos(slashAngle) * impactDist;
+    const targetY = this.y + Math.sin(slashAngle) * impactDist;
+    // Offset curvature pivot behind the impact plane so the crescent cuts cleanly across target without haloing the attacker
+    const pivotX = targetX - Math.cos(slashAngle) * (bladeReach * 0.62);
+    const pivotY = targetY - Math.sin(slashAngle) * (bladeReach * 0.62);
+    const dur = opts.duration || 18;
+    this.owner.activeVisualEffects.push({
+      type: 'pokemonSlash',
+      ownerPokemon: this,
+      tintKey: opts.tintKey || 'dragonClaw',
+      x: pivotX,
+      y: pivotY,
+      bladeReach,
+      angle: slashAngle,
+      facingLeft: Math.cos(slashAngle) < 0,
+      isReverseSweep: Boolean(opts.isReverseSweep),
+      timer: dur,
+      maxTimer: dur
+    });
+  }
 
   _startCloseCombatMove(target, forcedMoveKey = null, isTrainerCommand = false) {
     if (!target || target.hp <= 0) return;
@@ -1352,6 +1438,11 @@ export class PokemonCompanionEntity extends Fighter {
     this.animState = 'attack';
     this.actionAnimTimer = 40;
     this.animTick = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.knockbackVx = 0;
+    this.knockbackVy = 0;
+    this._stationaryStallFrames = 0;
 
     let calloutText = null;
     if (moveKey === 'quickAttack') {
@@ -1412,6 +1503,11 @@ export class PokemonCompanionEntity extends Fighter {
         this.meleeMoveState = 'strike';
         const leapProgress = (tick - 12) / 12; // 0.0 to 1.0
         this.z = Math.sin(leapProgress * Math.PI) * 19; // 0 -> 19px -> 0 (soaring forward leap)
+        if (tick % 3 === 1) {
+          if (!this.dashAfterImages) this.dashAfterImages = [];
+          if (this.dashAfterImages.length >= 4) this.dashAfterImages.shift();
+          this.dashAfterImages.push({ x: this.x, y: this.y, z: this.z, angle, life: 10, maxLife: 10, color: '#FACC15' });
+        }
 
         const dist = tgt ? Math.hypot(tgt.x - this.x, tgt.y - this.y) : 999;
         const hitReach = (this.r || 22) + (tgt?.r || 25) + 16;
@@ -1424,6 +1520,7 @@ export class PokemonCompanionEntity extends Fighter {
             this.owner._dealPokemonDamage(tgt, dmg, { angle, knockback: 10, isSpecial: false, isMelee: true, attacker: this });
             this.owner._spawnRippleEffect(tgt.x, tgt.y, 44, '#FFFFFF', 'rgba(255, 255, 255, 0.24)', 14);
           }
+          this._spawnMeleePunchImpact(tgt, angle, 48, 'gold', 0);
           spawnImpactFlash(tgt.x, tgt.y, '#FFFFFF');
           spawnSparks(tgt.x, tgt.y, 6, 'gold', '#FACC15');
         }
@@ -1466,6 +1563,9 @@ export class PokemonCompanionEntity extends Fighter {
         const strikeP = (tick - 17) / 8;
         this.z = Math.max(0, 22 * (1 - strikeP));
 
+        if (tick === 18) {
+          this._spawnMeleeSlashVfx(tgt, angle, { tintKey: 'ironTail', bladeReach: 74, duration: 18, isReverseSweep: false });
+        }
         if (tick === 20 && !this.meleeHitDone.has('ironTail') && tgt && tgt.hp > 0) {
           this.meleeHitDone.add('ironTail');
           _playAshSound('hitStrong');
@@ -1475,6 +1575,7 @@ export class PokemonCompanionEntity extends Fighter {
             this.owner._dealPokemonDamage(tgt, dmg, { angle, knockback: 14, isSpecial: false, isMelee: true, attacker: this });
             this.owner._spawnRippleEffect(tgt.x, tgt.y, 56, '#E2E8F0', 'rgba(226, 232, 240, 0.28)', 18);
           }
+          this._spawnMeleePunchImpact(tgt, angle, 54, 'gold', 0);
           if (typeof tgt.applyHitStun === 'function') tgt.applyHitStun(16);
           spawnImpactFlash(tgt.x, tgt.y, '#E2E8F0');
           spawnSparks(tgt.x, tgt.y, 7, 'silver', '#F8FAFC');
@@ -1513,6 +1614,9 @@ export class PokemonCompanionEntity extends Fighter {
         this.meleeMoveState = 'strike';
         this.z = 0;
 
+        if (tick === 17) {
+          this._spawnMeleeSlashVfx(tgt, angle, { tintKey: 'dragonClaw', bladeReach: 82, angleOffset: -0.22, duration: 16, isReverseSweep: false });
+        }
         // Sub-hit 1: Right Claw (tick 19)
         if (tick === 19 && !this.meleeHitDone.has('dragonClaw1') && tgt && tgt.hp > 0) {
           this.meleeHitDone.add('dragonClaw1');
@@ -1527,6 +1631,9 @@ export class PokemonCompanionEntity extends Fighter {
           spawnSparks(tgt.x, tgt.y, 4, 'green', '#10B981');
         }
 
+        if (tick === 23) {
+          this._spawnMeleeSlashVfx(tgt, angle, { tintKey: 'dragonClaw', bladeReach: 88, angleOffset: 0.22, duration: 22, isReverseSweep: true });
+        }
         // Sub-hit 2: Left Claw Cross-Rend (tick 25)
         if (tick === 25 && !this.meleeHitDone.has('dragonClaw2') && tgt && tgt.hp > 0) {
           this.meleeHitDone.add('dragonClaw2');
@@ -1563,6 +1670,11 @@ export class PokemonCompanionEntity extends Fighter {
       // Phase 1: Shadow Step Dash (ticks 1–8)
       if (tick <= 8) {
         this.meleeMoveState = 'windup';
+        if (tick % 3 === 1) {
+          if (!this.dashAfterImages) this.dashAfterImages = [];
+          if (this.dashAfterImages.length >= 4) this.dashAfterImages.shift();
+          this.dashAfterImages.push({ x: this.x, y: this.y, z: 0, angle, life: 12, maxLife: 12, color: '#8B5CF6' });
+        }
         if (tick === 8) {
           _playAshSound('nightSlashCast');
         }
@@ -1574,6 +1686,14 @@ export class PokemonCompanionEntity extends Fighter {
       // Phase 3: Dual Dark-Blade Cross-Cleave (ticks 12–20)
       else if (tick <= 20) {
         this.meleeMoveState = 'strike';
+        if (tick === 12) {
+          const rev = (this.comboStep % 2 === 0);
+          this._spawnMeleeSlashVfx(tgt, angle, { tintKey: 'nightSlash', bladeReach: 80, angleOffset: -0.22, duration: 18, isReverseSweep: rev });
+        }
+        if (tick === 14) {
+          const rev = (this.comboStep % 2 !== 0);
+          this._spawnMeleeSlashVfx(tgt, angle, { tintKey: 'nightSlash', bladeReach: 80, angleOffset: 0.22, duration: 18, isReverseSweep: rev });
+        }
 
         if (tick === 16 && !this.meleeHitDone.has('nightSlash') && tgt && tgt.hp > 0) {
           this.meleeHitDone.add('nightSlash');
@@ -1620,6 +1740,7 @@ export class PokemonCompanionEntity extends Fighter {
           triggerGlobalScreenShake(2.0, 3);
           const dmg = Math.round(5 * dmgMult);
           if (this.owner) this.owner._dealPokemonDamage(tgt, dmg, { angle: angle - 0.15, knockback: 2, isSpecial: false, isMelee: true, attacker: this });
+          this._spawnMeleePunchImpact(tgt, angle - 0.15, 44, 'cyan', -8);
           if (typeof tgt.applyTimeStop === 'function') tgt.applyTimeStop(4);
           spawnSparks(tgt.x, tgt.y, 3, 'cyan', '#22D3EE');
         }
@@ -1630,6 +1751,7 @@ export class PokemonCompanionEntity extends Fighter {
           triggerGlobalScreenShake(2.0, 3);
           const dmg = Math.round(5 * dmgMult);
           if (this.owner) this.owner._dealPokemonDamage(tgt, dmg, { angle: angle + 0.15, knockback: 2, isSpecial: false, isMelee: true, attacker: this });
+          this._spawnMeleePunchImpact(tgt, angle + 0.15, 48, 'cyan', 8);
           if (typeof tgt.applyTimeStop === 'function') tgt.applyTimeStop(4);
           spawnSparks(tgt.x, tgt.y, 3, 'cyan', '#22D3EE');
         }
@@ -1640,6 +1762,7 @@ export class PokemonCompanionEntity extends Fighter {
           triggerGlobalScreenShake(3.0, 4);
           const dmg = Math.round(6 * dmgMult);
           if (this.owner) this.owner._dealPokemonDamage(tgt, dmg, { angle, knockback: 4, isSpecial: false, isMelee: true, attacker: this });
+          this._spawnMeleePunchImpact(tgt, angle, 56, 'blue', -5);
           if (typeof tgt.applyTimeStop === 'function') tgt.applyTimeStop(5);
           spawnSparks(tgt.x, tgt.y, 4, 'cyan', '#22D3EE');
         }
@@ -1654,6 +1777,7 @@ export class PokemonCompanionEntity extends Fighter {
             this.owner._dealPokemonDamage(tgt, dmg, { angle, knockback: 16, isSpecial: false, isMelee: true, attacker: this });
             this.owner._spawnRippleEffect(tgt.x, tgt.y, 65, '#22D3EE', 'rgba(34, 211, 238, 0.28)', 22);
           }
+          this._spawnMeleePunchImpact(tgt, angle, 78, 'cyan', 0);
           if (typeof tgt.applyHitStun === 'function') tgt.applyHitStun(20);
           const auraCol = '#22D3EE';
           spawnImpactFlash(tgt.x, tgt.y, auraCol);
@@ -2113,9 +2237,13 @@ export class AshFighter extends Fighter {
 
     for (let i = this.activeElementalProjectiles.length - 1; i >= 0; i--) {
       const p = this.activeElementalProjectiles[i];
+      if (!p.trail) p.trail = [];
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > 7) p.trail.shift();
+
       p.x += p.vx;
       p.y += p.vy;
-      p.rot = (p.rot || 0) + 0.35;
+      p.rot = (p.rot || 0) + (p.kind === 'waterShuriken' ? 0.52 : 0.35);
       p.life--;
 
       // Homing steering for Lucario's Aura Sphere & slight electric tracking on Thunderbolt
@@ -2140,21 +2268,30 @@ export class AshFighter extends Fighter {
         const enemy = enemies[eIdx];
         const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
         if (dist <= (enemy.r || 25) + (p.r || 13)) {
+          const hitAngle = Math.atan2(p.vy, p.vx);
           this._dealPokemonDamage(enemy, p.damage || 18, {
             knockback: p.knockback || 8,
-            angle: Math.atan2(p.vy, p.vx),
+            angle: hitAngle,
             paralyzeFrames: p.paralyzeFrames,
             burnDps: p.burnDps,
             burnFrames: p.burnFrames,
             isSpecial: true
           });
+          if (p.kind === 'auraSphere') {
+            spawnPunchAttackImpact(p.x, p.y, 70, hitAngle, 'cyan');
+            spawnImpactFlash(p.x, p.y, '#ECFEFF');
+            spawnSparks(p.x, p.y, 8, 'cyan', '#22D3EE');
+          } else if (p.kind === 'waterShuriken') {
+            spawnImpactFlash(p.x, p.y, '#E0F2FE');
+            spawnSparks(p.x, p.y, 7, 'cyan', '#38BDF8');
+          }
           this._spawnRippleEffect(
             p.x,
             p.y,
-            p.kind === 'thunderbolt' ? 68 : 48,
+            p.kind === 'thunderbolt' ? 68 : (p.kind === 'auraSphere' ? 64 : 48),
             p.color || '#FACC15',
-            p.kind === 'thunderbolt' ? 'rgba(250, 204, 21, 0.25)' : 'rgba(56, 189, 248, 0.18)',
-            16
+            p.kind === 'thunderbolt' ? 'rgba(250, 204, 21, 0.25)' : 'rgba(56, 189, 248, 0.22)',
+            18
           );
           hit = true;
           break;
@@ -2562,7 +2699,13 @@ export class AshFighter extends Fighter {
     p.animState = 'special';
     p.actionAnimTimer = 28;
     p.specialCastTimer = 28;
+    p.specialCastMax = 28;
     p.animTick = 0;
+    p.vx = 0;
+    p.vy = 0;
+    p.knockbackVx = 0;
+    p.knockbackVy = 0;
+    p._stationaryStallFrames = 0;
 
     const moveTitle = spec.specialName || 'THUNDERBOLT!';
     spawnFloatingText(p.x, p.y - p.r - 22, moveTitle, p.themeColor);

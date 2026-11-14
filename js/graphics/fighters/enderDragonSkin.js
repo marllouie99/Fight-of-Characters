@@ -562,7 +562,7 @@ function _drawSwoopAfterImages(ctx, afterImages, r, fBox, wingsImg, tailSegments
       const wingDrawSize = r * wingScaleMult;
       ctx.save();
       ctx.translate(-r * 0.15, 0);
-      ctx.rotate(-Math.PI / 2);
+      ctx.rotate(Math.PI / 2);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         wingsImg,
@@ -858,7 +858,7 @@ export function drawEnderDragonSkin(ctx, fighter) {
   if (wingsImg && wingsImg.complete && wingsImg.naturalWidth > 0) {
     ctx.save();
     ctx.translate(-r * 0.15 - heaveX * 0.8, -heaveY * 0.4); // Attach wings to back spine with discrete breath heave
-    ctx.rotate(-Math.PI / 2 + (isSmoothKinematics ? breathCycle * 0.04 : breathQuantized * 0.04 * easeBreathing)); // Align lateral wing spread with subtle pitch flare
+    ctx.rotate(Math.PI / 2 + (isSmoothKinematics ? breathCycle * 0.04 : breathQuantized * 0.04 * easeBreathing)); // Align lateral wing spread (leading bone forward +X, scalloped webbing trailing -X) with subtle pitch flare
     ctx.imageSmoothingEnabled = false; // Authentic pixel art
     ctx.drawImage(
       wingsImg,
@@ -895,43 +895,50 @@ export function drawEnderDragonSkin(ctx, fighter) {
 
 /**
  * Minecraft Dragon's Breath Swirling Maw Charging & Active Discharge Animation
- * Renders swirling square purple/magenta/white particles spiraling and flaring from the dragon's snout
+ * Renders crackling Minecraft dragon_breath pixel star-cluster particles flaring from the snout
  */
 function _drawMinecraftMawChargingBreath(ctx, r, stateTimer, isContinuous = false) {
   const baseNx = r * 0.84;
   const baseNy = r * 0.20;
   const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : Math.floor(Date.now() / 16);
   const progress = isContinuous ? 1.0 : Math.min(1.0, Math.max(0, (18 - stateTimer) / 10));
+  const sprites = _getMinecraftBreathSprites();
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
 
   const P = 2.0;
-  const particleCount = 14;
-  const spiralRadius = r * (isContinuous ? 0.38 : (0.65 * (1.0 - progress * 0.75)));
-  const animTime = isContinuous ? (time * 0.25) : (progress * Math.PI * 3.5);
+  const particleCount = 12;
+  const spiralRadius = r * (isContinuous ? 0.42 : (0.65 * (1.0 - progress * 0.72)));
+  const animTime = isContinuous ? (time * 0.26) : (progress * Math.PI * 3.5);
 
   for (let i = 0; i < particleCount; i++) {
-    const dist = spiralRadius * (0.35 + (i % 4) * 0.20);
+    const dist = spiralRadius * (0.28 + (i % 4) * 0.22);
     const angle = (i / particleCount) * Math.PI * 2 + animTime;
-
     const px = Math.round((baseNx + Math.cos(angle) * dist) / P) * P;
     const py = Math.round((baseNy + Math.sin(angle) * dist) / P) * P;
-    const pSize = Math.round((P * (1.5 + (i % 2) * 0.5)) / P) * P;
+    const pAlpha = isContinuous ? (0.65 + (i % 3) * 0.12) : Math.min(1.0, 0.48 + progress * 0.52);
 
-    const palette = ['#FFFFFF', '#F5D0FE', '#E879F9', '#D946EF', '#C026D3'];
-    ctx.fillStyle = palette[i % palette.length];
-    ctx.globalAlpha = isContinuous ? (0.60 + (i % 3) * 0.15) : Math.min(1.0, 0.45 + progress * 0.55);
-    ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
+    if (sprites) {
+      const stage = (i + Math.floor(time * 0.25)) % 3;
+      const sprite = sprites.starSprites[i % sprites.starSprites.length][stage];
+      const drawS = Math.round((12 + (i % 2) * 4) / P) * P;
+      ctx.globalAlpha = pAlpha;
+      ctx.drawImage(sprite, px - drawS / 2, py - drawS / 2, drawS, drawS);
+    } else {
+      const pSize = P * (1.5 + (i % 2) * 0.5);
+      ctx.fillStyle = i % 2 === 0 ? '#E82CE8' : '#FF5EFF';
+      ctx.globalAlpha = pAlpha;
+      ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
+    }
   }
 
-  // Glowing aperture core spark at mouth opening
+  // Bright magenta/white aperture core spark at snout
   if (isContinuous || progress > 0.35) {
-    const coreAlpha = isContinuous ? (0.85 + Math.sin(time * 0.3) * 0.15) : Math.min(1.0, (progress - 0.35) * 1.6);
+    const coreAlpha = isContinuous ? (0.85 + Math.sin(time * 0.3) * 0.12) : Math.min(1.0, (progress - 0.35) * 1.6);
     const coreSize = Math.round((P * (2.5 + (isContinuous ? Math.sin(time * 0.4) * 0.5 : progress * 1.5))) / P) * P;
-
-    ctx.fillStyle = '#D946EF';
-    ctx.globalAlpha = coreAlpha * 0.75;
+    ctx.fillStyle = '#E82CE8';
+    ctx.globalAlpha = coreAlpha * 0.80;
     ctx.fillRect(Math.round(baseNx / P) * P - coreSize, Math.round(baseNy / P) * P - coreSize, coreSize * 2, coreSize * 2);
 
     ctx.fillStyle = '#FFFFFF';
@@ -943,68 +950,248 @@ function _drawMinecraftMawChargingBreath(ctx, r, stateTimer, isContinuous = fals
 }
 
 // ─────────────────────────────────────────────
-// MINECRAFT DRAGON'S BREATH ENGINE (AREA EFFECT CLOUD)
-// 100% authentic Minecraft visuals:
-// 1. Pixel-snapped mottled ground residue carpet (Area Effect Cloud footprint)
-// 2. Volumetric rising & wafting square dragon_breath pixel puffs (3-tier shaded)
-// 3. Magical potion/spell sparkle twinkling squares
+// MINECRAFT DRAGON'S BREATH ENGINE (LINGERING AREA EFFECT CLOUD)
+// Pre-baked offscreen sprite caches (Rule 35 — zero per-frame pixel-grid fillRect floods):
+// 1. Classic Minecraft 8x8 `dragon_breath` magenta/violet pixel star-cluster sprites (3 palettes x 4 stages)
+// 2. Classic Minecraft lavender-grey `effect` potion swirl ring glyphs (4 orientations/stages)
+// 3. Seeded pre-baked ground cloud carpet canvases (3 variants, 1-blit ground layer)
 // ─────────────────────────────────────────────
 
-// Pre-seeded Minecraft Area Effect Cloud Ground Residue Carpet Tiles (~55 discrete grid cells)
-const MC_BREATH_CARPET_TILES = (() => {
-  const tiles = [];
-  const stepX = 0.20, stepY = 0.20;
-  for (let gx = -0.90; gx <= 0.90; gx += stepX) {
-    for (let gy = -0.80; gy <= 0.80; gy += stepY) {
-      const dist = Math.hypot(gx, gy / 0.82);
-      if (dist <= 0.98) {
-        const tier = dist <= 0.40 ? 0 : (dist <= 0.75 ? 1 : 2);
-        const phase = +(gx * 3.7 + gy * 5.1 + dist * 4.2).toFixed(2);
-        const sizeP = dist <= 0.35 ? 3.0 : (dist <= 0.70 ? 2.5 : 2.0);
-        tiles.push({ gx: +gx.toFixed(2), gy: +gy.toFixed(2), tier, phase, sizeP });
-      }
+const MC_BREATH_STAR_MATRICES = [
+  [
+    '..#..#..',
+    '#..##..#',
+    '..####..',
+    '.###.###',
+    '.######.',
+    '..####..',
+    '.#.##.#.',
+    '#......#',
+  ],
+  [
+    '.#....#.',
+    '...##...',
+    '.#.##.#.',
+    '.##..##.',
+    '.#.##.#.',
+    '...##...',
+    '.#....#.',
+    '........',
+  ],
+  [
+    '........',
+    '..#..#..',
+    '...##...',
+    '.#....#.',
+    '...##...',
+    '.#....#.',
+    '....#...',
+    '........',
+  ],
+  [
+    '........',
+    '........',
+    '..#..#..',
+    '...#....',
+    '.#...#..',
+    '........',
+    '..#.....',
+    '........',
+  ],
+];
+
+const MC_POTION_SWIRL_MATRICES = [
+  [
+    '...######...',
+    '.##......##.',
+    '#...####...#',
+    '#..#....#..#',
+    '#.#..##..#.#',
+    '#.#.#....#.#',
+    '#.#..###.#.#',
+    '#..#......#.',
+    '.#..####.#..',
+    '..##....#...',
+    '....####....',
+    '............',
+  ],
+  [
+    '....####....',
+    '..##....##..',
+    '.#..####..#.',
+    '#..#....#..#',
+    '#.#..##..#.#',
+    '#.#....#.#.#',
+    '#..#..#..#..',
+    '.#..##..#...',
+    '..##...#....',
+    '....###.....',
+    '............',
+    '............',
+  ],
+  [
+    '....###.....',
+    '..##...##...',
+    '.#..###..#..',
+    '#..#...#..#.',
+    '#.#..#..#.#.',
+    '#.#.....#.#.',
+    '.#..###..#..',
+    '..#.....#...',
+    '...####.....',
+    '............',
+    '............',
+    '............',
+  ],
+  [
+    '...#####....',
+    '.##.....##..',
+    '#...###...#.',
+    '#..#...#..#.',
+    '.#..#.#..#..',
+    '..#..#..#...',
+    '...#...#....',
+    '....###.....',
+    '............',
+    '............',
+    '............',
+    '............',
+  ],
+];
+
+const MC_BREATH_PALETTES = [
+  ['#9E08AD', '#D414DF', '#FF52FF'],
+  ['#B80EC9', '#E82CE8', '#FF7AFF'],
+  ['#7D058B', '#B80FC7', '#E638F0'],
+];
+
+let _mcBreathSpritesCache = null;
+
+function _hashBreathFloat(i, seed) {
+  let n = (Math.imul(i, 374761393) + Math.imul(seed, 668265263)) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177) | 0;
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
+
+function _bakeMatrixCanvas(matrix, pxSize, colorResolver) {
+  const rows = matrix.length;
+  const cols = matrix[0].length;
+  const c = document.createElement('canvas');
+  c.width = cols * pxSize;
+  c.height = rows * pxSize;
+  const octx = c.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  for (let r = 0; r < rows; r++) {
+    const row = matrix[r];
+    for (let col = 0; col < cols; col++) {
+      if (row[col] !== '#') continue;
+      octx.fillStyle = colorResolver(col, r, cols, rows);
+      octx.fillRect(col * pxSize, r * pxSize, pxSize, pxSize);
     }
   }
-  return tiles;
-})();
+  return c;
+}
 
-// Pre-seeded 48 Volumetric Rising Minecraft dragon_breath Square Puffs
+function _getMinecraftBreathSprites() {
+  if (_mcBreathSpritesCache) return _mcBreathSpritesCache;
+  if (typeof document === 'undefined') return null;
+
+  const pxSize = 2;
+  const starSprites = MC_BREATH_PALETTES.map((pal) =>
+    MC_BREATH_STAR_MATRICES.map((mat) =>
+      _bakeMatrixCanvas(mat, pxSize, (col, r, cols, rows) => {
+        const d = Math.abs(col - cols * 0.5 + 0.5) + Math.abs(r - rows * 0.5 + 0.5);
+        if (d <= 1.8) return pal[2];
+        if (d <= 3.2) return pal[1];
+        return pal[0];
+      })
+    )
+  );
+
+  const swirlSprites = MC_POTION_SWIRL_MATRICES.map((mat) =>
+    _bakeMatrixCanvas(mat, pxSize, (col, r) => {
+      if (r < 4 && col < 6) return '#B8B4D2';
+      if (r > 7 || col > 8) return '#726E8A';
+      return '#9894B2';
+    })
+  );
+
+  // Pre-bake 3 airy 200x200 Minecraft dragon_breath ground carpet variants (1-quad blit per pool, sparse stars matching Minecraft!)
+  const poolBaseCanvases = [0, 1, 2].map((variant) => {
+    const size = 200;
+    const cx = size * 0.5;
+    const cy = size * 0.5;
+    const rBase = 84;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const octx = c.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+
+    const total = 26;
+    const goldenAngle = 2.39996323;
+    for (let i = 0; i < total; i++) {
+      const seed = 31 + variant * 97;
+      // Airy stratified spiral leaving clean negative space between individual 8x8 star clusters
+      const baseU = Math.sqrt((i + 0.5) / total);
+      const u = Math.max(0.06, Math.min(0.96, baseU + (_hashBreathFloat(i, seed) - 0.5) * 0.14));
+      const ang = i * goldenAngle + (_hashBreathFloat(i, seed + 13) - 0.5) * 0.55;
+      const dist = rBase * u;
+      const dx = Math.round((cx + Math.cos(ang) * dist) / 2) * 2;
+      const dy = Math.round((cy + Math.sin(ang) * dist * 0.85) / 2) * 2;
+
+      const stage = u < 0.48 ? 0 : (u < 0.76 ? 1 : (u < 0.90 ? 2 : 3));
+      const sprite = starSprites[(i + variant) % starSprites.length][stage];
+      const spriteScale = u < 0.50 ? 16 : (u < 0.82 ? 14 : 12);
+      octx.globalAlpha = Math.max(0.45, Math.min(0.96, 0.96 - Math.pow(u, 2.2) * 0.48));
+      octx.drawImage(sprite, dx - spriteScale / 2, dy - spriteScale / 2, spriteScale, spriteScale);
+    }
+    octx.globalAlpha = 1.0;
+    return c;
+  });
+
+  _mcBreathSpritesCache = { starSprites, swirlSprites, poolBaseCanvases };
+  return _mcBreathSpritesCache;
+}
+
+// Pre-seeded 4 Live Rising Minecraft dragon_breath Star Clusters per pool (kept lean for 60 FPS mobile)
 const MC_DRAGON_BREATH_PARTICLES = (() => {
   const particles = [];
-  const count = 48;
+  const count = 4;
   for (let i = 0; i < count; i++) {
-    const angle = +((i / count) * Math.PI * 2 + (i % 3) * 0.15).toFixed(3);
-    const distRatio = +(0.12 + ((i * 17) % 43) / 52).toFixed(3);
-    const speed = +(0.008 + ((i * 7) % 9) * 0.001).toFixed(3);
-    const maxRise = 18 + ((i * 11) % 18);
-    const swayAmp = +(3.5 + ((i * 5) % 6) * 0.7).toFixed(1);
-    const swayFreq = +(0.04 + ((i * 13) % 7) * 0.006).toFixed(3);
-    const swayPhase = +((i * 1.37) % (Math.PI * 2)).toFixed(2);
-    const baseSize = 6 + (i % 3) * 2;
+    const angle = +((i * 2.39996) % (Math.PI * 2)).toFixed(3);
+    const distRatio = +(0.18 + Math.sqrt((i + 0.5) / count) * 0.68).toFixed(3);
+    const speed = +(0.012 + ((i * 7) % 4) * 0.0018).toFixed(4);
+    const maxRise = 12 + ((i * 7) % 12);
+    const swayAmp = +(2.0 + (i % 3) * 0.8).toFixed(1);
+    const swayFreq = +(0.04 + (i % 4) * 0.008).toFixed(3);
+    const swayPhase = +((i * 1.57) % (Math.PI * 2)).toFixed(2);
+    const baseSize = 12 + (i % 2) * 2;
     const lifeOffset = +(i / count).toFixed(3);
-    const tier = i % 3;
-    particles.push({ angle, distRatio, speed, maxRise, swayAmp, swayFreq, swayPhase, baseSize, lifeOffset, tier });
+    particles.push({ angle, distRatio, speed, maxRise, swayAmp, swayFreq, swayPhase, baseSize, lifeOffset });
   }
   return particles;
 })();
 
-// Pre-seeded 16 Minecraft Magic Potion Sparkles
-const MC_BREATH_SPARKLES = (() => {
-  const sparkles = [];
-  for (let i = 0; i < 16; i++) {
-    const nx = +(Math.cos(i * 1.96) * (0.2 + (i % 5) * 0.14)).toFixed(3);
-    const ny = +(Math.sin(i * 1.96) * (0.2 + (i % 5) * 0.14) * 0.82).toFixed(3);
-    const phase = +(i * 0.87).toFixed(2);
-    const sizeP = i % 2 === 0 ? 2 : 3;
-    sparkles.push({ nx, ny, phase, sizeP });
+// Pre-seeded 1 Rising Minecraft Grey-Lavender Potion Swirl Ring per pool (matches lean FPS budget)
+const MC_BREATH_SWIRLS = (() => {
+  const swirls = [];
+  const count = 1;
+  for (let i = 0; i < count; i++) {
+    const angle = +(0.45).toFixed(3);
+    const distRatio = 0.35;
+    const speed = 0.009;
+    const maxRise = 18;
+    const lifeOffset = 0.25;
+    swirls.push({ angle, distRatio, speed, maxRise, lifeOffset });
   }
-  return sparkles;
+  return swirls;
 })();
 
 /**
- * Draws the Authentic Minecraft Dragon's Breath Area Effect Cloud on the arena ground
- * Replaces generic blurry circle with authentic pixelated Minecraft square clouds,
- * rising volumetric dragon_breath particles, and potion sparkles.
+ * Draws the Authentic Minecraft Dragon's Breath Area Effect Cloud on the arena ground.
+ * Combines pre-baked magenta/purple `dragon_breath` pixel star-cluster carpet + rising star
+ * bursts + floating grey-lavender Minecraft potion swirl rings.
  */
 export function drawDragonAcidPool(ctx, pool) {
   if (!ctx || !pool || pool.duration <= 0) return;
@@ -1018,113 +1205,76 @@ export function drawDragonAcidPool(ctx, pool) {
   const expandP = Math.min(1.0, (maxDur - pool.duration) / 14);
   const curRadius = radius * (0.82 + 0.18 * Math.sin(expandP * Math.PI * 0.5));
   const time = (typeof state !== 'undefined' && state.frameCount) ? state.frameCount : Math.floor(Date.now() / 16);
+  const sprites = _getMinecraftBreathSprites();
 
   ctx.save();
   ctx.translate(pool.x, pool.y);
   ctx.imageSmoothingEnabled = false;
 
-  const P = 2.0;
-  const snap = (v) => Math.round(v / P) * P;
-
-  // ── LAYER 1: Minecraft Area Effect Cloud Ground Carpet (Mottled Dithered Residue) ──
-  const tileCount = MC_BREATH_CARPET_TILES.length;
-  for (let i = 0; i < tileCount; i++) {
-    const tile = MC_BREATH_CARPET_TILES[i];
-    const tx = snap(tile.gx * curRadius);
-    const ty = snap(tile.gy * curRadius * 0.82);
-    const pulse = Math.sin(time * 0.06 + tile.phase);
-
-    let tileAlpha, tileColor;
-    if (tile.tier === 0) {
-      // Core bubbling zone
-      tileAlpha = alpha * (0.45 + 0.18 * pulse);
-      tileColor = pulse > 0.35 ? '#D946EF' : '#C026D3';
-    } else if (tile.tier === 1) {
-      // Mid carpet lattice
-      tileAlpha = alpha * (0.32 + 0.14 * pulse);
-      tileColor = pulse > 0.2 ? '#A21CAF' : '#86198F';
-    } else {
-      // Outer perimeter residue
-      tileAlpha = alpha * (0.18 + 0.10 * pulse);
-      tileColor = pulse > 0 ? '#581C87' : '#4A044E';
-    }
-
-    const size = snap(tile.sizeP * P);
-    ctx.fillStyle = tileColor;
-    ctx.globalAlpha = Math.max(0, Math.min(1.0, tileAlpha));
-    ctx.fillRect(tx - size / 2, ty - size / 2, size, size);
+  if (!sprites) {
+    // Headless fallback
+    ctx.fillStyle = '#D414DF';
+    ctx.globalAlpha = alpha * 0.45;
+    ctx.fillRect(-curRadius * 0.5, -curRadius * 0.4, curRadius, curRadius * 0.8);
+    ctx.restore();
+    return;
   }
 
-  // ── LAYER 2: Volumetric Floating Minecraft Square dragon_breath Particles ──
+  const P = 2.0;
+  const snap = (v) => Math.round(v / P) * P;
+  const variant = Math.abs(Math.floor((pool.x || 0) + (pool.y || 0))) % sprites.poolBaseCanvases.length;
+
+  // ── LAYER 1: Pre-Baked Airy Magenta `dragon_breath` Star-Cluster Carpet (1-Blit GPU Quad, bounded within curRadius) ──
+  const carpetDrawSize = Math.round((curRadius * 2.08) / P) * P;
+  ctx.globalAlpha = alpha * 0.94;
+  ctx.drawImage(
+    sprites.poolBaseCanvases[variant],
+    -carpetDrawSize / 2,
+    -carpetDrawSize / 2,
+    carpetDrawSize,
+    carpetDrawSize
+  );
+
+  // ── LAYER 2: Lean Live Rising & Flickering `dragon_breath` Star-Clusters ──
   const pCount = MC_DRAGON_BREATH_PARTICLES.length;
   for (let i = 0; i < pCount; i++) {
     const p = MC_DRAGON_BREATH_PARTICLES[i];
-    const pLife = ((time * p.speed + p.lifeOffset) % 1.0);
-
-    // Ground anchor with perspective compression
+    const pLife = (time * p.speed + p.lifeOffset + variant * 0.31) % 1.0;
     const x0 = Math.cos(p.angle) * (curRadius * p.distRatio);
     const y0 = Math.sin(p.angle) * (curRadius * p.distRatio * 0.82);
+    const sx = snap(x0 + Math.sin(time * p.swayFreq + p.swayPhase) * p.swayAmp);
+    const sy = snap(y0 - pLife * p.maxRise);
 
-    // Upward rising float (Minecraft chimney / buoyant cloud motion)
-    const py = y0 - pLife * p.maxRise;
-    // Horizontal gentle swaying
-    const px = x0 + Math.sin(time * p.swayFreq + p.swayPhase) * p.swayAmp;
-
-    const sx = snap(px);
-    const sy = snap(py);
-
-    // Dynamic puff expansion and fading lifecycle
-    const pop = Math.sin(pLife * Math.PI);
-    const S = Math.max(P * 2, snap(p.baseSize * (0.60 + 0.55 * pop)));
     const pIn = Math.min(1.0, pLife * 5.0);
-    const pOut = Math.max(0, 1.0 - Math.pow(pLife, 2.2));
-    const pAlpha = alpha * pIn * pOut * 0.92;
+    const pOut = Math.max(0, 1.0 - Math.pow(pLife, 2.0));
+    const pAlpha = alpha * pIn * pOut * 0.95;
+    if (pAlpha <= 0.03) continue;
 
-    if (pAlpha > 0.02) {
-      // Tier A: Outer dark plum / violet shadow border
-      ctx.fillStyle = p.tier === 1 ? '#4A044E' : (p.tier === 2 ? '#581C87' : '#701A75');
-      ctx.globalAlpha = pAlpha;
-      ctx.fillRect(sx - S / 2, sy - S / 2, S, S);
-
-      // Tier B: Mid vibrant magenta / fuchsia body
-      if (S >= P * 3) {
-        const midS = S - P * 2;
-        ctx.fillStyle = p.tier === 2 ? '#E879F9' : '#D946EF';
-        ctx.globalAlpha = Math.min(1.0, pAlpha * 1.15);
-        ctx.fillRect(sx - midS / 2, sy - midS / 2, midS, midS);
-      }
-
-      // Tier C: Core bright highlight pixel
-      if (S >= P * 4) {
-        const coreS = Math.max(P, S - P * 4);
-        ctx.fillStyle = p.tier === 2 ? '#FFFFFF' : '#F5D0FE';
-        ctx.globalAlpha = Math.min(1.0, pAlpha * 1.30);
-        ctx.fillRect(sx - coreS / 2, sy - coreS / 2, coreS, coreS);
-      }
-    }
+    const stage = Math.min(3, Math.floor(pLife * 4));
+    const sprite = sprites.starSprites[(i + variant) % sprites.starSprites.length][stage];
+    const drawS = snap(p.baseSize * (1.08 - pLife * 0.25));
+    ctx.globalAlpha = pAlpha;
+    ctx.drawImage(sprite, sx - drawS / 2, sy - drawS / 2, drawS, drawS);
   }
 
-  // ── LAYER 3: Minecraft Spell / Potion Effect Twinkle Sparkles ──
-  const sCount = MC_BREATH_SPARKLES.length;
+  // ── LAYER 3: Rising Minecraft Grey-Lavender Potion Swirl Rings ──
+  const sCount = MC_BREATH_SWIRLS.length;
   for (let i = 0; i < sCount; i++) {
-    const s = MC_BREATH_SPARKLES[i];
-    const spark = Math.sin(time * 0.22 + s.phase);
-    if (spark > 0.65) {
-      const sInt = (spark - 0.65) / 0.35;
-      const spx = snap(s.nx * curRadius);
-      const spy = snap(s.ny * curRadius * 0.82) - snap(Math.sin(time * 0.05 + s.phase) * 6);
-      const sSize = snap(s.sizeP * P);
+    const sw = MC_BREATH_SWIRLS[i];
+    const sLife = (time * sw.speed + sw.lifeOffset) % 1.0;
+    const x0 = Math.cos(sw.angle + variant * 0.7) * (curRadius * sw.distRatio);
+    const y0 = Math.sin(sw.angle + variant * 0.7) * (curRadius * sw.distRatio * 0.82);
+    const sx = snap(x0 + Math.sin(time * 0.04 + i * 1.9) * 4);
+    const sy = snap(y0 - 4 - sLife * sw.maxRise);
 
-      // Outer pastel glow square
-      ctx.fillStyle = '#F5D0FE';
-      ctx.globalAlpha = alpha * sInt * 0.75;
-      ctx.fillRect(spx - (sSize + P) / 2, spy - (sSize + P) / 2, sSize + P, sSize + P);
+    const sAlpha = alpha * Math.sin(sLife * Math.PI) * 0.85;
+    if (sAlpha <= 0.03) continue;
 
-      // Inner white spark square
-      ctx.fillStyle = '#FFFFFF';
-      ctx.globalAlpha = alpha * sInt * 0.95;
-      ctx.fillRect(spx - sSize / 2, spy - sSize / 2, sSize, sSize);
-    }
+    const stage = Math.min(3, Math.floor(sLife * 4));
+    const swirlCanvas = sprites.swirlSprites[(i + stage) % sprites.swirlSprites.length];
+    const swirlDraw = snap(18 + (1.0 - sLife) * 4);
+    ctx.globalAlpha = sAlpha;
+    ctx.drawImage(swirlCanvas, sx - swirlDraw / 2, sy - swirlDraw / 2, swirlDraw, swirlDraw);
   }
 
   ctx.restore();
@@ -1232,8 +1382,8 @@ export function drawMinecraftDragonFireball(ctx, proj, isSecondary = false) {
 }
 
 /**
- * Renders the Minecraft Dragon's Breath Direct Exhale Stream (Perch Breath)
- * Cascades forward as an expanding cone of billowing square dragon breath particle puffs
+ * Renders the Minecraft Dragon's Breath Direct Exhale Stream
+ * Cascades forward as an expanding cone of pre-baked magenta dragon_breath star-clusters + potion swirls
  */
 export function drawMinecraftBreathStream(ctx, proj) {
   if (!ctx || !proj) return;
@@ -1242,6 +1392,7 @@ export function drawMinecraftBreathStream(ctx, proj) {
   const vy = proj.vy || 0;
   const moveAngle = Math.atan2(vy, vx);
   const r = proj.radius || 14;
+  const sprites = _getMinecraftBreathSprites();
 
   ctx.save();
   ctx.translate(proj.x, proj.y);
@@ -1251,54 +1402,55 @@ export function drawMinecraftBreathStream(ctx, proj) {
   const P = 2.0;
   const snap = (v) => Math.round(v / P) * P;
 
-  // Expanding trailing stream of square puffs
-  const streamSteps = 4;
+  if (!sprites) {
+    ctx.fillStyle = '#D414DF';
+    ctx.globalAlpha = 0.85;
+    const hs = snap(r * 0.9);
+    ctx.fillRect(-hs / 2, -hs / 2, hs, hs);
+    ctx.restore();
+    return;
+  }
+
+  // Trailing expanding cone of magenta dragon_breath star-cluster sprites (lean 3-step cone for 60 FPS)
+  const streamSteps = 3;
   for (let s = streamSteps; s >= 1; s--) {
     const backX = -s * (r * 0.65);
-    const coneSpread = (s / streamSteps) * (r * 0.55);
-    const puffSize = snap(r * (0.60 + s * 0.12));
-    const stepAlpha = (1.0 - (s - 1) / streamSteps) * 0.85;
+    const coneSpread = (s / streamSteps) * (r * 0.52);
+    const drawS = snap(r * (0.95 + s * 0.12));
+    const stepAlpha = (1.0 - (s - 1) / streamSteps) * 0.88;
+    const stage = Math.min(3, Math.floor((s - 1) * 0.9));
 
-    const yOffsets = [0, -coneSpread, coneSpread];
-    for (let yOff of yOffsets) {
-      const wobble = Math.sin(time * 0.25 + s + yOff) * P;
+    const yOffsets = s >= 2 ? [-coneSpread, coneSpread] : [0];
+    for (let j = 0; j < yOffsets.length; j++) {
+      const yOff = yOffsets[j];
+      const wobble = Math.sin(time * 0.25 + s * 1.4 + j * 2.1) * P * 1.5;
       const px = snap(backX);
       const py = snap(yOff + wobble);
+      const sprite = sprites.starSprites[(s + j) % sprites.starSprites.length][stage];
 
-      // Outer violet square
-      ctx.fillStyle = s >= 3 ? '#4A044E' : '#701A75';
-      ctx.globalAlpha = stepAlpha * 0.70;
-      ctx.fillRect(px - puffSize / 2, py - puffSize / 2, puffSize, puffSize);
-
-      // Mid magenta puff
-      if (puffSize >= P * 3) {
-        const midSize = puffSize - P * 2;
-        ctx.fillStyle = '#D946EF';
-        ctx.globalAlpha = stepAlpha * 0.90;
-        ctx.fillRect(px - midSize / 2, py - midSize / 2, midSize, midSize);
-      }
+      ctx.globalAlpha = stepAlpha;
+      ctx.drawImage(sprite, px - drawS / 2, py - drawS / 2, drawS, drawS);
     }
   }
 
-  // Leading dense puff head
-  const headSize = snap(r * 0.95);
-  ctx.fillStyle = '#581C87';
-  ctx.globalAlpha = 0.95;
-  ctx.fillRect(-headSize / 2, -headSize / 2, headSize, headSize);
+  // Trailing Minecraft grey-lavender potion swirl ring near mid-plume
+  const swirlIdx = Math.floor(time * 0.15) % sprites.swirlSprites.length;
+  const swirlDraw = snap(r * 1.25);
+  ctx.globalAlpha = 0.78;
+  ctx.drawImage(
+    sprites.swirlSprites[swirlIdx],
+    snap(-r * 1.15) - swirlDraw / 2,
+    snap(Math.sin(time * 0.18) * 3) - swirlDraw / 2,
+    swirlDraw,
+    swirlDraw
+  );
 
-  const headMid = headSize - P * 2;
-  ctx.fillStyle = '#D946EF';
-  ctx.fillRect(-headMid / 2, -headMid / 2, headMid, headMid);
-
-  const headCore = headSize - P * 4;
-  if (headCore >= P) {
-    ctx.fillStyle = '#F5D0FE';
-    ctx.fillRect(-headCore / 2, -headCore / 2, headCore, headCore);
-  }
-
-  // Sparkling tip
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(snap(headSize * 0.3), -P / 2, P, P);
+  // Leading dense cluster burst at stream head
+  const headDraw = snap(r * 1.45);
+  ctx.globalAlpha = 0.96;
+  ctx.drawImage(sprites.starSprites[1][0], -headDraw / 2, -headDraw / 2, headDraw, headDraw);
+  ctx.globalAlpha = 0.85;
+  ctx.drawImage(sprites.starSprites[0][1], snap(P * 2) - headDraw * 0.45, -headDraw * 0.45, headDraw * 0.9, headDraw * 0.9);
 
   ctx.restore();
 }
@@ -1452,7 +1604,7 @@ export function drawEnderDragonDeathDisintegration(ctx, effect) {
     if (wingsImg && wingsImg.complete && wingsImg.naturalWidth > 0) {
       ctx.save();
       ctx.translate(-r * 0.15, 0);
-      ctx.rotate(-Math.PI / 2);
+      ctx.rotate(Math.PI / 2);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         wingsImg,

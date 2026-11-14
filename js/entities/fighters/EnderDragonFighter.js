@@ -1230,7 +1230,7 @@ export class EnderDragonFighter extends Fighter {
       stream.y += stream.vy;
       stream.traveled += Math.hypot(stream.vx, stream.vy);
 
-      if (Math.random() < 0.40) {
+      if (Math.random() < 0.12) {
         spawnSparks(stream.x, stream.y, '#E879F9', 1, 1.8);
       }
 
@@ -1264,24 +1264,37 @@ export class EnderDragonFighter extends Fighter {
     }
   }
 
-  _deployAcidPool(x, y, cfg) {
-    const poolRadius = (cfg.acidPoolRadius || 65) * 0.75;
+  _deployAcidPool(x, y, cfg, radiusScale = 0.75) {
+    const poolRadius = (cfg.acidPoolRadius || 65) * radiusScale;
     const duration = Math.floor((cfg.acidPoolDurationFrames || 180) * 0.8);
     const damagePerTick = cfg.acidDamagePerTick || 6;
     const tickInterval = cfg.acidTickInterval || 15;
 
-    // Deduping / clustering: if near an existing pool (< 24px), refresh duration
+    // Clamp pool inside arena edges so acid star clusters do not overflow onto HUD cards
+    const curArena = (typeof state !== 'undefined' ? state.arena : null) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null) || ARENA_VERTICAL;
+    const margin = Math.min(poolRadius * 0.65, 28);
+    const px = Math.max(curArena.x + margin, Math.min(curArena.x + curArena.width - margin, x));
+    const py = Math.max(curArena.y + margin, Math.min(curArena.y + curArena.height - margin, y));
+
+    // Spatial clustering dedup (~44px spacing): avoids overlapping carpet stacks while maintaining ring coverage
+    const minSpacing = Math.max(42, poolRadius * 0.90);
     for (let pool of this.acidPools) {
-      const dist = Math.hypot(pool.x - x, pool.y - y);
-      if (dist < 24) {
+      const dist = Math.hypot(pool.x - px, pool.y - py);
+      if (dist < minSpacing) {
         pool.duration = Math.max(pool.duration, duration);
         return;
       }
     }
 
+    // Hard pool cap prevents runaway overdraw on desktop & mobile (Rule 35)
+    const MAX_ACID_POOLS = 16;
+    while (this.acidPools.length >= MAX_ACID_POOLS) {
+      this.acidPools.shift();
+    }
+
     this.acidPools.push({
-      x,
-      y,
+      x: px,
+      y: py,
       radius: poolRadius,
       duration: duration,
       maxDuration: duration,
@@ -1958,21 +1971,11 @@ export class EnderDragonFighter extends Fighter {
       });
     }
 
-    // Deploy lingering acid pool trail
+    // Deploy lingering acid pool trail (routed through _deployAcidPool for spatial deduping & pool cap)
     this.divebombAcidTimer++;
     if (this.divebombAcidTimer % (cfg.divebombAcidDeployInterval || 4) === 0) {
-      this.acidPools.push({
-        x: this.x,
-        y: this.y,
-        radius: (cfg.acidPoolRadius || 70) * 0.75,
-        duration: cfg.acidPoolDurationFrames || 180,
-        maxDuration: cfg.acidPoolDurationFrames || 180,
-        tickTimer: 0,
-        tickInterval: cfg.acidTickInterval || 15,
-        damagePerTick: cfg.acidDamagePerTick || 6,
-        owner: this,
-      });
-      spawnSparks(this.x, this.y, '#E879F9', 4, 3.5);
+      this._deployAcidPool(this.x, this.y, cfg, 0.75);
+      spawnSparks(this.x, this.y, '#E879F9', 2, 3.0);
     }
 
     // Lock dragon flight vector: unstoppable freight train (no speed loss or deflection)

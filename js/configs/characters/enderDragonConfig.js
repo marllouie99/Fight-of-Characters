@@ -193,6 +193,9 @@ export const enderDragonConfig = {
   crystalHealAmount: 6, // HP restored per heal tick
   crystalHealInterval: 45, // Ticks (frames) between heal pulses (~0.75s)
   crystalBacklashDamage: 60, // Damage dealt to dragon when an opponent destroys an End Crystal
+  crystalExplosionRadius: 125, // Radial AOE explosion reach around a detonated End Crystal (edge-aware px)
+  crystalExplosionDamage: 35, // Radial AOE blast damage dealt to nearby combatants/minions on crystal detonation
+  crystalExplosionKnockback: 18.0, // Radial knockback impulse from crystal explosion
   crystalAnimTicks: 3, // Pacing: ticks per animation frame (3 ticks = ~3.0s per revolution, calm & authentic to Minecraft)
   crystalDrawSize: 140, // Rendered scale size of the End Crystal sprite on screen (140px, imposing beacon scale)
 

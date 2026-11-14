@@ -37,6 +37,12 @@ export const mahoragaAdaptationConfig = {
     thinIceBreaker: { damageThresholdPct: 0.15, windowFrames: 300 }
   },
 
+  // ── SANS ──
+  sans: {
+    gasterBlaster: { damageThresholdPct: 0.15, windowFrames: 400 },
+    karma: { requiredTicks: 8, color: '#A855F7' }
+  },
+
   // ── GENERIC FALLBACK ──
   default: {
     damageThresholdPct: 0.15, // Default 15% Max HP (matches WOA HUD skill bar)

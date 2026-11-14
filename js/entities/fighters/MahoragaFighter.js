@@ -12,7 +12,7 @@ import { pushTrailCap } from '../../graphics/particles/visualTrailSystem.js';
 import { spawnDroppedMahoragaWheel } from '../../graphics/particles/mahoragaDroppedWheel.js';
 
 // ── Refactored Mahoraga Modules ──
-import { handleAdaptationDamage, triggerAdaptation, handleInfinityFreeze, adaptToPureLoveBeam, adaptToYutaFlurry, adaptToThinIceBreaker, adaptToSoulDisfigurement, adaptToSaitamaCounter } from './mahoraga/mahoragaAdaptation.js';
+import { handleAdaptationDamage, triggerAdaptation, handleInfinityFreeze, adaptToPureLoveBeam, adaptToYutaFlurry, adaptToThinIceBreaker, adaptToSoulDisfigurement, adaptToSaitamaCounter, adaptToKarma } from './mahoraga/mahoragaAdaptation.js';
 import { gojoPurpleTeleportDodge, gojoRedTeleportDodge, startAdaptationFlashDash, spawnTeleportAfterimages, sukunaFugaTeleportDodge, generalSkillShotTeleportDodge } from './mahoraga/mahoragaSkills.js';
 import { performMeleeAttack, executeSwordHit, executeCleave, shootBladeBarrage, executeShout, getFrontRadiusTargets, playRandomHeavyPunchSound, initiateLevel8WallSlam, updateLevel8WallSlam } from './mahoraga/mahoragaCombat.js';
 import { drawMahoragaFighter } from './mahoraga/mahoragaVisuals.js';
@@ -84,6 +84,9 @@ export class MahoragaFighter extends Fighter {
     this.adaptedSkills = {};
     this.skillDodgeReady = {};
     this.adaptedLawnmower = false;
+    this.adaptedKarma = false;
+    this.karmaTickExposureCount = 0;
+    this.adaptedGasterBlaster = false;
     this._lastSkillShotId = null;
     this._lastSkillShotColor = null;
 
@@ -189,6 +192,9 @@ export class MahoragaFighter extends Fighter {
     this.adaptedSkills = {};
     this.skillDodgeReady = {};
     this.adaptedLawnmower = false;
+    this.adaptedKarma = false;
+    this.karmaTickExposureCount = 0;
+    this.adaptedGasterBlaster = false;
     this._lastSkillShotId = null;
     this._lastSkillShotColor = null;
     this.getsugaExposureCount = 0;
@@ -311,6 +317,10 @@ export class MahoragaFighter extends Fighter {
 
     if (this.hp <= 0 || (this.isAmbushing && !opts.isDomain)) return false;
 
+    if (opts.isKarma && (this.adaptedKarma || (this.adaptedSkills && this.adaptedSkills['karma']))) {
+      return false;
+    }
+
     // Pause passive RCT regeneration upon taking direct combat damage (skipping continuous vortex ticks)
     if (amount > 0 && !opts.isBlueDPS && !opts.isContinuous) {
       this.rctRegenDamagePauseTimer = CONFIG.mahoraga?.rctCombatDamagePauseFrames ?? 45;
@@ -389,8 +399,15 @@ export class MahoragaFighter extends Fighter {
         adaptToPureLoveBeam(this);
       } else if (pendingAdaptation.isSaitamaCounter) {
         adaptToSaitamaCounter(this, attacker);
+      } else if (pendingAdaptation.isKarma) {
+        adaptToKarma(this, attacker);
       } else {
-        triggerAdaptation(this, pendingAdaptation.type || dmgType, attacker);
+        triggerAdaptation(
+          this,
+          pendingAdaptation.type || dmgType,
+          attacker,
+          pendingAdaptation.thresholdPct !== undefined ? { thresholdPct: pendingAdaptation.thresholdPct } : undefined
+        );
       }
     }
 
@@ -428,6 +445,7 @@ export class MahoragaFighter extends Fighter {
   adaptToThinIceBreaker() { adaptToThinIceBreaker(this); }
   adaptToSoulDisfigurement() { adaptToSoulDisfigurement(this); }
   adaptToSaitamaCounter(attacker) { adaptToSaitamaCounter(this, attacker); }
+  adaptToKarma(attacker) { adaptToKarma(this, attacker); }
   _triggerAdaptation(type, attacker) { triggerAdaptation(this, type, attacker); }
   _gojoPurpleTeleportDodge(gojo, purpleOrb) { /* Teleport-away removed on adaptation */ }
   _gojoRedTeleportDodge(gojo) { /* Teleport-away removed on adaptation */ }

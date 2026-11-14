@@ -1139,7 +1139,7 @@ export class SansFighter extends Fighter {
    */
   applyKarma(target) {
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
-    if (!cfg.enableKarma || !target || target.hp <= 0) return;
+    if (!cfg.enableKarma || !target || target.hp <= 0 || target.adaptedKarma || target.adaptedSkills?.karma) return;
 
     let kData = this.karmaTargets.get(target);
     if (!kData) {
@@ -1171,7 +1171,8 @@ export class SansFighter extends Fighter {
           (target.invincibilityTimer && target.invincibilityTimer > 0)
         )
       );
-      if (!target || target.hp <= 0 || kData.timer <= 0 || isTargetInvincible) {
+      const isTargetAdaptedToKarma = Boolean(target && (target.adaptedKarma || target.adaptedSkills?.karma));
+      if (!target || target.hp <= 0 || kData.timer <= 0 || isTargetInvincible || isTargetAdaptedToKarma) {
         this.karmaTargets.delete(target);
         continue;
       }
@@ -1693,6 +1694,9 @@ export class SansFighter extends Fighter {
                   isGasterBlaster: true,
                   isSkill: true,
                   isFirstImpact: true,
+                  isAdaptableSkillShot: true,
+                  skillShotId: 'gasterBlaster',
+                  skillShotColor: '#03d5f1ff',
                   hitX: b.x,
                   hitY: b.y,
                   damageNumberColor: this.damageNumberColor || '#03d5f1ff'
@@ -1730,6 +1734,9 @@ export class SansFighter extends Fighter {
                     isGasterBlaster: true,
                     isSkill: true,
                     isContinuousDamage: true,
+                    isAdaptableSkillShot: true,
+                    skillShotId: 'gasterBlaster',
+                    skillShotColor: '#03d5f1ff',
                     hitX: b.x,
                     hitY: b.y,
                     damageNumberColor: this.damageNumberColor || '#03d5f1ff'

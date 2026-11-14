@@ -26,6 +26,7 @@ import {
   drawArcaneShockwave,
   drawDbzInstantTransmissionVFX,
 } from './renderers/blastShockwaveRenderers.js';
+import { drawMinecraftExplosion } from './renderers/minecraftExplosionRenderer.js';
 import {
   drawMahitoSoulBubble,
   drawMahitoSoulShockwave,
@@ -1237,6 +1238,7 @@ const SPARK_RENDERERS = {
   purpleShockwaveRing: drawPurpleShockwaveRing,
   purpleExplosion: drawPurpleExplosion,
   parryExplosion: drawParryExplosion,
+  minecraftExplosion: drawMinecraftExplosion,
   animeImpactFrame: drawAnimeImpactFrame,
   punchAttackImpact: drawPunchAttackImpact,
   punchWindSpeedLine: drawPunchWindSpeedLine,
@@ -2410,6 +2412,37 @@ export function spawnDbzInstantTransmissionVFX(x, y, radius = 25, options = {}) 
   vfx.vx = 0;
   vfx.vy = 0;
   vfx.friction = 0;
+  state.sparkEffects.push(vfx);
+  return vfx;
+}
+
+/**
+ * Spawns an authentic 16-bit Minecraft explosion (crescent smoke dome, upper grey smoke column,
+ * scattered white starburst motes, and rising pixel embers).
+ * @param {number} x - Explosion center X
+ * @param {number} y - Explosion center Y
+ * @param {number} radius - Blast radius in px
+ * @param {Object} [options={}] - { isCharged, isEndCrystal, durationFrames }
+ */
+export function spawnMinecraftExplosion(x, y, radius = 125, options = {}) {
+  if (!state || !state.sparkEffects) return null;
+  const durationFrames = Math.max(12, Number(options.durationFrames) || 34);
+  const vfx = ParticleSystem.getParticle();
+  vfx.x = x;
+  vfx.y = y;
+  vfx.vx = 0;
+  vfx.vy = 0;
+  vfx.friction = 1;
+  vfx.size = radius;
+  vfx.targetSize = radius;
+  vfx.life = 1.0;
+  vfx.decay = 1.0 / durationFrames;
+  vfx.type = 'minecraftExplosion';
+  vfx.isCharged = Boolean(options.isCharged);
+  vfx.isEndCrystal = Boolean(options.isEndCrystal);
+  vfx.isProtected = true;
+  vfx.isFlash = false;
+  vfx.isPixi = false;
   state.sparkEffects.push(vfx);
   return vfx;
 }

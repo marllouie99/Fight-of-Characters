@@ -19767,6 +19767,84 @@ async function runInteractionTests() {
     assert(playedDeathSounds.some(s => s.includes('Ender_dragon_death.ogg')), 'spawnEnderDragonDisintegrationDeath must play Ender_dragon_death.ogg');
     assert(!playedDeathSounds.some(s => s.includes('purpledeploy.mp3')), 'spawnEnderDragonDisintegrationDeath must NOT play purpledeploy.mp3');
 
+    // 8. Verify 16-bit Minecraft Dragon Wings sprite sheet asset, Dragon's Breath & stack depth
+    const fsWings = await import('fs');
+    const pathWings = await import('path');
+    const { drawEnderDragonSkin, drawDragonAcidPool, drawMinecraftBreathStream, getEnderDragonWingsSheet } = await import('../js/graphics/fighters/enderDragonSkin.js');
+    const wingsAssetPath = pathWings.default.join(process.cwd(), enderDragonConfig.assets.wings);
+    assert(fsWings.default.existsSync(wingsAssetPath), `Ender Dragon wings asset must exist at ${wingsAssetPath}`);
+    const wingsBuf = fsWings.default.readFileSync(wingsAssetPath);
+    assert(wingsBuf.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), 'Dragon-wings-sprite-sheet.png must have valid PNG signature');
+    const wingsW = wingsBuf.readUInt32BE(16);
+    const wingsH = wingsBuf.readUInt32BE(20);
+    assert(wingsW === 1536 && wingsH === 1024, `Dragon-wings-sprite-sheet.png must be 1536x1024 (3x2 grid of 512x512), got ${wingsW}x${wingsH}`);
+    const tailAssetPath = pathWings.default.join(process.cwd(), enderDragonConfig.assets.tailSegmented);
+    assert(fsWings.default.existsSync(tailAssetPath), `Ender Dragon segmented tail asset must exist at ${tailAssetPath}`);
+    const tailBuf = fsWings.default.readFileSync(tailAssetPath);
+    assert(tailBuf.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), 'Dragon-tail-segmented-sheet.png must have valid PNG signature');
+    const tailW = tailBuf.readUInt32BE(16);
+    const tailH = tailBuf.readUInt32BE(20);
+    assert(tailW === 1280 && tailH === 140, `Dragon-tail-segmented-sheet.png must be 1280x140, got ${tailW}x${tailH}`);
+
+    let stackDepth = 0;
+    let drawImageCount = 0;
+    const mockCtx = {
+      save() { stackDepth++; },
+      restore() { stackDepth--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      ellipse() {},
+      arc() {},
+      rect() {},
+      moveTo() {},
+      lineTo() {},
+      closePath() {},
+      clip() {},
+      fill() {},
+      stroke() {},
+      fillRect() {},
+      drawImage() { drawImageCount++; },
+      createRadialGradient() { return { addColorStop() {} }; },
+      createLinearGradient() { return { addColorStop() {} }; },
+      setTransform() {},
+      set fillStyle(_) {},
+      set strokeStyle(_) {},
+      set lineWidth(_) {},
+      set globalAlpha(_) {},
+      set imageSmoothingEnabled(_) {},
+    };
+    const wingsImgRef = getEnderDragonWingsSheet();
+    if (wingsImgRef) {
+      wingsImgRef.complete = true;
+      wingsImgRef.naturalWidth = wingsW;
+    }
+    drawEnderDragonSkin(mockCtx, dragon);
+    assert(stackDepth === 0, `drawEnderDragonSkin must preserve Canvas 2D stack depth 0, got ${stackDepth}`);
+    const beforePoolDraws = drawImageCount;
+    drawDragonAcidPool(mockCtx, { x: 260, y: 420, radius: 65, duration: 90, maxDuration: 180 });
+    const perPoolDraws = drawImageCount - beforePoolDraws;
+    assert(stackDepth === 0, `drawDragonAcidPool must preserve Canvas 2D stack depth 0, got ${stackDepth}`);
+    assert(perPoolDraws <= 8, `drawDragonAcidPool must stay <= 8 drawImage calls per pool for 60 FPS performance, got ${perPoolDraws}`);
+    drawMinecraftBreathStream(mockCtx, { x: 280, y: 420, vx: 6, vy: 2, radius: 14 });
+    assert(stackDepth === 0, `drawMinecraftBreathStream must preserve Canvas 2D stack depth 0, got ${stackDepth}`);
+    assert(drawImageCount >= 0, 'drawEnderDragonSkin executed cleanly');
+
+    // Verify acid pool spatial deduping, arena clamping & hard pool cap (<= 16)
+    dragon.acidPools = [];
+    const breathCfg = dragon._getConfig();
+    dragon._deployAcidPool(40, 200, breathCfg); // Outside top-left arena boundary
+    assert(dragon.acidPools.length === 1, 'First acid pool must deploy');
+    assert(dragon.acidPools[0].x >= testArena.x && dragon.acidPools[0].y >= testArena.y, 'Acid pool must clamp inside arena edges');
+    dragon._deployAcidPool(dragon.acidPools[0].x + 20, dragon.acidPools[0].y + 10, breathCfg);
+    assert(dragon.acidPools.length === 1, 'Close acid pools (< 42px) must merge/deduplicate instead of stacking');
+    for (let k = 0; k < 25; k++) {
+      const ang = (k / 25) * Math.PI * 2;
+      dragon._deployAcidPool(270 + Math.cos(ang) * (150 + k * 5), 465 + Math.sin(ang) * (150 + k * 5), breathCfg);
+    }
+    assert(dragon.acidPools.length <= 16, `Acid pools must cap at <= 16 to avoid FPS drops, got ${dragon.acidPools.length}`);
+
     // Cleanup
     state.fighters = [];
     console.log('      ✅ Ender Dragon Natural Linear Movement, Non-Circling & Wall Ricochet Standard verified cleanly.');
@@ -22058,6 +22136,634 @@ async function runInteractionTests() {
     }
   }
 
+
+  {
+    console.log('🧪 Test 168: Mahoraga Adaptation to Sans Karmic Retribution (KR) & Gaster Blaster Damage Reduction...');
+    const { MahoragaFighter } = await import('../js/entities/fighters/MahoragaFighter.js');
+    const { SansFighter } = await import('../js/entities/fighters/SansFighter.js');
+    const mahoraga = new MahoragaFighter({ id: 'mahoraga', type: 'mahoraga', name: 'Mahoraga', hp: 700, r: 30, speed: 6.5, x: 200, y: 350, color: '#FFD700' });
+    const sans = new SansFighter({ id: 'sans', type: 'sans', name: 'Sans', hp: 1, r: 25, speed: 6.2, x: 350, y: 350, color: '#03d5f1ff' });
+    mahoraga.team = 'A';
+    sans.team = 'B';
+    state.fighters = [mahoraga, sans];
+
+    try {
+      // 1. Gaster Blaster damage adaptation (15% maxHp = 105 threshold -> 75% damage reduction)
+      for (let hit = 0; hit < 6; hit++) {
+        mahoraga.takeDamage(20, sans, {
+          isProjectile: true,
+          isLaser: true,
+          isGasterBlaster: true,
+          isSkill: true,
+          isFirstImpact: true,
+          isAdaptableSkillShot: true,
+          skillShotId: 'gasterBlaster',
+          skillShotColor: '#03d5f1ff'
+        });
+      }
+      assert(mahoraga.adaptedGasterBlaster === true && mahoraga.adaptedSkills?.gasterBlaster === true, 'Mahoraga must adapt to Gaster Blaster once threshold is reached');
+      const hpBeforeFirst = mahoraga.hp;
+      mahoraga.takeDamage(20, sans, {
+        isProjectile: true,
+        isLaser: true,
+        isGasterBlaster: true,
+        isSkill: true,
+        isFirstImpact: true,
+        isAdaptableSkillShot: true,
+        skillShotId: 'gasterBlaster',
+        skillShotColor: '#03d5f1ff'
+      });
+      const reducedBlasterFirst = hpBeforeFirst - mahoraga.hp;
+      const hpBeforeCont = mahoraga.hp;
+      mahoraga.takeDamage(10, sans, {
+        isProjectile: true,
+        isLaser: true,
+        isGasterBlaster: true,
+        isSkill: true,
+        isContinuousDamage: true,
+        isAdaptableSkillShot: true,
+        skillShotId: 'gasterBlaster',
+        skillShotColor: '#03d5f1ff'
+      });
+      const reducedBlasterCont = hpBeforeCont - mahoraga.hp;
+      assert(reducedBlasterFirst === 5, `Adapted Gaster Blaster 20 dmg must reduce to 5 (got ${reducedBlasterFirst})`);
+      assert(reducedBlasterCont === 3, `Adapted Gaster Blaster 10 dmg continuous tick must reduce to 3 (got ${reducedBlasterCont})`);
+
+      // 2. Karmic Retribution (isKarma) adaptation after wheel cooldown expires -> 0 damage & KR cleared
+      mahoraga.fatalAdaptCooldown = 0;
+      sans.applyKarma(mahoraga);
+      assert(sans.karmaTargets.has(mahoraga), 'Sans must initially track KR stacks on unadapted Mahoraga');
+      for (let tick = 0; tick < 8; tick++) {
+        mahoraga.takeDamage(2, sans, {
+          isKarma: true,
+          skipKnockback: true,
+          skipHitStun: true,
+          skipInterrupt: true,
+          bypassDodge: true
+        });
+      }
+      assert(mahoraga.adaptedKarma === true && mahoraga.adaptedSkills?.karma === true, 'Mahoraga must adapt to Karmic Retribution after KR ticks');
+      assert(!sans.karmaTargets.has(mahoraga), 'Adapting to Karma must clear existing KR stacks from Sans');
+      sans.applyKarma(mahoraga);
+      assert(!sans.karmaTargets.has(mahoraga), 'Sans must not be able to reapply KR after Mahoraga adapts to Karma');
+      const hpBeforeKarma = mahoraga.hp;
+      const karmaAfterAdapt = mahoraga.takeDamage(2, sans, { isKarma: true, bypassDodge: true });
+      assert(karmaAfterAdapt === false && mahoraga.hp === hpBeforeKarma, `Adapted Mahoraga must take 0 KR damage (returned ${karmaAfterAdapt}, delta ${hpBeforeKarma - mahoraga.hp})`);
+
+      console.log('      ✅ Mahoraga adaptation to Sans KR & Gaster Blaster verified cleanly.');
+    } finally {
+      state.fighters = [];
+    }
+  }
+
+  // 🔥 169. Testing Pokémon Slash & Punch VFX, Trails, Afterimages & Non-Freezing World VFX Decay 🔥
+  {
+    console.log('   169. Testing Pokémon Slash & Punch VFX, Projectile Trails, Afterimages & Non-Freezing World VFX...');
+    const { AshFighter, PokemonCompanionEntity } = await import('../js/entities/fighters/AshFighter.js');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { drawPokemonCompanion, drawAshVisualEffects } = await import('../js/graphics/weapons/ashPokemonGraphics.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    state.gameState = 'playing';
+    const prevSparkEffects = state.sparkEffects;
+    state.sparkEffects = [];
+
+    const ash = new AshFighter({
+      id: 'ash',
+      name: 'Ash Ketchum',
+      type: 'ash',
+      x: 110,
+      y: 450,
+      hp: 350,
+      maxHp: 350,
+      r: 25
+    });
+    const enemy = new Fighter({
+      id: 'dummy_target',
+      name: 'Target Dummy',
+      type: 'dummy',
+      x: 240,
+      y: 450,
+      hp: 5000,
+      maxHp: 5000,
+      r: 25
+    });
+    enemy.teamId = 2;
+    ash.teamId = 1;
+    state.fighters = [ash, enemy];
+    const vfxCtx = createMockCtx();
+
+    try {
+      // 1. Pikachu Quick Attack (dashAfterImages + punchAttackImpact gold on strike)
+      const pika = new PokemonCompanionEntity(ash, 'pikachu', 200, 450);
+      pika.summonIntroTimer = 0;
+      pika.isSummonIntro = false;
+      ash.activePokemon = pika;
+      pika.x = enemy.x - 28;
+      pika.y = enemy.y;
+      pika._startCloseCombatMove(enemy, 'quickAttack');
+      for (let t = 0; t < 26; t++) {
+        pika.update(enemy, 0, testArena);
+        pika.x = enemy.x - 24;
+        pika.y = enemy.y;
+        drawPokemonCompanion(vfxCtx, pika);
+        assert(vfxCtx.getStackDepth() === 0, `Pikachu quickAttack stack depth must be 0 at tick ${t}`);
+      }
+      const qaPunches = state.sparkEffects.filter(e => e.type === 'punchAttackImpact' && e.color === 'gold');
+      assert(qaPunches.length >= 1, 'Pikachu Quick Attack must spawn gold punchAttackImpact on strike');
+
+      // 2. Pikachu Iron Tail (pokemonSlash tintKey 'ironTail' + punchAttackImpact gold)
+      state.sparkEffects.length = 0;
+      ash.activeVisualEffects.length = 0;
+      pika.interruptAttacks();
+      pika.x = enemy.x - 26;
+      pika.y = enemy.y;
+      pika._startCloseCombatMove(enemy, 'ironTail');
+      for (let t = 0; t < 28; t++) {
+        pika.update(enemy, 0, testArena);
+        pika.x = enemy.x - 26;
+        pika.y = enemy.y;
+        drawPokemonCompanion(vfxCtx, pika);
+        drawAshVisualEffects(vfxCtx, ash);
+        assert(vfxCtx.getStackDepth() === 0, `Pikachu ironTail render stack depth must be 0 at tick ${t}`);
+      }
+      const ironSlashFx = ash.activeVisualEffects.filter(fx => fx.type === 'pokemonSlash' && fx.tintKey === 'ironTail');
+      assert(ironSlashFx.length >= 1, 'Pikachu Iron Tail must push world-space pokemonSlash (ironTail) into Ash activeVisualEffects');
+      assert(
+        state.sparkEffects.some(e => e.type === 'punchAttackImpact' && e.color === 'gold'),
+        'Pikachu Iron Tail must spawn gold punchAttackImpact on contact'
+      );
+
+      // 3. Charizard Dragon Claw (twin crossing pokemonSlash + Rule 25 non-freezing decay while Chari is time-stopped + Flamethrower windup)
+      state.sparkEffects.length = 0;
+      ash.activeVisualEffects.length = 0;
+      const chari = new PokemonCompanionEntity(ash, 'charizard', 200, 450);
+      chari.summonIntroTimer = 0;
+      chari.isSummonIntro = false;
+      ash.activePokemon = chari;
+      chari.x = enemy.x - 32;
+      chari.y = enemy.y;
+      chari._startCloseCombatMove(enemy, 'dragonClaw');
+      for (let t = 0; t < 30; t++) {
+        chari.update(enemy, 0, testArena);
+        chari.x = enemy.x - 32;
+        chari.y = enemy.y;
+        ash._updateVisualEffects();
+        drawPokemonCompanion(vfxCtx, chari);
+        drawAshVisualEffects(vfxCtx, ash);
+        assert(vfxCtx.getStackDepth() === 0, `Charizard dragonClaw stack depth must be 0 at tick ${t}`);
+      }
+      const dcSlashes = ash.activeVisualEffects.filter(fx => fx.type === 'pokemonSlash' && fx.tintKey === 'dragonClaw');
+      assert(dcSlashes.length >= 2, `Charizard Dragon Claw must spawn twin crossing pokemonSlash entries, got ${dcSlashes.length}`);
+      assert(dcSlashes.some(fx => fx.isReverseSweep === true), 'Dragon Claw 2nd slash must set isReverseSweep=true for crossing X arc');
+
+      const slashTimerBeforeFreeze = dcSlashes[0].timer;
+      chari.applyTimeStop(15);
+      ash._updateVisualEffects();
+      assert(
+        dcSlashes[0].timer < slashTimerBeforeFreeze,
+        'pokemonSlash on ash.activeVisualEffects must continue decaying even when Charizard is time-stopped (Rule 25)'
+      );
+
+      chari.timeStopTimer = 0;
+      chari.interruptAttacks();
+      chari.startFlamethrower(enemy, false);
+      drawPokemonCompanion(vfxCtx, chari);
+      assert(vfxCtx.getStackDepth() === 0, 'Charizard flamethrower windup render must maintain 0 stack depth');
+
+      // 4. Greninja Night Slash (dashAfterImages + twin violet pokemonSlash) & Water Shuriken trail
+      ash.activeVisualEffects.length = 0;
+      ash.activeElementalProjectiles.length = 0;
+      const gren = new PokemonCompanionEntity(ash, 'greninja', 160, 450);
+      gren.summonIntroTimer = 0;
+      gren.isSummonIntro = false;
+      ash.activePokemon = gren;
+      gren._startCloseCombatMove(enemy, 'nightSlash');
+      let sawGrenAfterImage = false;
+      for (let t = 0; t < 28; t++) {
+        gren.update(enemy, 0, testArena);
+        if (Array.isArray(gren.dashAfterImages) && gren.dashAfterImages.length > 0) sawGrenAfterImage = true;
+        if (t >= 12) {
+          gren.x = enemy.x - 28;
+          gren.y = enemy.y;
+        }
+        drawPokemonCompanion(vfxCtx, gren);
+        drawAshVisualEffects(vfxCtx, ash);
+        assert(vfxCtx.getStackDepth() === 0, `Greninja nightSlash stack depth must be 0 at tick ${t}`);
+      }
+      assert(sawGrenAfterImage, 'Greninja Night Slash dash must populate dashAfterImages');
+      assert(
+        ash.activeVisualEffects.some(fx => fx.type === 'pokemonSlash' && fx.tintKey === 'nightSlash'),
+        'Greninja Night Slash must spawn violet pokemonSlash VFX'
+      );
+
+      gren.interruptAttacks();
+      gren.x = 80;
+      gren.y = 450;
+      enemy.x = 450;
+      ash._executePokemonSpecial(gren, enemy, false);
+      assert(gren.specialCastMax === 28, `Greninja specialCastMax must be set to 28, got ${gren.specialCastMax}`);
+      drawPokemonCompanion(vfxCtx, gren);
+      assert(vfxCtx.getStackDepth() === 0, 'Greninja special cast aura render must maintain 0 stack depth');
+      for (let t = 0; t < 4; t++) {
+        gren.update(enemy, 0, testArena);
+        ash._updateVisualEffects();
+      }
+      const wsProj = ash.activeElementalProjectiles.find(p => p.kind === 'waterShuriken');
+      assert(wsProj && Array.isArray(wsProj.trail) && wsProj.trail.length >= 2, 'Water Shuriken projectile must record trail points');
+      drawAshVisualEffects(vfxCtx, ash);
+      assert(vfxCtx.getStackDepth() === 0, 'Water Shuriken projectile trail render must maintain 0 stack depth');
+      enemy.x = 240;
+
+      // 5. Lucario Close Combat 4-Hit Flurry punchAttackImpact + Aura Sphere impact punch
+      state.sparkEffects.length = 0;
+      ash.activeElementalProjectiles.length = 0;
+      const luc = new PokemonCompanionEntity(ash, 'lucario', 200, 450);
+      luc.summonIntroTimer = 0;
+      luc.isSummonIntro = false;
+      ash.activePokemon = luc;
+      luc.x = enemy.x - 26;
+      luc.y = enemy.y;
+      luc._startCloseCombatMove(enemy, 'closeCombat');
+      for (let t = 0; t < 38; t++) {
+        luc.update(enemy, 0, testArena);
+        luc.x = enemy.x - 26;
+        luc.y = enemy.y;
+        drawPokemonCompanion(vfxCtx, luc);
+        assert(vfxCtx.getStackDepth() === 0, `Lucario closeCombat stack depth must be 0 at tick ${t}`);
+      }
+      const lucPunches = state.sparkEffects.filter(e => e.type === 'punchAttackImpact');
+      assert(lucPunches.length >= 4, `Lucario Close Combat 4-hit flurry + finisher must spawn >= 4 punchAttackImpact effects, got ${lucPunches.length}`);
+
+      state.sparkEffects.length = 0;
+      luc.interruptAttacks();
+      luc.x = enemy.x - 16;
+      luc.y = enemy.y;
+      ash._executePokemonSpecial(luc, enemy, false);
+      assert(luc.specialCastMax === 28, `Lucario specialCastMax must be set to 28, got ${luc.specialCastMax}`);
+      for (let t = 0; t < 24; t++) {
+        luc.update(enemy, 0, testArena);
+        ash._updateVisualEffects();
+      }
+      assert(
+        state.sparkEffects.some(e => e.type === 'punchAttackImpact' && e.color === 'cyan'),
+        'Lucario Aura Sphere detonation must spawn cyan punchAttackImpact effect'
+      );
+
+      // 6. Verify dedicated 16-bit slash animations for slash-attack Pokémon (zero dependency on Ichigo's Slash Attack)
+      const fs = await import('node:fs');
+      const slashConfigs = [
+        { key: 'ironTail', assetsObj: CONFIG.ash.assets.pikachu, listKey: 'ironTailFrames', stripKey: 'ironTail' },
+        { key: 'dragonClaw', assetsObj: CONFIG.ash.assets.charizard, listKey: 'dragonClawFrames', stripKey: 'dragonClaw' },
+        { key: 'nightSlash', assetsObj: CONFIG.ash.assets.greninja, listKey: 'nightSlashFrames', stripKey: 'nightSlash' }
+      ];
+      for (const sc of slashConfigs) {
+        assert(fs.existsSync(sc.assetsObj[sc.stripKey]), `Dedicated 16-bit slash strip must exist for ${sc.key}: ${sc.assetsObj[sc.stripKey]}`);
+        assert(Array.isArray(sc.assetsObj[sc.listKey]) && sc.assetsObj[sc.listKey].length === 12, `${sc.key} must declare 12 individual frames`);
+        for (const framePath of sc.assetsObj[sc.listKey]) {
+          assert(!framePath.includes('Slash Attack'), `${sc.key} must NOT reuse Ichigo's Slash Attack folder: ${framePath}`);
+          assert(fs.existsSync(framePath), `16-bit slash frame must exist on disk: ${framePath}`);
+        }
+      }
+
+      console.log('      ✅ Pokémon Slash & Punch VFX, projectile trails, dash afterimages & non-freezing decay verified.');
+    } finally {
+      ash._cleanupActivePokemon?.();
+      state.sparkEffects = prevSparkEffects;
+      state.fighters = [];
+    }
+  }
+
+  // 🛑 170. Testing Pokémon Stop-on-Attack & Resume-Movement Behavior (Melee & Special) 🛑
+  {
+    console.log('   170. Testing Pokémon movement stops on every attack and resumes movement cleanly afterward...');
+    const { AshFighter, PokemonCompanionEntity } = await import('../js/entities/fighters/AshFighter.js');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { isPokemonStationarySkill } = await import('../js/systems/pokemonTrainerSystem.js');
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450 };
+    state.arena = testArena;
+    state.gameState = 'playing';
+
+    const ash = new AshFighter({ id: 'ash', name: 'Ash Ketchum', type: 'ash', x: 110, y: 450, hp: 360, maxHp: 360, r: 25 });
+    const enemy = new Fighter({ id: 'dummy_stop_test', name: 'Dummy', type: 'dummy', x: 320, y: 450, hp: 5000, maxHp: 5000, r: 25 });
+    ash.teamId = 1;
+    enemy.teamId = 2;
+    state.fighters = [ash, enemy];
+
+    try {
+      const meleeCases = [
+        { species: 'pikachu', moveKey: 'quickAttack', maxTicks: 40 },
+        { species: 'pikachu', moveKey: 'ironTail', maxTicks: 50 },
+        { species: 'charizard', moveKey: 'dragonClaw', maxTicks: 54 },
+        { species: 'greninja', moveKey: 'nightSlash', maxTicks: 44 },
+        { species: 'lucario', moveKey: 'closeCombat', maxTicks: 56 }
+      ];
+
+      for (const mc of meleeCases) {
+        ash._cleanupActivePokemon?.();
+        const poke = new PokemonCompanionEntity(ash, mc.species, 200, 450);
+        poke.summonIntroTimer = 0;
+        poke.isSummonIntro = false;
+        poke.specialCooldown = 500;
+        poke.meleeCooldown = 0;
+        ash.activePokemon = poke;
+
+        // Moving before attack
+        assert(isPokemonStationarySkill(poke) === false, `${mc.species} idle isPokemonStationarySkill must be false`);
+        poke.vx = poke.speed;
+        poke.vy = 0;
+        poke._startCloseCombatMove(enemy, mc.moveKey);
+
+        const lockX = poke.x;
+        const lockY = poke.y;
+        assert(poke.vx === 0 && poke.vy === 0, `${mc.species} (${mc.moveKey}) must zero velocity immediately on attack start`);
+        assert(isPokemonStationarySkill(poke) === true, `${mc.species} (${mc.moveKey}) must report stationary during melee attack`);
+
+        for (let t = 0; t < mc.maxTicks - 2; t++) {
+          poke.update(enemy, 0, testArena);
+          if (poke.meleeMoveState) {
+            assert(poke.vx === 0 && poke.vy === 0, `${mc.species} (${mc.moveKey}) velocity must stay 0 at tick ${t}`);
+            assert(poke.x === lockX && poke.y === lockY, `${mc.species} (${mc.moveKey}) position must stay planted during attack at tick ${t}`);
+          }
+        }
+
+        // Advance until melee finishes cleanly + cooldown prevents immediate re-trigger
+        poke.meleeCooldown = 200;
+        for (let t = 0; t < 12; t++) {
+          poke.update(enemy, 0, testArena);
+        }
+        assert(poke.meleeMoveState === null, `${mc.species} (${mc.moveKey}) must finish cleanly`);
+        assert(isPokemonStationarySkill(poke) === false, `${mc.species} must clear stationary flag after ${mc.moveKey}`);
+        assert(Math.hypot(poke.vx, poke.vy) > 1.0, `${mc.species} must resume movement speed after ${mc.moveKey}, got vx=${poke.vx}, vy=${poke.vy}`);
+        assert(poke.x !== lockX || poke.y !== lockY, `${mc.species} position must move again after ${mc.moveKey}`);
+      }
+
+      // Special casts (Greninja Water Shuriken & Lucario Aura Sphere)
+      for (const sp of ['greninja', 'lucario']) {
+        ash._cleanupActivePokemon?.();
+        const poke = new PokemonCompanionEntity(ash, sp, 180, 450);
+        poke.summonIntroTimer = 0;
+        poke.isSummonIntro = false;
+        poke.specialCooldown = 0;
+        poke.meleeCooldown = 500;
+        ash.activePokemon = poke;
+        poke.vx = poke.speed;
+        poke.vy = 0;
+
+        ash._executePokemonSpecial(poke, enemy, false);
+        const lockX = poke.x;
+        const lockY = poke.y;
+        assert(poke.vx === 0 && poke.vy === 0, `${sp} special cast must zero velocity immediately`);
+        assert(isPokemonStationarySkill(poke) === true, `${sp} must report stationary during special cast`);
+
+        // Stay completely stopped through all 28 cast frames (past Fighter's 15-frame watchdog threshold)
+        for (let t = 0; t < 27; t++) {
+          poke.update(enemy, 0, testArena);
+          assert(poke.vx === 0 && poke.vy === 0, `${sp} special cast must keep velocity 0 at tick ${t}`);
+          assert(poke.x === lockX && poke.y === lockY, `${sp} must stay planted during special cast at tick ${t}`);
+        }
+
+        // Next updates complete cast -> movement resumes
+        for (let t = 0; t < 6; t++) {
+          poke.update(enemy, 0, testArena);
+        }
+        assert((poke.specialCastTimer || 0) === 0, `${sp} specialCastTimer must finish cleanly`);
+        assert(isPokemonStationarySkill(poke) === false, `${sp} stationary flag must clear after special cast`);
+        assert(Math.hypot(poke.vx, poke.vy) > 1.0, `${sp} must resume moving after special cast completes`);
+        assert(poke.x !== lockX || poke.y !== lockY, `${sp} must displace after special cast finishes`);
+      }
+
+      console.log('      ✅ Pokémon stop-on-attack and resume-movement verified across all melee & special moves.');
+    } finally {
+      ash._cleanupActivePokemon?.();
+      state.fighters = [];
+    }
+  }
+
+  // ── TEST 171: Bedrock-Free End Crystal Alignment & Radial AOE Explosion Damage ──
+  {
+    console.log('   171. Testing Bedrock-Free End Crystal Alignment & Radial AOE Explosion Damage...');
+    const fs = await import('node:fs');
+    const zlib = await import('node:zlib');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { EndCrystalEntity, drawCrystalHealingTetherBeams } = await import('../js/entities/EndCrystalEntity.js');
+    const DragonClass = FIGHTER_CLASS_MAP['ender_dragon'];
+
+    // 1. Decode Assets/model/enderDragon/end_crystal/end_crystal-b.png and assert y >= 165 inside every 256x256 cell has alpha === 0 (zero bedrock pixels)
+    const pngBuf = fs.readFileSync('Assets/model/enderDragon/end_crystal/end_crystal-b.png');
+    const ihdrW = pngBuf.readUInt32BE(16);
+    const ihdrH = pngBuf.readUInt32BE(20);
+    assert(ihdrW === 2560 && ihdrH === 1536, `end_crystal-b.png must be 2560x1536 (10x6 256px sheet), got ${ihdrW}x${ihdrH}`);
+    const idatChunks = [];
+    let pos = 8;
+    while (pos < pngBuf.length) {
+      const len = pngBuf.readUInt32BE(pos);
+      const chunkType = pngBuf.toString('ascii', pos + 4, pos + 8);
+      if (chunkType === 'IDAT') {
+        idatChunks.push(pngBuf.subarray(pos + 8, pos + 8 + len));
+      }
+      pos += 12 + len;
+    }
+    const rawScanlines = zlib.inflateSync(Buffer.concat(idatChunks));
+    const bpp = 4; // RGBA
+    const stride = ihdrW * bpp;
+    let bedrockAlphaCount = 0;
+    let crystalAlphaCount = 0;
+    const prevRow = Buffer.alloc(stride);
+    const curRow = Buffer.alloc(stride);
+    for (let y = 0; y < ihdrH; y++) {
+      const rowStart = y * (1 + stride);
+      const filterType = rawScanlines[rowStart];
+      for (let i = 0; i < stride; i++) {
+        const xVal = rawScanlines[rowStart + 1 + i];
+        const a = i >= bpp ? curRow[i - bpp] : 0;
+        const b = prevRow[i];
+        const c = i >= bpp ? prevRow[i - bpp] : 0;
+        let recon = xVal;
+        if (filterType === 1) recon = (xVal + a) & 0xff;
+        else if (filterType === 2) recon = (xVal + b) & 0xff;
+        else if (filterType === 3) recon = (xVal + ((a + b) >> 1)) & 0xff;
+        else if (filterType === 4) {
+          const p = a + b - c;
+          const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+          const pr = (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c);
+          recon = (xVal + pr) & 0xff;
+        }
+        curRow[i] = recon;
+      }
+      const cellY = y % 256;
+      for (let x = 0; x < ihdrW; x++) {
+        const alpha = curRow[x * 4 + 3];
+        if (alpha > 0) {
+          if (cellY >= 165) bedrockAlphaCount++;
+          else if (cellY >= 30 && cellY <= 160) crystalAlphaCount++;
+        }
+      }
+      curRow.copy(prevRow);
+    }
+    assert(crystalAlphaCount > 10000, 'Crystal cells must contain intact floating crystal pixels');
+    assert(bedrockAlphaCount === 0, `End Crystal sheet must have zero bedrock pixels at cellY >= 165, found ${bedrockAlphaCount}`);
+
+    // 2. Verify detonate() AOE radius, damage, knockback, illusion hits, dragon backlash isolation & explosion shockwave VFX
+    const origFighters = state.fighters;
+    const origIllusions = state.illusions;
+    const origSparkEffects = state.sparkEffects;
+    try {
+      state.sparkEffects = [];
+      const dragon = new DragonClass({
+        id: 'ender_dragon',
+        name: 'Ender Dragon',
+        type: 'ender_dragon',
+        characterId: 'ender_dragon',
+        x: 300,
+        y: 450,
+        hp: 1000,
+        maxHp: 1000,
+        r: 42
+      });
+      const cfg = dragon._getConfig();
+      const blastRadius = cfg.crystalExplosionRadius;
+      const blastDmg = cfg.crystalExplosionDamage;
+      const backlashDmg = cfg.crystalBacklashDamage;
+      assert(blastRadius > 0 && blastDmg > 0, 'enderDragonConfig must expose crystalExplosionRadius and crystalExplosionDamage');
+
+      const crystal = new EndCrystalEntity(200, 350, 'crystal_aoe_test', 'End Crystal');
+      crystal.tetherDragonTarget = dragon;
+      crystal.isTetheredToDragon = true;
+
+      // In-range direct fighter (80px away)
+      const nearFighter = new Fighter({
+        id: 'near_dummy',
+        name: 'Near Dummy',
+        type: 'dummy',
+        x: 280,
+        y: 350,
+        hp: 500,
+        maxHp: 500,
+        r: 25
+      });
+      nearFighter.invulnTimer = 0;
+      nearFighter.shield = 0;
+
+      // Edge-overlapping fighter (center at blastRadius + radius - 6px)
+      const edgeR = nearFighter.r || 25;
+      const edgeFighter = new Fighter({
+        id: 'edge_dummy',
+        name: 'Edge Dummy',
+        type: 'dummy',
+        x: 200,
+        y: 350 + blastRadius + edgeR - 6,
+        hp: 500,
+        maxHp: 500,
+        r: edgeR
+      });
+      edgeFighter.invulnTimer = 0;
+      edgeFighter.shield = 0;
+
+      // Out-of-range fighter (edge distance blastRadius + 30px)
+      const farFighter = new Fighter({
+        id: 'far_dummy',
+        name: 'Far Dummy',
+        type: 'dummy',
+        x: 200 + blastRadius + edgeR + 30,
+        y: 350,
+        hp: 500,
+        maxHp: 500,
+        r: edgeR
+      });
+
+      // Mock illusion inside blast radius
+      const nearIllusion = {
+        x: 200,
+        y: 350 - 55,
+        r: 20,
+        hp: 150,
+        maxHp: 150,
+        isIllusion: true,
+        vx: 0,
+        vy: 0,
+        applyKnockback(kx, ky) {
+          this.vx += kx;
+          this.vy += ky;
+        }
+      };
+
+      state.fighters = [dragon, crystal, nearFighter, edgeFighter, farFighter];
+      state.illusions = [nearIllusion];
+
+      // Check draw() and drawCrystalHealingTetherBeams() stack depth === 0 and tether anchor Y
+      const crystalCtx = createMockCtx();
+      const recordedTranslations = [];
+      const origTranslate = crystalCtx.translate;
+      crystalCtx.translate = (tx, ty) => {
+        recordedTranslations.push({ tx, ty });
+        origTranslate(tx, ty);
+      };
+      crystal.draw(crystalCtx);
+      assert(crystalCtx.getStackDepth() === 0, 'EndCrystalEntity.draw() must preserve Canvas 2D stack depth 0');
+      drawCrystalHealingTetherBeams(crystalCtx, dragon);
+      assert(crystalCtx.getStackDepth() === 0, 'drawCrystalHealingTetherBeams() must preserve Canvas 2D stack depth 0');
+      assert(
+        recordedTranslations.some(t => Math.abs(t.tx - crystal.x) < 0.01 && Math.abs(t.ty - crystal.y) < 0.01),
+        'Crystal draw & tether beam must anchor directly at floating crystal center (crystal.x, crystal.y) without bedrock offset'
+      );
+
+      const dragonHpBefore = dragon.hp;
+      const nearHpBefore = nearFighter.hp;
+      const edgeHpBefore = edgeFighter.hp;
+      const farHpBefore = farFighter.hp;
+      crystal.detonate(nearFighter);
+
+      assert(crystal.isDestroyed === true && crystal.hp === 0, 'detonate() must mark crystal destroyed');
+      assert(nearFighter.hp === nearHpBefore - blastDmg, `In-range fighter must take ${blastDmg} AOE explosion damage, got ${nearHpBefore - nearFighter.hp}`);
+      assert(nearFighter.vx > 0 || nearFighter.knockbackVx > 0, 'In-range fighter must receive outward knockback away from crystal');
+      assert(edgeFighter.hp === edgeHpBefore - blastDmg, `Edge-overlapping fighter must take ${blastDmg} AOE explosion damage, got ${edgeHpBefore - edgeFighter.hp}`);
+      assert(farFighter.hp === farHpBefore, `Out-of-range fighter must take 0 explosion damage, got ${farHpBefore - farFighter.hp}`);
+      assert(nearIllusion.hp < 150 && (150 - nearIllusion.hp) >= blastDmg, `Nearby illusion must take AOE explosion damage (>= ${blastDmg}), got ${150 - nearIllusion.hp}`);
+      assert(nearIllusion.vy < 0, 'Nearby illusion must be knocked upward away from crystal');
+      assert(dragon.hp === dragonHpBefore - backlashDmg, `Dragon must take only backlash (${backlashDmg}), got ${dragonHpBefore - dragon.hp}`);
+
+      assert(
+        state.sparkEffects.some(e => e && e.type === 'minecraftExplosion' && e.isEndCrystal === true),
+        'End Crystal detonation must spawn authentic minecraftExplosion (isEndCrystal) VFX'
+      );
+      assert(
+        state.sparkEffects.some(e => e && e.type === 'groundScorch'),
+        'End Crystal detonation must spawn groundScorch blast mark'
+      );
+
+      // 3. Verify Creeper uses the same Minecraft crescent/starburst explosion renderer with stack depth 0
+      const CreeperClass = FIGHTER_CLASS_MAP['creeper'];
+      assert(CreeperClass, 'Creeper fighter class must exist in FIGHTER_CLASS_MAP');
+      const creeperExpCtx = createMockCtx();
+      const testCreeper = new CreeperClass({ x: 260, y: 420, color: '#22C55E', hp: 400, maxHp: 400 });
+      testCreeper.activeVisualExplosions.push({ x: 260, y: 420, radius: 135, timer: 24, maxTimer: 34, isCharged: false });
+      testCreeper.activeVisualExplosions.push({ x: 260, y: 420, radius: 220, timer: 14, maxTimer: 34, isCharged: true });
+      testCreeper.draw(creeperExpCtx, nearFighter);
+      assert(creeperExpCtx.getStackDepth() === 0, 'Creeper explosion draw must preserve Canvas 2D stack depth 0');
+
+      const { drawMinecraftExplosion } = await import('../js/graphics/particles/renderers/minecraftExplosionRenderer.js');
+      const mcFx = state.sparkEffects.find(e => e && e.type === 'minecraftExplosion');
+      mcFx.life = 0.65;
+      drawMinecraftExplosion(creeperExpCtx, mcFx);
+      assert(creeperExpCtx.getStackDepth() === 0, 'drawMinecraftExplosion must preserve Canvas 2D stack depth 0');
+
+      // Verify Creeper death detonation spawns world-space minecraftExplosion so blast survives Creeper death
+      state.sparkEffects.length = 0;
+      testCreeper._executeDetonation(true);
+      assert(
+        state.sparkEffects.some(e => e && e.type === 'minecraftExplosion' && e.isCharged === true),
+        'Creeper death detonation must spawn world-space minecraftExplosion in state.sparkEffects'
+      );
+      console.log('      ✅ Bedrock-free End Crystal & Creeper Minecraft crescent/starburst explosion verified.');
+    } finally {
+      state.fighters = origFighters;
+      state.illusions = origIllusions;
+      state.sparkEffects = origSparkEffects;
+    }
+  }
 
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
