@@ -175,6 +175,8 @@ const TYPE_ELEMENT_MAP = {
   ulquiorra: 'dark',
   power: 'dark',
   zombie: 'dark',
+  roaring_knight: 'dark',
+  roaringknight: 'dark',
 
   // Grass (Flora, Botanical & Nature)
   crazydave: 'grass',

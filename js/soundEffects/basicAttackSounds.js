@@ -1419,6 +1419,15 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
     src: 'Assets/Sound Effects/Attacks/heavypunch1.mp3',
     volume: 0.85,
     delay: 0,
+  },
+  'roaring_knight': {
+    get src() {
+      return CONFIG.roaring_knight?.sounds?.cut1 || 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_cut.wav';
+    },
+    get volume() {
+      return CONFIG.roaring_knight?.soundVolumes?.cut1 ?? 0.90;
+    },
+    delay: 0,
   }
 };
 

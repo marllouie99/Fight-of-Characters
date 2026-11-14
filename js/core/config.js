@@ -76,6 +76,7 @@ import { vegetaConfig } from '../configs/characters/vegetaConfig.js';
 import { isagiConfig } from '../configs/characters/isagiConfig.js';
 import { chigiriConfig } from '../configs/characters/chigiriConfig.js';
 import { wardenConfig } from '../configs/characters/wardenConfig.js';
+import { roaringKnightConfig } from '../configs/characters/roaringKnightConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -114,6 +115,10 @@ export const CONFIG = {
   warden: wardenConfig,
   Warden: wardenConfig,
   WARDEN: wardenConfig,
+  roaring_knight: roaringKnightConfig,
+  roaringknight: roaringKnightConfig,
+  RoaringKnight: roaringKnightConfig,
+  ROARING_KNIGHT: roaringKnightConfig,
   genos: genosConfig,
   mahito: mahitoConfig,
   nanami: nanamiConfig,
@@ -2098,6 +2103,31 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: 1.0,
     ability: chigiriConfig.ability || 'Panther Sprint & 44-Mach Snipe',
     desc: chigiriConfig.desc,
+  },
+  {
+    id: 73,
+    name: roaringKnightConfig.name || 'Roaring Knight',
+    grade: roaringKnightConfig.grade ?? DEFAULT_GRADE,
+    displayName: roaringKnightConfig.displayName || roaringKnightConfig.name || 'Roaring Knight',
+    category: 'Gaming',
+    color: roaringKnightConfig.color || '#18181B',
+    themeColor: roaringKnightConfig.themeColor || '#18181B',
+    secondaryColor: roaringKnightConfig.secondaryColor || '#FFFFFF',
+    startX: 300,
+    startY: 250,
+    startVx: 1.2,
+    startVy: 1.1,
+    radius: roaringKnightConfig.radius || roaringKnightConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'roaring_knight',
+    hp: roaringKnightConfig.hp || 460,
+    damage: roaringKnightConfig.basicAttackDamage || 26,
+    cooldown: roaringKnightConfig.basicAttackCooldown || 42,
+    moveSpeed: roaringKnightConfig.moveSpeed || roaringKnightConfig.speed || 4.9,
+    projectileSpeedMultiplier: 1.0,
+    ability: roaringKnightConfig.ability || 'Black Knife, Falling Swords & Roaring Swoon',
+    desc: roaringKnightConfig.desc,
   }
 ];
 

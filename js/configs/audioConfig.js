@@ -319,7 +319,26 @@ export const AUDIO_CONFIG = {
   'minecraft_explosion3': 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg',
   'minecraft_explosion4': 'Assets/Sound Effects/EnderdragonSFX/Explosion4.ogg',
   'minecraft_xp_pickup': 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg',
-  'minecraft_successful_hit': 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg'
+  'minecraft_successful_hit': 'Assets/Sound Effects/EnderdragonSFX/Successful_hit.ogg',
+
+  // Roaring Knight (Deltarune Chapter 3)
+  'roaring_knight_cut1': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_cut.wav',
+  'roaring_knight_cut2': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_cut2.wav',
+  'roaring_knight_hit_strong': 'Assets/Sound Effects/RoaringKnightSFX/snd_metal_hit_strong.wav',
+  'roaring_knight_drawpower': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_drawpower.wav',
+  'roaring_knight_fallingsword': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_fallingsword.ogg',
+  'roaring_knight_fallingsword_big': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_fallingsword_big.wav',
+  'roaring_knight_pulse': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_pulse.wav',
+  'roaring_knight_star_explosion': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_star_explosion_close.wav',
+  'roaring_knight_roar': 'Assets/Sound Effects/RoaringKnightSFX/snd_knightroar.wav',
+  'roaring_knight_powerup_white': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_powerup_white.wav',
+  'roaring_knight_boxbreak': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_boxbreak.wav',
+  'roaring_knight_wideslash': 'Assets/Sound Effects/RoaringKnightSFX/snd_wideslash_low.wav',
+  'roaring_knight_dark_fountain': 'Assets/Sound Effects/RoaringKnightSFX/snd_ftext_dark_fountain.wav',
+  'roaring_knight_teleport': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_teleport.wav',
+  'roaring_knight_cape': 'Assets/Sound Effects/RoaringKnightSFX/snd_cape_1.wav',
+  'roaring_knight_hurt1': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurt.wav',
+  'roaring_knight_hurt2': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav'
 };
 
 

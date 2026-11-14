@@ -77,6 +77,7 @@ import { VegetaFighter } from '../fighters/VegetaFighter.js';
 import { IsagiFighter } from '../fighters/IsagiFighter.js';
 import { ChigiriFighter } from '../fighters/ChigiriFighter.js';
 import { WardenFighter } from '../fighters/WardenFighter.js';
+import { RoaringKnightFighter } from '../fighters/RoaringKnightFighter.js';
 
 export const FIGHTER_CLASS_MAP = {
   'unarmed':    UnarmedFighter,
@@ -107,6 +108,10 @@ export const FIGHTER_CLASS_MAP = {
   'warden':     WardenFighter,
   'Warden':     WardenFighter,
   'WARDEN':     WardenFighter,
+  'roaring_knight': RoaringKnightFighter,
+  'roaringknight':  RoaringKnightFighter,
+  'RoaringKnight':  RoaringKnightFighter,
+  'ROARING_KNIGHT': RoaringKnightFighter,
   'Unarmed':    UnarmedFighter,
   'UNARMED':    UnarmedFighter,
   'zombie':     ZombieFighter,

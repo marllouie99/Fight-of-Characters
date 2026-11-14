@@ -22765,6 +22765,173 @@ async function runInteractionTests() {
     }
   }
 
+  // ── TEST 172: Roaring Knight (Deltarune Ch.3) Full Combat Kit, Rules 18/20/21/23/24/25/30 & Stack Depth 0 ──
+  {
+    console.log('   -> [TEST 172] Testing Roaring Knight (Deltarune Ch.3) Combat Kit & Standards...');
+    const { FIGHTER_DEFS } = await import('../js/core/config.js');
+    const { getSkillDataForFighter, isSkillExceptionInDarkMode } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const KnightClass = FIGHTER_CLASS_MAP['roaring_knight'];
+    assert(KnightClass, 'RoaringKnightFighter must be registered in FIGHTER_CLASS_MAP');
+
+    const origFighters = state.fighters;
+    const origProjectiles = state.projectiles;
+    const origGameState = state.gameState;
+    try {
+      state.gameState = 'playing';
+      state.projectiles = [];
+      const rkDef = FIGHTER_DEFS.find(d => d.type === 'roaring_knight');
+      assert(rkDef && rkDef.id === 73, 'Roaring Knight must be registered in FIGHTER_DEFS with id 73');
+
+      const knight = new KnightClass({ ...rkDef, x: 180, y: 400 });
+      knight.x = 180;
+      knight.y = 400;
+      knight.vx = 0;
+      knight.vy = 0;
+      const UnarmedClass = FIGHTER_CLASS_MAP['unarmed'];
+      const dummy = new UnarmedClass({ x: 250, y: 400, hp: 1000, maxHp: 1000 });
+      dummy.x = 250;
+      dummy.y = 400;
+      dummy.vx = 0;
+      dummy.vy = 0;
+      state.fighters = [knight, dummy];
+
+      // 1. Rule 24: Scaled radius (> 25) preserved from super(def)
+      assert(knight.r > 25, `Roaring Knight radius must remain globally scaled (> 25), got ${knight.r}`);
+
+      // 2. Rule 23: Generic bullet suppression
+      knight.shoot(0);
+      assert(state.projectiles.length === 0, 'Roaring Knight shoot() must not spawn generic bullets');
+
+      // 3. Rule 30: 5-Phase Black Knife Cleave deals damage without micro-frames
+      knight.basicAttackCooldownTimer = 0;
+      knight._startBlackKnifeSwing(0);
+      assert(knight.isMeleeSwinging && knight.meleePhase === 1, 'Black Knife swing must begin in Phase 1 Windup');
+      assert(knight.meleePhaseTimer >= 8, `Windup must meet minimum frame floor (>= 8f), got ${knight.meleePhaseTimer}`);
+      const hpBeforeKnife = dummy.hp;
+      for (let f = 0; f < 22; f++) {
+        knight.update(dummy, 0, arena);
+      }
+      assert(dummy.hp < hpBeforeKnife, `Black Knife 5-phase cleave must deal melee damage (before=${hpBeforeKnife}, after=${dummy.hp})`);
+
+      // 4. Skill 1: Falling Swords spawns 6 blades and plunges
+      knight.isMeleeSwinging = false;
+      knight._startFallingSwordsCast();
+      for (let f = 0; f < 30; f++) {
+        knight._updateFallingSwordsChannel(dummy, arena);
+      }
+      assert(knight.activeFallingSwords.length === (CONFIG.roaring_knight.fallingSwordCount || 6), 'Falling Swords must summon configured sword volley');
+
+      // 5. Skill 2: Star Burst launches star & detonates into StarChild shards + concentric shockwave
+      knight._startStarBurstCast(0);
+      for (let f = 0; f < 20; f++) {
+        knight._updateStarBurstChannel(dummy);
+      }
+      assert(knight.activeStarBursts.length === 1, 'Star Burst must launch a StarBullet orb');
+      knight.activeStarBursts[0].fuseTimer = 1;
+      knight._updateStarBursts(dummy, arena);
+      assert(knight.activeStarChildren.length === (CONFIG.roaring_knight.starChildCount || 8), 'Star Burst detonation must emit StarChild radial shards');
+      assert(knight.activeVisualEffects.some(fx => fx.kind === 'star_shockwave'), 'Star Burst detonation must spawn Rule 26 concentric shockwave');
+
+      // 6. Ultimate: Roaring Swoon locks angle, halts movement completely while casting, cleaves opponent, then resumes moving
+      const hpBeforeSwoon = dummy.hp;
+      dummy.invincibleTimer = 0;
+      dummy.invincibilityTimer = 0;
+      dummy.x = knight.x + 220;
+      dummy.y = knight.y;
+      knight.vx = 5;
+      knight.vy = 3;
+      knight.fallingSwordsCooldownTimer = 999;
+      knight.starBurstCooldownTimer = 999;
+      knight.basicAttackCooldownTimer = 999;
+      const preSwoonX = knight.x;
+      const preSwoonY = knight.y;
+      knight._startRoaringSwoon(0);
+      assert(knight.isSwoonChanneling && knight.skillCastAngle === 0, 'Roaring Swoon must lock committed aim angle');
+      assert(knight.vx === 0 && knight.vy === 0, 'Roaring Swoon cast start must zero velocity immediately');
+
+      let sawSwoonCutVfx = false;
+      let stationaryFrames = 0;
+      for (let f = 0; f < 80 && (knight.isSwoonChanneling || knight.swoonActiveTimer > 0); f++) {
+        knight.update(dummy, 0, arena);
+        if (knight.isSwoonChanneling || knight.swoonActiveTimer > 0) {
+          stationaryFrames++;
+          assert(
+            knight.x === preSwoonX && knight.y === preSwoonY,
+            `Roaring Knight must remain completely stationary during Roaring Swoon cast (frame ${f}: x=${knight.x}, y=${knight.y})`
+          );
+          assert(knight.vx === 0 && knight.vy === 0, 'Velocity must stay zero while casting Roaring Swoon');
+        }
+        if (knight.activeVisualEffects.some(fx => fx.kind === 'swoon_cut')) {
+          sawSwoonCutVfx = true;
+        }
+      }
+      assert(stationaryFrames >= 50, `Expected >= 50 stationary frames during Roaring Swoon cast, got ${stationaryFrames}`);
+      assert(!knight.isSwoonChanneling && knight.swoonActiveTimer === 0, 'Roaring Swoon cast must cleanly complete');
+      assert(dummy.hp <= hpBeforeSwoon - (CONFIG.roaring_knight.swoonDamage || 78), 'Roaring Swoon must deal full dimensional slash damage across corridor');
+      assert(sawSwoonCutVfx, 'Roaring Swoon execution must spawn swoon_cut VFX');
+
+      for (let f = 0; f < 6; f++) {
+        knight.update(dummy, 0, arena);
+      }
+      assert(
+        Math.hypot(knight.x - preSwoonX, knight.y - preSwoonY) > 1,
+        'Roaring Knight must resume moving cleanly after Roaring Swoon finishes'
+      );
+
+      // 7. Rule 25: Top-of-update decay advances transient VFX while fighter is time-stopped
+      if (knight.activeVisualEffects.length === 0) {
+        knight.activeVisualEffects.push({
+          kind: 'swoon_cut',
+          x: knight.x,
+          y: knight.y,
+          angle: 0,
+          reach: 300,
+          hitDist: 200,
+          timer: 20,
+          maxTimer: 20,
+        });
+      }
+      const prevTimer = knight.activeVisualEffects[0].timer;
+      knight.applyTimeStop(15);
+      knight.update(dummy, 0, arena);
+      assert(
+        knight.activeVisualEffects.length === 0 || knight.activeVisualEffects[0].timer < prevTimer,
+        'Transient VFX must still decay during time-stop stasis (Rule 25)'
+      );
+      knight.timeStopTimer = 0;
+
+      // 8. Rule 18: HUD skill bars unified themeColor, toggle gating & dark-mode exemption
+      const hudSkills = getSkillDataForFighter(knight);
+      assert(hudSkills.length === 4, `Roaring Knight HUD must expose 4 bars, got ${hudSkills.length}`);
+      assert(hudSkills.every(s => s.color === knight.color), 'All Roaring Knight HUD bars must use unified themeColor');
+      assert(hudSkills.every(s => !s.label.includes('(READY)')), 'HUD bars must never contain (READY) suffix');
+      const ultBar = hudSkills.find(s => s.id === 'roaring_swoon');
+      assert(ultBar && isSkillExceptionInDarkMode(knight, ultBar), 'roaring_swoon ultimate must be exempt in dark HUD mode');
+      const origToggle = CONFIG.roaring_knight.enableFallingSwords;
+      CONFIG.roaring_knight.enableFallingSwords = false;
+      const gatedSkills = getSkillDataForFighter(knight);
+      CONFIG.roaring_knight.enableFallingSwords = origToggle;
+      assert(!gatedSkills.some(s => s.id === 'falling_swords'), 'Disabling enableFallingSwords must hide its HUD bar');
+
+      // 9. Canvas 2D stack depth 0 across skin, weapon, projectiles & VFX
+      const rkCtx = createMockCtx();
+      knight.afterImages.push({ x: 170, y: 400, angle: 0, r: knight.r, life: 10, maxLife: 16 });
+      knight.isMeleeSwinging = true;
+      knight.meleePhase = 3;
+      knight.meleePhaseProgress = 0.5;
+      knight.drawBody(rkCtx);
+      assert(rkCtx.getStackDepth() === 0, 'RoaringKnightFighter.drawBody() must preserve stack depth 0');
+      knight.draw(rkCtx, dummy);
+      assert(rkCtx.getStackDepth() === 0, 'RoaringKnightFighter.draw() must preserve stack depth 0');
+
+      console.log('      ✅ Roaring Knight (Deltarune Ch.3) kit, rules & stack depth 0 verified.');
+    } finally {
+      state.fighters = origFighters;
+      state.projectiles = origProjectiles;
+      state.gameState = origGameState;
+    }
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');

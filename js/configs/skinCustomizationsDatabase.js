@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE â€” MASTER SKIN & HAIR CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Skin Studio on 2026-11-11T08:57:52.075Z
+ * Generated from Skin Studio on 2026-11-14T15:16:26.211Z
  * =============================================================================
  */
 
@@ -74,14 +74,15 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   chigiri: { widthScale: 1.04, heightScale: 0.94, offsetX: 0, offsetY: 13, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   warden: { widthScale: 1.26, heightScale: 0.98, offsetX: 0, offsetY: -14, angleOffset: 0, flipX: false, flipY: false },
   alucard_glasses: { widthScale: 1.10, heightScale: 1.10, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
-  guts: { widthScale: 1.06, heightScale: 0.86, offsetX: 0, offsetY: 4, angleOffset: 0, flipX: false, flipY: false },
+  guts: { widthScale: 0.96, heightScale: 0.70, offsetX: 0, offsetY: 9, angleOffset: 0, flipX: false, flipY: false },
   bomberman: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: -15, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   pacman: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   ash: { widthScale: 0.74, heightScale: 0.70, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false, handScale: 1.00 },
   megumi: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   nobara: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   inosuke: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
-  ulquiorra: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false }
+  ulquiorra: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
+  roaring_knight: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false }
 };
 
 export const DEFAULT_SKIN_CUSTOMIZATIONS = SKIN_CUSTOMIZATIONS_DATABASE;

@@ -68,6 +68,7 @@ import { drawCreeperSkin, _drawCreeperHair } from '../fighters/creeperSkin.js';
 import { drawIsagiSkin, _drawIsagiHair, _getIsagiHairImage } from '../fighters/isagiSkin.js';
 import { drawChigiriSkin, _drawChigiriHair, _getChigiriHairImage } from '../fighters/chigiriSkin.js';
 import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighters/wardenSkin.js';
+import { drawRoaringKnightSkin, _drawRoaringKnightHair, _getRoaringKnightHairImage } from '../fighters/roaringKnightSkin.js';
 import { drawGokuSkin, _drawGokuHair, _getGokuHairImage, _getGokuSuperSaiyanHairImage } from '../fighters/gokuSkin.js';
 import { drawVegetaSkin, _drawVegetaHair, _getVegetaHairImage, _getVegetaSuperSaiyanHairImage } from '../fighters/vegetaSkin.js';
 
@@ -155,7 +156,7 @@ export const SKIN_STUDIO_CATEGORIES = [
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko', 'inosuke'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
   { id: 'BLUELOCK', label: 'BLUE LOCK', filter: (f) => ['isagi', 'chigiri'].includes(f.key) },
-  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'goku', 'vegeta'].includes(f.key) },
+  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'roaring_knight', 'goku', 'vegeta'].includes(f.key) },
   { id: 'DBZ', label: 'DBZ', filter: (f) => ['goku', 'vegeta'].includes(f.key) }
 ];
 
@@ -1008,6 +1009,23 @@ export const SKIN_STUDIO_FIGHTERS = [
     ]
   },
   {
+    key: 'roaring_knight',
+    label: 'ROARING KNIGHT',
+    asset: 'Assets/model/roaring_knight/RoaringKnight-hair.png',
+    assetDims: '168 x 96',
+    baseW: 2.55,
+    baseH: 1.46,
+    baseCrownY: -1.56,
+    visW: 168,
+    visH: 96,
+    centerX: 84,
+    topY: 0,
+    themeColor: '#EF4444',
+    forms: [
+      { id: 'default', label: 'DARK FOUNTAIN HERALD' }
+    ]
+  },
+  {
     key: 'goku',
     label: 'SON GOKU',
     asset: 'Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png',
@@ -1610,6 +1628,12 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 262 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'roaring_knight') {
+    return `// Calibrated Horned Antler Crown for Roaring Knight (Assets/model/roaring_knight/RoaringKnight-hair.png)\n` +
+           `const drawW = r * ${targetW};\n` +
+           `const drawH = r * ${targetH};\n` +
+           `const drawX = -drawW * 0.5${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)}${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'goku') {
     if (state.studioSkinForm === 'super_saiyan') {
       const ssjW = (3.15 * Number(wMult)).toFixed(2);
@@ -2137,6 +2161,9 @@ export function drawSkinStudioScreen() {
         dummyFighter._isStudioDummy = true;
         dummyFighter.isEnraged = (state.studioSkinForm === 'enraged');
         drawWardenSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'roaring_knight') {
+        dummyFighter._isStudioDummy = true;
+        drawRoaringKnightSkin(ctx, dummyFighter);
       } else if (fDef.key === 'goku') {
         dummyFighter._isStudioDummy = true;
         dummyFighter.isSuperSaiyan = (state.studioSkinForm === 'super_saiyan');
@@ -2245,6 +2272,8 @@ export function drawSkinStudioScreen() {
       _drawChigiriHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'warden') {
       _drawWardenHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'roaring_knight') {
+      _drawRoaringKnightHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'goku') {
       _drawGokuHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'super_saiyan');
     } else if (fDef.key === 'vegeta') {

@@ -990,6 +990,21 @@
         "knockback": 1,
         "cooldown": 1
       }
+    },
+    "roaring_knight": {
+      "name": "Roaring Knight",
+      "archetype": "swordmaster",
+      "color": "#18181B",
+      "hp": 460,
+      "speed": 4.9,
+      "baseRange": 88,
+      "baseDamage": 26,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
     }
   }
 }

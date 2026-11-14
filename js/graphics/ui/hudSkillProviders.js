@@ -3347,6 +3347,95 @@ export const HUD_SKILL_PROVIDERS = {
     return skills;
   },
 
+  roaring_knight(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.roaring_knight) ? CONFIG.roaring_knight : {};
+    const isDark = typeof state !== 'undefined' && state.arenaTheme === 'dark';
+    const themeColor = isDark ? '#F8FAFC' : (f.color || cfg.themeColor || '#18181B');
+    const skills = [];
+
+    // 1. Passive: Shadow Mantle Dash
+    if (isSkillEnabled(cfg.enableShadowMantle, true)) {
+      skills.push({
+        id: 'shadow_mantle',
+        pct: 100,
+        ready: true,
+        color: themeColor,
+        label: 'SHADOW MANTLE',
+      });
+    }
+
+    // 2. Skill 1: Falling Swords
+    if (isSkillEnabled(cfg.enableFallingSwords, true)) {
+      const cdMax = cfg.fallingSwordsCooldown || 340;
+      const cdTimer = f.fallingSwordsCooldownTimer || 0;
+      const isCasting = Boolean(f.isFallingSwordsCasting);
+      const pct = isCasting
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const secLeft = (cdTimer / 60).toFixed(1);
+      const label = (!isCasting && cdTimer > 0)
+        ? `FALLING SWORDS (${secLeft}S)`
+        : 'FALLING SWORDS';
+
+      skills.push({
+        id: 'falling_swords',
+        pct,
+        ready: !isCasting && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 3. Skill 2: Star Burst
+    if (isSkillEnabled(cfg.enableStarBurst, true)) {
+      const cdMax = cfg.starBurstCooldown || 420;
+      const cdTimer = f.starBurstCooldownTimer || 0;
+      const isCasting = Boolean(f.isStarBurstCasting);
+      const pct = isCasting
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const secLeft = (cdTimer / 60).toFixed(1);
+      const label = (!isCasting && cdTimer > 0)
+        ? `STAR BURST (${secLeft}S)`
+        : 'STAR BURST';
+
+      skills.push({
+        id: 'star_burst',
+        pct,
+        ready: !isCasting && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 4. Ultimate: Roaring Swoon
+    if (isSkillEnabled(cfg.enableRoaringSwoon, true)) {
+      const cdMax = cfg.swoonCooldown || 780;
+      const cdTimer = f.swoonCooldownTimer || 0;
+      const isChanneling = Boolean(f.isSwoonChanneling || (f.swoonActiveTimer || 0) > 0);
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const secLeft = (cdTimer / 60).toFixed(1);
+      const label = (!isChanneling && cdTimer > 0)
+        ? `ROARING SWOON (${secLeft}S)`
+        : 'ROARING SWOON';
+
+      skills.push({
+        id: 'roaring_swoon',
+        pct,
+        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
   pacman(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : {};
     const themeColor = f.color || cfg.themeColor || '#FACC15';
@@ -4127,6 +4216,8 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     isagi: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION', 'ego', 'EGO'],
     chigiri: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'panther_sprint', 'PANTHER SPRINT', 'ego', 'EGO'],
     warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic'],
+    roaring_knight: ['roaring_swoon', 'roaringswoon', 'ROARING SWOON', 'swoon'],
+    roaringknight: ['roaring_swoon', 'roaringswoon', 'ROARING SWOON', 'swoon'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 
