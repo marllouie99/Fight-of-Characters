@@ -13,6 +13,7 @@
 import { getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { drawPixelHand } from '../renderers/fighterRenderer.js';
+import { getChosoSkillSprite } from '../weapons/chosoBloodGraphics.js';
 
 let _chosoHairImage = null;
 let _chosoHairImageLoading = false;
@@ -690,31 +691,44 @@ export function _drawChosoArmsAndHands(ctx, fighter, r, handRadius, skinTone) {
         progress: p
       };
     } else {
-      // Supersonic Beam Discharge & Recoil Kickback
-      const bMax = fighter.piercingBloodBeamMax || 36;
-      const elapsed = bMax - fighter.piercingBloodTimer;
-      const t = Math.min(1.0, Math.max(0, elapsed / bMax));
+      // Sustained Hyperion-style Continuous Beam Hold & Final Recovery
+      const bMax = fighter.piercingBloodBeamMax || 96;
+      const remaining = Math.max(0, fighter.piercingBloodTimer || 0);
+      const elapsed = Math.max(0, bMax - remaining);
+      const kickFrames = 6;
+      const recoveryFrames = 8;
 
-      if (t < 0.16) {
-        // Instant backward recoil kickback (0 to 6 frames)
-        const kickP = Math.sin((t / 0.16) * Math.PI * 0.5);
-        leftX = r * 0.75 - r * 0.55 * kickP;
-        leftY = -handRadius * 0.45 - r * 0.15 * kickP;
-        rightX = r * 0.75 - r * 0.55 * kickP;
-        rightY = handRadius * 0.45 + r * 0.15 * kickP;
+      if (elapsed < kickFrames) {
+        // Quick crisp recoil brace at ignition (0 -> 6 frames)
+        const kickP = Math.sin((elapsed / kickFrames) * Math.PI);
+        leftX = r * 0.75 - r * 0.18 * kickP;
+        leftY = -handRadius * 0.45 - r * 0.05 * kickP;
+        rightX = r * 0.75 - r * 0.18 * kickP;
+        rightY = handRadius * 0.45 + r * 0.05 * kickP;
+      } else if (remaining <= recoveryFrames) {
+        // Smooth ease back to flank guard as beam dissipates (final 8 frames)
+        const recP = 1.0 - (remaining / recoveryFrames);
+        const e = 1.0 - Math.pow(1.0 - recP, 2.2);
+        leftX = (r * 0.72) + (defaultLX - r * 0.72) * e;
+        leftY = (-handRadius * 0.45) + (defaultLY - (-handRadius * 0.45)) * e;
+        rightX = (r * 0.72) + (defaultRX - r * 0.72) * e;
+        rightY = (handRadius * 0.45) + (defaultRY - (handRadius * 0.45)) * e;
       } else {
-        // Power ease recovery (6 to 36 frames)
-        const recP = (t - 0.16) / 0.84;
-        const e = 1.0 - Math.pow(1.0 - recP, 2.5);
-        const recoilLX = r * 0.20;
-        const recoilLY = -handRadius * 0.45 - r * 0.15;
-        const recoilRX = r * 0.20;
-        const recoilRY = handRadius * 0.45 + r * 0.15;
+        // Continuous Aim-Locked Nozzle Hold (sustains forward aperture clasp)
+        const tremorX = (Math.random() - 0.5) * 1.4;
+        const tremorY = (Math.random() - 0.5) * 1.4;
+        leftX = r * 0.72 + tremorX;
+        leftY = -handRadius * 0.45 + tremorY;
+        rightX = r * 0.72 + tremorX;
+        rightY = handRadius * 0.45 + tremorY;
+      }
 
-        leftX = recoilLX + (defaultLX - recoilLX) * e;
-        leftY = recoilLY + (defaultLY - recoilLY) * e;
-        rightX = recoilRX + (defaultRX - recoilRX) * e;
-        rightY = recoilRY + (defaultRY - recoilRY) * e;
+      if (remaining > recoveryFrames) {
+        apertureNozzle = {
+          x: r * 0.80,
+          y: 0,
+          progress: 1.0
+        };
       }
     }
   }
@@ -933,35 +947,49 @@ export function _drawChosoArmsAndHands(ctx, fighter, r, handRadius, skinTone) {
   }
 
   if (supernovaAura) {
+    const orbSprite = getChosoSkillSprite('supernovaOrb');
     ctx.save();
-    // Concentric cursed energy pulse around palms
-    ctx.strokeStyle = 'rgba(255, 42, 85, 0.75)';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.arc(supernovaAura.left.x, supernovaAura.left.y, supernovaAura.radius, 0, Math.PI * 2);
-    ctx.arc(supernovaAura.right.x, supernovaAura.right.y, supernovaAura.radius, 0, Math.PI * 2);
-    ctx.stroke();
+    if (orbSprite && orbSprite.complete && orbSprite.naturalWidth > 0) {
+      const orbDraw = (supernovaAura.radius * 2.1) * (104 / 72);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(orbSprite, supernovaAura.left.x - orbDraw / 2, supernovaAura.left.y - orbDraw / 2, orbDraw, orbDraw);
+      ctx.drawImage(orbSprite, supernovaAura.right.x - orbDraw / 2, supernovaAura.right.y - orbDraw / 2, orbDraw, orbDraw);
+    } else {
+      ctx.strokeStyle = 'rgba(255, 42, 85, 0.75)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(supernovaAura.left.x, supernovaAura.left.y, supernovaAura.radius, 0, Math.PI * 2);
+      ctx.arc(supernovaAura.right.x, supernovaAura.right.y, supernovaAura.radius, 0, Math.PI * 2);
+      ctx.stroke();
 
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1.0;
-    ctx.beginPath();
-    ctx.arc(supernovaAura.left.x, supernovaAura.left.y, supernovaAura.radius * 0.55, 0, Math.PI * 2);
-    ctx.arc(supernovaAura.right.x, supernovaAura.right.y, supernovaAura.radius * 0.55, 0, Math.PI * 2);
-    ctx.stroke();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.arc(supernovaAura.left.x, supernovaAura.left.y, supernovaAura.radius * 0.55, 0, Math.PI * 2);
+      ctx.arc(supernovaAura.right.x, supernovaAura.right.y, supernovaAura.radius * 0.55, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
   if (miniChakram) {
+    const chakramSprite = getChosoSkillSprite('bloodChakram');
     ctx.save();
     ctx.translate(miniChakram.x, miniChakram.y);
     ctx.rotate(miniChakram.rotation);
-    ctx.beginPath();
-    ctx.arc(0, 0, 7.0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(220, 38, 38, 0.85)';
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = '#FF2A55';
-    ctx.stroke();
+    if (chakramSprite && chakramSprite.complete && chakramSprite.naturalWidth > 0) {
+      const miniSize = 18 * (130 / 96);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(chakramSprite, -miniSize / 2, -miniSize / 2, miniSize, miniSize);
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, 7.0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(220, 38, 38, 0.85)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#FF2A55';
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

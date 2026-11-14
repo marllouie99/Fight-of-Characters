@@ -33,6 +33,7 @@ import { clearDroppedMiniguns } from '../graphics/particles/cjDroppedMinigun.js'
 import { clearDroppedMahoragaWheels } from '../graphics/particles/mahoragaDroppedWheel.js';
 import { clearCarExplosions } from '../graphics/particles/cjCarExplosion.js';
 import { clearBamEffects } from '../graphics/particles/bamImpactEffect.js';
+import { clearBloodEffects } from '../graphics/particles/bloodEffect.js';
 import { clearHybridProjectiles } from '../graphics/renderers/hybridProjectileRenderer.js';
 import { resetCamera } from '../systems/cameraSystem.js';
 import { preloadImage, preloadActiveMatchFighterVisuals, releaseInactiveMatchGraphicsMemory } from '../graphics/graphicsCache.js';
@@ -282,7 +283,7 @@ export function reinitFighters(isNewMatch = false) {
     }
     state.floatingTexts.length = 0;
   }
-  if (state.bloodEffects) state.bloodEffects.length = 0;
+  clearBloodEffects();
   if (state.sparkEffects) state.sparkEffects.length = 0;
   if (state.deathEffects) state.deathEffects.length = 0;
   if (state.tombstoneDeathEffects) state.tombstoneDeathEffects.length = 0;

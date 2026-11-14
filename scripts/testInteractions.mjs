@@ -8981,6 +8981,20 @@ async function runInteractionTests() {
     const { ChosoFighter } = await import('../js/entities/fighters/ChosoFighter.js');
     const { Fighter } = await import('../js/entities/fighter.js');
 
+    const _origChosoToggles = {
+      enableLaserMatrix: CONFIG.choso.enableLaserMatrix,
+      enableChakram: CONFIG.choso.enableChakram,
+      enableSupernova: CONFIG.choso.enableSupernova,
+      enablePiercingBlood: CONFIG.choso.enablePiercingBlood,
+      enableBloodDarts: CONFIG.choso.enableBloodDarts,
+    };
+    CONFIG.choso.enableLaserMatrix = true;
+    CONFIG.choso.enableChakram = 1;
+    CONFIG.choso.enableSupernova = 1;
+    CONFIG.choso.enablePiercingBlood = 1;
+    CONFIG.choso.enableBloodDarts = 1;
+    try {
+
     state.arena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
     const choso = new ChosoFighter({ x: 200, y: 300, hp: 420, maxHp: 420 });
     const dummy = new Fighter({ x: 350, y: 300, hp: 300, maxHp: 300 });
@@ -9004,9 +9018,14 @@ async function runInteractionTests() {
     assert(choso.speed > choso.baseSpeed, 'Movement speed must increase under Flowing Red Scale');
 
     // 4. Verify Blood Transmutation: Crimson Laser Matrix
-    // Seed 4 nodes
+    // Reset any cast started during Step 3 update and seed 4 active blood nodes
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
     choso.spawnBloodNode(180, 280);
     choso.spawnBloodNode(220, 320);
+    choso.spawnBloodNode(250, 270);
+    choso.spawnBloodNode(210, 335);
     const nodeCount = choso.bloodNodes.length;
     assert(nodeCount >= 4, 'Must have at least 4 active blood nodes');
 
@@ -9201,146 +9220,94 @@ async function runInteractionTests() {
       CONFIG.choso.enableChakram = prevChakram;
     }
 
-    // 10. Verify Sanguine Retaliation Matrix: Hit From Enemy -> Mid-Air Blood Eruption -> Convergence Laser Discharge (User Frame-by-Frame Scenario)
+    // 10. Verify Taking Damage Only Sheds Blood (NO immediate on-damage auto-fire retaliation)
     choso.interruptAttacks(true);
     choso.bloodNodes = [];
     if (state.bloodEffects) state.bloodEffects.length = 0;
+    choso.activeLaserBeams.length = 0;
+    choso.chakrams.length = 0;
     choso.ultCooldown = 0;
     choso.skill3Cooldown = 0;
+    choso.piercingBloodCooldown = 0;
+    choso.skill2Cooldown = 0;
+    choso.skill1Cooldown = 0;
+    choso.basicAttackCooldown = 0;
     dummy.hp = 300;
     dummy.isDead = false;
     state.gameState = 'playing';
     state.fighters = [choso, dummy];
 
-    // Frame 1: Hit from enemy triggers retaliation spray
     choso.takeDamage(25, dummy, { hitType: 'punch' });
-    assert(choso.isRetaliationSpraying === true, 'Choso must enter retaliation spray state upon enemy hit while Ult is UP');
-    assert(choso.bloodNodes.length >= 14, `Taking damage while Ult is UP must erupt blood particles fanning behind Choso (got ${choso.bloodNodes.length})`);
-    assert(choso.ultCooldown > 0, 'Ultimate cooldown must be consumed upon retaliation trigger');
+    assert(choso.bloodNodes.length >= 2, `Taking damage must still shed natural blood particles (got ${choso.bloodNodes.length})`);
+    assert(choso.isRetaliationSpraying === false, 'Taking damage must NOT trigger instant retaliation spray');
+    assert(choso.isCastingLaserMatrix === false, 'Taking damage must NOT immediately fire Convergence Laser Matrix');
+    assert(choso.isChargingPiercingBlood === false && choso.isFiringPiercingBlood === false, 'Taking damage must NOT immediately fire Piercing Blood');
+    assert(choso.isChargingSupernova === false, 'Taking damage must NOT immediately trigger Supernova');
+    assert(choso.chakrams.length === 0, 'Taking damage must NOT immediately launch Chakrams');
+    assert(choso.activeLaserBeams.length === 0, 'Taking damage must NOT immediately fire Sanguine Blood Darts at attacker');
+    assert(dummy.hp === 300, 'Attacker must NOT take immediate retaliation damage upon hitting Choso');
+    assert(choso.ultCooldown === 0 && choso.piercingBloodCooldown === 0 && choso.skill1Cooldown === 0 && choso.skill2Cooldown === 0, 'Skill cooldowns must NOT be consumed on takeDamage');
 
-    // Frame 2: Visible mid-air blood fanning out behind Choso
-    while (choso.retaliationSprayTimer > 0) {
-      choso.update(dummy, 0, state.arena);
-    }
-    assert(choso.isRetaliationSpraying === false, 'Retaliation spray must complete');
-    assert(choso.isCastingLaserMatrix === true, 'Choso must transition to Convergence Clasp pose after spray');
-    assert(choso.isClaspedForConvergence === true, 'Choso must be clasped for Convergence');
-    assert(choso.bloodNodes.every(n => n.isIgnitedAsLaser === true), 'All sprayed blood droplets must be frozen in mid-air as laser diodes');
-
-    // Frame 3: Convergence laser matrix discharge back into the enemy
+    // 11. Verify Proactive Convergence Discharge Cleanup via _startLaserMatrix
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    choso.ultCooldown = 0;
+    choso.skill3Cooldown = 0;
+    for (let i = 0; i < 4; i++) choso.spawnBloodNode(220 + i * 8, 250);
+    choso._startLaserMatrix(dummy, choso._getActiveBloodParticles());
+    assert(choso.isCastingLaserMatrix === true && choso.isClaspedForConvergence === true, 'Choso must enter Convergence clasp when triggered');
     choso.laserMatrixTimer = 0;
     choso.laserTelegraphTimer = 1;
     choso.activeLaserBeams.length = 0;
     const preHp = dummy.hp;
     choso.update(dummy, 0, state.arena);
-    assert(choso.activeLaserBeams.length >= 14, `All ignited blood droplets must fire simultaneous laser beams at the attacker (got ${choso.activeLaserBeams.length})`);
-    assert(dummy.hp < preHp, 'Target must take damage from the retaliatory laser barrage');
-    assert(choso.bloodNodes.length >= 14, 'Blood droplet nodes must remain alive as laser emitter squares during discharge');
-    assert(choso.bloodNodes.every(n => n.dischargeTimer > 0), 'Nodes must have active dischargeTimer during laser blast');
-
-    // Frame 4: After laser discharge completes, all used blood particles are cleanly cleared up!
+    assert(choso.activeLaserBeams.length >= 4, 'All ignited blood droplets must fire simultaneous beams when Convergence triggers');
+    assert(dummy.hp < preHp, 'Target must take damage from Convergence barrage');
     while (choso.bloodNodes.some(n => n.dischargeTimer > 0)) {
       choso._updateVisualEffects();
     }
     assert(choso.bloodNodes.length === 0, 'All blood particles used by Laser Matrix must be cleared up after discharge completes');
-    assert(choso._getActiveBloodCount() === 0, 'Active blood count must be 0 after used particles are cleared up');
 
-    // 11. Verify On-Hit Piercing Blood Retaliation (Blood particle is the source of the beam)
+    // 12. Verify Proactive Piercing Blood Source Cleanup
     choso.interruptAttacks(true);
     choso.bloodNodes = [];
     if (state.bloodEffects) state.bloodEffects.length = 0;
     dummy.hp = 300;
     dummy.isDead = false;
-    choso.ultCooldown = 999; // Ult on cooldown
-    choso.skill3Cooldown = 999;
-    choso.piercingBloodCooldown = 0; // Skill 3 ready
-    choso.takeDamage(20, dummy, { hitType: 'punch' });
-    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Piercing Blood retaliation');
-    assert(choso.isChargingPiercingBlood === true, 'Hit when Piercing Blood ready must trigger Piercing Blood retaliation');
-    assert(choso.piercingBloodSource !== null, 'Piercing Blood must have a designated blood particle source');
-    assert(typeof choso.piercingBloodSource.x === 'number', 'Piercing Blood source must have X coordinate from blood droplet');
-    assert(choso.piercingBloodCooldown > 0, 'Piercing Blood cooldown must be consumed');
-
-    // Verify used source blood particle is cleared up when Piercing Blood completes
-    const pbSourceNode = choso.piercingBloodSource.node;
-    assert(pbSourceNode !== null, 'Piercing Blood source node must exist');
+    choso.piercingBloodCooldown = 0;
+    const pbNode = choso.spawnBloodNode(210, 260);
+    assert(choso._startPiercingBlood(dummy, pbNode) === true, 'Piercing Blood must activate from blood node');
+    assert(choso.isChargingPiercingBlood === true && choso.piercingBloodCooldown > 0, 'Piercing Blood must enter charge and consume cooldown');
     choso.piercingBloodTimer = 1;
-    choso.update(dummy, 0, state.arena); // Transition from charging to firing
+    choso.update(dummy, 0, state.arena);
     choso.piercingBloodTimer = 1;
-    choso.update(dummy, 0, state.arena); // Beam discharge finishes
-    assert(choso.bloodNodes.includes(pbSourceNode) === false, 'Source blood particle used by Piercing Blood must be cleared up after beam completes');
+    choso.update(dummy, 0, state.arena);
+    assert(choso.bloodNodes.includes(pbNode) === false, 'Source blood particle used by Piercing Blood must be cleared up after beam completes');
 
-    // 12. Verify On-Hit Supernova Retaliation (Blood particles are the source of detonation)
+    // 13. Verify Proactive Supernova Detonation Source Cleanup
     choso.interruptAttacks(true);
     choso.bloodNodes = [];
     if (state.bloodEffects) state.bloodEffects.length = 0;
-    dummy.hp = 300;
-    dummy.isDead = false;
-    state.gameState = 'playing';
-    choso.ultCooldown = 999;
-    choso.skill3Cooldown = 999;
-    choso.piercingBloodCooldown = 999;
-    choso.skill2Cooldown = 0; // Supernova ready
-    choso.takeDamage(20, dummy, { hitType: 'punch' });
-    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Supernova retaliation');
-    assert(choso.isChargingSupernova === true, 'Hit when Supernova ready must trigger Supernova retaliation');
-    assert(choso.supernovaSources.length > 0, 'Supernova sources must be populated from spawned blood particles');
-    assert(choso.skill2Cooldown > 0, 'Supernova cooldown must be consumed');
-
-    // Verify all source blood particles used by Supernova are cleared up upon detonation
-    const novaSources = [...choso.supernovaSources];
+    choso.skill2Cooldown = 0;
+    const novaNodes = [choso.spawnBloodNode(220, 240), choso.spawnBloodNode(240, 260)];
+    choso._startSupernova(dummy, novaNodes);
+    assert(choso.isChargingSupernova === true && choso.skill2Cooldown > 0, 'Supernova must charge and consume cooldown');
     choso.supernovaTimer = 0;
-    choso.update(dummy, 0, state.arena); // Detonates
-    for (const src of novaSources) {
+    choso.update(dummy, 0, state.arena);
+    for (const src of novaNodes) {
       assert(choso.bloodNodes.includes(src) === false, 'All source blood particles used by Supernova must be cleared up upon detonation');
     }
 
-    // 13. Verify On-Hit Slicing Exorcist (Chakram) Retaliation (Blood particle is the source of chakram)
+    // 14. Verify Proactive Chakram Cast Source Cleanup
     choso.interruptAttacks(true);
     choso.bloodNodes = [];
     if (state.bloodEffects) state.bloodEffects.length = 0;
-    dummy.hp = 300;
-    dummy.isDead = false;
-    state.gameState = 'playing';
-    choso.ultCooldown = 999;
-    choso.skill3Cooldown = 999;
-    choso.piercingBloodCooldown = 999;
-    choso.skill2Cooldown = 999;
-    choso.skill1Cooldown = 0; // Chakram ready
-    choso.takeDamage(20, dummy, { hitType: 'punch' });
-    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Chakram retaliation');
-    assert(choso.chakrams.length > 0, 'Hit when Chakram ready must trigger Chakram retaliation');
-    assert(choso.skill1Cooldown > 0, 'Chakram cooldown must be consumed');
-    const chakramSourceId = choso.chakrams[0].sourceNodeId;
-    if (chakramSourceId) {
-      assert(choso.bloodNodes.every(n => n.id !== chakramSourceId), 'Blood particle used to form Chakram must be cleared up');
-    }
-
-    // 14. Verify On-Hit Sanguine Darts Retaliation (Blood particles shoot darts)
-    choso.interruptAttacks(true);
-    choso.bloodNodes = [];
-    if (state.bloodEffects) state.bloodEffects.length = 0;
-    choso.activeLaserBeams.length = 0;
-    dummy.hp = 300;
-    dummy.isDead = false;
-    state.gameState = 'playing';
-    choso.ultCooldown = 999;
-    choso.skill3Cooldown = 999;
-    choso.piercingBloodCooldown = 999;
-    choso.skill2Cooldown = 999;
-    choso.skill1Cooldown = 999;
-    choso.basicAttackCooldown = 0; // Basic attack ready
-    choso.takeDamage(20, dummy, { hitType: 'punch' });
-    assert(choso.bloodNodes.length >= 4, 'Taking damage must spawn blood particles for Sanguine Darts retaliation');
-    assert(choso.activeLaserBeams.length >= 4, 'Spawned blood particles must each fire a Sanguine Dart at the attacker');
-    assert(choso.basicAttackCooldown > 0, 'Basic attack cooldown must be consumed');
-
-    // Verify all blood particles used as Sanguine Darts are cleared up after firing completes
-    while (choso.bloodNodes.some(n => n.dischargeTimer > 0)) {
-      choso._updateVisualEffects();
-    }
-    assert(choso.bloodNodes.length === 0, 'All blood particles used as Sanguine Darts must be cleared up after firing completes');
-    assert(choso.basicAttackCooldown > 0, 'Basic attack cooldown must be consumed');
+    choso.skill1Cooldown = 0;
+    const chakNode = choso.spawnBloodNode(230, 250);
+    choso._castChakram(dummy, chakNode);
+    assert(choso.chakrams.length > 0 && choso.skill1Cooldown > 0, 'Chakram must launch and consume cooldown');
+    assert(choso.bloodNodes.every(n => n.id !== chakNode.id), 'Blood particle used to form Chakram must be cleared up');
 
     // 15. Verify Natural Blood Expiration & Unexpired Blood Damage Scaling
     choso.interruptAttacks(true);
@@ -9492,8 +9459,68 @@ async function runInteractionTests() {
     }
     choso.slashSwingTimer = 0;
 
+    // 17. Verify Hyperion-Style Continuous Aim-Locked Piercing Blood Tracking & Multi-Tick Damage (including 1v1 undefined team state!)
+    const prevChosoTeam = choso.team;
+    const prevDummyTeam = dummy.team;
+    const prevMode = state.mode;
+    state.mode = '1v1';
+    choso.team = undefined;
+    dummy.team = undefined;
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    choso.x = 180;
+    choso.y = 320;
+    dummy.x = 340;
+    dummy.y = 320;
+    dummy.hp = 600;
+    dummy.maxHp = 600;
+    dummy.isDead = false;
+    choso.ultCooldown = 999;
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 0;
+    choso.spawnBloodNode(200, 320);
+    assert(choso._startPiercingBlood(dummy) === true, 'Piercing Blood must start when active blood exists');
+    choso.piercingBloodTimer = 1;
+    choso.update(dummy, 0, state.arena); // Ignite beam (initial hit)
+    assert(choso.isFiringPiercingBlood === true, 'Piercing Blood must enter continuous firing state');
+    const angleBeforeMove = choso.piercingBloodAngle;
+    const hpAfterInitial = dummy.hp;
+    assert(hpAfterInitial < 600, 'Piercing Blood ignition must deal initial impact damage in 1v1 undefined-team match');
+
+    // Move enemy vertically off-axis and step several frames to confirm smooth aim-lock tracking & tick damage
+    dummy.x = 340;
+    dummy.y = 410;
+    for (let f = 0; f < 14; f++) {
+      choso.update(dummy, 0, state.arena);
+    }
+    assert(choso.isFiringPiercingBlood === true, 'Piercing Blood must remain continuously firing over multi-frame sequence');
+    assert(choso.piercingBloodAngle > angleBeforeMove + 0.05, `Piercing Blood must rotate continuously to track moved target in 1v1 (before=${angleBeforeMove.toFixed(3)}, after=${choso.piercingBloodAngle.toFixed(3)})`);
+    assert(choso.gunAngle === choso.piercingBloodAngle, 'Choso gunAngle must sync with rotating piercingBloodAngle');
+    assert(dummy.hp < hpAfterInitial, `Continuous aim-locked Piercing Blood must inflict periodic tick damage (afterInitial=${hpAfterInitial}, now=${dummy.hp})`);
+
+    const { _getPiercingBloodFrames } = await import('../js/graphics/weapons/chosoBloodGraphics.js');
+    assert(typeof _getPiercingBloodFrames === 'function', '_getPiercingBloodFrames loader must be exported');
+
+    mockCtx.resetStackDepth();
+    choso.draw(mockCtx, dummy);
+    assert(mockCtx.getStackDepth() === 0, 'Choso draw stack balance during continuous Piercing Blood must be 0');
+
+    choso.interruptAttacks(true);
+    assert(choso.isFiringPiercingBlood === false && choso.piercingBloodSource === null, 'Interrupting Choso must cleanly terminate continuous Piercing Blood');
+    choso.team = prevChosoTeam;
+    dummy.team = prevDummyTeam;
+    state.mode = prevMode;
+
     console.log('      ✅ Choso Infinite Blood Generation, Laser Transmutation Matrix & Piercing Blood verified successfully.');
     state.fighters = [];
+    } finally {
+      CONFIG.choso.enableLaserMatrix = _origChosoToggles.enableLaserMatrix;
+      CONFIG.choso.enableChakram = _origChosoToggles.enableChakram;
+      CONFIG.choso.enableSupernova = _origChosoToggles.enableSupernova;
+      CONFIG.choso.enablePiercingBlood = _origChosoToggles.enablePiercingBlood;
+      CONFIG.choso.enableBloodDarts = _origChosoToggles.enableBloodDarts;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

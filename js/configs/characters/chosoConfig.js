@@ -12,6 +12,14 @@ export const chosoConfig = {
 
   assets: {
     hair: 'Assets/model/choso/Choso-hair.png',
+    piercingBlood: 'Assets/model/choso/PiercingBlood.png',
+    piercingBloodFrames: 'Assets/model/choso/PiercingBlood/PiercingBlood-b.png',
+    bloodSplashFrames: 'Assets/model/choso/BloodSplash/BloodSplash-b.png',
+    bloodChakram: 'Assets/model/choso/BloodChakram.png',
+    supernovaOrb: 'Assets/model/choso/SupernovaOrb.png',
+    supernovaBurst: 'Assets/model/choso/SupernovaBurst.png',
+    convergenceBeam: 'Assets/model/choso/ConvergenceBeam.png',
+    bloodEdgeSlash: 'Assets/model/choso/BloodEdgeSlash.png',
   },
 
   // Base Attributes (Rule 24 Humanoid Standard)
@@ -37,7 +45,7 @@ export const chosoConfig = {
   desc: 'Eldest brother of the Cursed Womb: Death Paintings from Jujutsu Kaisen. Converts cursed energy into inexhaustible blood reserves, seeds the arena with poisonous blood droplets, and transmutates all blood particles into a deadly multi-angle piercing laser crossfire grid.',
 
   // Passive 1: Mugen Ketsuryū (Infinite Sanguine Reserves)
-  enableInfiniteBlood: 1,
+  enableInfiniteBlood: 0,
   maxBloodNodesInArena: 999, // No artificial 32 limit: converts all currently existing arena blood into beams
   bloodNodeLifespanFrames: 480, // ~8.0 seconds natural expiration lifespan
   bloodNodesPerDamageTakenMin: 2,
@@ -51,7 +59,7 @@ export const chosoConfig = {
   maxBloodDamageMultiplier: 2.25,      // Capped at 2.25x max (+125% max damage bonus)
 
   // Passive 2: Flowing Red Scale: Stack (Sekirin Ketsurui: Chō)
-  enableFlowingRedScale: 1,
+  enableFlowingRedScale: 0,
   redScaleHpThreshold: 0.60,      // Below 60% HP
   redScaleSpeedMultiplier: 1.25,  // +25% movement speed
   redScaleDropMultiplier: 2,      // 2x blood droplet spawning rate
@@ -73,7 +81,7 @@ export const chosoConfig = {
   comboDropletsOnFinisher: 3,
 
   // Skill 1: Slicing Exorcist / Blood Chakram (Karisō)
-  enableChakram: 1,
+  enableChakram: 0,
   skill1Cooldown: 360,           // 6.0s (360 frames)
   chakramDamage: 36,
   chakramSpeed: 11,
@@ -82,7 +90,7 @@ export const chosoConfig = {
   chakramDropInterval: 6,        // Emits a droplet every 6 frames
 
   // Skill 2: Supernova (Chōshinsei)
-  enableSupernova: 1,
+  enableSupernova: 0,
   skill2Cooldown: 540,           // 9.0s (540 frames)
   supernovaOrbCount: 8,
   supernovaPelletCount: 12,
@@ -92,7 +100,7 @@ export const chosoConfig = {
 
   // ULTIMATE: Blood Manipulation: Convergence
   // As long as Ultimate is UP, turns all active blood particles currently in the arena into piercing laser beams!
-  enableLaserMatrix: true,
+  enableLaserMatrix: 0,
   ultCooldown: 840,              // 14.0s (840 frames)
   skill3Cooldown: 840,           // Synchronized alias
   laserMatrixCastFrames: 16,     // Convergence Prayer Clasp pose
@@ -109,15 +117,25 @@ export const chosoConfig = {
   laserTransmutationOverdriveFrames: 300, // 5.0s active transmutation buff
   overdriveMicroLaserDamage: 8,
 
-  // Skill 3: Piercing Blood (Teisō / Fuga)
+  // Skill 3: Piercing Blood (Teisō / Fuga — Continuous Aim-Locked Beam)
   enablePiercingBlood: 1,
   enableUltimate: true,
   piercingBloodCooldown: 900,    // 15.0s (900 frames)
-  ultChargeFrames: 30,           // Clasp compression phase
-  ultBeamFrames: 36,             // Supersonic stream discharge
-  ultBeamDamage: 125,            // Sustained armor-piercing damage
+  ultChargeFrames: 100,           // Clasp compression phase
+  ultBeamFrames: 96,             // Sustained continuous beam discharge (1.6s @ 60 FPS)
+  ultBeamDamage: 125,            // Initial armor-piercing impact damage
+  ultBeamTickInterval: 6,        // Continuous piercing damage interval (like Hyperion)
+  ultBeamTickDamage: 14,         // Continuous tick damage per interval while aim-locked
+  ultBeamTickPush: 1.4,          // Continuous knockback push along beam ray
+  ultBeamRotateSpeed: 0.022,     // Slow heavy Hyperion-style beam tracking speed (rad/frame)
+  ultBeamChargeRotateSpeed: 0.025,// Smooth charge lock-on tracking speed (rad/frame)
+  ultBeamBackwardSpeed: 0.85,    // Gentle continuous recoil drift during sustained fire
+  ultBeamDriftRetention: 0.90,
+  ultBeamDriftBlend: 0.08,
   ultBeamWidth: 26,
-  ultRecoilKick: 16,             // Kinetic recoil pushback
+  ultBeamSpearScale: 0.42,       // Fixed conical spearhead sprite scale multiplier (normalized to r=30)
+  ultBeamSplashSize: 88,         // 12-frame impact BloodSplash size on Piercing Blood contact
+  ultRecoilKick: 16,             // Kinetic recoil pushback on beam ignition
   ultFalloutNodes: 10,           // Vapor droplets left in wake
 
   // Sound Effects & Audio Configuration
