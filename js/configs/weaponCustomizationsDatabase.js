@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE — MASTER WEAPON CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Weapon Studio on 2026-10-25T15:18:01.002Z
+ * Generated from Weapon Studio on 2026-11-15T14:27:30.180Z
  * =============================================================================
  */
 
@@ -98,7 +98,8 @@ export const WEAPON_CUSTOMIZATIONS_DATABASE = {
   reze: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
   pekka: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
   knight: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
-  guts: { offsetX: 0, offsetY: 0, scale: 1.15, widthScale: 1.25, lengthScale: 1.65, angleOffset: 0 }
+  guts: { offsetX: 0, offsetY: 0, scale: 1.15, widthScale: 1.25, lengthScale: 1.65, angleOffset: 0 },
+  roaring_knight: { offsetX: -4, offsetY: 0, scale: 1.40, widthScale: 1.00, lengthScale: 1.15, angleOffset: 0.05 }
 };
 
 export const DEFAULT_WEAPON_CUSTOMIZATIONS = WEAPON_CUSTOMIZATIONS_DATABASE;

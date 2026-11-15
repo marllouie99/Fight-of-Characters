@@ -34,6 +34,9 @@ export const pacmanConfig = {
   powerPelletRadius: 8, // Larger energizer dots at corner tiles
   dotColor: '#FFE082', // Retro pellet cream-yellow
   powerPelletColor: '#F2F000',
+  enableDotHeal: true, // Every consumed dot/pellet heals Pac-Man
+  dotHealAmount: 4, // HP healed per small Pac-Dot consumed
+  powerPelletHealAmount: 12, // HP healed per Power Pellet (big dot) consumed
   canEatSmallDotsDuringChompMode: true, // During Chomp Mode, Pac-Man can eat small dots
   canEatPowerPelletsDuringChompMode: false, // Big dots are preserved during Chomp Mode so they aren't wasted
 

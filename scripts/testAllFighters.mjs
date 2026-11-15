@@ -935,6 +935,119 @@ async function main() {
         fighter.draw(mockCtx, null);
         assertCanvasStackBalance(`Saitama hit pause & Serious counter test`);
 
+        // Test: Saitama Consecutive Normal Punches visuals clip strictly inside arena & keep Canvas stack balanced
+        const prevCtx = state.ctx;
+        const prevGameState = state.gameState;
+        const prevSparks = state.sparkEffects;
+        const origClip = mockCtx.clip;
+        const origRect = mockCtx.rect;
+        let clipCount = 0;
+        const clippedRects = [];
+        mockCtx.clip = () => { clipCount++; };
+        mockCtx.rect = (rx, ry, rw, rh) => { clippedRects.push({ x: rx, y: ry, width: rw, height: rh }); };
+
+        try {
+          const { drawSaitamaSpeedLines } = await import('../js/graphics/renderers/speedLinesRenderer.js');
+          const { drawSparkEffects } = await import('../js/graphics/particles/sparkEffect.js');
+
+          state.ctx = mockCtx;
+          state.gameState = 'fight';
+          state.sparkEffects = [];
+          state.fighters = [fighter, dummyOpponent];
+
+          fighter.x = state.arena.x + state.arena.width - 40;
+          fighter.y = state.arena.y + state.arena.height / 2;
+          fighter.gunAngle = 0;
+          fighter.angle = 0;
+          fighter.flurryCooldown = 0;
+          fighter._flurryBreatherTimer = 0;
+          fighter._counterPunchTimer = 0;
+          fighter.timeStopTimer = 0;
+
+          dummyOpponent.hp = 5000;
+          dummyOpponent.maxHp = 5000;
+          dummyOpponent.x = state.arena.x + state.arena.width - (dummyOpponent.r || 25);
+          dummyOpponent.y = fighter.y;
+
+          const flurryStarted = fighter.executeConsecutiveNormalPunches(dummyOpponent);
+          if (!flurryStarted || !fighter.isFlurrying) {
+            throw new Error('Saitama executeConsecutiveNormalPunches failed to initiate flurry in test');
+          }
+
+          // Frame during barrage
+          mockCtx.resetStackDepth();
+          clipCount = 0;
+          fighter.update(dummyOpponent, 0, state.arena);
+          fighter.draw(mockCtx, dummyOpponent);
+          if (clipCount < 1) {
+            throw new Error('Saitama Consecutive Normal Punches barrage did not clip to arena bounds');
+          }
+          assertCanvasStackBalance('Saitama Consecutive Normal Punches barrage draw');
+
+          clipCount = 0;
+          drawSaitamaSpeedLines();
+          if (clipCount < 1) {
+            throw new Error('Saitama Consecutive Normal Punches speed lines did not clip to arena bounds');
+          }
+          assertCanvasStackBalance('Saitama Consecutive Normal Punches speed lines draw');
+
+          // Advance flurry to trigger final finisher hit
+          for (let step = 0; step < 60 && fighter.isFlurrying; step++) {
+            fighter.update(dummyOpponent, 0, state.arena);
+          }
+          if (!(fighter._flurryFinalPunchTimer > 0)) {
+            throw new Error('Saitama Consecutive Normal Punches did not enter final finisher follow-through phase');
+          }
+
+          // Finisher punch & VFX clip check
+          clipCount = 0;
+          fighter.draw(mockCtx, dummyOpponent);
+          if (clipCount < 1) {
+            throw new Error('Saitama Consecutive Normal Punches finisher punch VFX did not clip to arena bounds');
+          }
+          assertCanvasStackBalance('Saitama Consecutive Normal Punches finisher draw');
+
+          // Spawned frontal blast & wind speed lines clip check
+          const hasFlurryFrontalBlast = state.sparkEffects.some(e => e && e.type === 'saitamaCounterFrontalBlast' && e.clipToArena === true);
+          const hasFlurryWindLine = state.sparkEffects.some(e => e && e.type === 'punchWindSpeedLine' && e.clipToArena === true);
+          if (!hasFlurryFrontalBlast || !hasFlurryWindLine) {
+            throw new Error(`Expected Consecutive Normal Punches blast/wind effects with clipToArena=true (blast=${hasFlurryFrontalBlast}, wind=${hasFlurryWindLine})`);
+          }
+          clipCount = 0;
+          drawSparkEffects();
+          if (clipCount < 2) {
+            throw new Error('Saitama Consecutive Normal Punches spark/blast effects did not clip to arena bounds');
+          }
+          assertCanvasStackBalance('Saitama Consecutive Normal Punches spark effects draw');
+
+          // Verify clipped rect matches arena bounds
+          const matchesArena = clippedRects.some(r =>
+            r.x === state.arena.x && r.y === state.arena.y &&
+            r.width === state.arena.width && r.height === state.arena.height
+          );
+          if (!matchesArena) {
+            throw new Error('Saitama Consecutive Normal Punches clip rect did not match active arena geometry');
+          }
+
+          // Verify UI/card preview skips arena clipping
+          fighter._isPreview = true;
+          clipCount = 0;
+          fighter.draw(mockCtx, null);
+          fighter._isPreview = false;
+          if (clipCount !== 0) {
+            throw new Error(`Expected UI/card preview render to skip arena clip, got clipCount=${clipCount}`);
+          }
+          assertCanvasStackBalance('Saitama UI preview without arena clip');
+        } finally {
+          mockCtx.clip = origClip;
+          mockCtx.rect = origRect;
+          state.ctx = prevCtx;
+          state.gameState = prevGameState;
+          state.sparkEffects = prevSparks;
+          fighter._isPreview = false;
+          fighter.interruptAttacks(true);
+        }
+
         state.fighters = prevFighters;
       }
       if (fType === 'ichigo') {
@@ -3837,6 +3950,8 @@ async function main() {
       throw new Error('Expected isEffectivelyAlive() to return false for Yuta when killed inside Gojo domain');
     }
     testGojoDomain.domainActive = false;
+    const prevYutaBeamTestGameState = state.gameState;
+    state.gameState = 'playing';
 
     // Test Yuta Pure Love Beam cancellation when Gojo opens Unlimited Void domain
     const testYutaBeam = new YutaFighter({ startX: 250, startY: 250, type: 'yuta', color: '#D946EF' });
@@ -3976,6 +4091,7 @@ async function main() {
 
     // Cleanup projectiles after beam tests
     projectileSystem.projectiles.length = 0;
+    state.gameState = prevYutaBeamTestGameState;
 
     // Test Yuta Flurry -> Thin Ice Breaker seamless transition
     state.fighters = [testYuta, dummyTarget, dummyTarget2];
@@ -12357,6 +12473,56 @@ async function main() {
     if (dragonInstance.hp < preHp) {
       throw new Error(`Self-damage violation: Ender Dragon took damage from its own breath or acid pools! hp=${dragonInstance.hp} < ${preHp}`);
     }
+
+    // 3b. Verify dragonsBreathStayDuration (exact stay frames & HUD stay countdown)
+    const { getSkillDataForFighter: getDragonSkillData } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const { enderDragonBossConfig } = await import('../js/configs/bosses/enderDragonBossConfig.js');
+    if (testCfg.dragonsBreathStayDuration !== 180) {
+      throw new Error(`Expected dragonsBreathStayDuration === 180, got ${testCfg.dragonsBreathStayDuration}`);
+    }
+    if (enderDragonBossConfig.dragonsBreathStayDuration !== 240) {
+      throw new Error(`Expected boss dragonsBreathStayDuration === 240, got ${enderDragonBossConfig.dragonsBreathStayDuration}`);
+    }
+    dragonInstance.acidPools = [];
+    dragonInstance.breathStreams = [{
+      x: 270,
+      y: 465,
+      vx: 10,
+      vy: 0,
+      radius: 14,
+      damage: 12,
+      maxDistance: 5,
+      traveled: 10,
+    }];
+    dragonInstance._updateBreathStreams(breathOpponent, testCfg);
+    if (dragonInstance.acidPools.length !== 1 || dragonInstance.acidPools[0].source !== 'breath') {
+      throw new Error('Expected breath stream expiration to deploy lingering breath pool with source=breath');
+    }
+    if (dragonInstance.acidPools[0].duration !== 180 || dragonInstance.acidPools[0].maxDuration !== 180) {
+      throw new Error(`Expected exact 180-frame stay duration, got duration=${dragonInstance.acidPools[0].duration}, max=${dragonInstance.acidPools[0].maxDuration}`);
+    }
+    const stayHudSkills = getDragonSkillData(dragonInstance);
+    const stayBreathBar = stayHudSkills.find(s => s.id === 'dragons_breath');
+    if (!stayBreathBar || !stayBreathBar.active || stayBreathBar.label !== "DRAGON'S BREATH (3.0S)" || Math.round(stayBreathBar.pct) !== 100) {
+      throw new Error(`Expected HUD dragons_breath stay countdown (3.0S, 100%), got ${JSON.stringify(stayBreathBar)}`);
+    }
+    // Verify 0-frame boundary disables lingering breath clouds cleanly
+    dragonInstance.acidPools = [];
+    dragonInstance.breathStreams = [{
+      x: 270,
+      y: 465,
+      vx: 10,
+      vy: 0,
+      radius: 14,
+      damage: 12,
+      maxDistance: 5,
+      traveled: 10,
+    }];
+    dragonInstance._updateBreathStreams(breathOpponent, { ...testCfg, dragonsBreathStayDuration: 0 });
+    if (dragonInstance.acidPools.length !== 0) {
+      throw new Error(`Expected 0 lingering breath pools for dragonsBreathStayDuration: 0, got ${dragonInstance.acidPools.length}`);
+    }
+
     dragonInstance.reset();
 
     mockCtx.resetStackDepth();
@@ -12401,9 +12567,15 @@ async function main() {
       throw new Error('divebombHitboxRadius or divebombRadius must be defined in enderDragonConfig');
     }
     const sidestepOpponent = new EnderDragonClass({ x: 270, y: 507, color: '#FFFFFF', controls: {} }); // 42px lateral distance
+    const farOpponent = new EnderDragonClass({ x: 400, y: 280, color: '#FFFFFF', controls: {} }); // ~185px outside corridor
     dragonInstance._updateDivebombStrike(sidestepOpponent, testArena, dragonCfg);
-    if (dragonInstance.draggedVictims.has(sidestepOpponent)) {
-      throw new Error('Tightened Hitbox Violation: Sidestepping opponent outside divebombHitboxRadius was caught!');
+    resolveFighterCollision(dragonInstance, sidestepOpponent);
+    resolveFighterCollision(dragonInstance, farOpponent);
+    if (dragonInstance.draggedVictims.has(sidestepOpponent) || sidestepOpponent.isDraggedByDragon) {
+      throw new Error('Tightened Hitbox Violation: Sidestepping opponent outside divebombCorridorWidth was caught!');
+    }
+    if (dragonInstance.draggedVictims.has(farOpponent) || farOpponent.isDraggedByDragon) {
+      throw new Error('Physics Divebomb Violation: Distant enemy outside divebombCorridorWidth was caught by resolveFighterCollision!');
     }
 
     // 4b. Verify In-Path Corridor Capture, Smooth Push, and Wall Slam
@@ -12448,6 +12620,29 @@ async function main() {
       throw new Error(`Victim slowMultiplier was not properly reduced! slowMultiplier=${dummyOpponent.slowMultiplier}`);
     }
 
+    // Verify Divebomb Wall Slam & Hit produce a single floating damage number (no duplicate popup)
+    const prevDiveDmgGameState = state.gameState;
+    const prevDiveDmgFighters = state.fighters;
+    const wallSlamTestTarget = new EnderDragonClass({ x: 300, y: 465, color: '#FFFFFF', controls: {} });
+    wallSlamTestTarget.hp = 500;
+    wallSlamTestTarget.maxHp = 500;
+    state.gameState = 'playing';
+    state.fighters = [dragonInstance, wallSlamTestTarget];
+    state.floatingTexts = [];
+    dragonInstance._applyDivebombWallSlam(wallSlamTestTarget, 100, 22, testArena, dragonInstance._getConfig());
+    const wallSlamDmgTexts = state.floatingTexts.filter(ft => ft && ft.text === '100');
+    if (wallSlamDmgTexts.length !== 1) {
+      throw new Error(`Expected 1 floating damage text on divebomb wall slam, got ${wallSlamDmgTexts.length}: ${JSON.stringify(state.floatingTexts)}`);
+    }
+    state.floatingTexts = [];
+    dragonInstance._applyDivebombHit(wallSlamTestTarget, 100, 22, testArena, dragonInstance._getConfig());
+    const hitDmgTexts = state.floatingTexts.filter(ft => ft && ft.text === '100');
+    if (hitDmgTexts.length !== 1) {
+      throw new Error(`Expected 1 floating damage text on divebomb hit, got ${hitDmgTexts.length}: ${JSON.stringify(state.floatingTexts)}`);
+    }
+    state.gameState = prevDiveDmgGameState;
+    state.fighters = prevDiveDmgFighters;
+
     // 4c. Verify Divebomb -> Smooth Arena Re-entry & 360° Dragon's Breath Combo Sequence
     dragonInstance.aiState = 'DIVEBOMB_RECOVERY';
     dragonInstance.recoveryFrames = 0;
@@ -12479,6 +12674,133 @@ async function main() {
     }
     if (dragonInstance.vx !== 0 || dragonInstance.vy !== 0) {
       throw new Error(`Divebomb Combo Violation: Movement was not stopped upon chaining into Dragon Breath! vx=${dragonInstance.vx}`);
+    }
+
+    // 4d. Verify Back-to-Back Divebomb Combo (config-driven divebombComboCount) before Recovery & 360° Dragon's Breath
+    dragonInstance.reset();
+    dragonInstance.x = 270;
+    dragonInstance.y = 465;
+    dragonInstance.divebombCooldown = 0;
+    const comboTarget = new EnderDragonClass({ x: 320, y: 465, color: '#FFFFFF', controls: {} });
+    comboTarget.hp = 10000;
+    comboTarget.maxHp = 10000;
+    state.fighters = [dragonInstance, comboTarget];
+    state.arena = testArena;
+    const comboCfg = dragonInstance._getConfig();
+    const expectedComboCount = Math.max(1, Math.floor(Number(comboCfg.divebombComboCount ?? 2)));
+    if (expectedComboCount < 2) {
+      throw new Error(`Expected divebombComboCount >= 2, got ${comboCfg.divebombComboCount}`);
+    }
+
+    dragonInstance._initiateDivebombSetup(comboTarget, testArena, comboCfg);
+    if (dragonInstance.divebombStrikesRemaining !== expectedComboCount - 1) {
+      throw new Error(`Expected divebombStrikesRemaining === ${expectedComboCount - 1} on initial divebomb cast, got ${dragonInstance.divebombStrikesRemaining}`);
+    }
+
+    let divebombStrikeCount = 0;
+    let prevDiveState = dragonInstance.aiState;
+    let prevDiveAngle = dragonInstance.gunAngle;
+    let maxChainedDiveAngleStep = 0;
+    let launchAngleAligned = false;
+    let breathTriggered = false;
+    let sawStrike1ToSetup2Chain = false;
+    const minArenaX = testArena.x + dragonInstance.r - 0.5;
+    const maxArenaX = testArena.x + testArena.width - dragonInstance.r + 0.5;
+    const minArenaY = testArena.y + dragonInstance.r - 0.5;
+    const maxArenaY = testArena.y + testArena.height - dragonInstance.r + 0.5;
+    const comboMaxFrames = Math.max(450, expectedComboCount * 160);
+    const divebombAudioCalls = [];
+    const origDivePlaySFX = audioSystem.playSFX;
+    audioSystem.playSFX = (src, vol, speed) => {
+      divebombAudioCalls.push({ src, vol, speed });
+    };
+    try {
+      for (let f = 0; f < comboMaxFrames; f++) {
+        dragonInstance.update(comboTarget, 0, testArena);
+        if (dragonInstance.x < minArenaX || dragonInstance.x > maxArenaX || dragonInstance.y < minArenaY || dragonInstance.y > maxArenaY) {
+          throw new Error(`Ender Dragon clipped outside arena during ${dragonInstance.aiState}: pos=(${dragonInstance.x.toFixed(1)}, ${dragonInstance.y.toFixed(1)}), allowed=[${minArenaX.toFixed(1)}..${maxArenaX.toFixed(1)}, ${minArenaY.toFixed(1)}..${maxArenaY.toFixed(1)}]`);
+        }
+        if (dragonInstance.aiState === 'DIVEBOMB_TELEGRAPH' || dragonInstance.aiState === 'DIVEBOMB_STRIKE') {
+          if (dragonInstance.divebombEndX < minArenaX || dragonInstance.divebombEndX > maxArenaX || dragonInstance.divebombEndY < minArenaY || dragonInstance.divebombEndY > maxArenaY) {
+            throw new Error(`Divebomb corridor endpoint escaped arena: end=(${dragonInstance.divebombEndX.toFixed(1)}, ${dragonInstance.divebombEndY.toFixed(1)})`);
+          }
+        }
+        let angleDelta = dragonInstance.gunAngle - prevDiveAngle;
+        while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+        while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+        if (divebombStrikeCount >= 1 && (dragonInstance.aiState === 'DIVEBOMB_SETUP' || dragonInstance.aiState === 'DIVEBOMB_TELEGRAPH' || dragonInstance.aiState === 'DIVEBOMB_STRIKE')) {
+          maxChainedDiveAngleStep = Math.max(maxChainedDiveAngleStep, Math.abs(angleDelta));
+        }
+        if (dragonInstance.aiState === 'DIVEBOMB_STRIKE' && prevDiveState !== 'DIVEBOMB_STRIKE') {
+          divebombStrikeCount++;
+          if (divebombStrikeCount === 2) {
+            let alignErr = Math.abs(dragonInstance.gunAngle - dragonInstance.divebombAngle);
+            while (alignErr > Math.PI) alignErr -= Math.PI * 2;
+            launchAngleAligned = Math.abs(alignErr) < 0.01;
+          }
+        }
+        if (prevDiveState === 'DIVEBOMB_STRIKE' && dragonInstance.aiState === 'DIVEBOMB_SETUP' && divebombStrikeCount === 1) {
+          sawStrike1ToSetup2Chain = true;
+          if (dragonInstance.divebombCooldown > 0) {
+            throw new Error(`divebombCooldown reset prematurely after Divebomb #1! cd=${dragonInstance.divebombCooldown}`);
+          }
+        }
+        if (dragonInstance.aiState === 'FIREBALL_SPIT' && dragonInstance.isBreathingFire) {
+          breathTriggered = true;
+          break;
+        }
+        prevDiveState = dragonInstance.aiState;
+        prevDiveAngle = dragonInstance.gunAngle;
+      }
+    } finally {
+      audioSystem.playSFX = origDivePlaySFX;
+    }
+
+    const expectedChargeSrc = comboCfg.sounds?.divebombCharge || 'Assets/Sound Effects/SkillEffects/groundTremble.mp3';
+    const expectedLaunchSrc = comboCfg.sounds?.divebomb || 'Assets/Sound Effects/Skills/dash5.mp3';
+    const expectedRoarSrc = comboCfg.sounds?.divebombRoar || 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt2.ogg';
+    const chargeSfxCount = divebombAudioCalls.filter(c => c.src === expectedChargeSrc && c.vol > 0).length;
+    const launchSfxCount = divebombAudioCalls.filter(c => c.src === expectedLaunchSrc && c.vol > 0).length;
+    const roarSfxCount = divebombAudioCalls.filter(c => c.src === expectedRoarSrc && c.vol > 0).length;
+    if (chargeSfxCount < expectedComboCount) {
+      throw new Error(`Missing Divebomb Telegraph SFX (${expectedChargeSrc}): expected >= ${expectedComboCount} plays, got ${chargeSfxCount}`);
+    }
+    if (launchSfxCount < expectedComboCount) {
+      throw new Error(`Missing Divebomb Strike Launch SFX (${expectedLaunchSrc}): expected >= ${expectedComboCount} plays, got ${launchSfxCount}`);
+    }
+    if (roarSfxCount < expectedComboCount) {
+      throw new Error(`Missing Divebomb Strike Roar SFX (${expectedRoarSrc}): expected >= ${expectedComboCount} plays, got ${roarSfxCount}`);
+    }
+
+    if (divebombStrikeCount !== expectedComboCount) {
+      throw new Error(`Expected ${expectedComboCount} back-to-back divebombs before breath, observed ${divebombStrikeCount} strikes (final state=${dragonInstance.aiState})`);
+    }
+    if (!sawStrike1ToSetup2Chain) {
+      throw new Error('Expected Divebomb #1 completion to chain directly into Divebomb #2 setup before recovery');
+    }
+    if (maxChainedDiveAngleStep > 0.25) {
+      throw new Error(`Chained Divebomb Rotation Snap Violation: max per-frame angle jump=${maxChainedDiveAngleStep.toFixed(3)} rad > 0.25`);
+    }
+    if (!launchAngleAligned) {
+      throw new Error('Expected 2nd Divebomb facing angle to smoothly finish aligning with divebombAngle before launching strike');
+    }
+    if (!breathTriggered) {
+      throw new Error(`Dragon failed to transition into FIREBALL_SPIT after ${expectedComboCount} back-to-back divebombs! state=${dragonInstance.aiState}`);
+    }
+    if (dragonInstance.divebombCooldown <= 0) {
+      throw new Error('divebombCooldown was not reset after completing all divebomb passes');
+    }
+
+    // Verify interruptAttacks clears remaining divebomb strikes & single-strike config boundary (divebombComboCount: 1)
+    dragonInstance._initiateDivebombSetup(comboTarget, testArena, comboCfg);
+    dragonInstance.interruptAttacks(true);
+    if (dragonInstance.divebombStrikesRemaining !== 0) {
+      throw new Error(`interruptAttacks did not clear divebombStrikesRemaining: ${dragonInstance.divebombStrikesRemaining}`);
+    }
+    const singleDiveCfg = { ...comboCfg, divebombComboCount: 1 };
+    dragonInstance._initiateDivebombSetup(comboTarget, testArena, singleDiveCfg);
+    if (dragonInstance.divebombStrikesRemaining !== 0) {
+      throw new Error(`Expected divebombStrikesRemaining === 0 for divebombComboCount: 1, got ${dragonInstance.divebombStrikesRemaining}`);
     }
 
     // 5. Verify 4 Corner End Crystals in non-boss fighter matches

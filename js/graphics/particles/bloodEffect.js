@@ -903,7 +903,7 @@ export function updateBloodEffects() {
       // Safety stasis watchdog: max laser stasis duration is 90 frames (~1.5s).
       // If stasis exceeds 90 frames or source entity is dead, release laser lock so particle decays naturally
       effect.laserStasisFrames = (effect.laserStasisFrames || 0) + 1;
-      if (effect.laserStasisFrames > 90 || (effect.sourceEntity && effect.sourceEntity.isDead)) {
+      if (effect.laserStasisFrames > 130 || (effect.sourceEntity && effect.sourceEntity.isDead)) {
         effect.isIgnitedAsLaser = false;
         delete effect.laserStasisFrames;
       } else {

@@ -546,10 +546,10 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
     },
     delay: 0,
   },
-  // Choso — Blood Edge & Sanguine Darts
+  // Choso — Supernova (Chōshinsei) Basic Attack
   'choso': {
-    src: 'Assets/Sound Effects/Attacks/swordswing.mp3',
-    volume: 0.85,
+    src: 'Assets/Sound Effects/Attacks/explosion.mp3',
+    volume: 1.15,
     delay: 0,
   },
   // Carl "CJ" Johnson — Street Boxing Brass Knuckles
@@ -848,13 +848,13 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
     delay: 0,
   },
 
-  // Choso — Blood Manipulation Dagger Slashes
+  // Choso — Supernova (Chōshinsei) Basic Attack
   'choso': {
     get src() {
-      return CONFIG.choso?.sounds?.meleeSlash || 'Assets/Sound Effects/Attacks/swordswing.mp3';
+      return CONFIG.choso?.sounds?.supernovaExplode || 'Assets/Sound Effects/Attacks/explosion.mp3';
     },
     get volume() {
-      return CONFIG.choso?.soundVolumes?.meleeSlash !== undefined ? CONFIG.choso.soundVolumes.meleeSlash : 0.85;
+      return CONFIG.choso?.soundVolumes?.supernovaExplode !== undefined ? CONFIG.choso.soundVolumes.supernovaExplode : 1.15;
     },
     delay: 0,
   },

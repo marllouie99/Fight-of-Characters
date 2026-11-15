@@ -777,7 +777,9 @@ export function _drawChosoArmsAndHands(ctx, fighter, r, handRadius, skinTone) {
       rightX = handRadius * 0.65 + tremor * 0.5;
       rightY = r * 0.22 + tremor * 0.3;
 
-      const pulse = Math.sin(performance.now() * 0.02) * 1.5;
+      const pulse = fighter.isLaserMatrixLockedIn
+        ? Math.sin(performance.now() * 0.045) * 0.8 + 1.2
+        : Math.sin(performance.now() * 0.02) * 1.5;
       palmSingularity = {
         x: 0,
         y: r * 0.22,

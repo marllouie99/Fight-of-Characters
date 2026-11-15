@@ -72,6 +72,10 @@ export class YutaPureLoveBeamBehavior extends ProjectileBehavior {
           ent.isInvulnerable ||
           ent.isInvincible ||
           ent.invincible ||
+          ent.isInvincibleUltimate ||
+          (ent.invincibleTimer && ent.invincibleTimer > 0) ||
+          (ent.invincibilityTimer && ent.invincibilityTimer > 0) ||
+          (ent.vanishTimer && ent.vanishTimer > 0) ||
           (ent.isPokemonTrainer && (ent.jumpState !== 'inside' || ent.isJumpedOut))
         ) continue;
         const isControlledRika = ownerFighter.isMakimaControlledRikaTarget?.(ent);
@@ -134,14 +138,19 @@ export class YutaPureLoveBeamBehavior extends ProjectileBehavior {
           if (!p._dodgedEntities) {
             p._dodgedEntities = new Set();
           }
+          if (!p._beamDamagedEntities) {
+            p._beamDamagedEntities = new Set();
+          }
 
           if (!p._dodgedEntities.has(ent)) {
             const didDodge = (typeof ent.dodgeBeam === 'function' && ent.dodgeBeam(beamData));
             if (didDodge) {
               p._dodgedEntities.add(ent);
+              p._beamDamagedEntities.delete(ent);
               ent.caughtInPureLoveBeam = false;
               ent.wasCaughtInPureLoveBeam = false;
               ent.pureLoveBeamTimer = 0;
+              ent.pureLoveBeamRecoveryTimer = 0;
               continue; // Successfully dodged out of Pure Love Beam on first impact!
             }
           }
@@ -152,7 +161,8 @@ export class YutaPureLoveBeamBehavior extends ProjectileBehavior {
             p.hitTargets.add(ent);
             
             if (typeof ent.takeDamage === 'function') {
-              ent.takeDamage(solidDamage, ownerFighter, {
+              const prevHp = ent.hp;
+              const dmgResult = ent.takeDamage(solidDamage, ownerFighter, {
                 isPureLoveBeam: true,
                 bypassShield: true,
                 bypassEvade: true,
@@ -160,17 +170,37 @@ export class YutaPureLoveBeamBehavior extends ProjectileBehavior {
                 isGuaranteedHit: true
               });
 
-              const dmgGain = CONFIG.yuta?.pureLoveBeamDamageStackPerTick ?? 0.5;
-              if (dmgGain > 0 && ownerFighter) {
-                ownerFighter.pureLoveBeamBonusDamage = (ownerFighter.pureLoveBeamBonusDamage || 0) + dmgGain;
-              }
+              const didDamage = (ent.hp < prevHp) || (dmgResult !== false && dmgResult > 0);
+              if (didDamage) {
+                p._beamDamagedEntities.add(ent);
 
-              const lifestealPct = CONFIG.yuta?.pureLoveBeamLifestealPct ?? 0.5;
-              const healAmount = solidDamage * lifestealPct;
-              if (healAmount > 0 && typeof ownerFighter.takeDamage === 'function') {
-                ownerFighter.takeDamage(-healAmount, ownerFighter, { isHeal: true });
+                const dmgGain = CONFIG.yuta?.pureLoveBeamDamageStackPerTick ?? 0.5;
+                if (dmgGain > 0 && ownerFighter) {
+                  ownerFighter.pureLoveBeamBonusDamage = (ownerFighter.pureLoveBeamBonusDamage || 0) + dmgGain;
+                }
+
+                const lifestealPct = CONFIG.yuta?.pureLoveBeamLifestealPct ?? 0.5;
+                const healAmount = solidDamage * lifestealPct;
+                if (healAmount > 0 && typeof ownerFighter.takeDamage === 'function') {
+                  ownerFighter.takeDamage(-healAmount, ownerFighter, { isHeal: true });
+                }
+              } else {
+                p._beamDamagedEntities.delete(ent);
+                ent.caughtInPureLoveBeam = false;
+                ent.wasCaughtInPureLoveBeam = false;
+                ent.pureLoveBeamTimer = 0;
+                continue;
               }
+            } else {
+              p._beamDamagedEntities.delete(ent);
+              continue;
             }
+          }
+
+          // Only apply beam trap, slow, skill-cancel, suction, and magenta recovery overlay
+          // if the beam actually dealt damage to this entity.
+          if (!p._beamDamagedEntities.has(ent)) {
+            continue;
           }
 
           if (!ent.isBaguvixActive && !ent.isGodModeActive) {

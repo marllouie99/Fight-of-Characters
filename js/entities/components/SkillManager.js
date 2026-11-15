@@ -290,9 +290,8 @@ export class SkillManager {
     const isParalyzed = Boolean(typeof this.fighter.isParalyzedDebuffActive === 'function' && this.fighter.isParalyzedDebuffActive());
     const isSilenced = Boolean(this.fighter.silenceTimer && this.fighter.silenceTimer > 0);
     const isEvading = Boolean(this.fighter.isEvading || this.fighter.isPreSplitting || (this.fighter.owner && (this.fighter.owner.isEvading || this.fighter.owner.isPreSplitting)));
-    const isPacmanGhost = Boolean(this.fighter.isPacmanGhost && (this.fighter.pacmanGhostTimer || 0) > 0);
 
-    if (isEvading || isPacmanGhost) return; // All skill cooldowns freeze during Evasion state & Pac-Man Ghost state
+    if (isEvading) return; // All skill cooldowns freeze during Evasion state
 
     // Calculate global decay multiplier (e.g. 1.20x in Black Flash zone)
     const globalDecay = (this.fighter.blackFlashTimer > 0)

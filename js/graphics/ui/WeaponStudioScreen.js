@@ -12,10 +12,12 @@ import { _clearButtons, _registerButton, handleUIMove, handleUIClick, drawPanel,
 import { drawWeaponPreview } from './WeaponIndexScreen.js';
 import { _getZenitsuAssemblyImage } from '../weapons/demonSlayerWeaponGraphics.js';
 import { _getEscanorWeaponImage } from '../weapons/escanorWeaponGraphics.js';
+import { _preloadRoaringKnightWeaponSprites } from '../weapons/roaringKnightWeaponGraphics.js';
 
 if (typeof window !== 'undefined') {
   _getZenitsuAssemblyImage?.();
   _getEscanorWeaponImage?.();
+  _preloadRoaringKnightWeaponSprites?.();
 }
 
 // Currently selected weapon key in studio: 'mahito' | 'yuta' | 'toji' | 'cronos' | 'ruby'
@@ -143,6 +145,9 @@ function initCustomizations() {
   if (!state.weaponCustomizations.guts) {
     state.weaponCustomizations.guts = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
   }
+  if (!state.weaponCustomizations.roaring_knight) {
+    state.weaponCustomizations.roaring_knight = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
   if (!state.weaponCustomizations.zenitsu) {
     state.weaponCustomizations.zenitsu = {
       offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0,
@@ -215,13 +220,14 @@ export function drawWeaponStudioScreen() {
   ctx.fillText('[ WEAPON STUDIO ]', canvas.width / 2, 74);
   ctx.restore();
 
-  // Weapon Selector Chips (2 Rows of Clean Chamfered Tabs)
+  // Weapon Selector Chips (3 Rows of Clean Chamfered Tabs)
   const weapons = [
     { key: 'mahito', label: 'MAHITO' },
     { key: 'yuta', label: 'YUTA' },
     { key: 'toji', label: 'TOJI' },
     { key: 'cronos', label: 'CRONOS' },
     { key: 'ruby', label: 'RUBY' },
+    { key: 'roaring_knight', label: 'R. KNIGHT' },
     { key: 'rubbick', label: 'RUBBICK' },
     { key: 'uryu', label: 'URYU' },
     { key: 'ulquiorra', label: 'ULQUIORRA' },
@@ -235,10 +241,10 @@ export function drawWeaponStudioScreen() {
     { key: 'guts', label: 'GUTS' }
   ];
 
-  // Distribute across 3 rows for better spacing (5, 5, 6)
-  const row1 = weapons.slice(0, 5);
-  const row2 = weapons.slice(5, 10);
-  const row3 = weapons.slice(10, 16);
+  // Distribute across 3 rows (6, 5, 6) preserving existing row3 chip coordinates
+  const row1 = weapons.slice(0, 6);
+  const row2 = weapons.slice(6, 11);
+  const row3 = weapons.slice(11, 17);
 
   const rW = 80;
   const rH = 22;

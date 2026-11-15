@@ -298,9 +298,12 @@ export function drawRoaringKnightPixelBody(ctx, r) {
 export function drawRoaringKnightSkin(ctx, fighter) {
   const r = fighter.r || 25;
   const zOffset = fighter.z || 0;
+  const shakeAmt = fighter.parryShakeTimer > 0
+    ? Math.sin(fighter.parryShakeTimer * 1.9) * 3.2 * Math.min(1, fighter.parryShakeTimer / 8)
+    : 0;
 
   ctx.save();
-  ctx.translate(fighter.x, fighter.y - zOffset);
+  ctx.translate(fighter.x + shakeAmt, fighter.y - zOffset);
 
   const angle = fighter._isWinnerReveal
     ? 0
@@ -340,6 +343,18 @@ export function drawRoaringKnightSkin(ctx, fighter) {
 
   // Layer 2: Horned Antler Crown (Rule 22)
   _drawRoaringKnightHair(ctx, r, facingLeft);
+
+  // Layer 2.5: Deltarune Knight Parry White Flash Overlay (blockanim whiteflash = 2)
+  if (fighter.parryWhiteFlashTimer > 0) {
+    const flashAlpha = Math.min(0.85, (fighter.parryWhiteFlashTimer / 6) * 0.78);
+    ctx.fillStyle = `rgba(255, 255, 255, ${(flashAlpha * 0.55).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${flashAlpha.toFixed(2)})`;
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+  }
 
   if (typeof fighter.drawStatusOverlays === 'function') {
     fighter.drawStatusOverlays(ctx, r);

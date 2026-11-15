@@ -625,11 +625,20 @@ export function drawSansGhostModel(ctx, r) {
  * Pure luminous cyan and bone spectral ghost model (Zero black shorts, zero dark shadows).
  */
 export function drawSansAfterImages(ctx, fighter) {
-  const isSuppressed = typeof fighter?.areAttackEffectsSuppressed === 'function'
-    ? fighter.areAttackEffectsSuppressed()
-    : isSuppressedByGetsuga(fighter);
+  const isDeadOrGhost = !fighter || (fighter.hp !== undefined && fighter.hp <= 0) || fighter.isDead || (fighter.isPacmanGhost && (fighter.pacmanGhostTimer || 0) > 0);
+  const isHardSuppressed = Boolean(
+    fighter && (
+      fighter.isTargetOfAmbush ||
+      fighter.isCaughtInTelekinesis ||
+      fighter.isCaughtInBlackHole ||
+      fighter._insideBlackHole ||
+      (fighter._hitByGetsugaTimer && fighter._hitByGetsugaTimer > 0) ||
+      (fighter._hitByFugaTimer && fighter._hitByFugaTimer > 0) ||
+      (fighter._hitByDivineFlameTimer && fighter._hitByDivineFlameTimer > 0)
+    )
+  );
 
-  if (!fighter || !fighter.afterImages || fighter.afterImages.length === 0 || isSuppressed || fighter._isSilhouettePass) return;
+  if (!fighter || !fighter.afterImages || fighter.afterImages.length === 0 || isDeadOrGhost || isHardSuppressed || fighter._isSilhouettePass) return;
   const r = fighter.r || 25;
 
   ctx.save();

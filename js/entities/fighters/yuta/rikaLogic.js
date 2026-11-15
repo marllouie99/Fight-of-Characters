@@ -655,11 +655,15 @@ export function updateRika(fighter, arena) {
                   const dy = enemy.y - rk.y;
                   const dist = Math.hypot(dx, dy) || 1;
                   if (dist <= roarRadius + enemy.r) {
-                    enemy.takeDamage(roarPulseDamage, fighter, { isPhysical: true, isRikaAttack: true });
-                    if (typeof enemy.applyHitStun === 'function') enemy.applyHitStun(10);
-                    enemy.vx += (dx / dist) * 5;
-                    enemy.vy += (dy / dist) * 5;
-                    if (typeof spawnImpactFlash === 'function') spawnImpactFlash(enemy.x, enemy.y, 35, 'rgba(255, 20, 147, 0.6)');
+                    const prevHp = enemy.hp;
+                    const hitRes = enemy.takeDamage(roarPulseDamage, fighter, { isPhysical: true, isRikaAttack: true });
+                    const didHit = (enemy.hp < prevHp) || (hitRes !== false && hitRes > 0);
+                    if (didHit) {
+                      if (typeof enemy.applyHitStun === 'function') enemy.applyHitStun(10);
+                      enemy.vx += (dx / dist) * 5;
+                      enemy.vy += (dy / dist) * 5;
+                      if (typeof spawnImpactFlash === 'function') spawnImpactFlash(enemy.x, enemy.y, 35, 'rgba(255, 20, 147, 0.6)');
+                    }
                   }
                 }
               }
@@ -675,11 +679,15 @@ export function updateRika(fighter, arena) {
                 const dy = ill.y - rk.y;
                 const dist = Math.hypot(dx, dy) || 1;
                 if (dist <= roarRadius + (ill.r || 20)) {
-                  ill.takeDamage(roarPulseDamage, fighter, { isPhysical: true, isRikaAttack: true });
-                  if (typeof ill.applyHitStun === 'function') ill.applyHitStun(10);
-                  ill.vx += (dx / dist) * 5;
-                  ill.vy += (dy / dist) * 5;
-                  if (typeof spawnImpactFlash === 'function') spawnImpactFlash(ill.x, ill.y, 35, 'rgba(255, 20, 147, 0.6)');
+                  const prevHp = ill.hp;
+                  const hitRes = ill.takeDamage(roarPulseDamage, fighter, { isPhysical: true, isRikaAttack: true });
+                  const didHit = (ill.hp < prevHp) || (hitRes !== false && hitRes > 0);
+                  if (didHit) {
+                    if (typeof ill.applyHitStun === 'function') ill.applyHitStun(10);
+                    ill.vx += (dx / dist) * 5;
+                    ill.vy += (dy / dist) * 5;
+                    if (typeof spawnImpactFlash === 'function') spawnImpactFlash(ill.x, ill.y, 35, 'rgba(255, 20, 147, 0.6)');
+                  }
                 }
               }
             });
@@ -738,16 +746,20 @@ export function updateRika(fighter, arena) {
                   const dy = enemy.y - rk.y;
                   const dist = Math.hypot(dx, dy) || 1;
                   if (dist <= emergenceRadius + enemy.r) {
-                    enemy.takeDamage(emergenceDamage, fighter, { isPhysical: true, isTrueDamage: true, isRikaAttack: true });
-                    if (typeof enemy.applyHitStun === 'function') enemy.applyHitStun(emergenceHitStun);
-                    if (emergenceKnockback > 0) {
-                      const pushVx = (dx / dist) * emergenceKnockback;
-                      const pushVy = (dy / dist) * emergenceKnockback;
-                      enemy.vx += pushVx;
-                      enemy.vy += pushVy;
-                      if (typeof enemy.applyKnockback === 'function') enemy.applyKnockback(pushVx * 0.5, pushVy * 0.5);
+                    const prevHp = enemy.hp;
+                    const hitRes = enemy.takeDamage(emergenceDamage, fighter, { isPhysical: true, isTrueDamage: true, isRikaAttack: true });
+                    const didHit = (enemy.hp < prevHp) || (hitRes !== false && hitRes > 0);
+                    if (didHit) {
+                      if (typeof enemy.applyHitStun === 'function') enemy.applyHitStun(emergenceHitStun);
+                      if (emergenceKnockback > 0) {
+                        const pushVx = (dx / dist) * emergenceKnockback;
+                        const pushVy = (dy / dist) * emergenceKnockback;
+                        enemy.vx += pushVx;
+                        enemy.vy += pushVy;
+                        if (typeof enemy.applyKnockback === 'function') enemy.applyKnockback(pushVx * 0.5, pushVy * 0.5);
+                      }
+                      if (typeof spawnFloatingText === 'function') spawnFloatingText(enemy.x, enemy.y - 30, 'EMERGENCE BLAST!', '#FF1493');
                     }
-                    if (typeof spawnFloatingText === 'function') spawnFloatingText(enemy.x, enemy.y - 30, 'EMERGENCE BLAST!', '#FF1493');
                   }
                 }
               }
@@ -762,16 +774,20 @@ export function updateRika(fighter, arena) {
                 const dy = ill.y - rk.y;
                 const dist = Math.hypot(dx, dy) || 1;
                 if (dist <= emergenceRadius + (ill.r || 20)) {
-                  ill.takeDamage(emergenceDamage, fighter, { isPhysical: true, isTrueDamage: true, isRikaAttack: true });
-                  if (typeof ill.applyHitStun === 'function') ill.applyHitStun(emergenceHitStun);
-                  if (emergenceKnockback > 0) {
-                    const pushVx = (dx / dist) * emergenceKnockback;
-                    const pushVy = (dy / dist) * emergenceKnockback;
-                    ill.vx += pushVx;
-                    ill.vy += pushVy;
-                    if (typeof ill.applyKnockback === 'function') ill.applyKnockback(pushVx * 0.5, pushVy * 0.5);
+                  const prevHp = ill.hp;
+                  const hitRes = ill.takeDamage(emergenceDamage, fighter, { isPhysical: true, isTrueDamage: true, isRikaAttack: true });
+                  const didHit = (ill.hp < prevHp) || (hitRes !== false && hitRes > 0);
+                  if (didHit) {
+                    if (typeof ill.applyHitStun === 'function') ill.applyHitStun(emergenceHitStun);
+                    if (emergenceKnockback > 0) {
+                      const pushVx = (dx / dist) * emergenceKnockback;
+                      const pushVy = (dy / dist) * emergenceKnockback;
+                      ill.vx += pushVx;
+                      ill.vy += pushVy;
+                      if (typeof ill.applyKnockback === 'function') ill.applyKnockback(pushVx * 0.5, pushVy * 0.5);
+                    }
+                    if (typeof spawnFloatingText === 'function') spawnFloatingText(ill.x, ill.y - 30, 'EMERGENCE BLAST!', '#FF1493');
                   }
-                  if (typeof spawnFloatingText === 'function') spawnFloatingText(ill.x, ill.y - 30, 'EMERGENCE BLAST!', '#FF1493');
                 }
               }
             });
@@ -1050,10 +1066,13 @@ export function updateRika(fighter, arena) {
 
       let anyHit = false;
       for (const target of aoeTargets) {
+        const prevHp = target.hp;
         const hitResult = target.takeDamage(rikaDmg, attackOwner, { isPhysical: true, isRikaAttack: true, rika: rk });
-        if (hitResult !== false) {
-          anyHit = true;
+        const didHit = (target.hp < prevHp) || (hitResult !== false && hitResult > 0);
+        if (!didHit) {
+          continue;
         }
+        anyHit = true;
 
         if (knockbackForce > 0) {
           const pushAngle = Math.atan2(target.y - rk.y, target.x - rk.x);

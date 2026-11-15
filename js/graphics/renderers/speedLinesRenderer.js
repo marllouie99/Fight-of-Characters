@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────
 import { state } from '../../core/state.js';
 import { isSuppressedByGetsuga } from '../../entities/fighter.js';
+import { clipCtxToArena } from './arenaClipHelper.js';
 
 // ──────────────────────────────────────────
 // Genos Machine Gun Blows & Dash Speed Lines
@@ -242,6 +243,7 @@ export function drawSaitamaSpeedLines() {
   const now = Date.now();
 
   ctx.save();
+  clipCtxToArena(ctx, state.arena);
 
   for (let i = 0; i < _saitamaSpeedLineSeeds.length; i++) {
     const seed = _saitamaSpeedLineSeeds[i];

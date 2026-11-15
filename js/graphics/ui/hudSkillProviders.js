@@ -102,21 +102,42 @@ export const HUD_SKILL_PROVIDERS = {
     const themeColor = cfg.hudSkillBarColor || f.themeColor || cfg.themeColor || '#C026D3';
     const skills = [];
 
-    // 1. Dragon's Breath / Fireball (Skill 1)
+    // 1. Dragon's Breath / Fireball (Skill 1 - Active Stay Duration & Cooldown)
     if (isSkillEnabled(f.enableFireball, f._def?.enableFireball, f.enableDragonsBreath, f._def?.enableDragonsBreath, cfg.enableFireball, cfg.enableDragonsBreath, true)) {
       const cdMax = cfg.fireballCooldown || 480;
       const cdTimer = f.fireballCooldown !== undefined ? f.fireballCooldown : 0;
-      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
-      const ready = pct >= 99 && cdTimer <= 0;
-      const label = cdTimer > 0 ? `DRAGON'S BREATH (${(cdTimer / 60).toFixed(1)}S)` : "DRAGON'S BREATH";
-      skills.push({ id: 'dragons_breath', pct, ready, color: themeColor, label });
+      let activeBreathRem = 0;
+      let activeBreathMax = 0;
+      if (Array.isArray(f.acidPools)) {
+        for (let i = 0; i < f.acidPools.length; i++) {
+          const p = f.acidPools[i];
+          if (p && p.source === 'breath' && p.duration > activeBreathRem) {
+            activeBreathRem = p.duration;
+            activeBreathMax = Math.max(activeBreathMax, p.maxDuration || cfg.dragonsBreathStayDuration || cfg.acidPoolDurationFrames || 180);
+          }
+        }
+      }
+
+      if (activeBreathRem > 0) {
+        const durCap = Math.max(1, activeBreathMax);
+        const pct = Math.max(0, Math.min(100, (activeBreathRem / durCap) * 100));
+        const label = `DRAGON'S BREATH (${(activeBreathRem / 60).toFixed(1)}S)`;
+        skills.push({ id: 'dragons_breath', pct, ready: false, color: themeColor, label, active: true });
+      } else {
+        const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
+        const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
+        const ready = pct >= 99 && cdTimer <= 0;
+        const label = cdTimer > 0 ? `DRAGON'S BREATH (${(cdTimer / 60).toFixed(1)}S)` : "DRAGON'S BREATH";
+        skills.push({ id: 'dragons_breath', pct, ready, color: themeColor, label });
+      }
     }
 
     // 2. Wing Buffet / Kinetic Swoop (Skill 2)
     if (isSkillEnabled(f.enableSwoop, f._def?.enableSwoop, f.enableWingBuffet, f._def?.enableWingBuffet, cfg.enableSwoop, cfg.enableWingBuffet, true)) {
       const cdMax = cfg.swoopCooldown || 540;
       const cdTimer = f.swoopCooldown !== undefined ? f.swoopCooldown : 0;
-      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
       const ready = pct >= 99 && cdTimer <= 0;
       const label = cdTimer > 0 ? `WING BUFFET (${(cdTimer / 60).toFixed(1)}S)` : 'WING BUFFET';
       skills.push({ id: 'wing_buffet', pct, ready, color: themeColor, label });
@@ -126,7 +147,8 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(f.enableDivebomb, f._def?.enableDivebomb, f.enableVoidDivebomb, f._def?.enableVoidDivebomb, cfg.enableDivebomb, cfg.enableVoidDivebomb, true)) {
       const cdMax = cfg.divebombCooldown || 600;
       const cdTimer = f.divebombCooldown !== undefined ? f.divebombCooldown : 0;
-      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
       const ready = pct >= 99 && cdTimer <= 0;
       const label = cdTimer > 0 ? `VOID DIVEBOMB (${(cdTimer / 60).toFixed(1)}S)` : 'VOID DIVEBOMB';
       skills.push({ id: 'divebomb_strafe', pct, ready, color: themeColor, label, isSignature: true, signature: true });
@@ -136,7 +158,8 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(f.enableCataclysm, f._def?.enableCataclysm, f.enableVoidCataclysm, f._def?.enableVoidCataclysm, cfg.enableCataclysm, cfg.enableVoidCataclysm, true)) {
       const cdMax = cfg.cataclysmCooldown || 1100;
       const cdTimer = f.cataclysmCooldown !== undefined ? f.cataclysmCooldown : 0;
-      const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
+      const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
       const ready = pct >= 99 && cdTimer <= 0;
       const label = cdTimer > 0 ? `VOID CATACLYSM (${(cdTimer / 60).toFixed(1)}S)` : 'VOID CATACLYSM';
       skills.push({ id: 'void_cataclysm', pct, ready, color: themeColor, label, isSignature: true, signature: true, isUltimate: true });
@@ -2915,21 +2938,7 @@ export const HUD_SKILL_PROVIDERS = {
       });
     }
 
-    // 2. Skill 2: Supernova (Omnidirectional Fragmentation)
-    if (isSkillEnabled(cfg.enableSupernova, true)) {
-      const novaMax = f.skill2CooldownMax || cfg.skill2Cooldown || 540;
-      const novaCd = f.skill2Cooldown !== undefined ? f.skill2Cooldown : 0;
-      const novaPct = Math.max(0, Math.min(100, (1 - (novaCd / novaMax)) * 100));
-      skills.push({
-        id: 'supernova',
-        pct: novaPct,
-        ready: novaPct >= 99 && novaCd <= 0,
-        color: themeColor,
-        label: 'SUPERNOVA'
-      });
-    }
-
-    // 3. Skill 3: Piercing Blood (Supersonic Hydraulic Beam)
+    // 2. Skill 3: Piercing Blood (Supersonic Hydraulic Beam)
     if (isSkillEnabled(cfg.enablePiercingBlood, true)) {
       const pbMax = f.piercingBloodCooldownMax || cfg.piercingBloodCooldown || 900;
       const pbCd = f.piercingBloodCooldown !== undefined ? f.piercingBloodCooldown : 0;
@@ -3355,76 +3364,86 @@ export const HUD_SKILL_PROVIDERS = {
 
     // 1. Passive: Shadow Mantle Dash
     if (isSkillEnabled(cfg.enableShadowMantle, true)) {
+      const dashTimer = f.shadowStepCooldownTimer || 0;
+      const dashMax = Math.max(1, cfg.shadowStepCooldown || 135, dashTimer);
+      const dashPct = Math.max(0, Math.min(100, (1 - dashTimer / dashMax) * 100));
+      const dashLabel = dashTimer > 0
+        ? `SHADOW MANTLE (${(dashTimer / 60).toFixed(1)}S)`
+        : 'SHADOW MANTLE';
       skills.push({
         id: 'shadow_mantle',
-        pct: 100,
-        ready: true,
+        pct: dashPct,
+        ready: dashTimer <= 0,
         color: themeColor,
-        label: 'SHADOW MANTLE',
+        label: dashLabel,
       });
     }
 
-    // 2. Skill 1: Falling Swords
-    if (isSkillEnabled(cfg.enableFallingSwords, true)) {
-      const cdMax = cfg.fallingSwordsCooldown || 340;
-      const cdTimer = f.fallingSwordsCooldownTimer || 0;
-      const isCasting = Boolean(f.isFallingSwordsCasting);
-      const pct = isCasting
+    // 2. Unified Skill 1 Slot (Randomly picks from enabled active skills when shared CD is up)
+    const hasAnySkill1 =
+      isSkillEnabled(cfg.enableFallingSwords, true) ||
+      isSkillEnabled(cfg.enableStarBurst, true) ||
+      isSkillEnabled(cfg.enableBladeCorridor, true) ||
+      isSkillEnabled(cfg.enableSwordTunnel, true) ||
+      isSkillEnabled(cfg.enableSwordTunnelPhase2, true) ||
+      isSkillEnabled(cfg.enableSwordTunnelFinisher, true) ||
+      isSkillEnabled(cfg.enableSnowflakeMatrix, true);
+    if (isSkillEnabled(cfg.enableSkill1, true) && hasAnySkill1) {
+      const cdTimer = f.skill1CooldownTimer || 0;
+      const cdMax = Math.max(1, f.skill1CooldownMax || cfg.skill1Cooldown || 420, cdTimer);
+      const isSwordCasting = Boolean(f.isFallingSwordsCasting || f._trackingSwordSeq);
+      const isStarCasting = Boolean(f.isStarBurstCasting);
+      const isCorridorCasting = Boolean(f.isBladeCorridorCasting);
+      const isTunnelCasting = Boolean(f.isSwordTunnelCasting || f.activeSwordTunnel || (f.activeTunnelSwords && f.activeTunnelSwords.some(s => s.finisherStage && s.finisherStage !== 'idle')));
+      const isMatrixCasting = Boolean(f.isSnowflakeMatrixCasting);
+      const isCasting = isSwordCasting || isStarCasting || isCorridorCasting || isTunnelCasting || isMatrixCasting;
+      const activeSkillName = isSwordCasting
+        ? 'TRACKING SWORD'
+        : isStarCasting
+          ? 'STAR BURST'
+          : isCorridorCasting
+            ? 'BLADE CORRIDOR'
+            : isTunnelCasting
+              ? (f._activeSkill1Label || 'SWORD TUNNEL')
+              : isMatrixCasting
+                ? 'SNOWFLAKE SLASH'
+                : (f._activeSkill1Label || 'SKILL 1');
+      const pct = (isCasting && cdTimer <= 0)
         ? 100
         : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
       const secLeft = (cdTimer / 60).toFixed(1);
-      const label = (!isCasting && cdTimer > 0)
-        ? `FALLING SWORDS (${secLeft}S)`
-        : 'FALLING SWORDS';
+      const baseName = isCasting ? activeSkillName : 'SKILL 1';
+      const label = cdTimer > 0 ? `${baseName} (${secLeft}S)` : baseName;
 
       skills.push({
-        id: 'falling_swords',
+        id: 'roaring_skill1',
         pct,
+        active: isCasting && cdTimer <= 0,
         ready: !isCasting && pct >= 99 && cdTimer <= 0,
         color: themeColor,
         label,
       });
     }
 
-    // 3. Skill 2: Star Burst
-    if (isSkillEnabled(cfg.enableStarBurst, true)) {
-      const cdMax = cfg.starBurstCooldown || 420;
-      const cdTimer = f.starBurstCooldownTimer || 0;
-      const isCasting = Boolean(f.isStarBurstCasting);
-      const pct = isCasting
-        ? 100
-        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
-      const secLeft = (cdTimer / 60).toFixed(1);
-      const label = (!isCasting && cdTimer > 0)
-        ? `STAR BURST (${secLeft}S)`
-        : 'STAR BURST';
-
-      skills.push({
-        id: 'star_burst',
-        pct,
-        ready: !isCasting && pct >= 99 && cdTimer <= 0,
-        color: themeColor,
-        label,
-      });
-    }
-
-    // 4. Ultimate: Roaring Swoon
-    if (isSkillEnabled(cfg.enableRoaringSwoon, true)) {
-      const cdMax = cfg.swoonCooldown || 780;
+    // 4. Ultimate: Rotating Slash (Phase 3 Finisher — Activated at 10 Basic Attack Hits)
+    if (isSkillEnabled(cfg.enableRotatingSlash ?? cfg.enableRoaringSwoon, true)) {
+      const hitsReq = Math.max(1, cfg.swoonHitsRequired ?? 10);
+      const curHits = Math.min(hitsReq, f.swoonBasicHits || 0);
       const cdTimer = f.swoonCooldownTimer || 0;
-      const isChanneling = Boolean(f.isSwoonChanneling || (f.swoonActiveTimer || 0) > 0);
+      const isChanneling = Boolean(f.isSwoonChanneling || (f.swoonActiveTimer || 0) > 0 || f._rotatingSlashSeq);
+      const isReady = !isChanneling && curHits >= hitsReq && cdTimer <= 0;
       const pct = isChanneling
         ? 100
-        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
-      const secLeft = (cdTimer / 60).toFixed(1);
-      const label = (!isChanneling && cdTimer > 0)
-        ? `ROARING SWOON (${secLeft}S)`
-        : 'ROARING SWOON';
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const label = (isChanneling || isReady)
+        ? 'ROTATING SLASH'
+        : `ROTATING SLASH (${curHits}/${hitsReq})`;
 
       skills.push({
         id: 'roaring_swoon',
         pct,
-        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        active: isChanneling,
+        ready: isReady,
         color: themeColor,
         label,
         isSignature: true,
@@ -4216,8 +4235,8 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     isagi: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'direct_volley', 'directvolley', 'DIRECT VOLLEY', 'metavision', 'METAVISION', 'ego', 'EGO'],
     chigiri: ['striker', 'striker!', 'STRIKER', 'STRIKER!', 'panther_sprint', 'PANTHER SPRINT', 'ego', 'EGO'],
     warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic'],
-    roaring_knight: ['roaring_swoon', 'roaringswoon', 'ROARING SWOON', 'swoon'],
-    roaringknight: ['roaring_swoon', 'roaringswoon', 'ROARING SWOON', 'swoon'],
+    roaring_knight: ['roaring_swoon', 'roaringswoon', 'ROTATING SLASH', 'rotating_slash', 'rotatingslash', 'ROARING SWOON', 'swoon'],
+    roaringknight: ['roaring_swoon', 'roaringswoon', 'ROTATING SLASH', 'rotating_slash', 'rotatingslash', 'ROARING SWOON', 'swoon'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 

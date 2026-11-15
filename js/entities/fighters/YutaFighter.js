@@ -443,11 +443,14 @@ export class YutaFighter extends Fighter {
     const dmgMult = typeof this.getRikaDamageMultiplier === 'function' ? this.getRikaDamageMultiplier() : 1.0;
     const flurryDmg = ((CONFIG.yuta?.flurryDamage || 8) + bonusDmg) * dmgMult;
 
-    target.takeDamage(flurryDmg, this, {
+    const prevHp = target.hp;
+    const dmgResult = target.takeDamage(flurryDmg, this, {
       isMelee: true,
       isSkill: true,
       isYutaFlurry: true
     });
+    const didHit = (target.hp < prevHp) || (dmgResult !== false && dmgResult > 0);
+    if (!didHit) return;
 
     spawnFloatingText(contactX, contactY - 12, 'SLASH!', '#FF1493');
     spawnSparks(contactX, contactY, 20, 'silver', { color: 'rgba(255, 20, 147, 1)', blendMode: 0 });

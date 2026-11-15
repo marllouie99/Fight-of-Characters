@@ -128,7 +128,7 @@ export const sansConfig = {
   blasterGigaScale: 2.6,        // Massive skull sprite scale
   blasterGigaChargeTime: 32,    // Heavy charge telegraph build-up (~0.53s)
   blasterGigaFireDuration: 36,  // Prolonged apocalyptic laser beam (~0.60s)
-  blasterGigaDamage: 30,        // Base damage per blaster (100% first impact = 30, 50% continuous = 15)
+  blasterGigaDamage: 50,        // Base damage per blaster (100% first impact = 30, 50% continuous = 15)
   blasterGigaBeamHeight: 120,   // Pattern 3 Giant titan laser beam thickness / height (pixels)
   blasterGigaBeamWidth: 120,    // Alias for blasterGigaBeamHeight
   blasterGigaLaserHeight: 1000, // Giant titan laser corridor length / reach (pixels)

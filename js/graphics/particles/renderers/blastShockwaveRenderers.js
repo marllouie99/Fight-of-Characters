@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────
 import { state } from '../../../core/state.js';
 import { drawGojoPurpleExplosion } from '../../weapons/gojoWeaponGraphics.js';
+import { clipCtxToArena } from '../../renderers/arenaClipHelper.js';
 
 function _isDarkMode() {
   return Boolean(
@@ -1248,6 +1249,9 @@ export function drawAnimeImpactFrame(ctx, effect) {
 
 export function drawPunchWindSpeedLine(ctx, effect) {
   ctx.save();
+  if (effect.clipToArena !== false && typeof state !== 'undefined' && state?.arena) {
+    clipCtxToArena(ctx, state.arena);
+  }
   ctx.globalCompositeOperation = 'lighter';
 
   const alpha = Math.min(1.0, effect.life * 1.4);
@@ -1299,6 +1303,9 @@ export function drawSaitamaCounterFrontalBlast(ctx, effect) {
   if (alpha <= 0.01) return;
 
   ctx.save();
+  if (effect.clipToArena !== false && typeof state !== 'undefined' && state?.arena) {
+    clipCtxToArena(ctx, state.arena);
+  }
   ctx.translate(startX, startY);
   ctx.rotate(angle);
 
@@ -1436,6 +1443,9 @@ export function drawGojoRedFrontalBlast(ctx, effect) {
   if (alpha <= 0.01) return;
 
   ctx.save();
+  if (effect.clipToArena !== false && typeof state !== 'undefined' && state?.arena) {
+    clipCtxToArena(ctx, state.arena);
+  }
   ctx.translate(startX, startY);
   ctx.rotate(angle);
 

@@ -499,6 +499,8 @@ export function reinitFighters(isNewMatch = false) {
       state.fighters = state.fighters.filter(f => !f.isEndCrystal);
       for (let cDef of bossMap.crystals) {
         const crystal = new EndCrystalEntity(cDef.x, cDef.y, cDef.id, cDef.name);
+        crystal.owner = state.fighters[0];
+        crystal.team = state.fighters[0]?.team;
         state.fighters.push(crystal);
       }
     }

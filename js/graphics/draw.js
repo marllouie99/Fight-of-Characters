@@ -56,7 +56,7 @@ export { drawPacmanSkin, drawPacmanPixelBody, _drawPacmanHair, _getPacmanHairIma
 export { drawCreeperSkin, drawCreeperPixelBody, _drawCreeperHair } from './fighters/creeperSkin.js';
 export { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from './fighters/wardenSkin.js';
 export { drawRoaringKnightSkin, drawRoaringKnightPixelBody, drawRoaringKnightGhostSkin, _drawRoaringKnightHair, _getRoaringKnightHairImage } from './fighters/roaringKnightSkin.js';
-export { drawRoaringKnightBlackKnife, drawFallingSwordEntity, drawStarBurstProjectile, drawStarChildFragment, drawRoaringSwoonVFX } from './weapons/roaringKnightWeaponGraphics.js';
+export { drawRoaringKnightBlackKnife, drawRoaringKnightWeaponPreview, drawFallingSwordEntity, drawTrackingSwordSlashVFX, drawStarBurstProjectile, drawStarChildFragment, drawRoaringSwoonVFX, drawRotatingSlashTelegraph, drawRotatingSlashVFX, drawRoaringKnightFrontSlashTrail, isRoaringKnightFlurryReady } from './weapons/roaringKnightWeaponGraphics.js';
 export { drawIsagiSkin, drawIsagiGhostSkin, drawIsagiPixelBody, _drawIsagiHair, _getIsagiHairImage, drawIsagiFist } from './fighters/isagiSkin.js';
 export { drawChigiriSkin, drawChigiriGhostSkin, drawChigiriPixelBody, _drawChigiriHair, _getChigiriHairImage, drawChigiriFist } from './fighters/chigiriSkin.js';
 export { drawMinecraftTntBlock, drawCreeperExplosion } from './weapons/creeperWeaponGraphics.js';

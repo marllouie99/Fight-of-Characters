@@ -304,7 +304,12 @@ export function resolveFighterCollision(a, b) {
     if (victim && !victim.isEndCrystal && !victim.isBoss && typeof dragon._catchAndDragVictim === 'function') {
       const isTeammate = (typeof dragon.isTeammate === 'function') ? dragon.isTeammate(victim) : false;
       if (!isTeammate) {
-        dragon._catchAndDragVictim(victim);
+        const inCorridor = typeof dragon._isTargetInDivebombStrikeCorridor === 'function'
+          ? dragon._isTargetInDivebombStrikeCorridor(victim)
+          : (wasmDistSq(a.x, a.y, b.x, b.y) < (a.r + b.r) * (a.r + b.r));
+        if (inCorridor) {
+          dragon._catchAndDragVictim(victim);
+        }
       }
     }
     return; // Skip standard elastic bounce and separation physics
@@ -1333,6 +1338,18 @@ export function updateFighters() {
         // Survivor horde mobs are managed exclusively by survivorSystem to provide locked 60 FPS horde physics
         return;
       }
+      const tickContainedFighterCooldowns = (containedFighter) => {
+        containedFighter.interruptAttacks?.(true);
+        if (containedFighter.skillManager) {
+          containedFighter.skillManager.interruptAll?.(true);
+        }
+        if (typeof containedFighter._tickCooldowns === 'function') {
+          containedFighter._tickCooldowns();
+        }
+        if (typeof containedFighter._syncSkillCooldowns === 'function') {
+          containedFighter._syncSkillCooldowns();
+        }
+      };
       // Swallowed by Pac-Man state:
       // While inside Pac-Man's belly, position tracks Pac-Man and physics/skills are contained
       if (fighter.isSwallowedByPacman && fighter.swallowedBy) {
@@ -1348,6 +1365,9 @@ export function updateFighters() {
           fighter.y = fighter.swallowedBy.y;
           fighter.vx = 0;
           fighter.vy = 0;
+          fighter.knockbackVx = 0;
+          fighter.knockbackVy = 0;
+          tickContainedFighterCooldowns(fighter);
           // Update persistent deployed arena objects (e.g. Bomberman active bombs & cross explosions)
           if (typeof fighter.updateDeployedObjects === 'function') {
             fighter.updateDeployedObjects(state.arena);
@@ -1356,13 +1376,13 @@ export function updateFighters() {
         }
       }
       // Pac-Man Frightened Ghost State:
-      // While transformed, the enemy cannot cast any skills, skill cooldowns are paused,
-      // all abilities are disabled, and all they can do is move until the duration expires!
+      // While transformed, the enemy cannot cast any skills and all abilities are disabled,
+      // moving until the duration expires while skill cooldowns continue ticking down cleanly!
       if (fighter.isPacmanGhost && (fighter.pacmanGhostTimer || 0) > 0) {
-        const isPlant = Boolean(fighter.isPlant || fighter.isPlantMinion || fighter.isPlantBarrier || fighter.isWallnut || fighter.isImmovable || fighter.characterId === 'crazydave_plant');
+        const isPlant = Boolean(fighter.isPlant || fighter.isPlantMinion || fighter.isPlantBarrier || fighter.isWallnut || fighter.isEndCrystal || fighter.isImmovable || fighter.characterId === 'crazydave_plant');
         if (
           fighter.isLawnmower ||
-          (!isPlant && (fighter.isDeployable || fighter.isBuilding || fighter.isTurret || fighter.isDispenser || fighter.isEndCrystal))
+          (!isPlant && (fighter.isDeployable || fighter.isBuilding || fighter.isTurret || fighter.isDispenser))
         ) {
           fighter.isPacmanGhost = false;
           fighter.pacmanGhostTimer = 0;
@@ -1379,10 +1399,7 @@ export function updateFighters() {
               }
             }
           }
-          fighter.interruptAttacks?.(true);
-          if (fighter.skillManager) {
-            fighter.skillManager.interruptAll?.(true);
-          }
+          tickContainedFighterCooldowns(fighter);
           if (isPlant) {
             fighter.vx = 0;
             fighter.vy = 0;

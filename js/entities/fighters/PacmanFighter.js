@@ -46,6 +46,8 @@ export class PacmanFighter extends Fighter {
     this.powerPelletRadius = cfg.powerPelletRadius ?? 8;
     this.dotColor = cfg.dotColor || '#FFE082';
     this.powerPelletColor = cfg.powerPelletColor || '#FACC15';
+    this.dotHealAmount = cfg.dotHealAmount ?? 4;
+    this.powerPelletHealAmount = cfg.powerPelletHealAmount ?? 12;
 
     this.dots = [];
     this.totalDots = 0;
@@ -342,10 +344,32 @@ export class PacmanFighter extends Fighter {
   }
 
   /**
+   * Resolves the team index of an entity, preferring its owner/tethered dragon when present.
+   * Prevents boss/multi-team deployables or crystals appended to state.fighters from inheriting the challenger's team slot.
+   * @param {Object} entity
+   * @param {number} [fighterIdx=-1]
+   * @returns {number|null}
+   */
+  _getEntityTeam(entity, fighterIdx = -1) {
+    if (!entity || typeof state === 'undefined' || typeof state.getFighterTeam !== 'function') {
+      return entity?.team ?? null;
+    }
+    const ownerRef = entity.owner || (entity.isEndCrystal ? entity.tetherDragonTarget : null);
+    if (ownerRef && Array.isArray(state.fighters)) {
+      const ownerIdx = state.fighters.indexOf(ownerRef);
+      if (ownerIdx !== -1) return state.getFighterTeam(ownerIdx);
+      if (ownerRef.team !== undefined) return ownerRef.team;
+    }
+    const idx = fighterIdx >= 0 ? fighterIdx : (Array.isArray(state.fighters) ? state.fighters.indexOf(entity) : -1);
+    const resolved = idx >= 0 ? state.getFighterTeam(idx) : null;
+    return resolved !== null && resolved !== undefined ? resolved : (entity.team ?? null);
+  }
+
+  /**
    * Evaluates whether an entity is an eligible target to be turned into a frightened ghost or swallowed into Pac-Man's belly.
-   * Plants CAN become frightened ghosts (they stay completely stationary).
+   * Plants and End Crystals CAN become frightened ghosts (they stay completely stationary).
    * STRICT EXCLUSIONS: Inanimate deployables, Crazy Dave lawnmower carts,
-   * turrets, dispensers, buildings, end crystals, traps, barriers, and untargetable entities CANNOT become ghosts or be swallowed!
+   * turrets, dispensers, buildings, traps, barriers, and untargetable entities CANNOT become ghosts or be swallowed!
    * @param {Object} entity
    * @returns {boolean}
    */
@@ -355,12 +379,12 @@ export class PacmanFighter extends Fighter {
     if (entity.hp <= 0 || entity.isDead || entity.dead) return false;
     // Crazy Dave lawnmowers / carts
     if (entity.isLawnmower || entity.type === 'Lawnmower' || entity.characterId === 'crazydave_lawnmower') return false;
-    // Crazy Dave plants CAN become ghosts (even though they have isDeployable)
+    // Crazy Dave plants and Ender Dragon End Crystals CAN become stationary frightened ghosts (even though they have isDeployable)
     const isPlant = Boolean(entity.isPlant || entity.isPlantMinion || entity.isPlantBarrier || entity.isWallnut || entity.characterId === 'crazydave_plant');
-    if (isPlant) return true;
-    // Engineer & general deployables / buildings / turrets / dispensers / traps / crystals / ice walls / barriers
+    if (isPlant || entity.isEndCrystal) return true;
+    // Engineer & general deployables / buildings / turrets / dispensers / traps / ice walls / barriers
     if (entity.isDeployable || entity.isBuilding || entity.isTurret || entity.isDispenser) return false;
-    if (entity.isEndCrystal || entity.isIceWall || entity.isTrap || entity.isBarrier) return false;
+    if (entity.isIceWall || entity.isTrap || entity.isBarrier) return false;
     // Untargetable / invulnerable entities
     if (entity.isUntargetable || entity.untargetable || entity.cannotBeTargeted || entity.isTargetable === false || entity.isInvulnerable) return false;
     return true;
@@ -387,7 +411,8 @@ export class PacmanFighter extends Fighter {
       for (let i = 0; i < state.fighters.length; i++) {
         const f = state.fighters[i];
         if (!f || f === this || f.hp <= 0 || f.isDead || f.dead) continue;
-        if (myTeam !== null && typeof state.getFighterTeam === 'function' && state.getFighterTeam(i) === myTeam) continue;
+        const fTeam = this._getEntityTeam(f, i);
+        if (myTeam !== null && fTeam !== null && fTeam === myTeam) continue;
         if (typeof this.isTeammate === 'function' && this.isTeammate(f)) continue;
         if (!this.isEligibleGhostTarget(f)) continue;
 
@@ -552,6 +577,23 @@ export class PacmanFighter extends Fighter {
   }
 
   /**
+   * Restores HP when Pac-Man consumes a dot or Power Pellet.
+   * Uses base Fighter.heal() with silent mode so healthbar pulses/bubbles update cleanly without text spam.
+   * @param {Object} dot - Consumed dot or Power Pellet object
+   * @param {Object} [cfg] - Active Pac-Man config
+   * @returns {boolean} True if HP was restored
+   */
+  _healFromDot(dot, cfg) {
+    const activeCfg = cfg || ((typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : pacmanConfig);
+    if (activeCfg.enableDotHeal === false) return false;
+    const healAmount = dot?.isPowerPellet
+      ? (activeCfg.powerPelletHealAmount ?? this.powerPelletHealAmount ?? activeCfg.dotHealAmount ?? 12)
+      : (activeCfg.dotHealAmount ?? this.dotHealAmount ?? 4);
+    if (healAmount <= 0) return false;
+    return this.heal(healAmount, { silent: true });
+  }
+
+  /**
    * Checks for dots eaten by Pac-Man during this frame.
    * Eating ANY of the 4 big Power Pellets immediately activates Super Chomp Mode (30% damage bite).
    * Consuming all dots across the arena also triggers Super Chomp Mode and prepares the arena refill.
@@ -585,6 +627,7 @@ export class PacmanFighter extends Fighter {
         dot.eaten = true;
         this.dotsEaten++;
         this._mouthAnimTicks += 6;
+        this._healFromDot(dot, cfg);
 
         if (this.dotsEaten >= this.totalDots) {
           // When all fruits/dots are eaten, activate the extended longer Chomp Mode!
@@ -1128,9 +1171,7 @@ export class PacmanFighter extends Fighter {
             if (!f || f === this || f.hp <= 0 || f.dead || f.isDead || f.isSwallowedByPacman) continue;
             if (f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0) continue;
             if (this.isMinionEntity(f) && this.isEligibleGhostTarget(f)) {
-              const fTeam = (f.owner && typeof state.getFighterTeam === 'function')
-                ? state.getFighterTeam(state.fighters.indexOf(f.owner))
-                : ((typeof state.getFighterTeam === 'function') ? state.getFighterTeam(state.fighters.indexOf(f)) : f.team);
+              const fTeam = this._getEntityTeam(f, i);
               if (myTeam !== null && fTeam !== null && fTeam === myTeam) continue;
               if (typeof this.isTeammate === 'function' && this.isTeammate(f)) continue;
               f.isPacmanGhost = true;
@@ -1152,9 +1193,7 @@ export class PacmanFighter extends Fighter {
         const targets = candidatePool.filter((f) => {
           if (!f || f === this || f.hp <= 0 || f.dead || f.isDead || f.isSwallowedByPacman) return false;
           if (f.isLawnmower || f.type === 'Lawnmower' || f.characterId === 'crazydave_lawnmower') return false;
-          const fTeam = (f.owner && typeof state.getFighterTeam === 'function')
-            ? state.getFighterTeam(state.fighters.indexOf(f.owner))
-            : ((typeof state.getFighterTeam === 'function') ? state.getFighterTeam(state.fighters.indexOf(f)) : f.team);
+          const fTeam = this._getEntityTeam(f);
           if (myTeam !== null && fTeam !== null && fTeam === myTeam) return false;
           if (typeof this.isTeammate === 'function' && this.isTeammate(f)) return false;
           return true;

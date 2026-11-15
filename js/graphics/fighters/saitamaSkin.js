@@ -1,6 +1,11 @@
 import { getHandSize } from '../../core/config.js';
 import { state } from '../../core/state.js';
 import { isSuppressedByGetsuga } from '../../entities/fighter.js';
+import {
+  clipCtxToArena,
+  clipCtxToArenaInLocalSpace,
+  getActiveMatchArenaForFighter
+} from '../renderers/arenaClipHelper.js';
 
 // ─── Saitama Red Glove Sprite Asset Loader (Assets/model/Sprites/Glove-punch.png) ───
 let _saitamaGloveSpriteImage = null;
@@ -433,6 +438,8 @@ export function drawSaitamaSkin(ctx, fighter) {
       const punchLateral = r * 0.20;
 
       ctx.save();
+      const postCounterArena = getActiveMatchArenaForFighter(fighter);
+      if (postCounterArena) clipCtxToArena(ctx, postCounterArena);
       ctx.translate(releaseOriginX, releaseOriginY);
       ctx.rotate(releaseAngle);
       if (releaseFacingLeft) ctx.scale(1, -1);
@@ -464,6 +471,8 @@ export function drawSaitamaSkin(ctx, fighter) {
       const punchLateral = r * 0.20;
 
       ctx.save();
+      const flurryFinalArena = getActiveMatchArenaForFighter(fighter);
+      if (flurryFinalArena) clipCtxToArena(ctx, flurryFinalArena);
       ctx.translate(releaseOriginX, releaseOriginY);
       ctx.rotate(releaseAngle);
       if (releaseFacingLeft) ctx.scale(1, -1);
@@ -491,6 +500,8 @@ export function drawSaitamaSkin(ctx, fighter) {
       const punchLateral = r * 0.25;
 
       ctx.save();
+      const normalPunchArena = getActiveMatchArenaForFighter(fighter);
+      if (normalPunchArena) clipCtxToArena(ctx, normalPunchArena);
       ctx.translate(releaseOriginX, releaseOriginY);
       ctx.rotate(releaseAngle);
       if (releaseFacingLeft) ctx.scale(1, -1);
@@ -741,6 +752,14 @@ function drawConsecutivePunchesBarrage(ctx, r, handRadius, flurryTimer, fighter 
   const snap = (v) => Math.round(v / P) * P;
 
   ctx.save();
+  const arena = getActiveMatchArenaForFighter(fighter);
+  if (arena) {
+    const originX = fighter.x;
+    const originY = fighter.y - (fighter.z || 0);
+    const angle = fighter.gunAngle || fighter.angle || 0;
+    const facingLeft = Math.abs(angle) > Math.PI / 2;
+    clipCtxToArenaInLocalSpace(ctx, originX, originY, angle, facingLeft, arena);
+  }
   for (let i = 0; i < lanes.length; i++) {
     const lane = lanes[i];
     const curPhase = flurryTimer * cycleFreq + lane.phase;

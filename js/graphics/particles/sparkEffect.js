@@ -9,6 +9,7 @@ import { GAME_MODES } from '../../core/modeConfig.js';
 import { fastCleanArray } from './visualTrailSystem.js';
 import { triggerGenosSelfDestructFlash } from '../renderers/effectsRenderer.js';
 import { ParticleSystem, isProtectedParticle } from '../../systems/particles/ParticleSystem.js';
+import { clipCtxToArena } from '../renderers/arenaClipHelper.js';
 
 import { drawGroundScorch, drawArcaneGroundScorch } from './renderers/groundDecalRenderers.js';
 import {
@@ -1317,6 +1318,9 @@ export function drawSparkEffects(layer = 'all') {
 
     ctx.save();
     ctx.globalAlpha = effect.life;
+    if (effect.clipToArena && isGamePlay && state.arena) {
+      clipCtxToArena(ctx, state.arena);
+    }
 
     const renderer = SPARK_RENDERERS[effect.type];
     if (renderer) {

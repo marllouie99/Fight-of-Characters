@@ -266,6 +266,90 @@ export function drawLaserTelegraphLine(ctx, sourceX, sourceY, targetX, targetY, 
 }
 
 /**
+ * Draws the locked-in trajectory beam ray and diode ignition flash before Convergence fires.
+ */
+export function drawLaserLockInLine(ctx, sourceX, sourceY, endX, endY, lockProgress = 0) {
+  const p = Math.max(0, Math.min(1, lockProgress));
+  ctx.save();
+
+  // 1. Solid outer crimson lock-in beam lane
+  ctx.globalAlpha = 0.35 + 0.50 * p;
+  ctx.strokeStyle = '#FF2A55';
+  ctx.lineWidth = 3.4 - 1.6 * p;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(sourceX, sourceY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // 2. Crisp white-hot razor core tightening into firing alignment
+  ctx.globalAlpha = 0.55 + 0.45 * p;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 0.9 + 0.6 * p;
+  ctx.beginPath();
+  ctx.moveTo(sourceX, sourceY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // 3. Diode node lock ring around origin blood particle
+  const ringR = 4.5 + (1 - p) * 5.0;
+  ctx.globalAlpha = 0.70 + 0.30 * p;
+  ctx.strokeStyle = p > 0.65 ? '#FFFFFF' : '#FF2A55';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(sourceX, sourceY, ringR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Draws the snapping Convergence Lock-In diamond reticle at the committed target coordinates.
+ */
+export function drawLaserLockInReticle(ctx, lockX, lockY, lockProgress = 0) {
+  const p = Math.max(0, Math.min(1, lockProgress));
+  const radius = 26 * (1 - p * 0.52);
+  const rotation = (1 - p) * (Math.PI * 0.25);
+
+  ctx.save();
+  ctx.translate(lockX, lockY);
+  ctx.rotate(rotation);
+
+  // Inner crimson wash
+  ctx.globalAlpha = 0.14 + 0.16 * p;
+  ctx.fillStyle = '#FF2A55';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Diamond lock frame
+  ctx.globalAlpha = 0.72 + 0.28 * p;
+  ctx.strokeStyle = '#FF2A55';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.moveTo(0, -radius);
+  ctx.lineTo(radius, 0);
+  ctx.lineTo(0, radius);
+  ctx.lineTo(-radius, 0);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Inner crisp white crosshairs
+  const tickIn = Math.max(3, radius * 0.35);
+  const tickOut = radius * 1.18;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-tickOut, 0); ctx.lineTo(-tickIn, 0);
+  ctx.moveTo(tickIn, 0);  ctx.lineTo(tickOut, 0);
+  ctx.moveTo(0, -tickOut); ctx.lineTo(0, -tickIn);
+  ctx.moveTo(0, tickIn);   ctx.lineTo(0, tickOut);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
  * Draws a Convergence laser beam or Sanguine Blood Dart using 16-bit pixel-art sprite
  * with crisp vector fallback when running headless.
  */

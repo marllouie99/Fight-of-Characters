@@ -1939,7 +1939,7 @@ export class Fighter {
       this.knockbackVy = 0;
       return;
     }
-    if (this.isPinnedByMaki) {
+    if (this.isPinnedByMaki || this.isSwallowedByPacman) {
       this.knockbackVx = 0;
       this.knockbackVy = 0;
       this.vx = 0;
@@ -2377,10 +2377,6 @@ export class Fighter {
     if (this._lastCooldownTickFrame === currentFrame && currentFrame !== undefined) return;
     this._lastCooldownTickFrame = currentFrame;
 
-    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) {
-      return; // All cooldowns are in pause while in Pac-Man ghost state!
-    }
-
     if (this.skillManager) {
       const isFrozen = Boolean(this.timeStopTimer > 0 || this.isTimeStopped || (this.statusEffects && this.statusEffects.isTimeStopped));
       if (!isFrozen) {
@@ -2707,7 +2703,7 @@ export class Fighter {
       return;
     }
 
-    if (this.isPinnedByMaki) {
+    if (this.isPinnedByMaki || this.isSwallowedByPacman) {
       this.knockbackVx = 0;
       this.knockbackVy = 0;
       this.vx = 0;
@@ -4325,8 +4321,8 @@ export class Fighter {
 
   /**
    * Universal Pac-Man Frightened Ghost State Guard:
-   * While transformed, the enemy cannot cast any skills, skill cooldowns are paused,
-   * all abilities and dodging are disabled, and all they can do is move until the duration expires!
+   * While transformed, the enemy cannot cast any skills and all abilities and dodging are disabled,
+   * moving until the duration expires while skill cooldowns continue ticking down cleanly.
    * @param {Object} arena - Arena bounds
    * @param {Object} opponent - Closest opponent
    * @returns {boolean} True if ghost state was handled and update should stop.
@@ -4349,13 +4345,16 @@ export class Fighter {
       if (this.skillManager) {
         this.skillManager.interruptAll?.(true);
       }
+      if (typeof this._syncSkillCooldowns === 'function') {
+        this._syncSkillCooldowns();
+      }
       this._inSuperUpdate = false;
       return true;
     }
     if (!this.isPacmanGhost || (this.pacmanGhostTimer || 0) <= 0) {
       return false;
     }
-    const isPlant = Boolean(this.isPlant || this.isPlantMinion || this.isPlantBarrier || this.isWallnut || this.isImmovable || this.characterId === 'crazydave_plant');
+    const isPlant = Boolean(this.isPlant || this.isPlantMinion || this.isPlantBarrier || this.isWallnut || this.isEndCrystal || this.isImmovable || this.characterId === 'crazydave_plant');
     if (
       this.isLawnmower ||
       (!isPlant && (this.isDeployable || this.isBuilding || this.isTurret || this.isDispenser))
@@ -4379,6 +4378,9 @@ export class Fighter {
     this.interruptAttacks?.(true);
     if (this.skillManager) {
       this.skillManager.interruptAll?.(true);
+    }
+    if (typeof this._syncSkillCooldowns === 'function') {
+      this._syncSkillCooldowns();
     }
     if (isPlant) {
       this.vx = 0;
@@ -4478,8 +4480,8 @@ export class Fighter {
     if (this.recoilTimer > 0) this.recoilTimer--;
 
     // Pac-Man Frightened Ghost State Guard:
-    // While transformed, the enemy cannot cast any skills, skill cooldowns are paused,
-    // all abilities are disabled, and all they can do is move until the duration expires!
+    // While transformed, the enemy cannot cast any skills and all abilities are disabled,
+    // moving until the duration expires while skill cooldowns continue ticking down cleanly.
     if (this._handlePacmanGhostState(arena, opponent)) {
       return;
     }

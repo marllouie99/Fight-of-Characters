@@ -24,11 +24,12 @@ import { drawChosoSkin } from '../../graphics/fighters/chosoSkin.js';
 import {
   drawBloodDropletNode,
   drawLaserTelegraphLine,
+  drawLaserLockInLine,
+  drawLaserLockInReticle,
   drawBloodLaserBeam,
   drawBloodChakram,
   drawSupernovaVisuals,
   drawPiercingBloodBeam,
-  drawBloodEdgeSlashArc,
   drawChosoBloodSplashes,
   resolvePiercingBloodStrikePoint,
   getRayArenaIntersection
@@ -66,33 +67,23 @@ export class ChosoFighter extends Fighter {
     // Passive 2: Flowing Red Scale: Stack (Sekirin Ketsurui: Chō)
     this.isFlowingRedScaleActive = false;
 
-    // Attack State (5-Phase Melee Combo & Piercing Blood Darts)
-    this.comboCount = 0;
-    this.meleePhase = 0; // 0=Idle, 1=Lift, 2=Hold, 3=Strike, 4=Impact Lock, 5=Recovery
-    this.meleePhaseTimer = 0;
-    this.slashSwingTimer = 0;
-    this.slashSwingMax = 28;
-    this.slashCastAngle = 0;
-    this.meleeReach = cfg.meleeReach || 70;
-    this.meleeArc = cfg.meleeArc || (130 * Math.PI) / 180;
+    // Basic Attack: Supernova (Chōshinsei)
     this.basicAttackCooldown = 0;
-
-    // Skill 1: Slicing Exorcist / Blood Chakram (Karisō)
-    this.skill1Cooldown = 0;
-    this.skill1CooldownMax = cfg.skill1Cooldown || 360;
-    this.chakrams = [];
-
-    // Skill 2: Supernova (Chōshinsei)
     this.skill2Cooldown = 0;
-    this.skill2CooldownMax = cfg.skill2Cooldown || 540;
+    this.skill2CooldownMax = cfg.cooldown || 36;
     this.isChargingSupernova = false;
     this.supernovaTimer = 0;
     this.supernovaOrbs = [];
     this.supernovaPellets = [];
     this.supernovaBursts = [];
-    this.supernovaWindupMax = 24;
+    this.supernovaWindupMax = cfg.supernovaWindupFrames || 24;
     this.supernovaDetonationTimer = 0;
     this.supernovaDetonationMax = 14;
+
+    // Skill 1: Slicing Exorcist / Blood Chakram (Karisō)
+    this.skill1Cooldown = 0;
+    this.skill1CooldownMax = cfg.skill1Cooldown || 360;
+    this.chakrams = [];
 
     // Skill 3: Piercing Blood: True Convergence (Teisō / Fuga — Continuous Aim-Locked Beam)
     this.piercingBloodCooldown = 0;
@@ -120,8 +111,12 @@ export class ChosoFighter extends Fighter {
     this.isCastingLaserMatrix = false;
     this.laserMatrixTimer = 0;
     this.laserTelegraphTimer = 0;
+    this.laserLockInTimer = 0;
     this.laserMatrixCastMax = cfg.laserMatrixCastFrames || 16;
     this.laserTelegraphMax = cfg.laserTelegraphFrames || 12;
+    this.laserLockInMax = cfg.laserLockInFrames ?? 14;
+    this.isLaserMatrixLockedIn = false;
+    this._laserLockPos = null;
     this.activeLaserBeams = [];
     this.isClaspedForConvergence = false;
     this.convergenceRecoveryTimer = 0;
@@ -349,7 +344,7 @@ export class ChosoFighter extends Fighter {
     }
 
     if (removeFromNodes && this.bloodNodes && this.bloodNodes.length > 0) {
-      fastCleanArray(this.bloodNodes, n => n !== node && n.id !== node.id);
+      fastCleanArray(this.bloodNodes, n => n !== node && (node.id === undefined || n.id !== node.id));
     }
   }
 
@@ -696,11 +691,6 @@ export class ChosoFighter extends Fighter {
       return;
     }
 
-    if (this.slashSwingTimer > 0) {
-      this._updateMeleeSwing(opponent);
-      return;
-    }
-
     // 5. Standard AI Combat Aim & Convergence / Piercing Blood Check on Existing Blood
     const target = this._findClosestEnemy() || opponent;
     if (target && !target.isDead && target.hp > 0) {
@@ -726,15 +716,6 @@ export class ChosoFighter extends Fighter {
         }
       }
 
-      // Skill 2: Supernova (when enabled and blood exists)
-      if (isSkillEnabled(cfg.enableSupernova, true) && this.skill2Cooldown <= 0) {
-        const activeBlood = this._getActiveBloodParticles();
-        if (activeBlood.length > 0) {
-          this._startSupernova(target, activeBlood.slice(0, Math.min(4, activeBlood.length)));
-          return;
-        }
-      }
-
       // Skill 1: Slicing Exorcist Chakram (when enabled and blood exists)
       if (isSkillEnabled(cfg.enableChakram, true) && this.skill1Cooldown <= 0) {
         const activeBlood = this._getActiveBloodParticles();
@@ -744,11 +725,24 @@ export class ChosoFighter extends Fighter {
         }
       }
 
-      // Primary Melee: Blood Edge combo in close range
-      const targetDist = Math.hypot(target.x - this.x, (target.y - (target.z || 0)) - (this.y - (this.z || 0)));
-      if (this.basicAttackCooldown <= 0 && targetDist <= this.meleeReach + (target.r || 25)) {
-        this._startMeleeCombo(target);
-        return;
+      // Basic Attack: Supernova (Chōshinsei)
+      if (this.basicAttackCooldown <= 0 && isSkillEnabled(cfg.enableSupernova, true)) {
+        const range = cfg.supernovaRange || 210;
+        const targetY = target.y - (target.z || 0);
+        const selfY = this.y - (this.z || 0);
+        const targetDist = Math.hypot(target.x - this.x, targetY - selfY);
+        const activeBlood = this._getActiveBloodParticles();
+        const nearbyBlood = activeBlood.filter(
+          n => Math.hypot(target.x - n.x, targetY - n.y) <= range
+        );
+        if (nearbyBlood.length > 0) {
+          this._startSupernova(target, nearbyBlood.slice(0, Math.min(4, nearbyBlood.length)));
+          return;
+        }
+        if (targetDist <= range) {
+          this._startSupernova(target, [{ x: this.x, y: selfY, isSelfOrigin: true }]);
+          return;
+        }
       }
     }
 
@@ -925,6 +919,12 @@ export class ChosoFighter extends Fighter {
     this.laserMatrixTimer = this.laserMatrixCastMax;
     this.laserTelegraphMax = cfg.laserTelegraphFrames || 12;
     this.laserTelegraphTimer = this.laserTelegraphMax;
+    this.laserLockInMax = cfg.laserLockInFrames ?? 14;
+    this.laserLockInTimer = this.laserLockInMax;
+    this.isLaserMatrixLockedIn = false;
+    this._laserLockPos = (target && typeof target.x === 'number')
+      ? { x: target.x, y: target.y - (target.z || 0) }
+      : null;
     this.ultCooldown = this.ultCooldownMax;
     this.skill3Cooldown = this.skill3CooldownMax;
     this.vx = 0;
@@ -942,6 +942,9 @@ export class ChosoFighter extends Fighter {
       node.vx = 0;
       node.vy = 0;
       node.isIgnitedAsLaser = true;
+      delete node.lockedAngle;
+      delete node.lockedEndX;
+      delete node.lockedEndY;
       if (node.particleRef) {
         node.particleRef.vx = 0;
         node.particleRef.vy = 0;
@@ -957,60 +960,128 @@ export class ChosoFighter extends Fighter {
     return true;
   }
 
+  /**
+   * Computes shortest distance from point (px, py) to segment (x1, y1)->(x2, y2).
+   */
+  _pointToSegmentDist(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const l2 = dx * dx + dy * dy;
+    if (l2 <= 0.0001) return Math.hypot(px - x1, py - y1);
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  /**
+   * Freezes laser diode rays onto the target's coordinates before firing (lock-in phase).
+   */
+  _commitLaserMatrixLockIn(target) {
+    const cfg = CONFIG.choso || {};
+    const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
+    if (target && !target.isDead && typeof target.x === 'number') {
+      this._laserLockPos = { x: target.x, y: target.y - (target.z || 0) };
+    }
+    const lockX = this._laserLockPos ? this._laserLockPos.x : this.x;
+    const lockY = this._laserLockPos ? this._laserLockPos.y : (this.y - (this.z || 0));
+
+    for (let i = 0; i < this.bloodNodes.length; i++) {
+      const node = this.bloodNodes[i];
+      if (!node || node.isDead) continue;
+      const angle = Math.atan2(lockY - node.y, lockX - node.x);
+      const maxBeamDist = arena ? getRayArenaIntersection(node.x, node.y, angle, arena, 4) : 700;
+      const beamReach = Math.min(700, maxBeamDist);
+      node.lockedAngle = angle;
+      node.lockedEndX = node.x + Math.cos(angle) * beamReach;
+      node.lockedEndY = node.y + Math.sin(angle) * beamReach;
+    }
+
+    this.isLaserMatrixLockedIn = true;
+    const lockFaceAngle = Math.atan2(lockY - (this.y - (this.z || 0)), lockX - this.x);
+    this.gunAngle = lockFaceAngle;
+    this.angle = lockFaceAngle;
+
+    audioSystem.playSFX(cfg.sounds?.laserIgnite || 'Assets/Sound Effects/Skills/woosh.mp3', cfg.soundVolumes?.laserIgnite || 0.95);
+    if (typeof triggerGlobalScreenShake === 'function') triggerGlobalScreenShake(1.6, 5);
+  }
+
+  _finishLaserMatrixCast() {
+    const cfg = CONFIG.choso || {};
+    this.isCastingLaserMatrix = false;
+    this.isClaspedForConvergence = false;
+    this.isLaserMatrixLockedIn = false;
+    this.convergenceRecoveryTimer = this.convergenceRecoveryMax || 14;
+    this.laserTransmutationOverdriveTimer = cfg.laserTransmutationOverdriveFrames || 300;
+  }
+
   _updateLaserMatrixSequence(opponent) {
-    const target = this._laserTarget || opponent;
+    const target = (this._laserTarget && !this._laserTarget.isDead && this._laserTarget.hp > 0)
+      ? this._laserTarget
+      : opponent;
     this.vx = 0;
     this.vy = 0;
 
-    // Verify diode nodes still exist during windup / telegraph pose
+    // Verify diode nodes still exist during windup / telegraph / lock-in pose
     const activeDiodes = this.bloodNodes.filter(n => n && !n.isDead);
     if (activeDiodes.length === 0) {
       this.isCastingLaserMatrix = false;
       this.isClaspedForConvergence = false;
+      this.isLaserMatrixLockedIn = false;
       this.laserMatrixTimer = 0;
       this.laserTelegraphTimer = 0;
+      this.laserLockInTimer = 0;
+      this._laserLockPos = null;
       return;
     }
 
     if (this.laserMatrixTimer > 0) {
       this.laserMatrixTimer--;
+      if (target && !target.isDead && typeof target.x === 'number') {
+        this._laserLockPos = { x: target.x, y: target.y - (target.z || 0) };
+        this.aim(target);
+      }
       return;
     }
 
     if (this.laserTelegraphTimer > 0) {
       this.laserTelegraphTimer--;
+      if (target && !target.isDead && typeof target.x === 'number') {
+        this._laserLockPos = { x: target.x, y: target.y - (target.z || 0) };
+        this.aim(target);
+      }
       if (this.laserTelegraphTimer === 0) {
-        // DISCHARGE ALL LASER BEAMS SIMULTANEOUSLY!
+        if (this.laserLockInTimer > 0) {
+          this._commitLaserMatrixLockIn(target);
+          return;
+        }
         this._dischargeLaserMatrix(target);
-        this.isCastingLaserMatrix = false;
-        this.isClaspedForConvergence = false;
-        this.convergenceRecoveryTimer = this.convergenceRecoveryMax || 14;
-        const cfg = CONFIG.choso || {};
-        this.laserTransmutationOverdriveTimer = cfg.laserTransmutationOverdriveFrames || 300; // 5.0s
+        this._finishLaserMatrixCast();
       }
       return;
     }
 
-    // Finished casting
-    this.isCastingLaserMatrix = false;
-    this.isClaspedForConvergence = false;
-    this.convergenceRecoveryTimer = this.convergenceRecoveryMax || 14;
-    const cfg = CONFIG.choso || {};
-    this.laserTransmutationOverdriveTimer = cfg.laserTransmutationOverdriveFrames || 300; // 5.0s
-  }
-
-  /**
-   * Fires supersonic piercing laser beams from every active blood node to the target.
-   */
-  _dischargeLaserMatrix(target) {
-    if (!target || target.isDead) {
-      this.isCastingLaserMatrix = false;
-      this.isClaspedForConvergence = false;
+    if (this.laserLockInTimer > 0) {
+      this.isLaserMatrixLockedIn = true;
+      if (this._laserLockPos) {
+        const lockFaceAngle = Math.atan2(this._laserLockPos.y - (this.y - (this.z || 0)), this._laserLockPos.x - this.x);
+        this.gunAngle = lockFaceAngle;
+        this.angle = lockFaceAngle;
+      }
+      this.laserLockInTimer--;
+      if (this.laserLockInTimer === 0) {
+        this._dischargeLaserMatrix(target);
+        this._finishLaserMatrixCast();
+      }
       return;
     }
 
+    this._finishLaserMatrixCast();
+  }
+
+  /**
+   * Fires supersonic piercing laser beams from every active blood node along locked angles.
+   */
+  _dischargeLaserMatrix(target) {
     const cfg = CONFIG.choso || {};
-    let hitCount = 0;
     const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
 
     // Filter strictly to living nodes that were ignited for this matrix
@@ -1020,21 +1091,35 @@ export class ChosoFighter extends Fighter {
       this.bloodNodes = [];
       this.isCastingLaserMatrix = false;
       this.isClaspedForConvergence = false;
+      this.isLaserMatrixLockedIn = false;
       return;
+    }
+
+    const candidates = this._getAllValidEnemyTargets();
+    if (target && !target.isDead && target.hp > 0 && !candidates.includes(target) && this._isEnemyTarget(target)) {
+      candidates.push(target);
     }
 
     const bloodMultiplier = this.getBloodDamageMultiplier(validNodes.length);
     const damagePerNode = Math.round((cfg.laserDamagePerNode || 14) * bloodMultiplier);
+    const hitCountsByTarget = new Map();
+    const beamHitPad = 6;
 
     for (let i = 0; i < validNodes.length; i++) {
       const node = validNodes[i];
 
-      // Project beam from node through target, strictly clamped to arena boundary
-      const angle = Math.atan2(target.y - node.y, target.x - node.x);
-      const maxBeamDist = arena ? getRayArenaIntersection(node.x, node.y, angle, arena, 4) : 700;
-      const beamReach = Math.min(700, maxBeamDist);
-      const endX = node.x + Math.cos(angle) * beamReach;
-      const endY = node.y + Math.sin(angle) * beamReach;
+      let angle = node.lockedAngle;
+      let endX = node.lockedEndX;
+      let endY = node.lockedEndY;
+      if (angle === undefined || endX === undefined || endY === undefined) {
+        const fallbackX = (target && typeof target.x === 'number') ? target.x : (this._laserLockPos?.x ?? this.x);
+        const fallbackY = (target && typeof target.y === 'number') ? (target.y - (target.z || 0)) : (this._laserLockPos?.y ?? this.y);
+        angle = Math.atan2(fallbackY - node.y, fallbackX - node.x);
+        const maxBeamDist = arena ? getRayArenaIntersection(node.x, node.y, angle, arena, 4) : 700;
+        const beamReach = Math.min(700, maxBeamDist);
+        endX = node.x + Math.cos(angle) * beamReach;
+        endY = node.y + Math.sin(angle) * beamReach;
+      }
 
       this.activeLaserBeams.push({
         startX: node.x,
@@ -1048,24 +1133,36 @@ export class ChosoFighter extends Fighter {
         target: target
       });
 
-      // Check Gojo Limitless Infinity (Rule 1.7)
-      const isInfinity = (typeof target.hasActiveInfinity === 'function') && target.hasActiveInfinity();
-      if (!isInfinity) {
-        applyDamageToTarget(target, damagePerNode, this, { isTrueDamage: true, hitType: 'laser', skipKnockback: true });
-        hitCount++;
-        spawnSparks(target.x, target.y, 4, '#FF2A55', '#FFFFFF');
-        if (hitCount <= 3) {
-          this.spawnBloodSplash(target.x, target.y - (target.z || 0), angle, 74, 20);
-        }
-      } else {
-        if (typeof target.triggerInfinityBlock === 'function') {
-          target.triggerInfinityBlock(target.x, target.y, this);
+      for (let c = 0; c < candidates.length; c++) {
+        const ent = candidates[c];
+        if (!ent || ent.isDead || ent.hp <= 0) continue;
+        const entY = ent.y - (ent.z || 0);
+        const hitRadius = (ent.r || 25) + beamHitPad;
+        if (this._pointToSegmentDist(ent.x, entY, node.x, node.y, endX, endY) > hitRadius) continue;
+
+        // Check Gojo Limitless Infinity (Rule 1.7)
+        const isInfinity = (typeof ent.hasActiveInfinity === 'function') && ent.hasActiveInfinity();
+        if (!isInfinity) {
+          const applied = applyDamageToTarget(ent, damagePerNode, this, { isTrueDamage: true, hitType: 'laser', skipKnockback: true });
+          if (applied !== false) {
+            const nextCount = (hitCountsByTarget.get(ent) || 0) + 1;
+            hitCountsByTarget.set(ent, nextCount);
+            spawnSparks(ent.x, entY, 4, '#FF2A55', '#FFFFFF');
+            if (nextCount <= 3) {
+              this.spawnBloodSplash(ent.x, entY, angle, 74, 20);
+            }
+          }
+        } else if (typeof ent.triggerInfinityBlock === 'function') {
+          ent.triggerInfinityBlock(ent.x, ent.y, this);
         }
       }
 
       // Keep blood droplet alive & visible as laser emitter square throughout beam duration (Frame 3)
       node.dischargeTimer = cfg.laserDischargeFrames || 22;
       node.isIgnitedAsLaser = true;
+      delete node.lockedAngle;
+      delete node.lockedEndX;
+      delete node.lockedEndY;
       if (node.particleRef) {
         node.particleRef.isIgnitedAsLaser = true;
         node.particleRef.vx = 0;
@@ -1074,26 +1171,23 @@ export class ChosoFighter extends Fighter {
       spawnSparks(node.x, node.y, 4, '#FF2A55', '#FFFFFF');
     }
 
-    if (hitCount > 0) {
-      const pullX = this.x - target.x;
-      const pullY = this.y - target.y;
+    for (const [ent, hitCount] of hitCountsByTarget.entries()) {
+      if (hitCount <= 0 || ent.isDead || ent.hp <= 0) continue;
+      const pullX = this.x - ent.x;
+      const pullY = this.y - ent.y;
       const pullDistance = Math.hypot(pullX, pullY);
-      if (pullDistance > 0 && typeof target.applyKnockback === 'function') {
+      if (pullDistance > 0 && typeof ent.applyKnockback === 'function') {
         const dragForce = cfg.laserMatrixDragForce ?? 2.8;
-        target.applyKnockback((pullX / pullDistance) * dragForce, (pullY / pullDistance) * dragForce);
+        ent.applyKnockback((pullX / pullDistance) * dragForce, (pullY / pullDistance) * dragForce);
       }
-      if (typeof target.applySlow === 'function') {
-        target.applySlow(
+      if (typeof ent.applySlow === 'function') {
+        ent.applySlow(
           cfg.laserMatrixSlowDurationFrames ?? 90,
           cfg.laserMatrixSlowMultiplier ?? 0.55
         );
       }
-    }
-
-    // Inflict Sanguine Stun if 3+ simultaneous beams hit
-    if (hitCount >= (cfg.laserMatrixStunThreshold || 3)) {
-      if (typeof target.applyHitStun === 'function') {
-        target.applyHitStun(cfg.laserMatrixStunDuration || 30);
+      if (hitCount >= (cfg.laserMatrixStunThreshold || 3) && typeof ent.applyHitStun === 'function') {
+        ent.applyHitStun(cfg.laserMatrixStunDuration || 30);
       }
     }
 
@@ -1145,21 +1239,31 @@ export class ChosoFighter extends Fighter {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // SKILL 2: SUPERNOVA
+  // BASIC ATTACK: SUPERNOVA (CHŌSHINSEI)
   // ═══════════════════════════════════════════════════════════
 
   _startSupernova(target, sourceNodes = null) {
     const cfg = CONFIG.choso || {};
-    this.skill2Cooldown = this.skill2CooldownMax;
+    const cd = cfg.cooldown || 36;
+    this.basicAttackCooldown = cd;
+    this.skill2Cooldown = cd;
+    this.skill2CooldownMax = cd;
     this.isChargingSupernova = true;
-    this.supernovaWindupMax = 24;
+    this.supernovaWindupMax = cfg.supernovaWindupFrames || 24;
     this.supernovaTimer = this.supernovaWindupMax;
     this.supernovaOrbs = [];
+    this.vx = 0;
+    this.vy = 0;
+    if (target && !target.isDead && target.hp > 0) {
+      this.aim(target);
+    }
 
     let sources = sourceNodes;
     if (!sources || sources.length === 0) {
       const activeBlood = this._getActiveBloodParticles();
-      sources = (activeBlood.length > 0) ? activeBlood.slice(0, 4) : [{ x: this.x, y: this.y }];
+      sources = (activeBlood.length > 0)
+        ? activeBlood.slice(0, 4)
+        : [{ x: this.x, y: this.y - (this.z || 0), isSelfOrigin: true }];
     }
     this.supernovaSources = sources;
 
@@ -1181,14 +1285,25 @@ export class ChosoFighter extends Fighter {
   _updateSupernovaSequence(opponent) {
     if (this.supernovaTimer > 0) {
       this.supernovaTimer--;
-      // Spin orbiting orbs around source blood particles
+      this.vx = 0;
+      this.vy = 0;
+      if (this.supernovaSources && this.supernovaSources.length > 0) {
+        const selfY = this.y - (this.z || 0);
+        for (let s = 0; s < this.supernovaSources.length; s++) {
+          if (this.supernovaSources[s]?.isSelfOrigin) {
+            this.supernovaSources[s].x = this.x;
+            this.supernovaSources[s].y = selfY;
+          }
+        }
+      }
+      // Spin orbiting orbs around source points
       for (let i = 0; i < this.supernovaOrbs.length; i++) {
         this.supernovaOrbs[i].angle += 0.20;
       }
       return;
     }
 
-    // Detonate Supernova in 360° Fragmentation Burst from each source blood particle!
+    // Detonate Supernova in 360° Fragmentation Burst from each source point!
     this.isChargingSupernova = false;
     this.supernovaDetonationTimer = this.supernovaDetonationMax || 14;
     const cfg = CONFIG.choso || {};
@@ -1196,7 +1311,7 @@ export class ChosoFighter extends Fighter {
     const speed = cfg.supernovaPelletSpeed || 13;
     const sources = (this.supernovaSources && this.supernovaSources.length > 0)
       ? this.supernovaSources
-      : [{ x: this.x, y: this.y }];
+      : [{ x: this.x, y: this.y - (this.z || 0), isSelfOrigin: true }];
 
     for (let s = 0; s < sources.length; s++) {
       const src = sources[s];
@@ -1218,12 +1333,18 @@ export class ChosoFighter extends Fighter {
         });
       }
 
-      // AOE Damage in proximity of each source blood particle
+      // AOE Damage in proximity of each source point
       const candidates = this._getAllValidEnemyTargets();
       for (let i = 0; i < candidates.length; i++) {
         const ent = candidates[i];
-        const d = Math.hypot(ent.x - src.x, ent.y - src.y);
+        const d = Math.hypot(ent.x - src.x, (ent.y - (ent.z || 0)) - src.y);
         if (d <= (cfg.supernovaRange || 210)) {
+          if (typeof ent.hasActiveInfinity === 'function' && ent.hasActiveInfinity()) {
+            if (typeof ent.triggerInfinityBlock === 'function') {
+              ent.triggerInfinityBlock(ent.x, ent.y, this);
+            }
+            continue;
+          }
           const bloodMultiplier = this.getBloodDamageMultiplier();
           const novaDamage = Math.round((cfg.supernovaPelletDamage || 14) * 3 * bloodMultiplier);
           applyDamageToTarget(ent, novaDamage, this, { hitType: 'supernova' });
@@ -1593,114 +1714,6 @@ export class ChosoFighter extends Fighter {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // PRIMARY ATTACK: 5-PHASE BLOOD EDGE MELEE & BLOOD DARTS
-  // ═══════════════════════════════════════════════════════════
-
-  _startMeleeCombo(target) {
-    const cfg = CONFIG.choso || {};
-    this.comboCount = (this.comboCount % 3) + 1;
-    this.slashSwingTimer = this.slashSwingMax;
-    this.slashCastAngle = Math.atan2(target.y - this.y, target.x - this.x);
-    this.gunAngle = this.slashCastAngle;
-    this.basicAttackCooldown = cfg.cooldown || 36;
-
-    audioSystem.playSFX(cfg.sounds?.meleeSlash || 'Assets/Sound Effects/Attacks/swordswing.mp3', cfg.soundVolumes?.meleeSlash || 0.90);
-  }
-
-  _updateMeleeSwing(opponent) {
-    this.slashSwingTimer--;
-    const progress = 1.0 - (this.slashSwingTimer / this.slashSwingMax);
-
-    // Hit impact at 50% swing progress (Rule 30)
-    if (progress >= 0.50 && !this._meleeHitDelivered) {
-      this._meleeHitDelivered = true;
-      this._executeMeleeImpact(opponent);
-    }
-
-    if (this.slashSwingTimer <= 0) {
-      this._meleeHitDelivered = false;
-    }
-  }
-
-  _executeMeleeImpact(opponent) {
-    const cfg = CONFIG.choso || {};
-    const bloodMultiplier = this.getBloodDamageMultiplier();
-    const comboDmg = cfg.meleeDamageCombo || [22, 26, 34];
-    const dmg = Math.round((comboDmg[this.comboCount - 1] || 22) * bloodMultiplier);
-    const candidates = this._getAllValidEnemyTargets();
-
-    for (let i = 0; i < candidates.length; i++) {
-      const ent = candidates[i];
-      const dist = Math.hypot(ent.x - this.x, ent.y - this.y);
-      if (dist <= (this.meleeReach + ent.r)) {
-        const angleTo = Math.atan2(ent.y - this.y, ent.x - this.x);
-        const diff = Math.abs(Math.atan2(Math.sin(angleTo - this.slashCastAngle), Math.cos(angleTo - this.slashCastAngle)));
-
-        if (diff <= this.meleeArc / 2) {
-          applyDamageToTarget(ent, dmg, this, { hitType: 'blood_edge' });
-          spawnSparks(ent.x, ent.y, 6, '#FF2A55', '#A31D1D');
-          this.spawnBloodSplash(ent.x, ent.y - (ent.z || 0), this.slashCastAngle, 76, 20);
-          audioSystem.playSFX(cfg.sounds?.fleshHit || 'Assets/Sound Effects/Attacks/fleshhit.mp3', cfg.soundVolumes?.fleshHit || 1.00);
-
-          // Third hit drops 3 fresh blood nodes on target ONLY if infinite blood is enabled
-          if (this.comboCount === 3 && isSkillEnabled(cfg.enableInfiniteBlood, false)) {
-            for (let k = 0; k < 3; k++) {
-              this.spawnBloodNode(ent.x + (Math.random() - 0.5) * 16, ent.y + (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  _throwBloodDart(target, sourceNode = null) {
-    const cfg = CONFIG.choso || {};
-    this.basicAttackCooldown = cfg.cooldown || 36;
-    this.dartThrowTimer = this.dartThrowMax || 12;
-    let node = sourceNode;
-    if (!node) {
-      const activeBlood = this._getActiveBloodParticles();
-      node = (activeBlood.length > 0 ? activeBlood[activeBlood.length - 1] : null);
-    }
-    const startX = (node && typeof node.x === 'number') ? node.x : this.x;
-    const startY = (node && typeof node.y === 'number') ? node.y : (this.y - (this.z || 0));
-
-    const angle = Math.atan2(target.y - startY, target.x - startX);
-    this.gunAngle = angle;
-
-    const arena = (typeof state !== 'undefined' && state.arena) || (CONFIG && CONFIG.arena);
-    const maxDist = arena ? getRayArenaIntersection(startX, startY, angle, arena, 4) : 400;
-    const dist = Math.min(400, maxDist);
-    const endX = startX + Math.cos(angle) * dist;
-    const endY = startY + Math.sin(angle) * dist;
-
-    this.activeLaserBeams.push({
-      startX: startX,
-      startY: startY,
-      endX: endX,
-      endY: endY,
-      timer: 6,
-      maxTimer: 6,
-      thickness: 2.6,
-      damageDealt: true,
-      target: target
-    });
-
-    // Apply damage
-    const bloodMultiplier = this.getBloodDamageMultiplier();
-    const dartDmg = Math.round((cfg.rangedDartDamage || 18) * bloodMultiplier);
-    applyDamageToTarget(target, dartDmg, this, { hitType: 'blood_dart' });
-    this.spawnBloodSplash(target.x, target.y - (target.z || 0), angle, 64, 18);
-
-    // Blood particle was thrown as a dart — clear it up!
-    if (node) {
-      this._clearBloodNode(node, true);
-    }
-
-    audioSystem.playSFX(cfg.sounds?.dartThrow || 'Assets/Sound Effects/Attacks/shurikenthrow.mp3', cfg.soundVolumes?.dartThrow || 0.85);
-  }
-
-  // ═══════════════════════════════════════════════════════════
   // DAMAGE REACTION & SANGUINE RETALIATION MATRIX (FRAME 1 -> 2 -> 3)
   // ═══════════════════════════════════════════════════════════
 
@@ -1807,7 +1820,6 @@ export class ChosoFighter extends Fighter {
       this.isChargingPiercingBlood ||
       this.isFiringPiercingBlood ||
       this.isChargingSupernova ||
-      (this.slashSwingTimer > 0) ||
       super.isStationarySkillActive?.()
     );
   }
@@ -1815,12 +1827,15 @@ export class ChosoFighter extends Fighter {
   interruptAttacks(forceCancelAll = false) {
     this._stopPiercingBloodSound();
     if (this._piercingBloodHitState) this._piercingBloodHitState.clear();
-    this.slashSwingTimer = 0;
-    this._meleeHitDelivered = false;
     this.isRetaliationSpraying = false;
     this.retaliationSprayTimer = 0;
     this.isCastingLaserMatrix = false;
     this.isClaspedForConvergence = false;
+    this.isLaserMatrixLockedIn = false;
+    this.laserMatrixTimer = 0;
+    this.laserTelegraphTimer = 0;
+    this.laserLockInTimer = 0;
+    this._laserLockPos = null;
     this.isChargingSupernova = false;
     this.isChargingPiercingBlood = false;
     this.isFiringPiercingBlood = false;
@@ -1836,6 +1851,9 @@ export class ChosoFighter extends Fighter {
         const n = this.bloodNodes[i];
         if (n) {
           n.isIgnitedAsLaser = false;
+          delete n.lockedAngle;
+          delete n.lockedEndX;
+          delete n.lockedEndY;
           if (forceCancelAll && n.dischargeTimer !== undefined) {
             this._clearBloodNode(n, false);
             this.bloodNodes.splice(i, 1);
@@ -1873,12 +1891,27 @@ export class ChosoFighter extends Fighter {
 
     // 1. Blood droplets are rendered exclusively by the default game system (state.bloodEffects / bloodEffect.js)
 
-    // 2. Draw Laser Telegraph Guidance Lines (Laser Matrix)
-    if (this.isCastingLaserMatrix && this.laserTelegraphTimer > 0 && this._laserTarget) {
-      for (let i = 0; i < this.bloodNodes.length; i++) {
-        const node = this.bloodNodes[i];
-        if (node && !node.isDead) {
-          drawLaserTelegraphLine(ctx, node.x, node.y, this._laserTarget.x, this._laserTarget.y, 0.75);
+    // 2. Draw Laser Telegraph Guidance Lines & Lock-In Rays (Laser Matrix)
+    if (this.isCastingLaserMatrix) {
+      if (this.isLaserMatrixLockedIn && this.laserLockInTimer > 0) {
+        const lockMax = Math.max(1, this.laserLockInMax || 14);
+        const lockProgress = Math.max(0, Math.min(1, 1 - (this.laserLockInTimer / lockMax)));
+        for (let i = 0; i < this.bloodNodes.length; i++) {
+          const node = this.bloodNodes[i];
+          if (node && !node.isDead && node.lockedEndX !== undefined && node.lockedEndY !== undefined) {
+            drawLaserLockInLine(ctx, node.x, node.y, node.lockedEndX, node.lockedEndY, lockProgress);
+          }
+        }
+        if (this._laserLockPos) {
+          drawLaserLockInReticle(ctx, this._laserLockPos.x, this._laserLockPos.y, lockProgress);
+        }
+      } else if (this.laserTelegraphTimer > 0 && this._laserTarget) {
+        const targetY = this._laserTarget.y - (this._laserTarget.z || 0);
+        for (let i = 0; i < this.bloodNodes.length; i++) {
+          const node = this.bloodNodes[i];
+          if (node && !node.isDead) {
+            drawLaserTelegraphLine(ctx, node.x, node.y, this._laserTarget.x, targetY, 0.75);
+          }
         }
       }
     }
@@ -1902,10 +1935,7 @@ export class ChosoFighter extends Fighter {
     // 5. Draw Supernova Visuals
     drawSupernovaVisuals(ctx, this);
 
-    // 6. Draw Blood Edge Melee Slashes
-    drawBloodEdgeSlashArc(ctx, this);
-
-    // 7. Draw Piercing Blood Death Beam
+    // 6. Draw Piercing Blood Death Beam
     drawPiercingBloodBeam(ctx, this);
 
     // 7b. Draw 12-Frame 16-Bit Blood Splash Impacts (wall/entity/skill hits)

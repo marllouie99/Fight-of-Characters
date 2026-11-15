@@ -244,10 +244,13 @@ function _deliverKatanaImpact(fighter) {
   for (const enemy of validTargets) {
     const prevEnemyHp = enemy.hp;
     const dmgResult = enemy.takeDamage(finalDamage, fighter, { isPhysical: true, isMelee: true });
+    const didDamage = (enemy.hp < prevEnemyHp) || (dmgResult !== false && dmgResult > 0);
+    if (!didDamage) {
+      continue;
+    }
     hitSomeone = true;
 
-    const didDamage = (enemy.hp < prevEnemyHp) || (dmgResult !== false && dmgResult > 0);
-    if (didDamage && typeof fighter.registerBasicAttackHit === 'function') {
+    if (typeof fighter.registerBasicAttackHit === 'function') {
       fighter.registerBasicAttackHit(enemy);
     }
 

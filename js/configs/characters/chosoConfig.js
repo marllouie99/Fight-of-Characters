@@ -65,20 +65,14 @@ export const chosoConfig = {
   redScaleDropMultiplier: 2,      // 2x blood droplet spawning rate
   redScaleAttackSpeedMultiplier: 1.20,
 
-  // Primary Attack: Blood Edge & Sanguine Darts (Rule 30 Melee Standard)
-  meleeReach: 70,
-  meleeArc: (130 * Math.PI) / 180, // 130° frontal arc
-  hitLiftFrames: 7,
-  hitHoldFrames: 3,
-  hitStrikeFrames: 6,
-  hitLockFrames: 6, // Mandatory Impact Lock / Latch Phase
-  hitRecoveryFrames: 10,
-  meleeDamageCombo: [22, 26, 34],
-  enableBloodDarts: 1,           // Retaliates with Sanguine Darts from blood particles
-  rangedDartDamage: 18,
-  rangedDartSpeed: 15,
-  dartDropletsOnHit: 1,
-  comboDropletsOnFinisher: 3,
+  // Basic Attack: Supernova (Chōshinsei)
+  enableSupernova: 0,
+  supernovaOrbCount: 8,
+  supernovaPelletCount: 12,
+  supernovaPelletDamage: 14,
+  supernovaPelletSpeed: 13,
+  supernovaRange: 210,
+  supernovaWindupFrames: 24,
 
   // Skill 1: Slicing Exorcist / Blood Chakram (Karisō)
   enableChakram: 0,
@@ -89,22 +83,14 @@ export const chosoConfig = {
   chakramLifespan: 90,           // 1.5 seconds
   chakramDropInterval: 6,        // Emits a droplet every 6 frames
 
-  // Skill 2: Supernova (Chōshinsei)
-  enableSupernova: 0,
-  skill2Cooldown: 540,           // 9.0s (540 frames)
-  supernovaOrbCount: 8,
-  supernovaPelletCount: 12,
-  supernovaPelletDamage: 14,
-  supernovaPelletSpeed: 13,
-  supernovaRange: 210,
-
   // ULTIMATE: Blood Manipulation: Convergence
-  // As long as Ultimate is UP, turns all active blood particles currently in the arena into piercing laser beams!
-  enableLaserMatrix: 0,
+    // As long as Ultimate is UP, turns all active blood particles currently in the arena into piercing laser beams!
+  enableLaserMatrix: 1,
   ultCooldown: 840,              // 14.0s (840 frames)
   skill3Cooldown: 840,           // Synchronized alias
-  laserMatrixCastFrames: 16,     // Convergence Prayer Clasp pose
+  laserMatrixCastFrames: 50,     // Convergence Prayer Clasp pose
   laserTelegraphFrames: 12,      // Razor needle targeting lines
+  laserLockInFrames: 14,         // Aim lock-in commitment hold before firing
   laserDischargeFrames: 22,      // Supersonic beam firing duration
   laserDamagePerNode: 14,        // True damage per active node beam
   laserMatrixDragForce: 2.8,     // Pull impulse toward Choso after a beam volley hits

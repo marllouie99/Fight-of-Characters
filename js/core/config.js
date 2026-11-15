@@ -2126,7 +2126,7 @@ export const FIGHTER_DEFS = [
     cooldown: roaringKnightConfig.basicAttackCooldown || 42,
     moveSpeed: roaringKnightConfig.moveSpeed || roaringKnightConfig.speed || 4.9,
     projectileSpeedMultiplier: 1.0,
-    ability: roaringKnightConfig.ability || 'Black Knife, Falling Swords & Roaring Swoon',
+    ability: roaringKnightConfig.ability || 'Black Knife, Tracking Sword & Rotating Slash',
     desc: roaringKnightConfig.desc,
   }
 ];

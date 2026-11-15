@@ -2627,25 +2627,28 @@ export class LawnmowerEntity extends Fighter {
 
     for (const f of allCandidates) {
       if (!isEnemyPlantTarget(this, f)) continue;
+      // Stationary corner End Crystals sit beside baseline mowers at match start and must never trip idle lawnmowers
+      if (f.isEndCrystal || f.type === 'EndCrystal') continue;
 
+      const targetRadius = f.r || f.hitRadius || 0;
       const dy = Math.abs(f.y - this.y);
       const dx = Math.abs(f.x - this.x);
       const dist = Math.hypot(dx, dy);
 
-      // Direct proximity trigger
-      if (dist <= this._triggerRadius) {
+      // Direct proximity trigger (edge-aware so larger-radius fighters like Ender Dragon trigger near the wall)
+      if (dist - targetRadius <= this._triggerRadius) {
         this.trigger();
         this._shredBombs(cfg, opponent);
         return;
       }
 
-      // Lane breach trigger: enemy is within mower's lane and crosses baseline zone
+      // Lane breach trigger: enemy is within mower's lane and its leading edge crosses baseline zone
       if (dy <= halfRowH) {
-        if (this.facingDirection === 1 && f.x <= this.x + this._triggerRadius + 12) {
+        if (this.facingDirection === 1 && (f.x - targetRadius) <= this.x + this._triggerRadius + 12) {
           this.trigger();
           this._shredBombs(cfg, opponent);
           return;
-        } else if (this.facingDirection === -1 && f.x >= this.x - this._triggerRadius - 12) {
+        } else if (this.facingDirection === -1 && (f.x + targetRadius) >= this.x - this._triggerRadius - 12) {
           this.trigger();
           this._shredBombs(cfg, opponent);
           return;

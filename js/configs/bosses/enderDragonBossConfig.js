@@ -41,23 +41,29 @@ export const enderDragonBossConfig = {
   enableCornerCrystals: true,
 
   fireballCooldown: 360, // 6.0s
+  fireballInitialCooldown: 360, // 6.0s initial cooldown at match start
   dragonsBreathSpinDuration: 72,
   dragonsBreathRecoveryFrames: 24,
   dragonsBreathFireInterval: 2,
   dragonsBreathStreamSpeed: 9.0,
   dragonsBreathDamage: 16,
   dragonsBreathMaxDistance: 210,
+  dragonsBreathStayDuration: 240, // 4.0s lingering Dragon's Breath cloud duration
   fireballSpeed: 9.0,
   fireballDamage: 16,
   acidPoolDurationFrames: 240, // 4.0s
   acidDamagePerTick: 8,
 
   swoopCooldown: 420, // 7.0s
+  swoopInitialCooldown: 420, // 7.0s initial cooldown at match start
   swoopSpeed: 21.0,
   swoopDamage: 48,
   swoopKnockback: 24.0,
 
+  divebombInitialCooldown: 600, // 10.0s initial cooldown at match start
+
   cataclysmCooldown: 900, // 15.0s
+  cataclysmInitialCooldown: 900, // 15.0s initial cooldown at match start
   cataclysmShockwaveRadius: 260,
   cataclysmShockwaveDamage: 80,
   cataclysmSecondaryFireballs: 8,

@@ -314,6 +314,9 @@ export const AUDIO_CONFIG = {
   'ender_dragon_hurt3': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt3.ogg',
   'ender_dragon_hurt4': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt4.ogg',
   'ender_dragon_fireball': 'Assets/Sound Effects/EnderdragonSFX/Ghast_fireball4.ogg',
+  'ender_dragon_divebomb_charge': 'Assets/Sound Effects/SkillEffects/groundTremble.mp3',
+  'ender_dragon_divebomb': 'Assets/Sound Effects/Skills/dash5.mp3',
+  'ender_dragon_divebomb_roar': 'Assets/Sound Effects/EnderdragonSFX/Ender_dragon_hurt2.ogg',
   'minecraft_explosion1': 'Assets/Sound Effects/EnderdragonSFX/Explosion1.ogg',
   'minecraft_explosion2': 'Assets/Sound Effects/EnderdragonSFX/Explosion2.ogg',
   'minecraft_explosion3': 'Assets/Sound Effects/EnderdragonSFX/Explosion3.ogg',
@@ -338,7 +341,13 @@ export const AUDIO_CONFIG = {
   'roaring_knight_teleport': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_teleport.wav',
   'roaring_knight_cape': 'Assets/Sound Effects/RoaringKnightSFX/snd_cape_1.wav',
   'roaring_knight_hurt1': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurt.wav',
-  'roaring_knight_hurt2': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav'
+  'roaring_knight_hurt2': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav',
+  'roaring_knight_beam': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_beam.wav',
+  'roaring_knight_laser': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_laser.wav',
+  'roaring_knight_rotatingslash_line': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav',
+  'roaring_knight_pulse2': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_pulse2.wav',
+  'roaring_knight_stretch': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_stretch.wav',
+  'roaring_knight_puff': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav'
 };
 
 

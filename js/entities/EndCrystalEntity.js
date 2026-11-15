@@ -9,6 +9,7 @@ import { state, triggerGlobalScreenShake, spawnFloatingText } from '../core/stat
 import { spawnSparks, spawnImpactFlash, spawnGroundScorch, spawnMinecraftExplosion } from '../graphics/particles/sparkEffect.js';
 import { audioSystem } from '../systems/audioSystem.js';
 import { ARENA_VERTICAL } from '../configs/arenaConstants.js';
+import { drawPacmanFrightenedGhost } from '../graphics/fighters/pacmanSkin.js';
 
 let _crystalSheetImg = null;
 let _crystalSheetLoaded = false;
@@ -230,6 +231,15 @@ export class EndCrystalEntity extends Fighter {
   drawFreezeTimer() { /* End Crystals are immune to freeze */ }
   drawStatusOverlays() { /* End Crystals are immune to debuffs */ }
 
+  /**
+   * Interrupts active tether healing when disabled (e.g. Pac-Man frightened ghost state).
+   */
+  interruptAttacks() {
+    this.isTetheredToDragon = false;
+    this.tetherDragonTarget = null;
+    this.tetherTickTimer = 0;
+  }
+
   update(opponent, ownerIndex, arena) {
     if (this.hp <= 0) {
       this.detonate();
@@ -439,6 +449,10 @@ export class EndCrystalEntity extends Fighter {
 
   draw(ctx) {
     if (!ctx) return;
+    if (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) {
+      drawPacmanFrightenedGhost(ctx, this);
+      return;
+    }
     const sheetImg = getEndCrystalSpriteSheet();
     const isReady = Boolean(sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0);
     const bobY = this._visualBobY !== undefined ? this._visualBobY : 0;
@@ -585,7 +599,7 @@ export function drawCrystalHealingTetherBeams(ctx, dragon) {
   targetDragon._drewTetherBeamsFrame = state.frameCount;
 
   const crystals = state.fighters.filter(
-    f => f && f.isEndCrystal && f.hp > 0 && f.isTetheredToDragon && (!f.tetherDragonTarget || f.tetherDragonTarget === targetDragon)
+    f => f && f.isEndCrystal && f.hp > 0 && f.isTetheredToDragon && !(f.isPacmanGhost && (f.pacmanGhostTimer || 0) > 0) && (!f.tetherDragonTarget || f.tetherDragonTarget === targetDragon)
   );
   if (crystals.length === 0) return;
 

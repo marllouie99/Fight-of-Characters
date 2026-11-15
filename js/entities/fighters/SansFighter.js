@@ -285,7 +285,13 @@ export class SansFighter extends Fighter {
   }
 
   interruptAttacks(forceCancelAll = false) {
-    super.interruptAttacks(forceCancelAll);
+    const shouldPreserve = !forceCancelAll && !this._hasHardVisualSuppression();
+    if (shouldPreserve) this._preserveDodgeAfterimagesInStasis = true;
+    try {
+      super.interruptAttacks(forceCancelAll);
+    } finally {
+      this._preserveDodgeAfterimagesInStasis = false;
+    }
     this.gravitySlamTimer = 0;
     this.basicAttackAnimTimer = 0;
     if (this.blueSoulVictim) {
@@ -486,10 +492,40 @@ export class SansFighter extends Fighter {
   }
 
   /**
-   * Clears all lingering afterimages.
+   * Returns true only when Sans should wipe/hide even already-spawned world-space dodge afterimages.
+   * Transient hit-pause / hit-stun must NEVER erase lingering teleport dodge ghosts.
+   */
+  _hasHardVisualSuppression() {
+    return Boolean(
+      this.hp <= 0 ||
+      this.isDead ||
+      this.isTargetOfAmbush ||
+      this.isCaughtInTelekinesis ||
+      this.isCaughtInBlackHole ||
+      this._insideBlackHole ||
+      (this.isPacmanGhost && (this.pacmanGhostTimer || 0) > 0) ||
+      (this._hitByGetsugaTimer && this._hitByGetsugaTimer > 0) ||
+      (this._hitByFugaTimer && this._hitByFugaTimer > 0) ||
+      (this._hitByDivineFlameTimer && this._hitByDivineFlameTimer > 0)
+    );
+  }
+
+  /**
+   * Clears all lingering afterimages (preserved across transient hit-pause/hit-stun unless hard-suppressed).
    */
   clearAllAfterimages() {
+    if (this._preserveDodgeAfterimagesInStasis) return;
     if (this.afterImages) this.afterImages.length = 0;
+  }
+
+  _handleTimeStop() {
+    const shouldPreserve = !this._hasHardVisualSuppression();
+    if (shouldPreserve) this._preserveDodgeAfterimagesInStasis = true;
+    try {
+      return super._handleTimeStop();
+    } finally {
+      this._preserveDodgeAfterimagesInStasis = false;
+    }
   }
 
   /**
@@ -736,6 +772,7 @@ export class SansFighter extends Fighter {
     this.caughtInPureLoveBeam = false;
     this.wasCaughtInPureLoveBeam = false;
     this.pureLoveBeamTimer = 0;
+    this.pureLoveBeamRecoveryTimer = 0;
 
     return true; // Successfully dodged!
   }
@@ -2230,6 +2267,7 @@ export class SansFighter extends Fighter {
    */
   update(opponent, ownerIndex, arena) {
     // 0. Update visual effects & transient particle lifecycles before freeze guard (Rule 25)
+    this._updateAfterImages();
     this._updateHeartShatters();
     this._updateSpeech();
 
@@ -2292,7 +2330,6 @@ export class SansFighter extends Fighter {
     }
 
     // 4. Update Subsystems
-    this._updateAfterImages();
     this._updateKarma();
     this._updateGasterBlasters(opponent);
     this._updateBones();

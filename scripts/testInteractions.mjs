@@ -5074,8 +5074,9 @@ async function runInteractionTests() {
     assert(sans.gasterBlasters.length === 1, 'Gigablaster must be spawned in gasterBlasters array');
     const gigaBlaster = sans.gasterBlasters[0];
     assert(gigaBlaster.pattern === 2, 'Gigablaster pattern index must be 2');
-    const gigaBaseDmg = gigaBlaster.damage; // 30
-    assert(gigaBaseDmg === 30, `Gigablaster base damage must be 30 (got ${gigaBaseDmg})`);
+    const expectedGigaDmg = sansConfig.blasterGigaDamage ?? 30;
+    const gigaBaseDmg = gigaBlaster.damage;
+    assert(gigaBaseDmg === expectedGigaDmg, `Gigablaster base damage must match config ${expectedGigaDmg} (got ${gigaBaseDmg})`);
 
     // Complete charge phase; on final charge tick it transitions to firing and triggers First Impact (100% damage)
     const hpBeforeCast = targetDummy.hp;
@@ -8986,13 +8987,11 @@ async function runInteractionTests() {
       enableChakram: CONFIG.choso.enableChakram,
       enableSupernova: CONFIG.choso.enableSupernova,
       enablePiercingBlood: CONFIG.choso.enablePiercingBlood,
-      enableBloodDarts: CONFIG.choso.enableBloodDarts,
     };
     CONFIG.choso.enableLaserMatrix = true;
     CONFIG.choso.enableChakram = 1;
     CONFIG.choso.enableSupernova = 1;
     CONFIG.choso.enablePiercingBlood = 1;
-    CONFIG.choso.enableBloodDarts = 1;
     try {
 
     state.arena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
@@ -9036,12 +9035,15 @@ async function runInteractionTests() {
     assert(choso.isStationarySkillActive() === true, 'Choso must report stationary skill active during cast');
     assert(choso.bloodNodes.every(n => n.isIgnitedAsLaser === true), 'All blood nodes must ignite into laser diodes');
 
-    // Advance telegraph and discharge
+    // Advance telegraph -> lock-in -> discharge
     choso.laserMatrixTimer = 0;
     choso.laserTelegraphTimer = 1;
+    choso.laserLockInTimer = 1;
     dummy.vx = 0;
     dummy.vy = 0;
     const initialDummyHp = dummy.hp;
+    choso.update(dummy, 0, state.arena);
+    assert(choso.isLaserMatrixLockedIn === true && choso.activeLaserBeams.length === 0, 'Must enter lock-in frame before discharging');
     choso.update(dummy, 0, state.arena);
     assert(choso.activeLaserBeams.length >= 4, `All active blood nodes must discharge laser beams (got ${choso.activeLaserBeams.length})`);
     assert(dummy.hp < initialDummyHp, 'Laser Matrix beams must deal damage to target');
@@ -9082,6 +9084,8 @@ async function runInteractionTests() {
     assert(choso.bloodNodes.length === 1, 'Only the 1 existing blood particle must be ignited');
     choso.laserMatrixTimer = 0;
     choso.laserTelegraphTimer = 1;
+    choso.laserLockInTimer = 1;
+    choso.update(dummy, 0, state.arena);
     choso.update(dummy, 0, state.arena);
     assert(choso.activeLaserBeams.length === 1, 'Exactly 1 beam must be fired from the 1 existing blood particle');
 
@@ -9127,6 +9131,8 @@ async function runInteractionTests() {
     assert(choso.isClaspedForConvergence === true, 'Choso must be clasped for Convergence');
     choso.laserMatrixTimer = 0;
     choso.laserTelegraphTimer = 1;
+    choso.laserLockInTimer = 1;
+    choso.update(dummy, 0, state.arena);
     choso.update(dummy, 0, state.arena);
     assert(choso.activeLaserBeams.length === 1, 'Laser Matrix must fire beam from the floor blood particle');
 
@@ -9190,7 +9196,9 @@ async function runInteractionTests() {
     choso.draw(mockCtx, dummy);
     assert(mockCtx.getStackDepth() === 0, 'Choso draw stack balance must be 0');
 
-    // 9. Verify Zero Blood Being Fired when No Blood Particles Exist in Arena
+    // 9. Verify Zero Blood Skills Blocked + Supernova Basic Attack Triggers Without Blood Within Range
+    assert(typeof choso._startMeleeCombo === 'undefined', 'Old Blood Edge melee basic attack (_startMeleeCombo) must be removed');
+    assert(hudSkills.find(s => s.id === 'supernova') === undefined, 'Supernova is now Choso basic attack and must not appear as a separate Skill 2 HUD bar');
     const prevNova = CONFIG.choso.enableSupernova;
     const prevChakram = CONFIG.choso.enableChakram;
     CONFIG.choso.enableSupernova = 0;
@@ -9207,7 +9215,7 @@ async function runInteractionTests() {
       choso.basicAttackCooldown = 0;
       choso.activeLaserBeams.length = 0;
 
-      // Run AI update loop with all skills off cooldown
+      // Run AI update loop with all skills off cooldown and 0 blood
       choso.update(dummy, 0, state.arena);
       assert(choso.activeLaserBeams.length === 0, 'ZERO laser beams may be fired when 0 blood particles exist');
       assert(choso.isCastingLaserMatrix === false, 'Laser Matrix must NOT activate when 0 blood particles exist');
@@ -9215,6 +9223,22 @@ async function runInteractionTests() {
       assert(choso.isFiringPiercingBlood === false, 'Piercing Blood must NOT fire when 0 blood particles exist');
       assert(choso.isChargingSupernova === false, 'Supernova must NOT charge when disabled');
       assert(choso.chakrams.length === 0, 'Chakrams must NOT be spawned when disabled');
+
+      // Now enable Supernova Basic Attack and verify it charges in range even with 0 blood particles, and deals damage
+      CONFIG.choso.enableSupernova = 1;
+      choso.interruptAttacks(true);
+      choso.basicAttackCooldown = 0;
+      choso.x = 200;
+      choso.y = 300;
+      dummy.x = 320; // 120px <= 210px supernovaRange
+      dummy.y = 300;
+      dummy.hp = 300;
+      dummy.isDead = false;
+      choso.update(dummy, 0, state.arena);
+      assert(choso.isChargingSupernova === true && choso.basicAttackCooldown > 0, 'Supernova basic attack must charge when target is within supernovaRange even with 0 blood');
+      choso.supernovaTimer = 0;
+      choso.update(dummy, 0, state.arena);
+      assert(dummy.hp < 300, 'Supernova basic attack detonation must damage nearby target');
     } finally {
       CONFIG.choso.enableSupernova = prevNova;
       CONFIG.choso.enableChakram = prevChakram;
@@ -9259,8 +9283,10 @@ async function runInteractionTests() {
     assert(choso.isCastingLaserMatrix === true && choso.isClaspedForConvergence === true, 'Choso must enter Convergence clasp when triggered');
     choso.laserMatrixTimer = 0;
     choso.laserTelegraphTimer = 1;
+    choso.laserLockInTimer = 1;
     choso.activeLaserBeams.length = 0;
     const preHp = dummy.hp;
+    choso.update(dummy, 0, state.arena);
     choso.update(dummy, 0, state.arena);
     assert(choso.activeLaserBeams.length >= 4, 'All ignited blood droplets must fire simultaneous beams when Convergence triggers');
     assert(dummy.hp < preHp, 'Target must take damage from Convergence barrage');
@@ -9449,15 +9475,27 @@ async function runInteractionTests() {
     }
     choso.dartThrowTimer = 0;
 
-    // L. Blood Edge Melee 5-Phase Cleave (Lift, Hold, Whip Strike, Impact Lock, Recovery) with Coagulated Blood Dagger
-    choso.slashSwingMax = 36;
-    for (const timer of [32, 25, 18, 12, 4]) {
-      choso.slashSwingTimer = timer;
-      chosoMockCtx.resetStackDepth();
-      drawChosoSkin(chosoMockCtx, choso);
-      assert(chosoMockCtx.getStackDepth() === 0, `drawChosoSkin during Blood Edge melee (timer=${timer}) must maintain 0 Canvas 2D stack depth`);
-    }
-    choso.slashSwingTimer = 0;
+    // L. Remote Supernova Basic Attack Trigger via Nearby Blood Nodes (Target > range from Choso, within range of blood)
+    choso.interruptAttacks(true);
+    choso.bloodNodes = [];
+    if (state.bloodEffects) state.bloodEffects.length = 0;
+    choso.x = 100;
+    choso.y = 300;
+    dummy.x = 420; // 320px from Choso (> 210px)
+    dummy.y = 300;
+    dummy.hp = 300;
+    dummy.isDead = false;
+    choso.ultCooldown = 999;
+    choso.skill3Cooldown = 999;
+    choso.piercingBloodCooldown = 999;
+    choso.skill1Cooldown = 999;
+    choso.basicAttackCooldown = 0;
+    choso.spawnBloodNode(400, 300); // 20px from dummy
+    choso.update(dummy, 0, state.arena);
+    assert(choso.isChargingSupernova === true, 'Supernova basic attack must remotely charge blood nodes near target');
+    choso.supernovaTimer = 0;
+    choso.update(dummy, 0, state.arena);
+    assert(dummy.hp < 300, 'Remote Supernova basic attack must damage target near detonated blood nodes');
 
     // 17. Verify Hyperion-Style Continuous Aim-Locked Piercing Blood Tracking & Multi-Tick Damage (including 1v1 undefined team state!)
     const prevChosoTeam = choso.team;
@@ -9519,7 +9557,6 @@ async function runInteractionTests() {
       CONFIG.choso.enableChakram = _origChosoToggles.enableChakram;
       CONFIG.choso.enableSupernova = _origChosoToggles.enableSupernova;
       CONFIG.choso.enablePiercingBlood = _origChosoToggles.enablePiercingBlood;
-      CONFIG.choso.enableBloodDarts = _origChosoToggles.enableBloodDarts;
     }
   }
 
@@ -14911,7 +14948,7 @@ async function runInteractionTests() {
     assert(zenitsu.canPerformBasicAttack(pacman) === false, 'Enemy must NOT be able to perform basic attacks in ghost state');
     assert(zenitsu.canAim() === false, 'Enemy must NOT be able to aim in ghost state');
 
-    // 3. Verify Skill Cooldowns are PAUSED (Do not tick down)
+    // 3. Verify Skill Cooldowns are NOT paused (continue ticking down during ghost state) while abilities stay locked
     const initialCd1 = zenitsu.thunderclapCooldown;
     const initialCd2 = zenitsu.rokurenCooldown;
     const initialX = zenitsu.x;
@@ -14919,12 +14956,15 @@ async function runInteractionTests() {
 
     // Simulate 10 physics frames
     for (let f = 0; f < 10; f++) {
+      state.frameCount = (state.frameCount || 0) + 1;
       updateFighters();
     }
 
-    assert(zenitsu.thunderclapCooldown === initialCd1, 'Thunderclap cooldown must remain paused during ghost state');
-    assert(zenitsu.rokurenCooldown === initialCd2, 'Rokuren cooldown must remain paused during ghost state');
+    assert(zenitsu.thunderclapCooldown === initialCd1 - 10, `Thunderclap cooldown must continue ticking during ghost state (expected ${initialCd1 - 10}, got ${zenitsu.thunderclapCooldown})`);
+    assert(zenitsu.rokurenCooldown === initialCd2 - 10, `Rokuren cooldown must continue ticking during ghost state (expected ${initialCd2 - 10}, got ${zenitsu.rokurenCooldown})`);
     assert(zenitsu.pacmanGhostTimer === expectedBaseGhostTimer - 10, `Ghost timer must decrement each frame (got ${zenitsu.pacmanGhostTimer})`);
+    assert(zenitsu.canPerformBasicAttack(pacman) === false, 'Enemy must remain unable to attack while ghost cooldowns tick down');
+    assert(zenitsu.canAim() === false, 'Enemy must remain unable to aim while ghost cooldowns tick down');
 
     // 4. Verify Movement Continuity: Enemy CAN MOVE
     const moved = Math.hypot(zenitsu.x - initialX, zenitsu.y - initialY) > 0.5 || Math.hypot(zenitsu.vx, zenitsu.vy) > 0.1;
@@ -14974,12 +15014,25 @@ async function runInteractionTests() {
     assert(pacman.swallowedEnemies.includes(zenitsu), 'Pac-Man must track swallowed enemy in swallowedEnemies');
     assert(zenitsu.hp === hpBeforeSwallow - Math.round((zenitsu.maxHp || 1000) * pacman.chompDamagePercent), 'Swallowed enemy must take 30% max HP damage');
 
-    // 8. Verify Swallowed Enemy Position is Locked inside Pac-Man (physics.js containment)
+    // 8. Verify Swallowed Enemy Position is Locked inside Pac-Man (physics.js containment) & Skill Cooldowns Still Tick
     pacman.x = 180;
     pacman.y = 280;
-    updateFighters();
+    const swallowedCdBefore1 = zenitsu.thunderclapCooldown;
+    const swallowedCdBefore2 = zenitsu.rokurenCooldown;
+    for (let f = 0; f < 5; f++) {
+      state.frameCount = (state.frameCount || 0) + 1;
+      updateFighters();
+    }
     assert(zenitsu.x === pacman.x && zenitsu.y === pacman.y, 'Swallowed enemy position must sync with Pac-Man in physics.js');
     assert(zenitsu.vx === 0 && zenitsu.vy === 0, 'Swallowed enemy velocity must be 0 while contained');
+    assert(
+      zenitsu.thunderclapCooldown === swallowedCdBefore1 - 5,
+      `Swallowed enemy Thunderclap cooldown must NOT freeze when consumed (expected ${swallowedCdBefore1 - 5}, got ${zenitsu.thunderclapCooldown})`
+    );
+    assert(
+      zenitsu.rokurenCooldown === swallowedCdBefore2 - 5,
+      `Swallowed enemy Rokuren cooldown must NOT freeze when consumed (expected ${swallowedCdBefore2 - 5}, got ${zenitsu.rokurenCooldown})`
+    );
 
     // 8b. Verify Swallowed Enemy Takes Digestion Damage Per Second (60 frames)
     const hpBeforeDps = zenitsu.hp;
@@ -15002,12 +15055,56 @@ async function runInteractionTests() {
     assert(zenitsu.canPerformBasicAttack(pacman) === true, 'Enemy must regain ability to attack after being spit out');
     assert(zenitsu.canAim() === true, 'Enemy must regain ability to aim after being spit out');
 
-    // 10. Verify Power Pellet Consumption Resumes After Chomp Mode Expires
+    // 10. Verify Power Pellet Consumption Resumes After Chomp Mode Expires & Every Dot Heals Pac-Man
+    const cfgPac = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : {};
+    const expectedSmallDotHeal = cfgPac.dotHealAmount ?? pacman.dotHealAmount ?? 4;
+    const expectedPowerPelletHeal = cfgPac.powerPelletHealAmount ?? pacman.powerPelletHealAmount ?? 12;
+
+    pacman.hp = Math.max(100, pacman.maxHp - 50);
+    pacman._healthBarHealTimer = 0;
+    pacman._lastHealAmount = 0;
+    const hpBeforePelletHeal = pacman.hp;
+
     pacman.x = powerPellet.x;
     pacman.y = powerPellet.y;
     pacman._checkDotEating();
     assert(powerPellet.eaten === true, 'Pac-Man must resume eating Power Pellets once Chomp Mode has expired');
     assert(pacman.dotsEaten > dotsEatenBeforePellet, 'dotsEaten must increment now that Chomp Mode is inactive');
+    assert(
+      pacman.hp === Math.min(pacman.maxHp, hpBeforePelletHeal + expectedPowerPelletHeal),
+      `Consuming a Power Pellet must heal Pac-Man by ${expectedPowerPelletHeal} HP (got ${pacman.hp - hpBeforePelletHeal})`
+    );
+    assert(pacman._healthBarHealTimer > 0, 'Consuming a Power Pellet must pulse the HUD healthbar heal timer');
+
+    // 10b. Verify small dot consumption heals Pac-Man (including during Chomp Mode) and final dot heals before board clear break
+    const nextSmallDot = pacman.dots.find(d => !d.isPowerPellet && !d.eaten);
+    assert(nextSmallDot !== undefined, 'Remaining small dot must exist for heal check');
+    const hpBeforeSmallDotHeal = pacman.hp;
+    pacman._healthBarHealTimer = 0;
+    pacman.x = nextSmallDot.x;
+    pacman.y = nextSmallDot.y;
+    pacman._checkDotEating();
+    assert(nextSmallDot.eaten === true, 'Small dot must be consumed');
+    assert(
+      pacman.hp === Math.min(pacman.maxHp, hpBeforeSmallDotHeal + expectedSmallDotHeal),
+      `Consuming a small dot must heal Pac-Man by ${expectedSmallDotHeal} HP (got ${pacman.hp - hpBeforeSmallDotHeal})`
+    );
+    assert(pacman._healthBarHealTimer > 0, 'Consuming a small dot must pulse the HUD healthbar heal timer');
+
+    // Final dot (allDots clear branch) must still heal Pac-Man and clamp cleanly at maxHp
+    for (let i = 0; i < pacman.dots.length - 1; i++) {
+      pacman.dots[i].eaten = true;
+    }
+    const lastDot = pacman.dots[pacman.dots.length - 1];
+    lastDot.eaten = false;
+    pacman.dotsEaten = pacman.dots.length - 1;
+    pacman.totalDots = pacman.dots.length;
+    pacman.hp = pacman.maxHp - 2;
+    pacman.x = lastDot.x;
+    pacman.y = lastDot.y;
+    pacman._checkDotEating();
+    assert(pacman.hp === pacman.maxHp, `Final dot heal must clamp cleanly to maxHp (${pacman.maxHp}), got ${pacman.hp}`);
+    pacman.hp = pacman.maxHp;
 
     // 11. Verify Pac-Man Dedicated Audio SFX Configuration
     assert(pacman.sounds.death === 'Assets/Sound Effects/PacmanSFX/pac-man-death-sound.mp3', 'Pac-Man death sound path must match');
@@ -19744,7 +19841,44 @@ async function runInteractionTests() {
     for (let s of defaultHudSkills) {
       assert(s.color === expectedColor, `Skill ${s.id} color (${s.color}) must match themeColor (${expectedColor})`);
       assert(s.pct >= 0 && s.pct <= 100, `Skill ${s.id} pct must be clamped [0, 100], got ${s.pct}`);
+      assert(s.ready === false, `Skill ${s.id} must start on initial cooldown at match start`);
     }
+
+    // Verify config-driven initial cooldowns across constructor, reset(), and zero boundary
+    const expectedDragonCfg = dragon._getConfig();
+    const expectedInitFireball = expectedDragonCfg.fireballInitialCooldown ?? expectedDragonCfg.fireballCooldown ?? 480;
+    const expectedInitSwoop = expectedDragonCfg.swoopInitialCooldown ?? expectedDragonCfg.swoopCooldown ?? 540;
+    const expectedInitDivebomb = expectedDragonCfg.divebombInitialCooldown ?? expectedDragonCfg.divebombCooldown ?? 600;
+    const expectedInitCataclysm = expectedDragonCfg.cataclysmInitialCooldown ?? expectedDragonCfg.cataclysmCooldown ?? 1100;
+    const expectedInitIntercept = expectedDragonCfg.interceptInitialCooldown ?? expectedDragonCfg.interceptCooldown ?? 360;
+    const expectedInitPerch = expectedDragonCfg.perchInitialCooldown ?? expectedDragonCfg.perchInterval ?? 1200;
+
+    assert(fullDragon.fireballCooldown === expectedInitFireball && expectedInitFireball > 0, `Ender Dragon fireball must initialize with config initial cooldown (${expectedInitFireball}), got ${fullDragon.fireballCooldown}`);
+    assert(fullDragon.swoopCooldown === expectedInitSwoop && expectedInitSwoop > 0, `Ender Dragon swoop must initialize with config initial cooldown (${expectedInitSwoop}), got ${fullDragon.swoopCooldown}`);
+    assert(fullDragon.divebombCooldown === expectedInitDivebomb && expectedInitDivebomb > 0, `Ender Dragon divebomb must initialize with config initial cooldown (${expectedInitDivebomb}), got ${fullDragon.divebombCooldown}`);
+    assert(fullDragon.cataclysmCooldown === expectedInitCataclysm && expectedInitCataclysm > 0, `Ender Dragon cataclysm must initialize with config initial cooldown (${expectedInitCataclysm}), got ${fullDragon.cataclysmCooldown}`);
+    assert(fullDragon.interceptCooldown === expectedInitIntercept && expectedInitIntercept > 0, `Ender Dragon intercept must initialize with config initial cooldown (${expectedInitIntercept}), got ${fullDragon.interceptCooldown}`);
+    assert(fullDragon.perchCooldown === expectedInitPerch && expectedInitPerch > 0, `Ender Dragon perch must initialize with config initial cooldown (${expectedInitPerch}), got ${fullDragon.perchCooldown}`);
+
+    fullDragon.fireballCooldown = 0;
+    fullDragon.divebombCooldown = 0;
+    fullDragon.reset();
+    assert(fullDragon.fireballCooldown === expectedInitFireball, 'reset() must restore fireball initial cooldown');
+    assert(fullDragon.divebombCooldown === expectedInitDivebomb, 'reset() must restore divebomb initial cooldown');
+
+    const zeroInitDragon = new EnderDragonFighter({
+      x: 250,
+      y: 250,
+      customConfig: {
+        ...enderDragonConfig,
+        fireballInitialCooldown: 0,
+        swoopInitialCooldown: 0,
+        divebombInitialCooldown: 0,
+        cataclysmInitialCooldown: 0,
+      },
+    });
+    assert(zeroInitDragon.fireballCooldown === 0, 'fireballInitialCooldown=0 boundary must be respected via nullish coalescing');
+    assert(zeroInitDragon.divebombCooldown === 0, 'divebombInitialCooldown=0 boundary must be respected via nullish coalescing');
 
     // Test disabling specific skill toggles: hide from HUD and prevent cast
     const customDragon = new EnderDragonFighter({
@@ -19815,6 +19949,7 @@ async function runInteractionTests() {
 
     let stackDepth = 0;
     let drawImageCount = 0;
+    const drawnTexts = [];
     const mockCtx = {
       save() { stackDepth++; },
       restore() { stackDepth--; },
@@ -19832,6 +19967,8 @@ async function runInteractionTests() {
       fill() {},
       stroke() {},
       fillRect() {},
+      setLineDash() {},
+      fillText(txt) { drawnTexts.push(String(txt)); },
       drawImage() { drawImageCount++; },
       createRadialGradient() { return { addColorStop() {} }; },
       createLinearGradient() { return { addColorStop() {} }; },
@@ -19857,6 +19994,22 @@ async function runInteractionTests() {
     drawMinecraftBreathStream(mockCtx, { x: 280, y: 420, vx: 6, vy: 2, radius: 14 });
     assert(stackDepth === 0, `drawMinecraftBreathStream must preserve Canvas 2D stack depth 0, got ${stackDepth}`);
     assert(drawImageCount >= 0, 'drawEnderDragonSkin executed cleanly');
+
+    // Verify divebomb telegraph renders cleanly without DANGER ZONE label text
+    drawnTexts.length = 0;
+    dragon.hp = 500;
+    dragon.isDead = false;
+    dragon.isTelegraphingDivebomb = true;
+    dragon.aiState = DRAGON_STATE.DIVEBOMB_TELEGRAPH;
+    dragon.divebombStartX = 120;
+    dragon.divebombStartY = 420;
+    dragon.divebombEndX = 420;
+    dragon.divebombEndY = 420;
+    dragon.divebombAngle = 0;
+    dragon.divebombTelegraphProgress = 0.5;
+    dragon.drawGroundTelegraph(mockCtx);
+    assert(stackDepth === 0, `drawGroundTelegraph must preserve Canvas 2D stack depth 0, got ${stackDepth}`);
+    assert(!drawnTexts.some(t => t.toUpperCase().includes('DANGER')), `drawGroundTelegraph must NOT render DANGER ZONE label text, got ${JSON.stringify(drawnTexts)}`);
 
     // Verify acid pool spatial deduping, arena clamping & hard pool cap (<= 16)
     dragon.acidPools = [];
@@ -22803,7 +22956,25 @@ async function runInteractionTests() {
     const origFighters = state.fighters;
     const origProjectiles = state.projectiles;
     const origGameState = state.gameState;
+    const rkCfg = CONFIG.roaring_knight;
+    const toggleKeys = [
+      'enableShadowMantle',
+      'enableBlackKnife',
+      'enableFallingSwords',
+      'enableStarBurst',
+      'enableStarOrbit',
+      'enableBladeCorridor',
+      'enableSwordTunnel',
+      'enableSwordTunnelPhase2',
+      'enableSwordTunnelFinisher',
+      'enableSnowflakeMatrix',
+      'enableRoaringSwoon',
+      'enableGapingMawRift',
+      'enableDesperationRoaring',
+    ];
+    const origToggles = Object.fromEntries(toggleKeys.map(k => [k, rkCfg[k]]));
     try {
+      for (const k of toggleKeys) rkCfg[k] = true;
       state.gameState = 'playing';
       state.projectiles = [];
       const rkDef = FIGHTER_DEFS.find(d => d.type === 'roaring_knight');
@@ -22815,12 +22986,172 @@ async function runInteractionTests() {
       knight.vx = 0;
       knight.vy = 0;
       const UnarmedClass = FIGHTER_CLASS_MAP['unarmed'];
-      const dummy = new UnarmedClass({ x: 250, y: 400, hp: 1000, maxHp: 1000 });
+      const dummy = new UnarmedClass({ x: 250, y: 400 });
+      dummy.maxHp = 2000;
+      dummy.hp = 2000;
       dummy.x = 250;
       dummy.y = 400;
       dummy.vx = 0;
       dummy.vy = 0;
       state.fighters = [knight, dummy];
+
+      // 0. Fresh-spawn initial cooldowns across all skills (prevents instant round-start skill spam)
+      assert(
+        knight.shadowStepCooldownTimer === (rkCfg.shadowStepInitialCooldown ?? 75) &&
+        knight.basicAttackCooldownTimer === (rkCfg.basicAttackInitialCooldown ?? 30) &&
+        knight.skill1CooldownTimer === (rkCfg.skill1InitialCooldown ?? rkCfg.fallingSwordsInitialCooldown ?? 180) &&
+        knight.fallingSwordsCooldownTimer === (rkCfg.fallingSwordsInitialCooldown ?? 180) &&
+        knight.starBurstCooldownTimer === (rkCfg.starBurstInitialCooldown ?? 300) &&
+        knight.bladeCorridorCooldownTimer === (rkCfg.bladeCorridorInitialCooldown ?? 240) &&
+        knight.snowflakeMatrixCooldownTimer === (rkCfg.snowflakeMatrixInitialCooldown ?? 360) &&
+        knight.swoonCooldownTimer === (rkCfg.swoonInitialCooldown ?? 0) &&
+        knight.swoonBasicHits === 0,
+        `Roaring Knight must initialize all skills on round-start initial cooldowns`
+      );
+      const initUltHud = getSkillDataForFighter(knight).find(s => s.id === 'roaring_swoon');
+      assert(
+        initUltHud && initUltHud.label === `ROTATING SLASH (0/${rkCfg.swoonHitsRequired ?? 10})` && initUltHud.pct === 0 && !initUltHud.ready,
+        `Roaring Knight Ultimate HUD must initialize at (0/10), got ${JSON.stringify(initUltHud)}`
+      );
+      knight.update(dummy, 0, arena);
+      assert(
+        !knight.isFallingSwordsCasting && !knight.isStarBurstCasting && !knight.isBladeCorridorCasting &&
+        !knight.isSnowflakeMatrixCasting && !knight.isSwoonChanneling && !knight.isMeleeSwinging,
+        'Roaring Knight must not cast any active skill on frame 1 while initial cooldowns remain > 0'
+      );
+
+      // 0a. Single-source cooldown rate verification with state.frameCount advancing every frame (no SkillManager 2x double-tick)
+      const prevTestFrameCount = state.frameCount;
+      const origKnightInitPos = { x: knight.x, y: knight.y, vx: knight.vx, vy: knight.vy };
+      knight.reset();
+      knight.x = 180;
+      knight.y = 400;
+      knight.vx = 0;
+      knight.vy = 0;
+      const expectedInitCd = rkCfg.skill1InitialCooldown ?? rkCfg.fallingSwordsInitialCooldown ?? 180;
+      assert(
+        knight.skill1CooldownTimer === expectedInitCd,
+        `knight.reset() must preserve skill1InitialCooldown (${expectedInitCd}), got ${knight.skill1CooldownTimer}`
+      );
+      knight.basicAttackCooldownTimer = 9999;
+      knight.shadowStepCooldownTimer = 9999;
+      knight.swoonCooldownTimer = 9999;
+      for (let f = 1; f < expectedInitCd; f++) {
+        state.frameCount = (state.frameCount || 0) + 1;
+        knight.basicAttackCooldownTimer = 9999;
+        knight.update(dummy, 0, arena);
+        assert(
+          !knight._isSkill1Active(),
+          `Skill 1 must NOT activate before initial cooldown (${expectedInitCd}f) elapses (activated early on frame ${f}, s1=${knight.skill1CooldownTimer})`
+        );
+      }
+      assert(
+        knight.skill1CooldownTimer === 1,
+        `After ${expectedInitCd - 1} frames with state.frameCount advancing, skill1CooldownTimer must be 1 (no 2x SkillManager double-tick), got ${knight.skill1CooldownTimer}`
+      );
+      state.frameCount = (state.frameCount || 0) + 1;
+      knight.basicAttackCooldownTimer = 9999;
+      knight.update(dummy, 0, arena);
+      assert(knight._isSkill1Active(), `Skill 1 must activate on exact frame ${expectedInitCd}`);
+      assert(
+        knight.skill1CooldownTimer === (rkCfg.skill1Cooldown ?? 420),
+        `Skill 1 must arm full skill1Cooldown (${rkCfg.skill1Cooldown ?? 420}) on cast start, got ${knight.skill1CooldownTimer}`
+      );
+      const expectedPostCastWait = Math.min(200, Math.max(10, (rkCfg.skill1Cooldown ?? 420) - 10));
+      for (let f = 1; f <= expectedPostCastWait; f++) {
+        state.frameCount = (state.frameCount || 0) + 1;
+        knight.basicAttackCooldownTimer = 9999;
+        knight.update(dummy, 0, arena);
+      }
+      assert(
+        knight.skill1CooldownTimer === (rkCfg.skill1Cooldown ?? 420) - expectedPostCastWait,
+        `Post-cast skill1CooldownTimer must tick strictly 1/frame with frameCount advancing (expected ${(rkCfg.skill1Cooldown ?? 420) - expectedPostCastWait}, got ${knight.skill1CooldownTimer})`
+      );
+      state.frameCount = prevTestFrameCount;
+      knight.reset();
+      knight.x = origKnightInitPos.x;
+      knight.y = origKnightInitPos.y;
+      knight.vx = origKnightInitPos.vx;
+      knight.vy = origKnightInitPos.vy;
+      dummy.x = 250;
+      dummy.y = 400;
+      dummy.hp = dummy.maxHp;
+      dummy.vx = 0;
+      dummy.vy = 0;
+
+      // 0b. Unified Random Skill 1: when skill1CooldownTimer reaches 0, randomly chooses from enabled active skills & arms shared CD
+      const origKnightSkillState = {
+        x: knight.x,
+        y: knight.y,
+        skill1CooldownTimer: knight.skill1CooldownTimer,
+        swoonCooldownTimer: knight.swoonCooldownTimer,
+        basicAttackCooldownTimer: knight.basicAttackCooldownTimer,
+        shadowStepCooldownTimer: knight.shadowStepCooldownTimer,
+      };
+      const seenSkill1Picks = new Set();
+      knight.swoonCooldownTimer = 9999;
+      knight.basicAttackCooldownTimer = 9999;
+      knight.shadowStepCooldownTimer = 9999;
+      for (let trial = 0; trial < 30; trial++) {
+        knight.isFallingSwordsCasting = false;
+        knight.fallingSwordsCastTimer = 0;
+        knight._trackingSwordSeq = null;
+        knight.isStarBurstCasting = false;
+        knight.starBurstCastTimer = 0;
+        knight.activeStarCone = null;
+        knight.isBladeCorridorCasting = false;
+        knight.bladeCorridorCastTimer = 0;
+        knight.isSwordTunnelCasting = false;
+        knight.swordTunnelCastTimer = 0;
+        knight.activeSwordTunnel = null;
+        knight.isSnowflakeMatrixCasting = false;
+        knight.snowflakeMatrixPhase = 'idle';
+        knight.snowflakeMatrixTimer = 0;
+        knight.activeSnowflakeMatrix = null;
+        knight.skill1CooldownTimer = 0;
+        knight.x = 180;
+        knight.y = 400;
+        dummy.x = 340;
+        dummy.y = 400;
+        knight.update(dummy, 0, arena);
+        assert(knight._isSkill1Active(), 'Unified Skill 1 must initiate one active skill when skill1CooldownTimer hits 0');
+        assert(knight.skill1CooldownTimer === (rkCfg.skill1Cooldown ?? 420), 'Casting Skill 1 must arm unified skill1Cooldown');
+        if (knight._activeSkill1Id) seenSkill1Picks.add(knight._activeSkill1Id);
+        if (seenSkill1Picks.size >= 2) break;
+      }
+      assert(
+        seenSkill1Picks.size >= 2,
+        `Unified Skill 1 must randomly select across enabled active skills, observed only: ${JSON.stringify([...seenSkill1Picks])}`
+      );
+      knight.isFallingSwordsCasting = false;
+      knight.fallingSwordsCastTimer = 0;
+      knight._trackingSwordSeq = null;
+      knight.isStarBurstCasting = false;
+      knight.starBurstCastTimer = 0;
+      knight.activeStarCone = null;
+      knight.isBladeCorridorCasting = false;
+      knight.bladeCorridorCastTimer = 0;
+      knight.isSwordTunnelCasting = false;
+      knight.swordTunnelCastTimer = 0;
+      knight.activeSwordTunnel = null;
+      knight.activeTunnelSwords.length = 0;
+      knight.activeTunnelBeamHitboxes.length = 0;
+      knight.activeTunnelAfterimages.length = 0;
+      knight.isSnowflakeMatrixCasting = false;
+      knight.snowflakeMatrixPhase = 'idle';
+      knight.snowflakeMatrixTimer = 0;
+      knight.activeSnowflakeMatrix = null;
+      knight.activeFallingSwords.length = 0;
+      knight.activeStarBursts.length = 0;
+      knight.activeOrbitStars.length = 0;
+      knight.x = origKnightSkillState.x;
+      knight.y = origKnightSkillState.y;
+      knight.skill1CooldownTimer = origKnightSkillState.skill1CooldownTimer;
+      knight.swoonCooldownTimer = origKnightSkillState.swoonCooldownTimer;
+      knight.basicAttackCooldownTimer = origKnightSkillState.basicAttackCooldownTimer;
+      knight.shadowStepCooldownTimer = origKnightSkillState.shadowStepCooldownTimer;
+      dummy.x = 250;
+      dummy.y = 400;
 
       // 1. Rule 24: Scaled radius (> 25) preserved from super(def)
       assert(knight.r > 25, `Roaring Knight radius must remain globally scaled (> 25), got ${knight.r}`);
@@ -22829,91 +23160,764 @@ async function runInteractionTests() {
       knight.shoot(0);
       assert(state.projectiles.length === 0, 'Roaring Knight shoot() must not spawn generic bullets');
 
-      // 3. Rule 30: 5-Phase Black Knife Cleave deals damage without micro-frames
-      knight.basicAttackCooldownTimer = 0;
-      knight._startBlackKnifeSwing(0);
-      assert(knight.isMeleeSwinging && knight.meleePhase === 1, 'Black Knife swing must begin in Phase 1 Windup');
-      assert(knight.meleePhaseTimer >= 8, `Windup must meet minimum frame floor (>= 8f), got ${knight.meleePhaseTimer}`);
-      const hpBeforeKnife = dummy.hp;
-      for (let f = 0; f < 22; f++) {
-        knight.update(dummy, 0, arena);
-      }
-      assert(dummy.hp < hpBeforeKnife, `Black Knife 5-phase cleave must deal melee damage (before=${hpBeforeKnife}, after=${dummy.hp})`);
+      // 3. Basic Attack: Rotating Slash Phase 1 (1 -> 2 -> 2 -> 3 -> 3 -> 4 cycle, Black Knife held)
+      const expectedCycle = [1, 2, 2, 3, 3, 4];
+      const origKnightX = knight.x;
+      const origKnightY = knight.y;
+      const seenCycleCounts = [];
+      for (let cycleIdx = 0; cycleIdx < expectedCycle.length; cycleIdx++) {
+        knight.x = origKnightX;
+        knight.y = origKnightY;
+        knight.skill1CooldownTimer = 999;
+        knight.fallingSwordsCooldownTimer = 999;
+        knight.starBurstCooldownTimer = 999;
+        knight.bladeCorridorCooldownTimer = 999;
+        knight.snowflakeMatrixCooldownTimer = 999;
+        knight.swoonCooldownTimer = 999;
+        dummy.x = origKnightX + 140;
+        dummy.y = origKnightY;
+        dummy.vx = 0;
+        dummy.vy = 0;
+        dummy.invincibleTimer = 0;
+        dummy.invincibilityTimer = 0;
+        knight.basicAttackCooldownTimer = 0;
+        knight._startBlackKnifeSwing(0, dummy, arena);
+        knight.basicAttackCooldownTimer = 999;
+        assert(knight.isMeleeSwinging && knight._basicRotatingSlash?.stage === 'basic_dash', 'Basic attack must initiate Dash stage FIRST');
+        assert(Math.hypot(knight.vx, knight.vy) > 5, 'Basic attack dash must apply initial dash velocity');
+        seenCycleCounts.push(knight._basicRotatingSlash.lineCount);
 
-      // 4. Skill 1: Falling Swords spawns 6 blades and plunges
-      knight.isMeleeSwinging = false;
-      knight._startFallingSwordsCast();
-      for (let f = 0; f < 30; f++) {
-        knight._updateFallingSwordsChannel(dummy, arena);
+        const hpBeforeCast = dummy.hp;
+        const stageOrder = ['basic_dash'];
+        const cutsBeforeCast = knight.activeRotatingSlashes.length;
+        let sawStopBeforeSwing = false;
+        let sawMoveDuringPhase1 = false;
+        let checkedAimAnchor = false;
+        const maxCastFrames = (CONFIG.roaring_knight.knifeDashFrames || 9) + (CONFIG.roaring_knight.basicSlashAimFrames || 18) + (CONFIG.roaring_knight.knifeWindupFrames || 8) + (CONFIG.roaring_knight.knifeStrikeFrames || 7) + 22;
+        for (let f = 0; f < maxCastFrames && (knight.isMeleeSwinging || knight._basicRotatingSlash); f++) {
+          dummy.x = origKnightX + 140;
+          dummy.y = origKnightY;
+          knight.update(dummy, 0, arena);
+          const curStage = knight._basicRotatingSlash?.stage;
+          if (curStage && stageOrder[stageOrder.length - 1] !== curStage) {
+            stageOrder.push(curStage);
+          }
+          if (curStage === 'basic_swing') {
+            if (knight.vx === 0 && knight.vy === 0) sawStopBeforeSwing = true;
+            if (cycleIdx === 0) {
+              assert(knight.activeRotatingSlashes.length === cutsBeforeCast, 'Phase 1 Rotating Slash cuts must NOT fire before Black Knife swing animation finishes');
+            }
+          }
+          if (curStage === 'basic_aim' && knight._basicRotatingSlash) {
+            assert(!knight.isMeleeSwinging && !knight.isStationarySkillActive(), 'Roaring Knight must unlock movement immediately once swing animation finishes');
+            if (Math.hypot(knight.vx, knight.vy) > 0) sawMoveDuringPhase1 = true;
+            if (!checkedAimAnchor) {
+              checkedAimAnchor = true;
+              const spawnDist = Math.hypot(knight._basicRotatingSlash.boardCx - knight.x, knight._basicRotatingSlash.boardCy - knight.y);
+              assert(
+                spawnDist <= (knight.r || 25) * 2.5 + 8,
+                `Rotating Slash Phase 1 must spawn right in front of Roaring Knight (dist=${spawnDist.toFixed(1)} vs <= ${((knight.r || 25) * 2.5 + 8).toFixed(1)})`
+              );
+            }
+          }
+        }
+        assert(
+          sawStopBeforeSwing &&
+          sawMoveDuringPhase1 &&
+          JSON.stringify(stageOrder) === JSON.stringify(['basic_dash', 'basic_swing', 'basic_aim', 'basic_slash']),
+          `Basic attack cast #${cycleIdx + 1} must run Dash -> Stop+Swing -> Free Move + Phase 1 Aim -> Slash, got ${JSON.stringify(stageOrder)} (stopped=${sawStopBeforeSwing}, moved=${sawMoveDuringPhase1})`
+        );
+        const dmgDealt = hpBeforeCast - dummy.hp;
+        assert(
+          dmgDealt === (CONFIG.roaring_knight.basicAttackDamage ?? 24),
+          `Rotating Slash basic cast #${cycleIdx + 1} (${expectedCycle[cycleIdx]} lines) must deal exact single-cast damage (got ${dmgDealt})`
+        );
+        assert(
+          dummy.timeStopTimer > 0 && !dummy.isFrameFrozen && (dummy.frameFreezeTimer || 0) === 0 && dummy.suppressFreezeOverlay === true && dummy.vx === 0 && dummy.vy === 0,
+          `Basic Attack Rotating Slash Phase 1 damage must pause the damaged enemy without Naoya frame visuals (timeStop=${dummy.timeStopTimer}, frozen=${dummy.isFrameFrozen})`
+        );
+        if (cycleIdx === expectedCycle.length - 1) {
+          const pausedX = dummy.x;
+          const pausedY = dummy.y;
+          const pauseRemaining = dummy.timeStopTimer;
+          for (let pf = 0; pf < pauseRemaining - 1; pf++) {
+            dummy.update(knight, 1, arena);
+            assert(
+              Math.hypot(dummy.x - pausedX, dummy.y - pausedY) < 0.01,
+              `Enemy paused by Basic Attack damage must remain stationary during pause frame ${pf}`
+            );
+          }
+          dummy.update(knight, 1, arena);
+          assert(dummy.timeStopTimer === 0, `Enemy pause from Basic Attack damage must expire cleanly (remaining=${dummy.timeStopTimer})`);
+        }
+        dummy.timeStopTimer = 0;
+        dummy.hitStunTimer = 0;
+        dummy.suppressFreezeOverlay = false;
+        delete dummy._suppressFreezeTimer;
       }
-      assert(knight.activeFallingSwords.length === (CONFIG.roaring_knight.fallingSwordCount || 6), 'Falling Swords must summon configured sword volley');
 
-      // 5. Skill 2: Star Burst launches star & detonates into StarChild shards + concentric shockwave
-      knight._startStarBurstCast(0);
-      for (let f = 0; f < 20; f++) {
-        knight._updateStarBurstChannel(dummy);
-      }
-      assert(knight.activeStarBursts.length === 1, 'Star Burst must launch a StarBullet orb');
-      knight.activeStarBursts[0].fuseTimer = 1;
-      knight._updateStarBursts(dummy, arena);
-      assert(knight.activeStarChildren.length === (CONFIG.roaring_knight.starChildCount || 8), 'Star Burst detonation must emit StarChild radial shards');
-      assert(knight.activeVisualEffects.some(fx => fx.kind === 'star_shockwave'), 'Star Burst detonation must spawn Rule 26 concentric shockwave');
-
-      // 6. Ultimate: Roaring Swoon locks angle, halts movement completely while casting, cleaves opponent, then resumes moving
-      const hpBeforeSwoon = dummy.hp;
+      // Basic Attack non-damage check: invulnerable enemy taking 0 damage must NOT receive Basic Attack pause
+      dummy.invincibleTimer = 20;
+      dummy.timeStopTimer = 0;
+      knight._applyBasicRotatingLineDamage(
+        { boardCx: dummy.x, boardCy: dummy.y, damagedTargets: new Set() },
+        0,
+        CONFIG.roaring_knight,
+        dummy
+      );
+      assert(dummy.timeStopTimer === 0, 'Basic Attack Rotating Slash Phase 1 must NOT pause enemy when 0 damage is dealt');
       dummy.invincibleTimer = 0;
-      dummy.invincibilityTimer = 0;
-      dummy.x = knight.x + 220;
-      dummy.y = knight.y;
-      knight.vx = 5;
-      knight.vy = 3;
-      knight.fallingSwordsCooldownTimer = 999;
-      knight.starBurstCooldownTimer = 999;
-      knight.basicAttackCooldownTimer = 999;
-      const preSwoonX = knight.x;
-      const preSwoonY = knight.y;
-      knight._startRoaringSwoon(0);
-      assert(knight.isSwoonChanneling && knight.skillCastAngle === 0, 'Roaring Swoon must lock committed aim angle');
-      assert(knight.vx === 0 && knight.vy === 0, 'Roaring Swoon cast start must zero velocity immediately');
-
-      let sawSwoonCutVfx = false;
-      let stationaryFrames = 0;
-      for (let f = 0; f < 80 && (knight.isSwoonChanneling || knight.swoonActiveTimer > 0); f++) {
-        knight.update(dummy, 0, arena);
-        if (knight.isSwoonChanneling || knight.swoonActiveTimer > 0) {
-          stationaryFrames++;
-          assert(
-            knight.x === preSwoonX && knight.y === preSwoonY,
-            `Roaring Knight must remain completely stationary during Roaring Swoon cast (frame ${f}: x=${knight.x}, y=${knight.y})`
-          );
-          assert(knight.vx === 0 && knight.vy === 0, 'Velocity must stay zero while casting Roaring Swoon');
-        }
-        if (knight.activeVisualEffects.some(fx => fx.kind === 'swoon_cut')) {
-          sawSwoonCutVfx = true;
-        }
-      }
-      assert(stationaryFrames >= 50, `Expected >= 50 stationary frames during Roaring Swoon cast, got ${stationaryFrames}`);
-      assert(!knight.isSwoonChanneling && knight.swoonActiveTimer === 0, 'Roaring Swoon cast must cleanly complete');
-      assert(dummy.hp <= hpBeforeSwoon - (CONFIG.roaring_knight.swoonDamage || 78), 'Roaring Swoon must deal full dimensional slash damage across corridor');
-      assert(sawSwoonCutVfx, 'Roaring Swoon execution must spawn swoon_cut VFX');
-
-      for (let f = 0; f < 6; f++) {
-        knight.update(dummy, 0, arena);
-      }
       assert(
-        Math.hypot(knight.x - preSwoonX, knight.y - preSwoonY) > 1,
-        'Roaring Knight must resume moving cleanly after Roaring Swoon finishes'
+        JSON.stringify(seenCycleCounts) === JSON.stringify(expectedCycle),
+        `Rotating Slash Phase 1 line cycle must follow [1,2,2,3,3,4], got ${JSON.stringify(seenCycleCounts)}`
+      );
+      assert(
+        knight.activeRotatingSlashes.some(s => s.mode === 'phase1') || knight.activeRotatingShards.length > 0,
+        'Basic Rotating Slash must emit Phase 1 cut beams and shard debris'
+      );
+      const expectedChargedHits = Math.min(expectedCycle.length, Math.max(1, CONFIG.roaring_knight.swoonHitsRequired ?? 10));
+      assert(
+        knight.swoonBasicHits === expectedChargedHits,
+        `Each successful basic attack hit must charge swoonBasicHits (${expectedChargedHits}), got ${knight.swoonBasicHits}`
       );
 
-      // 7. Rule 25: Top-of-update decay advances transient VFX while fighter is time-stopped
+      // 3b. Natural ballistic movement & wall rebounce (no artificial magnetic orbit overriding wall/fighter elasticity)
+      const rbArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      knight.isMeleeSwinging = false;
+      knight._basicRotatingSlash = null;
+      knight.basicAttackCooldownTimer = 999;
+      knight.shadowStepCooldownTimer = 999;
+      knight.skill1CooldownTimer = 999;
+      knight.fallingSwordsCooldownTimer = 999;
+      knight.starBurstCooldownTimer = 999;
+      knight.bladeCorridorCooldownTimer = 999;
+      knight.snowflakeMatrixCooldownTimer = 999;
+      knight.swoonCooldownTimer = 999;
+      knight.x = rbArena.x + rbArena.width - knight.r - 6;
+      knight.y = rbArena.y + 180;
+      knight.vx = 4.9;
+      knight.vy = 2.0;
+      for (let f = 0; f < 3; f++) {
+        knight.update(dummy, 0, rbArena);
+      }
+      assert(
+        knight.vx <= -1.0 && Math.hypot(knight.vx, knight.vy) >= 3.0 && knight.x <= rbArena.x + rbArena.width - knight.r,
+        `Roaring Knight must bounce naturally off arena walls without forced magnetic damping (vx=${knight.vx.toFixed(2)}, vy=${knight.vy.toFixed(2)}, x=${knight.x.toFixed(1)})`
+      );
+
+      // 4. Skill 1: Tracking Sword Phase 1 (10 progressive 8-dir swords -> track -> red_freeze -> white_flash -> white board slash)
+      const tsArena = state.arena || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+      knight.isMeleeSwinging = false;
+      knight.activeFallingSwords.length = 0;
+      knight.activeTrackingSlashes.length = 0;
+      knight._trackingSwordSeq = null;
+      const origDummyX = dummy.x;
+      const origDummyY = dummy.y;
+      const origDummyHp = dummy.hp;
+      knight._basicRotatingSlash = null;
+      knight.activeRotatingSlashes.length = 0;
+      knight.activeRotatingShards.length = 0;
+      dummy.x = tsArena.x + 225;
+      dummy.y = tsArena.y + 225;
+      knight._startFallingSwordsCast();
+      for (let f = 0; f < (CONFIG.roaring_knight.fallingSwordsChargeFrames || 16) + 1; f++) {
+        knight._updateFallingSwordsChannel(dummy, tsArena);
+      }
+      assert(knight.activeFallingSwords.length === 1 && knight.activeFallingSwords[0].isTrackingSword, 'Tracking Sword must summon Sword #1 in track phase');
+      const sword0 = knight.activeFallingSwords[0];
+      assert(sword0.swordPhase === 'track', 'Sword #1 must begin in tracking phase');
+      const angleStepQuot = Math.round(sword0.angle / (Math.PI / 4));
+      assert(Math.abs(sword0.angle - angleStepQuot * (Math.PI / 4)) < 1e-6, 'Tracking Sword angle must snap to cardinal or intercardinal direction');
+      const initTrackLineX = sword0.lineX;
+      const initTrackLineY = sword0.lineY;
+      dummy.x += 45;
+      dummy.y -= 35;
+      knight._updateFallingSwords(dummy, tsArena);
+      assert(
+        sword0.lineX !== initTrackLineX || sword0.lineY !== initTrackLineY,
+        'Tracking Sword must follow moving opponent during track phase'
+      );
+
+      // Advance sword0 into red_freeze and confirm position locks even if opponent moves
+      for (let f = 0; f < 40 && sword0.swordPhase === 'track'; f++) {
+        knight._updateFallingSwords(dummy, tsArena);
+      }
+      assert(sword0.swordPhase === 'red_freeze' && sword0.isLocked === true, 'Tracking Sword must turn red and freeze');
+      const lockedLineX = sword0.lineX;
+      const lockedLineY = sword0.lineY;
+      const lockedSwordX = sword0.x;
+      const lockedSwordY = sword0.y;
+      dummy.x -= 60;
+      dummy.y += 50;
+      knight._updateFallingSwords(dummy, tsArena);
+      assert(
+        sword0.lineX === lockedLineX && sword0.lineY === lockedLineY && sword0.x === lockedSwordX && sword0.y === lockedSwordY,
+        'Locked red Tracking Sword must stay frozen even when opponent moves'
+      );
+
+      // Probe draw stack depth across track, red_freeze, white_flash, sword_afterimage_grow, dash streak, and white slash
+      const tsCtx = createMockCtx();
+      for (const ph of ['track', 'red_freeze', 'white_flash']) {
+        sword0.swordPhase = ph;
+        knight.draw(tsCtx, dummy);
+        assert(tsCtx.getStackDepth() === 0, `Tracking Sword draw (${ph}) must preserve stack depth 0`);
+      }
+      sword0.swordPhase = 'red_freeze';
+      // Run through remaining sequence and count detonated slashes (expect 10 total) & speedup
+      dummy.x = lockedLineX;
+      dummy.y = lockedLineY;
+      const hpBeforeTracking = dummy.hp;
+      let slashesObserved = 0;
+      let sword10TotalLife = null;
+      let seenMaxSeqIndex = 0;
+      let sawSwordAfterimageGrow = false;
+      let sawPullbackTension = false;
+      const seenPhaseSnapshots = new Set();
+      for (let tick = 0; tick < 360; tick++) {
+        const prevSlashCount = knight.activeTrackingSlashes.length;
+        knight._updateAllTransientEffects(dummy, tsArena);
+        knight._updateFallingSwordsChannel(dummy, tsArena);
+        if (knight.activeVisualEffects.some(fx => fx.kind === 'sword_afterimage_grow')) {
+          sawSwordAfterimageGrow = true;
+          knight.draw(tsCtx, dummy);
+          assert(tsCtx.getStackDepth() === 0, 'Tracking Sword afterimage_grow draw must preserve stack depth 0');
+        }
+        for (const s of knight.activeFallingSwords) {
+          if (s.swordPhase === 'red_freeze' && (s.pullBackPx || 0) > 0) {
+            sawPullbackTension = true;
+          }
+          if (s.seqIndex > seenMaxSeqIndex) {
+            seenMaxSeqIndex = s.seqIndex;
+            if (s.seqIndex === (CONFIG.roaring_knight.fallingSwordCount || 10) - 1) {
+              sword10TotalLife = s.trackTimer + s.freezeTimer + s.whiteTimer;
+            }
+          }
+        }
+        if (knight.activeTrackingSlashes.length > prevSlashCount) {
+          slashesObserved += knight.activeTrackingSlashes.length - prevSlashCount;
+        }
+        for (const sl of knight.activeTrackingSlashes) {
+          seenPhaseSnapshots.add(sl.dashTimer > 0 ? 'dash' : 'white_slash');
+          knight.draw(tsCtx, dummy);
+          assert(tsCtx.getStackDepth() === 0, 'Tracking Sword slash draw must preserve stack depth 0');
+        }
+        if (!knight._trackingSwordSeq && knight.activeFallingSwords.length === 0 && knight.activeTrackingSlashes.length === 0) break;
+      }
+      assert(seenMaxSeqIndex === (CONFIG.roaring_knight.fallingSwordCount || 10) - 1, 'Tracking Sword must spawn all 10 sequential swords');
+      assert(slashesObserved === (CONFIG.roaring_knight.fallingSwordCount || 10), `Tracking Sword must create 10 white board slashes, got ${slashesObserved}`);
+      assert(seenPhaseSnapshots.has('dash') && seenPhaseSnapshots.has('white_slash'), 'Tracking Sword slash must render both crimson ghost dash and white board slash');
+      assert(sawSwordAfterimageGrow, 'Tracking Sword red-lock -> white_flash snap must emit sword_afterimage_grow burst');
+      assert(sawPullbackTension, 'Tracking Sword red_freeze phase must apply visual pullback tension before striking');
+      assert(sword10TotalLife !== null && sword10TotalLife < 55, `Later swords must lock faster (sword10=${sword10TotalLife}f < initial ~60f)`);
+      assert(dummy.hp < hpBeforeTracking, 'Tracking Sword white board slash must deal damage across cut line');
+
+      // 4b. Skill 1 Cooldown Integrity: starts ticking immediately right after random skill activation
+      knight.activeFallingSwords.length = 0;
+      knight.activeTrackingSlashes.length = 0;
+      knight._trackingSwordSeq = null;
+      knight.isFallingSwordsCasting = false;
+      knight.skill1CooldownTimer = 0;
+      knight.fallingSwordsCooldownTimer = 0;
+      knight.swoonCooldownTimer = 9999;
+      knight.snowflakeMatrixCooldownTimer = 9999;
+      knight.bladeCorridorCooldownTimer = 9999;
+      knight.starBurstCooldownTimer = 9999;
+      knight.basicAttackCooldownTimer = 9999;
+      knight.shadowStepCooldownTimer = 9999;
+      knight._startFallingSwordsCast();
+      const expectedSk1Cd = CONFIG.roaring_knight.skill1Cooldown ?? CONFIG.roaring_knight.fallingSwordsCooldown ?? 420;
+      assert(
+        knight.skill1CooldownTimer === expectedSk1Cd && knight.fallingSwordsCooldownTimer === (CONFIG.roaring_knight.fallingSwordsCooldown ?? 420),
+        `Skill 1 cast start must arm full cooldown (${expectedSk1Cd}), got skill1=${knight.skill1CooldownTimer}`
+      );
+      let checkedActiveCdTick = false;
+      let finishCastFrame = -1;
+      for (let tick = 0; tick < 360; tick++) {
+        knight.update(dummy, 0, tsArena);
+        const stillSpawning = knight.isFallingSwordsCasting || Boolean(knight._trackingSwordSeq);
+        assert(
+          knight.skill1CooldownTimer === Math.max(0, expectedSk1Cd - (tick + 1)),
+          `Skill 1 cooldown must tick down immediately each frame after activation (tick=${tick}, skill1=${knight.skill1CooldownTimer}, expected=${Math.max(0, expectedSk1Cd - (tick + 1))})`
+        );
+        if (stillSpawning && !checkedActiveCdTick) {
+          checkedActiveCdTick = true;
+          const sk1Hud = getSkillDataForFighter(knight).find(s => s.id === 'roaring_skill1');
+          assert(
+            sk1Hud && sk1Hud.ready === false && sk1Hud.label.startsWith('TRACKING SWORD (') && sk1Hud.label.endsWith('S)'),
+            `Unified Skill 1 HUD must show live countdown under active skill name while casting, got "${sk1Hud?.label}"`
+          );
+        } else if (!stillSpawning) {
+          finishCastFrame = tick;
+          break;
+        }
+      }
+      assert(finishCastFrame > 0 && checkedActiveCdTick, 'Skill 1 full spawn sequence must complete while cooldown ticks immediately');
+      const sk1PostHud = getSkillDataForFighter(knight).find(s => s.id === 'roaring_skill1');
+      assert(sk1PostHud && !sk1PostHud.active && !sk1PostHud.ready && sk1PostHud.label.startsWith('SKILL 1 ('), 'Unified Skill 1 HUD must continue SKILL 1 countdown after cast completes');
+      knight.activeFallingSwords.length = 0;
+      knight.activeTrackingSlashes.length = 0;
+      knight._trackingSwordSeq = null;
+      knight.isFallingSwordsCasting = false;
+      dummy.x = origDummyX;
+      dummy.y = origDummyY;
+      dummy.hp = origDummyHp; // Restore Dummy HP cleanly before STARS tests
+
+      // 5. Skill 2: STARS Phase 1 (B&W intro line -> unfold flash -> purple cone -> collapse outro line -> reverse -> red flickering flare -> 6 shards)
+      knight._startStarBurstCast(0, arena, 'phase1');
+      assert(knight.activeStarCone && knight.activeStarCone.phase === 'intro', 'STARS Phase 1 must start with B&W intro pointing line');
+      const totalConeFrames = (CONFIG.roaring_knight.starIntroFrames || 12) +
+        (CONFIG.roaring_knight.starConeOpenFrames || 4) +
+        (CONFIG.roaring_knight.starBurstCastFrames || 40);
+      const expectedConeCount = CONFIG.roaring_knight.starConeCount || 10;
+      let sawConeOpen = false;
+      let sawPurpleCone = false;
+      for (let f = 0; f < totalConeFrames + 1; f++) {
+        knight._updateStarBurstChannel(dummy, arena);
+        knight._updateStarBursts(dummy, arena);
+        if (knight.activeStarCone?.phase === 'open_flash') sawConeOpen = true;
+        if (knight.activeStarCone?.phase === 'cone') sawPurpleCone = true;
+      }
+      assert(sawConeOpen, 'B&W intro line must unfold via lavender-white flash into purple cone');
+      assert(sawPurpleCone, 'Purple cone phase must stream growing 6-pointed stars');
+      assert(
+        knight.activeStarBursts.length === expectedConeCount,
+        `STARS Phase 1 must emit ${expectedConeCount} growing stars from purple cone, got ${knight.activeStarBursts.length}`
+      );
+      assert(
+        knight.activeOrbitStars.length === (CONFIG.roaring_knight.starOrbitCount || 4),
+        'STARS Phase 1 must summon orbiting 4-pointed star shield when enabled'
+      );
+      assert(
+        knight.activeStarCone && knight.activeStarCone.phase === 'flash_close',
+        'Purple cone must briefly flash closed before transitioning to collapsing B&W outro line'
+      );
+
+      let sawConeOutro = false;
+      for (let f = 0; f < 30; f++) {
+        knight._updateStarConeDecay();
+        if (knight.activeStarCone?.phase === 'outro') sawConeOutro = true;
+        if (!knight.activeStarCone) break;
+      }
+      assert(sawConeOutro && knight.activeStarCone === null, 'STARS cone must collapse into B&W outro line and fade out cleanly');
+
+      let sawReversePhase = false;
+      let sawRedLockPhase = false;
+      const starInitRadius = knight.activeStarBursts[knight.activeStarBursts.length - 1].radius;
+      for (let f = 0; f < 130; f++) {
+        knight._updateStarBursts(dummy, arena);
+        if (knight.activeStarBursts.some(s => s.phase === 'reverse')) sawReversePhase = true;
+        if (knight.activeStarBursts.some(s => s.phase === 'red_lock')) sawRedLockPhase = true;
+        if (knight.activeStarChildren.length >= 6) break;
+      }
+      assert(sawReversePhase, 'Emitted 6-pointed stars must stop and reverse direction');
+      assert(sawRedLockPhase, 'Reversed stars must turn crimson red with flickering flare before detonating');
+      assert(knight.activeVisualEffects.some(fx => fx.kind === 'star_detonate_flash'), 'Star detonation must emit white-to-grey flash');
+      const firstSixShards = knight.activeStarChildren.slice(0, 6);
+      assert(firstSixShards.length === 6, 'Each star must explode into exactly 6 shards');
+      assert(
+        firstSixShards.filter(s => s.isShortShard).length === 3 && firstSixShards.filter(s => !s.isShortShard).length === 3,
+        '3 of 6 exploded star shards must travel slower and last shorter than the other 3'
+      );
+      const longShardRef = firstSixShards.find(s => !s.isShortShard);
+      const shardInitSpeed = Math.hypot(longShardRef.vx, longShardRef.vy);
+      for (let f = 0; f < 5; f++) knight._updateStarChildren(dummy, arena);
+      assert(
+        Math.hypot(longShardRef.vx, longShardRef.vy) < shardInitSpeed,
+        'Phase 1 star shards must smoothly decelerate toward minSpeed during flight'
+      );
+      assert(
+        knight.activeStarBursts.every(s => s.radius > starInitRadius),
+        'Stars must grow over time during flight'
+      );
+      knight.activeStarBursts.length = 0;
+      knight.activeStarChildren.length = 0;
+      knight.activeOrbitStars.length = 0;
+      knight.activeStarCone = null;
+
+      // 5a. Skill 2 Phase 3 Variant: Each star explodes into 2 shards that hover, turn crimson red, and shoot toward opponent one at a time
+      knight._startStarBurstCast(0, arena, 'phase3');
+      for (let f = 0; f < totalConeFrames + 1; f++) {
+        knight._updateStarBurstChannel(dummy, arena);
+      }
+      const p3Star = knight.activeStarBursts[0];
+      p3Star.phase = 'red_lock';
+      p3Star.redLockTimer = 1;
+      knight._detonateStarBurst(p3Star, [dummy]);
+      assert(knight.activeStarChildren.length === 2, `STARS Phase 3 star must explode into 2 shards, got ${knight.activeStarChildren.length}`);
+      assert(knight.activeStarChildren.every(s => s.isHomingPhase3 && s.shardPhase === 'drift'), 'Phase 3 shards must initially drift outward');
+      let sawStaggeredSingleShot = false;
+      for (let f = 0; f < 40; f++) {
+        knight._updateStarChildren(dummy, arena);
+        const s0 = knight.activeStarChildren[0];
+        const s1 = knight.activeStarChildren[1];
+        if (s0 && s1 && (s0.shardPhase === 'shoot' || s0.isPhase3Crimson) && s1.shardPhase === 'drift') {
+          sawStaggeredSingleShot = true;
+          break;
+        }
+      }
+      assert(sawStaggeredSingleShot, 'Phase 3 shards must turn crimson red and shoot toward opponent one at a time');
+      knight.activeStarBursts.length = 0;
+      knight.activeStarChildren.length = 0;
+      knight.activeOrbitStars.length = 0;
+      knight.activeStarCone = null;
+
+      // 5b. Skill 3: Blade Corridor spawns sweeping Sword Tunnel + Rotating Carousel Ring variation
+      knight._startBladeCorridorCast();
+      for (let f = 0; f < 22; f++) {
+        knight._updateBladeCorridorChannel(dummy, arena);
+      }
+      assert(knight.activeCorridorBlades.length >= 6, 'Blade Corridor must spawn sweeping parallel sword walls');
+      knight.activeCorridorBlades.length = 0;
+      knight._startBladeCorridorCast();
+      for (let f = 0; f < 22; f++) {
+        knight._updateBladeCorridorChannel(dummy, arena);
+      }
+      assert(
+        knight.activeCorridorBlades.some(b => b.isCarouselRing),
+        'Second Blade Corridor cycle must spawn Rotating Carousel Sword Ring'
+      );
+      knight.activeCorridorBlades.length = 0;
+
+      // 5c. Skill 4: Snowflake Matrix charges, freezes lock-in coordinates, and rotates + / X cuts during active phase
+      dummy.x = 260;
+      dummy.y = 400;
+      knight.skill1CooldownTimer = 999;
+      knight.fallingSwordsCooldownTimer = 999;
+      knight.starBurstCooldownTimer = 999;
+      knight.bladeCorridorCooldownTimer = 999;
+      knight.swoonCooldownTimer = 999;
+      knight._startSnowflakeMatrixCast(dummy, arena);
+      assert(knight.isSnowflakeMatrixCasting && knight.snowflakeMatrixPhase === 'charge', 'Snowflake Matrix must start in charge phase');
+      for (let f = 0; f < (CONFIG.roaring_knight.snowflakeMatrixChargeFrames || 18); f++) {
+        knight._updateSnowflakeMatrix(dummy, arena);
+      }
+      assert(knight.snowflakeMatrixPhase === 'lock', 'Snowflake Matrix must transition from charge into crimson lock-in phase');
+      const lockedCx = knight.activeSnowflakeMatrix.cx;
+      const lockedCy = knight.activeSnowflakeMatrix.cy;
+      // Moving opponent during lock-in must NOT drag locked beam coordinates
+      dummy.x = 340;
+      dummy.y = 330;
+      knight._updateSnowflakeMatrix(dummy, arena);
+      assert(
+        knight.activeSnowflakeMatrix.cx === lockedCx && knight.activeSnowflakeMatrix.cy === lockedCy,
+        'Snowflake Matrix must hold committed lock coordinates motionless during lock-in'
+      );
+      // Place opponent back onto locked + beam and let lock-in discharge
+      dummy.x = lockedCx + 45;
+      dummy.y = lockedCy;
+      dummy.invincibleTimer = 0;
+      dummy.invincibilityTimer = 0;
+      const hpBeforeMatrix = dummy.hp;
+      for (let f = 0; f < (CONFIG.roaring_knight.snowflakeMatrixLockInFrames || 12) + 2; f++) {
+        knight._updateSnowflakeMatrix(dummy, arena);
+      }
+      assert(knight.snowflakeMatrixPhase === 'active', 'Snowflake Matrix must transition into active laser discharge after lock-in');
+      const beamAngleAtDischarge = knight.activeSnowflakeMatrix.beams[0].angle;
+      knight._updateSnowflakeMatrix(dummy, arena);
+      assert(
+        knight.activeSnowflakeMatrix.beams[0].angle > beamAngleAtDischarge,
+        'Snowflake Matrix active beams must rotate smoothly across ticks'
+      );
+      assert(dummy.hp < hpBeforeMatrix, 'Snowflake Matrix beam discharge must damage opponent intersecting locked + / X rays');
+      for (let f = 0; f < (CONFIG.roaring_knight.snowflakeMatrixActiveFrames || 22) + 2; f++) {
+        knight._updateSnowflakeMatrix(dummy, arena);
+      }
+      assert(!knight.isSnowflakeMatrixCasting && knight.snowflakeMatrixPhase === 'idle', 'Snowflake Matrix must cleanly finish active discharge');
+
+      // 6a. Ultimate Hit Requirement: 10 successful basic attack hits required to unlock & activate Rotating Slash
+      const reqUltHits = CONFIG.roaring_knight.swoonHitsRequired ?? 10;
+      knight.isSwoonChanneling = false;
+      knight._rotatingSlashSeq = null;
+      knight.swoonCooldownTimer = 0;
+      knight.swoonBasicHits = reqUltHits - 1;
+      knight.skill1CooldownTimer = 999;
+      knight.basicAttackCooldownTimer = 999;
+      knight.shadowStepCooldownTimer = 999;
+      knight._decideAndMove(dummy, arena);
+      assert(!knight.isSwoonChanneling, `Ultimate must NOT activate below ${reqUltHits} basic hits (had ${reqUltHits - 1})`);
+      const preReadyHud = getSkillDataForFighter(knight).find(s => s.id === 'roaring_swoon');
+      assert(preReadyHud && preReadyHud.label === `ROTATING SLASH (${reqUltHits - 1}/${reqUltHits})` && !preReadyHud.ready, 'Ultimate HUD must show 9/10 before final hit');
+
+      // Landing the 10th successful basic attack hit unlocks and auto-activates Ultimate on _decideAndMove
+      knight.x = 180;
+      knight.y = 400;
+      dummy.x = 220;
+      dummy.y = 400;
+      dummy.invincibleTimer = 0;
+      dummy.invincibilityTimer = 0;
+      knight._applyBasicRotatingLineDamage(
+        { boardCx: 220, boardCy: 400, damagedTargets: new Set() },
+        0,
+        CONFIG.roaring_knight,
+        dummy
+      );
+      assert(knight.swoonBasicHits === reqUltHits, `10th basic hit must reach ${reqUltHits}, got ${knight.swoonBasicHits}`);
+      const readyUltHud = getSkillDataForFighter(knight).find(s => s.id === 'roaring_swoon');
+      assert(readyUltHud && readyUltHud.ready === true && readyUltHud.pct === 100 && readyUltHud.label === 'ROTATING SLASH', 'Ultimate HUD must show 100% READY at 10/10 hits');
+
+      // Far range guard: must NOT trigger Ultimate while enemy is far outside swoonTriggerRange
+      dummy.x = knight.x + (CONFIG.roaring_knight.swoonTriggerRange ?? 140) + 90;
+      dummy.y = knight.y;
+      knight._decideAndMove(dummy, arena);
+      assert(
+        !knight.isSwoonChanneling && knight.swoonBasicHits === reqUltHits,
+        'Ultimate must NOT activate when enemy is far away outside swoonTriggerRange'
+      );
+
+      // Close range activation: triggers Ultimate once close to enemy and pauses enemies
+      dummy.x = knight.x + 40;
+      dummy.y = knight.y;
+      dummy.vx = 3.5;
+      dummy.vy = 1.5;
+      knight._decideAndMove(dummy, arena);
+      assert(knight.isSwoonChanneling && knight.swoonBasicHits === 0, 'Hitting required basic attacks while close to enemy must activate Ultimate and reset swoonBasicHits to 0');
+      assert(dummy.timeStopTimer > 0 && !dummy.isFrameFrozen && (dummy.frameFreezeTimer || 0) === 0 && dummy.vx === 0 && dummy.vy === 0, 'Activating Ultimate must immediately pause enemies without triggering Naoya frame-freeze visuals');
+      knight.interruptAttacks(true);
+      assert(!dummy.isFrameFrozen && dummy.timeStopTimer === 0 && (dummy.frameFreezeTimer || 0) === 0, 'Interrupting Ultimate must immediately release paused enemies');
+      knight.activeRotatingSlashes.length = 0;
+      knight.activeRotatingShards.length = 0;
+
+      // 6. Ultimate: Dash Forward -> Apply Stun -> Non-Rotating Multi-Angle Front Slash Barrage
+      const ultArena = state.arena || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+      knight.activeFallingSwords.length = 0;
+      knight.activeStarChildren.length = 0;
+      knight.activeOrbitStars.length = 0;
+      knight.activeRotatingSlashes.length = 0;
+      const boardCx = (ultArena.x ?? 0) + ultArena.width * 0.5;
+      const boardCy = (ultArena.y ?? 0) + ultArena.height * 0.5;
+      dummy.maxHp = Math.max(dummy.maxHp || 0, 1000);
+      dummy.hp = Math.max(dummy.hp || 0, 1000);
+      const hpBeforeUlt = dummy.hp;
+      dummy.invincibleTimer = 0;
+      dummy.invincibilityTimer = 0;
+      dummy.hitStunTimer = 0;
+      dummy.slowTimer = 0;
+      dummy.slowMultiplier = 1;
+      dummy.vx = 4.0;
+      dummy.vy = 2.0;
+      knight.vx = 0;
+      knight.vy = 0;
+      knight.x = (ultArena.x ?? 0) + 110;
+      knight.y = (ultArena.y ?? 0) + 130;
+      dummy.x = knight.x + 128;
+      dummy.y = knight.y;
+      const dummyPausedX = dummy.x;
+      const dummyPausedY = dummy.y;
+      knight.skill1CooldownTimer = 999;
+      knight.fallingSwordsCooldownTimer = 999;
+      knight.starBurstCooldownTimer = 999;
+      knight.bladeCorridorCooldownTimer = 999;
+      knight.snowflakeMatrixCooldownTimer = 999;
+      knight.basicAttackCooldownTimer = 999;
+      const preUltX = knight.x;
+      const preUltY = knight.y;
+      knight._startRoaringSwoon(0, dummy, ultArena);
+      assert(knight.isSwoonChanneling && Math.abs(knight.skillCastAngle) < 0.05, 'Ultimate must lock aim angle toward target');
+      assert(dummy.timeStopTimer > 0 && !dummy.isFrameFrozen && (dummy.frameFreezeTimer || 0) === 0 && dummy.vx === 0 && dummy.vy === 0, 'Ultimate activation must pause opponent immediately without Naoya frame-freeze visuals');
+      assert(
+        knight._rotatingSlashSeq?.stage === 'ult_dash' && knight._rotatingSlashSeq?.isFrontBarrage === true,
+        `Ultimate must begin by dashing forward ('ult_dash'), got ${knight._rotatingSlashSeq?.stage}`
+      );
+      assert(knight.vx > 0, 'Ultimate activation dash must propel Knight forward toward target');
+
+      let finaleCuts = 0;
+      let sawPhase1VisualCut = false;
+      let sawLongLingerTimer = false;
+      let sawCenterMarkShard = false;
+      let sawWallExitShard = false;
+      let dashFramesSeen = 0;
+      let swingFramesSeen = 0;
+      let windupFramesSeen = 0;
+      let sawStunApplied = false;
+      let sawSwingStrike = false;
+      let sawFrontTrail = false;
+      let sawUltRicochetMove = false;
+      let sawUltRicochetStreak = false;
+      let stayedAnchoredAfterDash = false;
+      let channeledFrames = 0;
+      let prevDummyRicX = dummyPausedX;
+      let prevDummyRicY = dummyPausedY;
+      let postDashAnchorX = null;
+      let postDashAnchorY = null;
+      let postDashBoardCx = null;
+      let postDashBoardCy = null;
+      let windupTelegraphAngles = null;
+      const seenSlashes = new Set();
+      const distinctAngles = new Set();
+
+      for (let f = 0; f < 160 && knight.isSwoonChanneling; f++) {
+        dummy.invincibleTimer = 0;
+        dummy.invincibilityTimer = 0;
+        knight.update(dummy, 0, ultArena);
+
+        const seq = knight._rotatingSlashSeq;
+        if (knight.isSwoonChanneling) {
+          dummy.update(knight, 1, ultArena);
+          assert(
+            !dummy.isFrameFrozen && (dummy.frameFreezeTimer || 0) === 0 && dummy.timeStopTimer > 0,
+            `Opponent AI/movement must stay paused cleanly (no Naoya frame overlay) throughout entire Ultimate (stage=${seq?.stage}, frame=${f})`
+          );
+          if (seq?.stage !== 'finale_barrage' && seq?.stage !== 'finale_outro') {
+            assert(
+              Math.hypot(dummy.x - dummyPausedX, dummy.y - dummyPausedY) < 0.01,
+              `Opponent must stay completely stationary before multi-slash barrage starts (stage=${seq?.stage}, frame=${f})`
+            );
+          } else {
+            if (Math.hypot(dummy.x - prevDummyRicX, dummy.y - prevDummyRicY) > 1.5) {
+              sawUltRicochetMove = true;
+            }
+            if (knight.activeVisualEffects.some(fx => fx.kind === 'ult_ricochet_streak')) {
+              sawUltRicochetStreak = true;
+            }
+          }
+          prevDummyRicX = dummy.x;
+          prevDummyRicY = dummy.y;
+          channeledFrames++;
+          if (seq?.stage === 'ult_dash') {
+            dashFramesSeen++;
+          } else {
+            if (postDashAnchorX === null) {
+              postDashAnchorX = knight.x;
+              postDashAnchorY = knight.y;
+              postDashBoardCx = seq?.boardCx;
+              postDashBoardCy = seq?.boardCy;
+              windupTelegraphAngles = [...(seq?.telegraphAngles || [])];
+              assert(knight.x > preUltX + 10, `Ultimate dash must advance Knight forward toward target (pre=${preUltX}, post=${knight.x.toFixed(1)})`);
+              assert(dummy.hitStunTimer > 0, `Ultimate dash completion must apply stun effect to target before slashing (hitStunTimer=${dummy.hitStunTimer})`);
+              assert(seq?.stage === 'ult_swing' && knight.isMeleeSwinging, `Ultimate must play Black Knife attack swing animation after dash+stun before barrage, got stage=${seq?.stage}`);
+              sawStunApplied = true;
+            }
+            if (seq?.stage === 'ult_swing') {
+              swingFramesSeen++;
+              assert(knight.isMeleeSwinging && knight.meleePhase >= 1, 'Knight must remain in Black Knife cleave swing during ult_swing');
+              assert(knight.activeRotatingSlashes.length === 0, 'Front Slash Barrage cuts must NOT spawn before the attack swing animation finishes');
+              if (knight.meleePhase === 3) sawSwingStrike = true;
+            }
+            if (seq?.stage === 'finale_barrage' || seq?.stage === 'finale_outro') {
+              assert(!knight.isMeleeSwinging, 'Black Knife melee swing must be finished before front slash barrage plays');
+              assert(
+                Math.hypot(knight.x - postDashAnchorX, knight.y - postDashAnchorY) < 1,
+                `Roaring Knight must remain anchored at post-dash spot during front slashes (frame ${f})`
+              );
+              stayedAnchoredAfterDash = true;
+            }
+            assert(knight.vx === 0 && knight.vy === 0, 'Velocity must stay zero after dash while swinging, winding up and casting front slashes');
+          }
+        }
+        if (seq?.stage === 'finale_windup') {
+          windupFramesSeen++;
+          assert(
+            JSON.stringify(seq.telegraphAngles) === JSON.stringify(windupTelegraphAngles),
+            'Ultimate windup telegraph must stay non-rotating'
+          );
+        }
+        if (seq?.showFrontTrail) sawFrontTrail = true;
+
+        for (const shard of knight.activeRotatingShards) {
+          if (shard.kind === 'center_mark') sawCenterMarkShard = true;
+          if (shard.kind === 'wall_shard' && Math.hypot(shard.vx, shard.vy) > 1) sawWallExitShard = true;
+        }
+
+        for (const cut of knight.activeRotatingSlashes) {
+          if (seenSlashes.has(cut)) continue;
+          seenSlashes.add(cut);
+          assert(cut.mode === 'phase1' && cut.isFrontBarrage === true, `Ultimate must emit Phase 1 slash visual cuts ('phase1'), got ${cut.mode}`);
+          assert(cut.prevAngle === null, 'Non-rotating front barrage cuts must not render sweeping rotation bowties');
+          if (!Number.isFinite(cut.halfLength)) sawPhase1VisualCut = true;
+          distinctAngles.add(cut.angle.toFixed(2));
+          finaleCuts++;
+          if (cut.maxTimer >= 18) sawLongLingerTimer = true;
+          const distFromFrontAnchor = Math.hypot(cut.cx - postDashBoardCx, cut.cy - postDashBoardCy);
+          assert(
+            distFromFrontAnchor <= (CONFIG.roaring_knight.rotatingSlashFrontSpread ?? 44) + 12,
+            `Front barrage slash must spawn in front of Knight near (${postDashBoardCx.toFixed(1)},${postDashBoardCy.toFixed(1)}), got (${cut.cx.toFixed(1)},${cut.cy.toFixed(1)})`
+          );
+        }
+      }
+
+      assert(!knight.isSwoonChanneling && !knight._rotatingSlashSeq && !knight.isMeleeSwinging, 'Front Slash Barrage Ultimate must cleanly complete');
+      assert(
+        !dummy.isFrameFrozen && dummy.timeStopTimer === 0 && (dummy.frameFreezeTimer || 0) === 0 && dummy.hitStunTimer === 0,
+        `Opponent must unpause cleanly as soon as Ultimate ends (frozen=${dummy.isFrameFrozen}, timeStop=${dummy.timeStopTimer}, frameFreeze=${dummy.frameFreezeTimer}, hitStun=${dummy.hitStunTimer})`
+      );
+      assert(dashFramesSeen >= 1 && sawStunApplied, 'Ultimate must execute dash-forward phase and apply stun before swinging');
+      assert(swingFramesSeen >= 15 && sawSwingStrike, `Ultimate must play Black Knife attack animation first before barrage (swingFrames=${swingFramesSeen}, strike=${sawSwingStrike})`);
+      assert(channeledFrames >= 65, `Expected >= 65 channeled frames across dash + swing + windup + barrage + outro, got ${channeledFrames}`);
+      assert(windupFramesSeen >= 10, `Non-rotating windup telegraph must last >= 10 frames before barrage (got ${windupFramesSeen})`);
+      assert(stayedAnchoredAfterDash, 'Front Slash Barrage must keep Knight anchored at post-dash position while slashes spawn in front');
+      assert(finaleCuts >= 20, `Front Slash Barrage must spawn >= 20 total angled slashes across its volleys (got ${finaleCuts})`);
+      assert(distinctAngles.size >= 8, `Front Slash Barrage must spawn slashes across >= 8 distinct angles (got ${distinctAngles.size})`);
+      assert(sawPhase1VisualCut, 'Front Slash Barrage cuts must use full-span Slash Phase 1 visual cuts');
+      assert(sawLongLingerTimer, 'Front Slash Barrage cuts must use >= 18f linger timers for overlapping white scratch scars');
+      assert(sawCenterMarkShard && sawWallExitShard, 'Front Slash Barrage must spawn center diamond flashes and arena wall debris shards');
+      assert(sawFrontTrail, 'Roaring Knight must overlay front slash trail during Front Slash Barrage');
+      assert(sawUltRicochetMove && sawUltRicochetStreak, `Paused opponent must ricochet across multiple slash hits and emit ult_ricochet_streak visuals (move=${sawUltRicochetMove}, streak=${sawUltRicochetStreak})`);
+
+      assert(dummy.hp <= hpBeforeUlt - 100, `Front Slash Barrage Ultimate must deal heavy multi-hit damage >= 100 (hp ${hpBeforeUlt} -> ${dummy.hp})`);
+      assert(
+        dummy.slowTimer > 0 && (dummy.slowMultiplier ?? 1) < 1,
+        `Front Slash Barrage Ultimate hit must apply slow debuff (slowTimer=${dummy.slowTimer}, slowMultiplier=${dummy.slowMultiplier})`
+      );
+
+      // Non-hit check: enemy outside the cut corridor must not receive the Ultimate slow debuff
+      const missedTarget = new UnarmedClass({ x: 900, y: 900 });
+      missedTarget.x = 900;
+      missedTarget.y = 900;
+      missedTarget.slowTimer = 0;
+      missedTarget.slowMultiplier = 1;
+      knight._damageTargetsAlongLines(
+        boardCx,
+        boardCy,
+        0,
+        1,
+        28,
+        7,
+        3.5,
+        missedTarget,
+        'roaring_knight_rotating_finale',
+        { slowFrames: 150, slowMultiplier: 0.45 }
+      );
+      assert(
+        missedTarget.slowTimer === 0 && missedTarget.slowMultiplier === 1,
+        `Rotating Slash non-hit must NOT apply slow debuff (slowTimer=${missedTarget.slowTimer}, slowMultiplier=${missedTarget.slowMultiplier})`
+      );
+
+      const dummyPostUltX = dummy.x;
+      const dummyPostUltY = dummy.y;
+      for (let f = 0; f < 6; f++) {
+        knight.update(dummy, 0, ultArena);
+        dummy.update(knight, 1, ultArena);
+      }
+      assert(
+        Math.hypot(knight.x - postDashAnchorX, knight.y - postDashAnchorY) > 1,
+        'Roaring Knight must resume moving cleanly after Front Slash Barrage Ultimate completes'
+      );
+      assert(
+        Math.hypot(dummy.x - dummyPostUltX, dummy.y - dummyPostUltY) > 1,
+        'Paused opponent must resume moving cleanly after Front Slash Barrage Ultimate ends'
+      );
+
+      // 7. Rule 25: Top-of-update decay advances transient Rotating Slash & VFX while fighter is time-stopped
+      knight.activeRotatingSlashes.push({
+        mode: 'finale',
+        cx: boardCx,
+        cy: boardCy,
+        angle: 0.4,
+        halfWidth: 20,
+        timer: 10,
+        maxTimer: 12,
+        span: 650,
+        seed: 2,
+        arenaBounds: arena,
+      });
+      const prevRotTimer = knight.activeRotatingSlashes[knight.activeRotatingSlashes.length - 1].timer;
       if (knight.activeVisualEffects.length === 0) {
         knight.activeVisualEffects.push({
-          kind: 'swoon_cut',
+          kind: 'star_detonate_flash',
           x: knight.x,
           y: knight.y,
-          angle: 0,
-          reach: 300,
-          hitDist: 200,
+          radius: 18,
+          rot: 0,
           timer: 20,
           maxTimer: 20,
         });
@@ -22925,37 +23929,1241 @@ async function runInteractionTests() {
         knight.activeVisualEffects.length === 0 || knight.activeVisualEffects[0].timer < prevTimer,
         'Transient VFX must still decay during time-stop stasis (Rule 25)'
       );
+      assert(
+        knight.activeRotatingSlashes.length === 0 || knight.activeRotatingSlashes[knight.activeRotatingSlashes.length - 1].timer < prevRotTimer,
+        'Active Rotating Slash decals must continue decaying during time-stop stasis (Rule 25)'
+      );
       knight.timeStopTimer = 0;
+
+      // 7b. Final Phase: Low-HP Full-Screen Roaring desperation trigger (<= 35% HP, once per match)
+      knight.activeVoidRifts.length = 0;
+      knight.activeRiftStrikes.length = 0;
+      knight.activeStarBursts.length = 0;
+      knight.hp = Math.floor(knight.maxHp * 0.25);
+      knight._decideAndMove(dummy, arena);
+      assert(knight.hasTriggeredDesperationRoar === true, 'Low HP <= 35% must trigger Final Phase Full-Screen Roaring once');
+      assert(knight.activeStarBursts.length >= 1 && knight.activeVoidRifts.length >= 1, 'Full-Screen Roaring must unleash Starstorm spread & Gaping Maw rifts');
+
+      // 7c. Always-on Ghost Model Afterimages while moving (independent of enableShadowMantle or slow cruising speeds)
+      rkCfg.enableShadowMantle = 0;
+      knight.afterImages.length = 0;
+      knight._afterImageTick = 0;
+      knight.timeStopTimer = 0;
+      knight.isMeleeSwinging = false;
+      knight.isSwoonChanneling = false;
+      knight.isFallingSwordsCasting = false;
+      knight.isStarBurstCasting = false;
+      knight.isBladeCorridorCasting = false;
+      knight.isSnowflakeMatrixCasting = false;
+      knight.basicAttackCooldownTimer = 999;
+      knight.skill1CooldownTimer = 999;
+      knight.swoonCooldownTimer = 999;
+      knight.x = arena.x + 80;
+      knight.y = arena.y + 180;
+      knight.vx = 2.4;
+      knight.vy = 0.6;
+      dummy.x = arena.x + 360;
+      dummy.y = arena.y + 180;
+      for (let f = 0; f < 16; f++) {
+        knight.update(dummy, 0, arena);
+      }
+      assert(
+        knight.afterImages.length > 0 && knight.afterImages.length <= 8,
+        `Roaring Knight must always spawn ghost model afterimages while moving even with enableShadowMantle=0 and low speed (got ${knight.afterImages.length})`
+      );
+      rkCfg.enableShadowMantle = true;
 
       // 8. Rule 18: HUD skill bars unified themeColor, toggle gating & dark-mode exemption
       const hudSkills = getSkillDataForFighter(knight);
-      assert(hudSkills.length === 4, `Roaring Knight HUD must expose 4 bars, got ${hudSkills.length}`);
+      assert(hudSkills.length === 3, `Roaring Knight HUD must expose 3 bars (Shadow Mantle, Unified Skill 1, Rotating Slash Ult), got ${hudSkills.length}`);
       assert(hudSkills.every(s => s.color === knight.color), 'All Roaring Knight HUD bars must use unified themeColor');
       assert(hudSkills.every(s => !s.label.includes('(READY)')), 'HUD bars must never contain (READY) suffix');
       const ultBar = hudSkills.find(s => s.id === 'roaring_swoon');
       assert(ultBar && isSkillExceptionInDarkMode(knight, ultBar), 'roaring_swoon ultimate must be exempt in dark HUD mode');
-      const origToggle = CONFIG.roaring_knight.enableFallingSwords;
-      CONFIG.roaring_knight.enableFallingSwords = false;
+      const origSkill1Toggle = CONFIG.roaring_knight.enableSkill1;
+      CONFIG.roaring_knight.enableSkill1 = false;
       const gatedSkills = getSkillDataForFighter(knight);
-      CONFIG.roaring_knight.enableFallingSwords = origToggle;
-      assert(!gatedSkills.some(s => s.id === 'falling_swords'), 'Disabling enableFallingSwords must hide its HUD bar');
+      CONFIG.roaring_knight.enableSkill1 = origSkill1Toggle;
+      assert(!gatedSkills.some(s => s.id === 'roaring_skill1'), 'Disabling enableSkill1 must hide the unified Skill 1 HUD bar');
 
-      // 9. Canvas 2D stack depth 0 across skin, weapon, projectiles & VFX
+      // 9. Canvas 2D stack depth 0 across skin, weapon, projectiles, Matrix beams & Gaping Maw Rift + Foreground Ult Deferral
+      const { beginForegroundFxPass, flushForegroundFxPass, endForegroundFxPass } = await import('../js/graphics/renderers/foregroundFxPass.js');
       const rkCtx = createMockCtx();
+      knight._rotatingSlashSeq = {
+        stage: 'finale_barrage',
+        isFrontBarrage: true,
+        showFrontTrail: true,
+        castAngle: 0,
+        boardCx: 250,
+        boardCy: 400,
+        telegraphAngles: [-0.74, 0.70, 0],
+        telegraphHalfLength: 145,
+        windupTimer: 0,
+        maxWindupFrames: 18,
+        span: 650,
+        arenaBounds: arena,
+      };
+      knight.activeRotatingSlashes.push({
+        mode: 'phase1',
+        isFrontBarrage: true,
+        cx: 250,
+        cy: 400,
+        angle: 0.3,
+        prevAngle: null,
+        halfWidth: 28,
+        timer: 14,
+        maxTimer: 18,
+        span: 650,
+        arenaBounds: arena,
+      });
+      knight.activeRotatingShards.push({
+        kind: 'center_mark',
+        x: 250,
+        y: 400,
+        vx: 0,
+        vy: 0,
+        size: 20,
+        rot: 0.2,
+        timer: 10,
+        maxTimer: 12,
+      });
+      beginForegroundFxPass();
+      try {
+        knight.draw(rkCtx, dummy);
+        assert(rkCtx.getStackDepth() === 0, 'RoaringKnightFighter.draw() must preserve stack depth 0 during foreground FX deferral');
+        assert(
+          Array.isArray(state._deferredForegroundFx) && state._deferredForegroundFx.length === 1,
+          `RoaringKnightFighter.draw() must queue Ultimate visuals to deferred foreground pass so enemies cannot overlay them (queued=${state._deferredForegroundFx?.length})`
+        );
+        flushForegroundFxPass(rkCtx);
+        assert(rkCtx.getStackDepth() === 0, 'Flushing Roaring Knight deferred Ultimate visuals must preserve stack depth 0');
+      } finally {
+        endForegroundFxPass();
+        knight._rotatingSlashSeq = null;
+        knight.activeRotatingSlashes.length = 0;
+        knight.activeRotatingShards.length = 0;
+      }
+
       knight.afterImages.push({ x: 170, y: 400, angle: 0, r: knight.r, life: 10, maxLife: 16 });
+      knight.activeSnowflakeMatrix = {
+        phase: 'active',
+        cx: 260,
+        cy: 400,
+        halfWidth: 16,
+        timer: 10,
+        maxTimer: 16,
+        arenaBounds: arena,
+        beams: knight._buildSnowflakeBeams(260, 400, arena),
+      };
       knight.isMeleeSwinging = true;
       knight.meleePhase = 3;
       knight.meleePhaseProgress = 0.5;
       knight.drawBody(rkCtx);
       assert(rkCtx.getStackDepth() === 0, 'RoaringKnightFighter.drawBody() must preserve stack depth 0');
-      knight.draw(rkCtx, dummy);
-      assert(rkCtx.getStackDepth() === 0, 'RoaringKnightFighter.draw() must preserve stack depth 0');
+      knight.activeStarBursts.push(
+        { x: 260, y: 400, radius: 18, rot: 0.4, phase: 'red_lock', starVariant: 'phase1', redLockTimer: 6, maxRedLockFrames: 22 },
+        { x: 295, y: 420, radius: 19, rot: 0.7, phase: 'red_lock', starVariant: 'phase3', redLockTimer: 3, maxRedLockFrames: 22 }
+      );
+      knight.activeStarChildren.push(
+        { x: 275, y: 390, angle: 0.2, isHomingPhase3: true, isPhase3Crimson: true, shardPhase: 'shoot', life: 20 },
+        { x: 245, y: 410, angle: -0.4, isShortShard: true, life: 6, maxLife: 22 }
+      );
+      for (const conePhase of ['intro', 'open_flash', 'cone', 'flash_close', 'outro']) {
+        knight.activeStarCone = {
+          phase: conePhase,
+          originX: knight.x,
+          originY: knight.y,
+          angle: 0.15,
+          halfAngle: 0.46,
+          reach: 520,
+          timer: 4,
+          introMaxFrames: 12,
+          openMaxFrames: 4,
+          coneMaxFrames: 40,
+          closeMaxFrames: 4,
+          outroMaxFrames: 16,
+          tick: 7,
+          arenaBounds: arena,
+        };
+        knight.draw(rkCtx, dummy);
+        assert(rkCtx.getStackDepth() === 0, `RoaringKnightFighter.draw() must preserve stack depth 0 during STARS cone phase "${conePhase}"`);
+      }
+      knight.activeStarCone = null;
+      knight.activeRotatingSlashes.push({
+        mode: 'phase1',
+        cx: 250,
+        cy: 400,
+        angle: 0.45,
+        prevAngle: 0.1,
+        slashDir: 1,
+        halfWidth: 24,
+        span: 700,
+        arenaBounds: arena,
+        timer: 10,
+        maxTimer: 16,
+      });
+      for (const basicStage of ['basic_aim', 'basic_swing']) {
+        knight._basicRotatingSlash = {
+          stage: basicStage,
+          boardCx: 250,
+          boardCy: 400,
+          aimTimer: basicStage === 'basic_aim' ? 10 : 0,
+          maxAimFrames: 18,
+          windupAngle: 0.35,
+          spin: 1,
+          lineCount: 4,
+          span: 700,
+          arenaBounds: arena,
+        };
+        knight.draw(rkCtx, dummy);
+        assert(rkCtx.getStackDepth() === 0, `RoaringKnightFighter.draw() must preserve stack depth 0 during Rotating Slash Phase 1 stage "${basicStage}"`);
+      }
+      knight._basicRotatingSlash = null;
+      knight.activeRotatingSlashes.length = 0;
+      knight.activeVisualEffects.push({ kind: 'star_detonate_flash', x: 240, y: 380, radius: 20, rot: 0.2, timer: 6, maxTimer: 10 });
+      knight.activeRotatingSlashes.push(
+        { mode: 'finale', isFrontBarrage: true, cx: boardCx, cy: boardCy, angle: 0.55, prevAngle: null, slashDir: 1, halfWidth: 30, halfLength: 145, timer: 16, maxTimer: 18, span: 650, seed: 1, arenaBounds: ultArena },
+        { mode: 'finale', isFrontBarrage: true, cx: boardCx + 12, cy: boardCy - 8, angle: -0.90, prevAngle: null, slashDir: -1, halfWidth: 30, halfLength: 195, timer: 5, maxTimer: 24, span: 650, seed: 3, arenaBounds: ultArena }
+      );
+      knight.activeRotatingShards.push(
+        { kind: 'center_mark', x: boardCx, y: boardCy, vx: 0, vy: 0, angle: 0.55, len: 86, halfW: 16, timer: 4, maxTimer: 8 },
+        { kind: 'wall_shard', x: boardCx + 230, y: boardCy, vx: 4, vy: 0, angle: 0.2, len: 16, halfW: 3.2, timer: 10, maxTimer: 24 }
+      );
+      for (const rsState of [
+        { stage: 'ult_dash', isFrontBarrage: true, dashTimer: 6, maxDashFrames: 12, boardCx, boardCy, showFrontTrail: false, span: 650, arenaBounds: ultArena },
+        { stage: 'ult_swing', isFrontBarrage: true, swingPhase: 3, swingTimer: 4, boardCx, boardCy, showFrontTrail: false, span: 650, arenaBounds: ultArena },
+        { stage: 'finale_windup', isFrontBarrage: true, windupTimer: 12, maxWindupFrames: 18, telegraphAngles: [-0.74, 0.70, 0], telegraphHalfLength: 145, boardCx, boardCy, showFrontTrail: false, span: 650, arenaBounds: ultArena },
+        { stage: 'finale_windup', isFrontBarrage: true, windupTimer: 4, maxWindupFrames: 18, telegraphAngles: [-0.74, 0.70, 0], telegraphHalfLength: 145, boardCx, boardCy, showFrontTrail: true, span: 650, arenaBounds: ultArena },
+        { stage: 'finale_barrage', isFrontBarrage: true, boardCx, boardCy, showFrontTrail: true, span: 650, arenaBounds: ultArena },
+        { stage: 'finale_outro', isFrontBarrage: true, outroTimer: 4, maxOutroFrames: 14, boardCx, boardCy, showFrontTrail: true, span: 650, arenaBounds: ultArena },
+      ]) {
+        knight._rotatingSlashSeq = rsState;
+        knight.draw(rkCtx, dummy);
+        assert(rkCtx.getStackDepth() === 0, `RoaringKnightFighter.draw() must preserve stack depth 0 during Rotating Slash stage "${rsState.stage}"`);
+      }
+      knight._rotatingSlashSeq = null;
+
+      // 9b. Verify KnightBattleFlurry.png config, readiness check & 3-frame animated sprite path
+      const { isRoaringKnightFlurryReady, _preloadRoaringKnightWeaponSprites } = await import('../js/graphics/weapons/roaringKnightWeaponGraphics.js');
+      assert(
+        CONFIG.roaring_knight.assets.battleFlurry === 'Assets/model/roaring_knight/KnightBattleFlurry.png',
+        'Roaring Knight config must register KnightBattleFlurry.png asset path'
+      );
+      assert(typeof isRoaringKnightFlurryReady === 'function', 'isRoaringKnightFlurryReady helper must be exported');
+
+      const rkSprites = _preloadRoaringKnightWeaponSprites();
+      const flurrySprite = rkSprites.battleFlurry;
+      const origFlurryNW = flurrySprite?.naturalWidth;
+      const origFlurryNH = flurrySprite?.naturalHeight;
+      const origVfxTick = knight._vfxTick;
+      const flurryDrawCalls = [];
+      const origRkDrawImage = rkCtx.drawImage;
+      try {
+        if (flurrySprite) {
+          flurrySprite.naturalWidth = 384;
+          flurrySprite.naturalHeight = 90;
+          flurrySprite.complete = true;
+        }
+        assert(isRoaringKnightFlurryReady() === true, 'isRoaringKnightFlurryReady() must return true once KnightBattleFlurry sprite is loaded');
+        rkCtx.drawImage = (img, ...args) => {
+          flurryDrawCalls.push({ img, args });
+          return origRkDrawImage(img, ...args);
+        };
+        const barrageSkinDrawn = [];
+        knight._vfxTick = 4; // Frame 1 (sx = 128)
+        for (const flurryStage of [
+          { stage: 'finale_barrage', nextAngle: 0.6, boardCx, boardCy, showFrontTrail: true, span: 650, arenaBounds: ultArena },
+          { stage: 'finale_outro', outroTimer: 4, maxOutroFrames: 10, boardCx, boardCy, showFrontTrail: true, span: 650, arenaBounds: ultArena },
+        ]) {
+          const beforeCount = flurryDrawCalls.length;
+          knight._rotatingSlashSeq = flurryStage;
+          knight.draw(rkCtx, dummy);
+          if (flurryStage.stage === 'finale_barrage') {
+            barrageSkinDrawn.push(...flurryDrawCalls.slice(beforeCount).filter(c => c.img !== flurrySprite && c.args.length === 2));
+          }
+          assert(rkCtx.getStackDepth() === 0, `RoaringKnightFighter.draw() must preserve stack depth 0 during KnightBattleFlurry stage "${flurryStage.stage}"`);
+        }
+        assert(
+          barrageSkinDrawn.length >= 1,
+          'Canonical Circle Knight body must stay rendered during Stage 2 slash flurry (zero full-model transform)'
+        );
+        assert(
+          flurryDrawCalls.some(c => c.img === flurrySprite && c.args.length === 8 && c.args[0] === 128 && c.args[2] === 128 && c.args[3] === 90),
+          'Rotating Slash finale flurry must draw 128x90 frame cell from KnightBattleFlurry.png'
+        );
+      } finally {
+        rkCtx.drawImage = origRkDrawImage;
+        knight._rotatingSlashSeq = null;
+        knight._vfxTick = origVfxTick;
+        if (flurrySprite) {
+          flurrySprite.naturalWidth = origFlurryNW;
+          flurrySprite.naturalHeight = origFlurryNH;
+        }
+      }
+      for (const conePhase of ['intro', 'open_flash', 'cone', 'flash_close', 'outro']) {
+        knight.activeStarCone = {
+          phase: conePhase,
+          originX: knight.x + 20,
+          originY: knight.y,
+          angle: 0,
+          halfAngle: 0.46,
+          reach: 520,
+          timer: 4,
+          introMaxFrames: 12,
+          openMaxFrames: 4,
+          coneMaxFrames: 40,
+          closeMaxFrames: 4,
+          outroMaxFrames: 16,
+          tick: 12,
+          arenaBounds: arena,
+        };
+        knight.draw(rkCtx, dummy);
+        assert(rkCtx.getStackDepth() === 0, `RoaringKnightFighter.draw() must preserve stack depth 0 across cone phase "${conePhase}"`);
+      }
+
+      // 9c. Verify Weapon Studio registration, database default, custom transform support & preview stack depth 0
+      const { WEAPON_CUSTOMIZATIONS_DATABASE } = await import('../js/configs/weaponCustomizationsDatabase.js');
+      const { drawRoaringKnightWeaponPreview } = await import('../js/graphics/weapons/roaringKnightWeaponGraphics.js');
+      assert(
+        Boolean(WEAPON_CUSTOMIZATIONS_DATABASE.roaring_knight),
+        'WEAPON_CUSTOMIZATIONS_DATABASE must include roaring_knight for Weapon Studio customization'
+      );
+      const origRkCustom = state.weaponCustomizations?.roaring_knight
+        ? { ...state.weaponCustomizations.roaring_knight }
+        : null;
+      if (!state.weaponCustomizations) state.weaponCustomizations = {};
+      state.weaponCustomizations.roaring_knight = { offsetX: 4, offsetY: -2, scale: 1.25, widthScale: 1.1, lengthScale: 1.2, angleOffset: 0.15 };
+      drawRoaringKnightWeaponPreview(rkCtx, 0, 0, 0, 25, { isPreview: true });
+      assert(rkCtx.getStackDepth() === 0, 'drawRoaringKnightWeaponPreview() must preserve stack depth 0');
+      if (origRkCustom) {
+        state.weaponCustomizations.roaring_knight = origRkCustom;
+      } else {
+        delete state.weaponCustomizations.roaring_knight;
+      }
+
+      // 8. Verify StarChild Deltarune Fly-Out Behavior (passes past arena walls unclipped, culled off-canvas)
+      const clipArena = state.arena || { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+      const origKnightArenaBounds = knight._arenaBounds;
+      const origStarCone = knight.activeStarCone;
+      const origStarChildren = knight.activeStarChildren;
+      const origStarBursts = knight.activeStarBursts;
+      const origSnowflakeMatrix = knight.activeSnowflakeMatrix;
+      const origVoidRifts = knight.activeVoidRifts;
+      const origRiftStrikes = knight.activeRiftStrikes;
+      const origRotatingSlashes = knight.activeRotatingSlashes;
+      try {
+        knight._arenaBounds = clipArena;
+        knight.activeStarCone = null;
+        knight.activeStarBursts = [];
+        knight.activeSnowflakeMatrix = null;
+        knight.activeVoidRifts = [];
+        knight.activeRiftStrikes = [];
+        knight.activeRotatingSlashes = [];
+        knight.activeStarChildren = [
+          { x: clipArena.x + clipArena.width + 18, y: clipArena.y + 80, vx: 4, vy: 0, angle: 0, damage: 9, life: 20, maxLife: 20 },
+          { x: clipArena.x + clipArena.width + 24, y: clipArena.y + 120, vx: 0, vy: 0, angle: 0, damage: 12, life: 20, isPhase3Crimson: true, shardPhase: 'shoot' },
+          { x: clipArena.x - 16, y: clipArena.y + 160, vx: 3, vy: 0, angle: 0, damage: 8, life: 20, isVoidDiamond: true }
+        ];
+        let clipCallsDuringDraw = 0;
+        const flyOutProbeCtx = createMockCtx();
+        const origClip = flyOutProbeCtx.clip;
+        flyOutProbeCtx.clip = (...args) => {
+          clipCallsDuringDraw++;
+          origClip(...args);
+        };
+        knight.draw(flyOutProbeCtx, dummy);
+        assert(flyOutProbeCtx.getStackDepth() === 0, 'StarChild Deltarune fly-out draw must preserve stack depth 0');
+        assert(clipCallsDuringDraw === 0, 'RoaringKnightFighter.draw() must NOT clip activeStarChildren at the arena wall');
+
+        // Verify StarChild fragments pass right outside arena walls without disappearing on wall collision,
+        // skip out-of-arena hit checks, and only cull after leaving the expanded canvas margin
+        const savedDummyHp = dummy.hp;
+        knight.activeStarChildren = [
+          { x: clipArena.x + clipArena.width + 18, y: clipArena.y + 60, vx: 6, vy: 0, angle: 0, damage: 25, life: 20 }
+        ];
+        dummy.x = clipArena.x + clipArena.width + 22;
+        dummy.y = clipArena.y + 60;
+        knight._updateStarChildren(dummy, clipArena);
+        assert(dummy.hp === savedDummyHp, 'Out-of-arena StarChild must not deal damage outside arena boundaries');
+        assert(
+          knight.activeStarChildren.length === 1,
+          'StarChild past arena wall (+24px) must continue flying outside the arena instead of vanishing on wall contact'
+        );
+
+        knight.activeStarChildren = [
+          { x: clipArena.x + clipArena.width + 400, y: clipArena.y + 60, vx: 6, vy: 0, angle: 0, damage: 25, life: 20 }
+        ];
+        knight._updateStarChildren(dummy, clipArena);
+        assert(knight.activeStarChildren.length === 0, 'StarChild past off-canvas margin must be culled cleanly');
+
+        // Verify synced outro disappearance (purple cone sheath + B&W outro line fade together & clear on frame 0)
+        knight.activeStarChildren = [];
+        knight.isStarBurstCasting = false;
+        const outroMid = {
+          phase: 'outro', originX: knight.x + 20, originY: knight.y, angle: 0,
+          halfAngle: 0.46, reach: 520, timer: 8, outroMaxFrames: 16, tick: 60, arenaBounds: clipArena,
+        };
+        const outroFills = [];
+        const syncProbeCtx = createMockCtx();
+        const baseFill = syncProbeCtx.fill;
+        syncProbeCtx.fill = (...args) => {
+          outroFills.push({ style: syncProbeCtx.fillStyle, alpha: syncProbeCtx.globalAlpha });
+          baseFill(...args);
+        };
+        knight.activeStarCone = outroMid;
+        knight.draw(syncProbeCtx, dummy);
+        assert(syncProbeCtx.getStackDepth() === 0, 'Synced cone outro draw must keep stack depth 0');
+        const purpleOutroFill = outroFills.find(f => String(f.style).includes('156, 66, 236'));
+        const whiteOutroFill = outroFills.find(f => String(f.style).toUpperCase() === '#FFFFFF');
+        assert(
+          purpleOutroFill && whiteOutroFill && Math.abs(purpleOutroFill.alpha - whiteOutroFill.alpha) < 1e-6 && purpleOutroFill.alpha < 1,
+          'Outro purple cone sheath and B&W line must share the same fade alpha'
+        );
+        knight.activeStarCone.timer = 1;
+        knight._updateStarConeDecay();
+        assert(knight.activeStarCone === null, 'Purple cone and outro line must clear simultaneously when outro finishes');
+      } finally {
+        knight._arenaBounds = origKnightArenaBounds;
+        knight.activeStarCone = origStarCone;
+        knight.activeStarBursts = origStarBursts;
+        knight.activeStarChildren = origStarChildren;
+        knight.activeSnowflakeMatrix = origSnowflakeMatrix;
+        knight.activeVoidRifts = origVoidRifts;
+        knight.activeRiftStrikes = origRiftStrikes;
+        knight.activeRotatingSlashes = origRotatingSlashes;
+      }
+
+      // Verify Sword Tunnel (Phase 1), Phase 2 Rotating Spiral Tunnel & Phase 2 Finisher
+      const tunnelArena = { x: 45, y: 240, width: 450, height: 450, shape: 'rect' };
+      try {
+        knight.interruptAttacks(true);
+        dummy.hp = dummy.maxHp;
+        dummy.x = tunnelArena.x + tunnelArena.width * 0.5;
+        dummy.y = tunnelArena.y + tunnelArena.height * 0.5;
+        dummy.hitStunTimer = 0;
+        dummy.invincibleTimer = 0;
+
+        // 1. Phase 1 Sword Tunnel cast -> corridor spawning & HUD label
+        knight._startSwordTunnelCast(1, 0, dummy, tunnelArena);
+        assert(knight.isSwordTunnelCasting === true, 'Phase 1 Sword Tunnel cast must activate cast channel');
+        assert(knight._activeSkill1Id === 'sword_tunnel', 'Phase 1 Sword Tunnel must register sword_tunnel id');
+        for (let f = 0; f < 25; f++) {
+          knight._updateSwordTunnelChannel(dummy, tunnelArena);
+          knight._updateSwordTunnelEffects(dummy, tunnelArena);
+        }
+        assert(knight.activeSwordTunnel !== null && knight.activeSwordTunnel.phase === 1, 'Phase 1 Sword Tunnel manager must activate');
+        assert(knight.activeTunnelSwords.length >= 2, 'Phase 1 Sword Tunnel must spawn opposing blade pairs');
+
+        const tunnelDrawCtx = createMockCtx();
+        knight.draw(tunnelDrawCtx, dummy);
+        assert(tunnelDrawCtx.getStackDepth() === 0, 'Sword Tunnel draw must preserve Canvas 2D stack depth 0');
+
+        // 2. Phase 2 Rotating Spiral Sword Tunnel -> rotating corridor angle -> Phase 2 Finisher lock -> AfterimageGrow + Cut Beam damage
+        knight.interruptAttacks(true);
+        knight.hp = knight.maxHp;
+        dummy.hp = dummy.maxHp;
+        dummy.x = tunnelArena.x + tunnelArena.width * 0.5;
+        dummy.y = tunnelArena.y + tunnelArena.height * 0.5;
+        knight._startSwordTunnelCast(2, 0, dummy, tunnelArena);
+        assert(knight._activeSkill1Id === 'phase2_sword_tunnel', 'Phase 2 Sword Tunnel must register phase2_sword_tunnel id');
+        for (let f = 0; f < 20; f++) {
+          knight._updateSwordTunnelChannel(dummy, tunnelArena);
+          knight._updateSwordTunnelEffects(dummy, tunnelArena);
+        }
+        assert(knight.activeSwordTunnel && knight.activeSwordTunnel.phase === 2, 'Phase 2 Sword Tunnel manager must enter phase 2 spiral mode');
+        const initialSpiralAngle = knight.activeSwordTunnel.angle;
+        for (let f = 0; f < 16; f++) {
+          knight._updateSwordTunnelChannel(dummy, tunnelArena);
+          knight._updateSwordTunnelEffects(dummy, tunnelArena);
+        }
+        assert(
+          knight.activeSwordTunnel === null || Math.abs(knight.activeSwordTunnel.angle - initialSpiralAngle) > 0.05,
+          'Phase 2 Sword Tunnel must rotate its 360-degree corridor angle over time'
+        );
+
+        // Advance Phase 2 Tunnel straight to climax to verify Phase 2 Finisher lock -> launch -> beam damage
+        let sawFinisherAim = false;
+        let sawLaserTelegraph = false;
+        let sawAfterimageGrow = false;
+        let sawCutBeamHitbox = false;
+        for (let f = 0; f < 220; f++) {
+          knight._updateSwordTunnelChannel(dummy, tunnelArena);
+          knight._updateSwordTunnelEffects(dummy, tunnelArena);
+          if (knight.activeTunnelSwords.some(s => s.finisherStage === 'aim')) sawFinisherAim = true;
+          if (knight.activeTunnelSwords.some(s => (s.telegraphAlpha || 0) > 0.05)) sawLaserTelegraph = true;
+          if (knight.activeTunnelAfterimages.length > 0) sawAfterimageGrow = true;
+          if (knight.activeTunnelBeamHitboxes.length > 0) {
+            sawCutBeamHitbox = true;
+            const beamDrawCtx = createMockCtx();
+            knight.draw(beamDrawCtx, dummy);
+            assert(beamDrawCtx.getStackDepth() === 0, 'Phase 2 Finisher AfterimageGrow & beam cut draw must keep stack depth 0');
+          }
+          if (sawAfterimageGrow && sawCutBeamHitbox && dummy.hp < dummy.maxHp) break;
+        }
+        assert(sawFinisherAim, 'Phase 2 Tunnel must transition into Phase 2 Finisher aim lock');
+        assert(sawLaserTelegraph, 'Phase 2 Finisher must display crimson lock-on laser telegraphs');
+        assert(sawAfterimageGrow, 'Phase 2 Finisher launch must spawn expanding AfterimageGrow flashes');
+        assert(sawCutBeamHitbox, 'Phase 2 Finisher launch must spawn full-span SwordTunnelHitbox cut beams');
+        assert(dummy.hp < dummy.maxHp, 'Phase 2 Finisher cut beams must deal damage to targeted enemy');
+
+        // 3. Rule 25 non-freezing decay: active finisher afterimages & cut beams must decay while Knight is time-stopped
+        knight.activeSwordTunnel = null;
+        knight.activeTunnelSwords.length = 0;
+        knight.activeTunnelAfterimages.length = 0;
+        knight.activeTunnelBeamHitboxes.length = 0;
+        knight.activeTunnelAfterimages.push({ x: 250, y: 400, angle: 0, baseScale: 1, life: 4, maxLife: 10 });
+        knight.activeTunnelBeamHitboxes.push({
+          x: 250, y: 400, angle: 0, span: 600, halfWidth: 10, damage: 15, knockback: 5,
+          life: 4, maxLife: 11, activeFrames: 0, hitTargets: new Set(), volleyTracker: null,
+        });
+        knight.timeStopTimer = 15;
+        for (let f = 0; f < 5; f++) {
+          knight.update(dummy, 0, tunnelArena);
+        }
+        knight.timeStopTimer = 0;
+        assert(
+          knight.activeTunnelAfterimages.length === 0 && knight.activeTunnelBeamHitboxes.length === 0,
+          'Rule 25: Sword Tunnel finisher afterimages & beam hitboxes must decay while Knight is time-stopped'
+        );
+      } finally {
+        knight.timeStopTimer = 0;
+        knight.interruptAttacks(true);
+      }
+
+      // 8. Verify Black Knife Parry Mechanic (Deltarune Guard Stance, Block VFX, Riposte & Toggle Gate)
+      const origRand = Math.random;
+      const origEnableParry = rkCfg.enableParry;
+      try {
+        knight.interruptAttacks(true);
+        knight.timeStopTimer = 0;
+        knight.hitStunTimer = 0;
+        knight.paralyzeTimer = 0;
+        knight.parryCooldownTimer = 0;
+        knight.blockPoseTimer = 0;
+        knight.isMeleeSwinging = false;
+        knight.isSwoonChanneling = false;
+        rkCfg.enableParry = true;
+        knight.hp = knight.maxHp;
+        dummy.hp = dummy.maxHp;
+        dummy.invincibleTimer = 0;
+        knight.x = 240;
+        knight.y = 420;
+        dummy.x = knight.x + 58;
+        dummy.y = knight.y;
+
+        // Deterministic roll below parryPassiveChance (0.40)
+        Math.random = () => 0.10;
+        const preParryKnightHp = knight.hp;
+        const preParryDummyHp = dummy.hp;
+        const hitLanded = knight.takeDamage(30, dummy, { isMelee: true });
+        assert(hitLanded === false && knight.hp === preParryKnightHp, 'Successful Black Knife parry must negate incoming damage');
+        assert(knight.blockPoseTimer > 0 && knight.parryHitAnimTimer > 0 && knight.parryWhiteFlashTimer > 0, 'Successful parry must trigger Deltarune guard pose, recoil anim & whiteflash');
+        assert(knight.activeParryBlockVfx.length > 0, 'Successful parry must spawn obj_block_vfx sparks & clash arc');
+        assert(dummy.hp < preParryDummyHp, 'Close-range melee parry must deliver Black Knife riposte damage safely');
+
+        const parryDrawCtx = createMockCtx();
+        knight.draw(parryDrawCtx, dummy);
+        assert(parryDrawCtx.getStackDepth() === 0, 'Roaring Knight Black Knife parry guard & VFX draw must maintain Canvas 2D stack depth 0');
+
+        // Verify Rule 25 non-freezing decay of parry VFX & whiteflash while Knight is time-stopped
+        knight.timeStopTimer = 25;
+        for (let f = 0; f < 22; f++) {
+          knight.update(dummy, 0, tunnelArena);
+        }
+        knight.timeStopTimer = 0;
+        assert(
+          knight.parryWhiteFlashTimer === 0 && knight.parryHitAnimTimer === 0 && knight.activeParryBlockVfx.length === 0,
+          'Rule 25: Parry block_vfx, recoil, and whiteflash must decay cleanly even while Knight is time-stopped'
+        );
+
+        // Verify Sukuna Malevolent Shrine domain slice lines can be parried across multi-line waves
+        // while Fuga remains unblockable and spatial cuts don't trigger cross-arena riposte
+        knight.interruptAttacks(true);
+        knight.parryCooldownTimer = 0;
+        const SukunaClass = FIGHTER_CLASS_MAP['sukuna'];
+        const sukunaDef = FIGHTER_DEFS.find(d => d.type === 'sukuna') || { name: 'Sukuna', characterId: 'sukuna', type: 'sukuna', radius: 25 };
+        const distantSukuna = new SukunaClass({ ...sukunaDef, x: 60, y: 200 });
+        distantSukuna.x = 60;
+        distantSukuna.y = 200;
+        distantSukuna.maxHp = 500;
+        distantSukuna.hp = 500;
+        distantSukuna.invincibleTimer = 0;
+        knight.x = 350;
+        knight.y = 200;
+        const preShrineHp = knight.hp;
+        const preSukunaHp = distantSukuna.hp;
+        Math.random = () => 0.0; // Guarantee parry roll passes on first line
+        const shrineLine1Opts = {
+          isDomain: true,
+          isDomainSlash: true,
+          isSukunaDomainSliceLine: true,
+          bypassShield: true,
+          isSukunaSlash: true,
+          isGuaranteedHit: true,
+          undodgeable: true,
+          alreadyCheckedDodge: true,
+          noHitSound: true,
+          angle: Math.PI / 4,
+        };
+        const shrineRes1 = knight.takeDamage(12, distantSukuna, shrineLine1Opts);
+        assert(shrineRes1 === false && knight.hp === preShrineHp, 'Sukuna Malevolent Shrine slice line 1 must be parried by Roaring Knight');
+        // Second line in same wave tick hits while parryCooldownTimer > 0 — must be covered by domain wave grace!
+        Math.random = () => 0.99;
+        const shrineRes2 = knight.takeDamage(12, distantSukuna, { ...shrineLine1Opts, angle: -Math.PI / 4 });
+        assert(shrineRes2 === false && knight.hp === preShrineHp, 'Sukuna shrine wave follow-up slice line must be deflected during wave parry grace');
+        assert(distantSukuna.hp === preSukunaHp, 'Spatial domain slice line parry must not deal cross-arena melee riposte to distant Sukuna');
+        // Fuga remains unblockable
+        Math.random = () => 0.0;
+        knight.parryCooldownTimer = 0;
+        knight._domainParryGraceTimer = 0;
+        const fugaLanded = knight.takeDamage(25, distantSukuna, {
+          isDomain: true,
+          isDivineFlame: true,
+          isFuga: true,
+          undodgeable: true,
+        });
+        assert(fugaLanded !== false && knight.hp < preShrineHp, 'Sukuna Divine Flame (Fuga) must remain unblockable by Roaring Knight parry');
+
+        // Verify enableParry toggle disables parry cleanly
+        knight.interruptAttacks(true);
+        knight.parryCooldownTimer = 0;
+        rkCfg.enableParry = 0;
+        const preBypassHp = knight.hp;
+        const unparriedLanded = knight.takeDamage(20, dummy, { isMelee: true });
+        assert(unparriedLanded !== false && knight.hp < preBypassHp, 'Disabling enableParry must allow damage through without parrying');
+      } finally {
+        Math.random = origRand;
+        rkCfg.enableParry = origEnableParry;
+        knight.timeStopTimer = 0;
+        knight.interruptAttacks(true);
+      }
 
       console.log('      ✅ Roaring Knight (Deltarune Ch.3) kit, rules & stack depth 0 verified.');
     } finally {
+      for (const k of toggleKeys) rkCfg[k] = origToggles[k];
       state.fighters = origFighters;
       state.projectiles = origProjectiles;
       state.gameState = origGameState;
+    }
+  }
+
+  // ── TEST 173: Pac-Man Power Pellet vs Ender Dragon End Crystal (Ghost State, Tether Pause, Team Filter & 1-Hit Kill) ──
+  console.log('🧪 Test 173: Pac-Man Power Pellet vs End Crystal (Stationary Ghost, Tether Pause & 1-Hit Kill)...');
+  {
+    const { EnderDragonFighter } = await import('../js/entities/fighters/EnderDragonFighter.js');
+    const { EndCrystalEntity, drawCrystalHealingTetherBeams } = await import('../js/entities/EndCrystalEntity.js');
+    const { updateFighters } = await import('../js/systems/physics.js');
+    const PacmanClass = FIGHTER_CLASS_MAP['pacman'];
+    assert(PacmanClass && EnderDragonFighter && EndCrystalEntity, 'Pac-Man, EnderDragonFighter, and EndCrystalEntity must exist');
+
+    const prevFighters = state.fighters;
+    const prevMode = state.mode;
+    const prevGetTeam = state.getFighterTeam;
+    try {
+      state.mode = '1v1';
+      const dragon = new EnderDragonFighter({ x: 180, y: 320, color: '#18181B', hp: 500, maxHp: 520 });
+      dragon.hp = 400; // injured so tether would heal if active
+      const pacman = new PacmanClass({ x: 350, y: 400, color: '#F2F000', hp: 400, maxHp: 400 });
+      const crystal = new EndCrystalEntity(73, 268, 'crystal_pacman_test', 'End Crystal');
+      crystal.owner = dragon;
+      crystal.isTetheredToDragon = true;
+      crystal.tetherDragonTarget = dragon;
+
+      state.fighters = [dragon, pacman, crystal];
+
+      assert(crystal.isPacmanGhost === false, 'End Crystal must not start as a ghost');
+      assert(pacman.isEligibleGhostTarget(crystal) === true, 'Pac-Man must treat End Crystal as eligible ghost target');
+
+      pacman.activateChompMode('powerPellet');
+
+      assert(crystal.isPacmanGhost === true, 'End Crystal must transform into a frightened ghost on Power Pellet');
+      assert(crystal.pacmanGhostTimer > 0, 'End Crystal pacmanGhostTimer must be positive');
+      assert(crystal.isTetheredToDragon === false, 'Ghosted End Crystal must break/pause active healing tether immediately');
+
+      // Ensure stationary lock, paused healing, and timer decrement across updateFighters ticks
+      const fixedX = crystal.x;
+      const fixedY = crystal.y;
+      const dragonHpStart = dragon.hp;
+      const timerStart = crystal.pacmanGhostTimer;
+      for (let i = 0; i < 6; i++) {
+        state.frameCount = (state.frameCount || 0) + 1;
+        pacman.x = 350;
+        pacman.vx = 0;
+        pacman.vy = 0;
+        updateFighters();
+      }
+      assert(crystal.x === fixedX && crystal.y === fixedY, 'Ghosted End Crystal must stay stationary at fixed corner coordinates');
+      assert(crystal.pacmanGhostTimer === timerStart - 6, `Ghosted End Crystal timer must decrement cleanly (got ${crystal.pacmanGhostTimer})`);
+      assert(dragon.hp === dragonHpStart, `Ghosted End Crystal must pause dragon tether healing (dragon HP changed to ${dragon.hp})`);
+
+      // Ghost render + beam skip stack check
+      const crystalGhostCtx = createMockCtx();
+      crystal.draw(crystalGhostCtx);
+      assert(crystalGhostCtx.getStackDepth() === 0, 'Ghosted EndCrystalEntity.draw() must preserve Canvas 2D stack depth 0');
+      drawCrystalHealingTetherBeams(crystalGhostCtx, dragon);
+      assert(crystalGhostCtx.getStackDepth() === 0, 'drawCrystalHealingTetherBeams must preserve stack depth 0');
+
+      // Team filter check: in Boss Battle (idx 0 dragon vs idx 1 pacman), crystal owned by dragon MUST become ghost;
+      // in 2v2 where pacman & dragon are teammates, crystal MUST NOT become ghost.
+      crystal.reset();
+      state.mode = 'Boss Battle';
+      state.getFighterTeam = (idx) => (idx === 0 ? 0 : 1);
+      pacman.activateChompMode('powerPellet');
+      assert(crystal.isPacmanGhost === true, 'Enemy Boss End Crystal must still become ghost in Boss Battle mode');
+
+      crystal.reset();
+      state.mode = '2v2'; // idx 0 & idx 1 on Team 0
+      state.getFighterTeam = (idx) => (idx < 2 ? 0 : 1);
+      pacman.activateChompMode('powerPellet');
+      assert(crystal.isPacmanGhost === false, 'Teammate Ender Dragon End Crystal in 2v2 MUST NOT become ghost');
+
+      // 1-Hit Kill chomp on ghosted End Crystal cleanly detonates & removes it
+      state.mode = '1v1';
+      state.getFighterTeam = (idx) => idx;
+      pacman.activateChompMode('powerPellet');
+      assert(crystal.isPacmanGhost === true, 'Crystal ghosted before chomp test');
+      pacman.x = crystal.x - 16;
+      pacman.y = crystal.y;
+      pacman.vx = 0;
+      pacman.vy = 0;
+      pacman.gunAngle = 0;
+      pacman.chompAttackCooldown = 0;
+      const chomped = pacman._executeChompAttack(crystal);
+      assert(chomped === true, 'Pac-Man must chomp ghosted End Crystal');
+      assert(crystal.hp <= 0 && crystal.isDestroyed === true, 'Chomping ghosted End Crystal must trigger 1-Hit Kill detonation');
+      assert(!state.fighters.includes(crystal), 'Detonated ghost End Crystal must be removed from state.fighters');
+
+      // Round reset clears ghost flags
+      crystal.reset();
+      assert(crystal.isPacmanGhost === false && crystal.pacmanGhostTimer === 0, 'EndCrystalEntity.reset() must clear ghost state');
+      console.log('      ✅ Pac-Man Power Pellet vs End Crystal (stationary ghost, tether pause, team filter & 1-hit kill) verified.');
+  } finally {
+      state.fighters = prevFighters;
+      state.mode = prevMode;
+      state.getFighterTeam = prevGetTeam;
+    }
+  }
+
+  // Test 174: Ender Dragon turned Ghost by Pac-Man keeps active Dragon's Breath alive (streams + pools update & render)
+  {
+    console.log('🧪 Test 174: Ender Dragon Ghosted by Pac-Man Keeps Active Dragon Breath Alive...');
+    const { PacmanFighter } = await import('../js/entities/fighters/PacmanFighter.js');
+    const { EnderDragonFighter } = await import('../js/entities/fighters/EnderDragonFighter.js');
+    const { updateFighters } = await import('../js/systems/physics.js');
+    const { drawFighters } = await import('../js/graphics/renderers/EntityRenderer.js');
+
+    const prevFighters = state.fighters;
+    const prevMode = state.mode;
+    const prevGetTeam = state.getFighterTeam;
+    const prevCtx = state.ctx;
+    const prevFrameCount = state.frameCount;
+
+    try {
+      state.mode = '1v1';
+      state.gameState = 'playing';
+      state.getFighterTeam = (idx) => idx;
+      state.arena = { x: 45, y: 240, width: 450, height: 450 };
+
+      const dragon = new EnderDragonFighter({ x: 200, y: 465, team: 0 });
+      const pacman = new PacmanFighter({ x: 420, y: 465, team: 1 });
+      dragon.maxHp = 500;
+      dragon.hp = 500;
+      pacman.maxHp = 500;
+      pacman.hp = 500;
+      dragon._hasSpawnedCornerCrystals = true;
+      state.fighters = [dragon, pacman];
+
+      // Spawn active breath cloud & in-flight breath stream before Pac-Man triggers Power Pellet
+      const cfg = dragon._getConfig();
+      dragon._fireDragonBreathStream(0, cfg);
+      dragon._deployAcidPool(pacman.x, pacman.y, cfg, 0.75, 180, 'breath');
+      assert(dragon.breathStreams.length === 1, 'Expected 1 in-flight breath stream before ghosting');
+      assert(dragon.acidPools.length === 1, 'Expected 1 active breath cloud before ghosting');
+
+      // Transform Ender Dragon into Pac-Man frightened ghost
+      pacman.activateChompMode('powerPellet');
+      assert(dragon.isPacmanGhost === true && dragon.pacmanGhostTimer > 0, 'Ender Dragon must transform into ghost');
+
+      // Step physics updates across multiple frames while dragon is ghosted (keep Pac-Man inside initial cloud for tick verification)
+      const initialPoolDuration = dragon.acidPools[0].duration;
+      const prePacmanHp = pacman.hp;
+      for (let f = 0; f < 30; f++) {
+        state.frameCount = (prevFrameCount || 0) + f + 1;
+        pacman.x = 420;
+        pacman.y = 465;
+        updateFighters();
+      }
+
+      // Active breath MUST NOT be cleared by interruptAttacks(true) during ghost state, and MUST continue ticking/deploying
+      assert(dragon.acidPools.length >= 2, `In-flight breath stream must finish and deploy a second breath cloud while dragon is ghosted (got ${dragon.acidPools.length})`);
+      assert(dragon.acidPools[0].duration < initialPoolDuration, `Ghost Dragon Breath pool duration must keep ticking (was ${initialPoolDuration}, now ${dragon.acidPools[0].duration})`);
+      assert(pacman.hp < prePacmanHp, `Lingering breath pools MUST still damage Pac-Man while Ender Dragon is a ghost (hp=${pacman.hp} vs ${prePacmanHp})`);
+
+      // Render via EntityRenderer.drawFighters() while dragon is ghosted: deployed pools/streams must render in ground pass!
+      const ghostBreathCtx = createMockCtx();
+      let deployedDrawCalled = 0;
+      const origDrawDeployed = dragon.drawDeployedObjects.bind(dragon);
+      dragon.drawDeployedObjects = (ctx) => {
+        deployedDrawCalled++;
+        origDrawDeployed(ctx);
+      };
+      state.ctx = ghostBreathCtx;
+      state.frameCount = (prevFrameCount || 0) + 100;
+      drawFighters();
+      assert(deployedDrawCalled === 1, `EntityRenderer must invoke drawDeployedObjects exactly once per frame while ghosted (got ${deployedDrawCalled})`);
+      assert(ghostBreathCtx.getStackDepth() === 0, `EntityRenderer drawFighters with ghosted dragon breath must maintain Canvas stack depth 0 (got ${ghostBreathCtx.getStackDepth()})`);
+
+      // Direct dragon.draw() call also works in standalone harnesses when ground pass hasn't run on current frame
+      dragon._deployedObjectsRenderedFrame = null;
+      const directCtx = createMockCtx();
+      dragon.draw(directCtx);
+      assert(deployedDrawCalled === 2, 'Direct dragon.draw() must render deployed breath objects when ground pass did not pre-render');
+      assert(directCtx.getStackDepth() === 0, 'Direct dragon.draw() must maintain Canvas stack depth 0');
+
+      console.log('      ✅ Ghosted Ender Dragon keeps active Dragon Breath (streams, lingering clouds & rendering) verified.');
+    } finally {
+      state.fighters = prevFighters;
+      state.mode = prevMode;
+      state.getFighterTeam = prevGetTeam;
+      state.ctx = prevCtx;
+      state.frameCount = prevFrameCount;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // TEST 175: Crazy Dave Lawnmowers vs Ender Dragon Corner End Crystals
+  // Ensures corner End Crystals spawned beside Row 0 / Row 7 mowers do NOT trigger lawnmowers at match start
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('🧪 Test 175: Crazy Dave Lawnmowers vs Ender Dragon Corner End Crystals (Zero Match-Start Trigger)...');
+  {
+    const prevFighters = state.fighters;
+    const prevMode = state.mode;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+
+    try {
+      const { CrazyDaveFighter } = await import('../js/entities/fighters/CrazyDaveFighter.js');
+      const { EnderDragonFighter } = await import('../js/entities/fighters/EnderDragonFighter.js');
+      const { updateFighters } = await import('../js/systems/physics.js');
+
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      const dave = new CrazyDaveFighter({ id: 0, startX: 150, startY: 465, radius: 25, hp: 300 });
+      const dragon = new EnderDragonFighter({ id: 1, startX: 390, startY: 465, radius: 36, hp: 520 });
+      dave.team = 0;
+      dragon.team = 1;
+
+      state.mode = '1v1';
+      state.gameState = 'playing';
+      state.arena = testArena;
+      state.fighters = [dave, dragon];
+      state.getFighterTeam = (idx) => {
+        const f = state.fighters[idx];
+        if (!f) return null;
+        if (f === dave || f.owner === dave || f.team === 0) return 0;
+        return 1;
+      };
+
+      // Step first 10 frames of match start (initializes Crazy Dave lawnmowers & Ender Dragon 4 corner End Crystals)
+      for (let f = 0; f < 10; f++) {
+        updateFighters();
+      }
+
+      const crystals = state.fighters.filter(f => f && f.isEndCrystal && !f.isDead);
+      assert(crystals.length === 4, `Expected 4 active corner End Crystals, got ${crystals.length}`);
+      assert(dave.lawnmowers && dave.lawnmowers.length > 0, 'Crazy Dave must initialize baseline lawnmowers');
+      assert(dave.lawnmowers.every(m => m.state === 'idle'), `All lawnmowers must remain idle beside corner End Crystals at match start (states: ${dave.lawnmowers.map(m => m.state).join(',')})`);
+      assert(crystals.every(c => c.hp === c.maxHp), 'Corner End Crystals must stay untouched while lawnmowers are idle');
+
+      // Confirm Ender Dragon (including large live radius r = 43.2 clamped at the arena wall) trips Row 0's lawnmower when near it
+      const row0Mower = dave.lawnmowers[0];
+      dragon.r = 43.2;
+      dragon.x = testArena.x + dragon.r; // Pressed against left arena wall directly in front of Row 0 mower
+      dragon.y = row0Mower.y;
+      row0Mower.update(dragon, 0, testArena);
+      assert(row0Mower.state === 'charging', `Ender Dragon near Row 0 baseline inside arena (x=${dragon.x}, r=${dragon.r}) must trigger the lawnmower`);
+
+      console.log('      ✅ Crazy Dave Lawnmowers vs Corner End Crystals (no match-start auto-trigger) verified.');
+    } finally {
+      state.fighters = prevFighters;
+      state.mode = prevMode;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // TEST 176: Sans Teleport Dodge Afterimages vs Yuta Okkotsu (Katana, Flurry, Rika & Stun Decay)
+  // Ensures Sans retains & renders dodge afterimages when dodging Yuta's katana/flurry/Rika
+  // and under transient hit-stun (Rule 25).
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('🧪 Test 176: Sans Teleport Dodge Afterimages vs Yuta Okkotsu...');
+  {
+    const prevFighters = state.fighters;
+    const prevMode = state.mode;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+
+    try {
+      const { SansFighter } = await import('../js/entities/fighters/SansFighter.js');
+      const { YutaFighter } = await import('../js/entities/fighters/YutaFighter.js');
+      const { modExecuteKatanaMelee, modUpdateKatanaSwing } = await import('../js/entities/fighters/yuta/yutaKatana.js');
+      const { drawSansAfterImages } = await import('../js/graphics/fighters/sansSkin.js');
+      const { updateFighters } = await import('../js/systems/physics.js');
+
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      const sans = new SansFighter({ id: 'sans', x: 250, y: 450, radius: 25, hp: 1 });
+      const yuta = new YutaFighter({ id: 'yuta', x: 210, y: 450, radius: 25, hp: 200 });
+      sans.x = 250;
+      sans.y = 450;
+      yuta.x = 210;
+      yuta.y = 450;
+      sans.team = 0;
+      yuta.team = 1;
+      sans.stamina = sans.maxStamina;
+      sans.dodgeCooldown = 0;
+
+      state.mode = '1v1';
+      state.gameState = 'playing';
+      state.arena = testArena;
+      state.fighters = [sans, yuta];
+      state.getFighterTeam = (idx) => (state.fighters[idx] === sans ? 0 : 1);
+
+      // 1. Trigger Yuta 5-phase katana swing & step until mid-strike impact connects onto Sans
+      modExecuteKatanaMelee(yuta, 0);
+      for (let f = 0; f < 25 && !yuta.swordHitDelivered; f++) {
+        sans.x = 250;
+        sans.y = 450;
+        yuta.x = 210;
+        yuta.y = 450;
+        modUpdateKatanaSwing(yuta, sans, testArena);
+      }
+      assert(yuta.swordHitDelivered === true, 'Yuta katana swing must reach mid-strike delivery frame');
+
+      assert(sans.hp === 1, 'Sans must dodge Yuta katana swing with full HP preserved');
+      assert(sans.afterImages && sans.afterImages.length > 0, `Sans must spawn dodge afterimages when dodging Yuta katana (got ${sans.afterImages?.length})`);
+      assert((sans.timeStopTimer || 0) === 0, `Dodging Yuta katana must NOT apply hit-pause timeStop to Sans (got ${sans.timeStopTimer})`);
+      assert((sans.hitStunTimer || 0) === 0, `Dodging Yuta katana must NOT apply hitStun to Sans (got ${sans.hitStunTimer})`);
+
+      // Update a few frames: afterimages must remain visible and tick down naturally
+      const countAfterKatana = sans.afterImages.length;
+      const timerBefore = sans.afterImages[0].timer;
+      for (let f = 0; f < 3; f++) {
+        updateFighters();
+      }
+      assert(sans.afterImages.length === countAfterKatana, `Sans dodge afterimages must persist cleanly across combat frames after Yuta katana dodge (got ${sans.afterImages.length})`);
+      assert(sans.afterImages[0].timer === timerBefore - 3, `Sans dodge afterimage timer must tick cleanly (expected ${timerBefore - 3}, got ${sans.afterImages[0].timer})`);
+
+      // Render Sans skin + afterimages: verify drawSansAfterImages actually draws ghost quad & keeps stack depth 0
+      const renderCtx = createMockCtx();
+      let ghostDraws = 0;
+      const origDrawImage = renderCtx.drawImage.bind(renderCtx);
+      renderCtx.drawImage = (...args) => {
+        ghostDraws++;
+        return origDrawImage(...args);
+      };
+      drawSansAfterImages(renderCtx, sans);
+      assert(ghostDraws === countAfterKatana, `drawSansAfterImages must render all ${countAfterKatana} dodge afterimages (rendered ${ghostDraws})`);
+      assert(renderCtx.getStackDepth() === 0, `drawSansAfterImages must preserve stack depth 0 (got ${renderCtx.getStackDepth()})`);
+
+      // 2. Transient hit-stun (e.g. Yuta Domain trap applyHitStun) must NOT erase existing dodge afterimages and must let them decay (Rule 25)
+      sans.applyHitStun(12);
+      const timerPreStun = sans.afterImages[0].timer;
+      sans.update(yuta, 0, testArena);
+      assert(sans.afterImages.length === countAfterKatana, `Transient hitStun must NOT delete Sans existing dodge afterimages (got ${sans.afterImages.length})`);
+      assert(sans.afterImages[0].timer === timerPreStun - 1, `Existing dodge afterimages must continue decaying during hitStun (Rule 25)`);
+
+      let stunnedGhostDraws = 0;
+      const stunRenderCtx = createMockCtx();
+      const origStunDrawImage = stunRenderCtx.drawImage.bind(stunRenderCtx);
+      stunRenderCtx.drawImage = (...args) => {
+        stunnedGhostDraws++;
+        return origStunDrawImage(...args);
+      };
+      drawSansAfterImages(stunRenderCtx, sans);
+      assert(stunnedGhostDraws === countAfterKatana, `drawSansAfterImages must still render lingering dodge afterimages during transient hitStun (rendered ${stunnedGhostDraws})`);
+      assert(stunRenderCtx.getStackDepth() === 0, 'drawSansAfterImages during hitStun must preserve stack depth 0');
+
+      // 3. Yuta Phantom Flurry hit dodged by Sans must NOT apply timeStop to Sans and must keep afterimages
+      sans.hitStunTimer = 0;
+      sans.timeStopTimer = 0;
+      sans.stamina = sans.maxStamina;
+      sans.afterImages = [];
+      yuta._executeFlurryHit(sans, { contactX: sans.x, contactY: sans.y });
+      assert(sans.hp === 1, 'Sans must dodge Phantom Flurry strike while stamina holds');
+      assert(sans.afterImages.length > 0, 'Sans must spawn dodge afterimages when dodging Yuta Phantom Flurry');
+      assert((sans.timeStopTimer || 0) === 0, `Dodging Phantom Flurry must NOT apply timeStop to Sans (got ${sans.timeStopTimer})`);
+
+      console.log('      ✅ Sans Teleport Dodge Afterimages vs Yuta Okkotsu verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.mode = prevMode;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+    }
+  }
+
+  console.log('\n🧪 Test 177: Yuta Pure Love Beam Magenta Visual Only Applies When Damage Is Dealt (Sans & Saitama Safe)...');
+  {
+    const { YutaPureLoveBeamBehavior } = await import('../js/systems/projectiles/behaviors/YutaPureLoveBeamBehavior.js');
+    const YutaClass = FIGHTER_CLASS_MAP['yuta'];
+    const SansClass = FIGHTER_CLASS_MAP['sans'];
+    const SaitamaClass = FIGHTER_CLASS_MAP['saitama'];
+    const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+    const behavior = new YutaPureLoveBeamBehavior();
+
+    const prevFighters = state.fighters;
+    const prevMode = state.mode;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevIllusions = state.illusions;
+    const prevDriveBys = state.cjDriveBys;
+
+    const createBeamSetup = (target) => {
+      const yuta = new YutaClass({ x: 100, y: 300, color: '#FF1493', controls: {} });
+      yuta.reset();
+      yuta.x = 100;
+      yuta.y = 300;
+      yuta.z = 0;
+      yuta.hp = yuta.maxHp;
+      yuta.gunAngle = 0;
+      yuta.angle = 0;
+      yuta.isFiringPureLoveBeam = true;
+      yuta.pureLoveBeamLockedAngle = 0;
+      yuta.pureLoveBeamActiveTimer = 200;
+
+      target.x = 260;
+      target.y = 300;
+      target.vx = 0;
+      target.vy = 0;
+      target.pureLoveBeamRecoveryTimer = 0;
+      target.caughtInPureLoveBeam = false;
+      target.wasCaughtInPureLoveBeam = false;
+      target.pureLoveBeamTimer = 0;
+
+      state.fighters = [yuta, target];
+      state.arena = { x: 45, y: 240, width: 450, height: 450 };
+      state.mode = 'duel';
+      state.gameState = 'FIGHTING';
+      state.getFighterTeam = (idx) => idx;
+      state.illusions = [];
+      state.cjDriveBys = [];
+
+      const projectile = {
+        owner: 0,
+        ownerFighter: yuta,
+        angle: 0,
+        x: yuta.x + 39,
+        y: yuta.y,
+        length: CONFIG.yuta?.pureLoveBeamLength || 2500,
+        r: CONFIG.yuta?.pureLoveBeamWidth || 200,
+        damage: 10,
+        knockback: CONFIG.yuta?.pureLoveBeamKnockback || 2,
+        hitTargets: new Set(),
+        hitTickTimer: 0,
+        life: 200,
+        maxLife: 200
+      };
+      return { yuta, projectile };
+    };
+
+    try {
+      // 1. Sans dodging via dodgeBeam AND via takeDamage inside beam must NOT receive pureLoveBeamRecoveryTimer (magenta visual)
+      const sans = new SansClass({ x: 260, y: 300, color: '#FFFFFF', controls: {} });
+      sans.reset();
+      sans.hp = 1;
+      sans.stamina = sans.maxStamina;
+      const { projectile: sansProj } = createBeamSetup(sans);
+      behavior.update(sansProj, state.fighters, {});
+      assert(sans.hp === 1, 'Sans must avoid Pure Love Beam damage on dodgeBeam');
+      assert((sans.pureLoveBeamRecoveryTimer || 0) === 0, `Sans dodgeBeam must NOT apply magenta pureLoveBeamRecoveryTimer (got ${sans.pureLoveBeamRecoveryTimer})`);
+      assert(sans.caughtInPureLoveBeam === false && sans.wasCaughtInPureLoveBeam === false, 'Sans dodgeBeam must NOT flag beam capture');
+
+      // Re-position Sans inside beam while already in _dodgedEntities so takeDamage() handles the dodge directly
+      sans.x = 260;
+      sans.y = 300;
+      sans.hitStunTimer = 0;
+      sans.dodgeCooldown = 0;
+      sans.stamina = sans.maxStamina;
+      sansProj.hitTargets.clear();
+      sansProj.hitTickTimer = 0;
+      behavior.update(sansProj, state.fighters, {});
+      behavior.update(sansProj, state.fighters, {}); // Also verify non-tick frame inside beam
+      assert(sans.hp === 1, 'Sans must avoid Pure Love Beam damage when dodging in takeDamage');
+      assert((sans.pureLoveBeamRecoveryTimer || 0) === 0, `Sans takeDamage dodge must NOT apply magenta pureLoveBeamRecoveryTimer (got ${sans.pureLoveBeamRecoveryTimer})`);
+      assert(sans.caughtInPureLoveBeam === false && sans.wasCaughtInPureLoveBeam === false, 'Sans takeDamage dodge must NOT set caughtInPureLoveBeam flags');
+
+      // 2. Saitama dodging via dodgeBeam OR immune during invincibility must NOT receive pureLoveBeamRecoveryTimer
+      const saitama = new SaitamaClass({ x: 260, y: 300, color: '#FFE600', controls: {} });
+      saitama.reset();
+      saitama.hp = saitama.maxHp;
+      const { projectile: saiProj } = createBeamSetup(saitama);
+      behavior.update(saiProj, state.fighters, {});
+      assert(saitama.hp === saitama.maxHp, 'Saitama must avoid Pure Love Beam damage on dodgeBeam');
+      assert((saitama.pureLoveBeamRecoveryTimer || 0) === 0, `Saitama dodgeBeam must NOT apply magenta pureLoveBeamRecoveryTimer (got ${saitama.pureLoveBeamRecoveryTimer})`);
+      assert(saitama.caughtInPureLoveBeam === false && saitama.wasCaughtInPureLoveBeam === false, 'Saitama dodgeBeam must NOT set caughtInPureLoveBeam flags');
+
+      // Re-position Saitama inside beam while invulnerable (counter/ultimate immunity)
+      saitama.x = 260;
+      saitama.y = 300;
+      saitama.invincibilityTimer = 30;
+      saitama.isInvincibleUltimate = true;
+      saiProj.hitTargets.clear();
+      saiProj.hitTickTimer = 0;
+      behavior.update(saiProj, state.fighters, {});
+      assert(saitama.hp === saitama.maxHp, 'Invulnerable Saitama must take 0 Pure Love Beam damage');
+      assert((saitama.pureLoveBeamRecoveryTimer || 0) === 0, `Invulnerable Saitama must NOT apply magenta pureLoveBeamRecoveryTimer (got ${saitama.pureLoveBeamRecoveryTimer})`);
+      assert(saitama.caughtInPureLoveBeam === false && saitama.wasCaughtInPureLoveBeam === false, 'Invulnerable Saitama must NOT set caughtInPureLoveBeam flags');
+
+      // 3. Standard target that DOES take beam damage MUST still receive caughtInPureLoveBeam and pureLoveBeamRecoveryTimer
+      const gojo = new GojoClass({ x: 260, y: 300, color: '#00F0FF', controls: {} });
+      gojo.reset();
+      const prevGojoHp = gojo.hp;
+      const { projectile: gojoProj } = createBeamSetup(gojo);
+      behavior.update(gojoProj, state.fighters, {});
+      assert(gojo.hp < prevGojoHp, 'Normal target inside Pure Love Beam must still take beam damage');
+      assert(gojo.caughtInPureLoveBeam === true, 'Damaged target inside Pure Love Beam must be flagged caughtInPureLoveBeam');
+      assert(gojo.pureLoveBeamRecoveryTimer > 0, 'Damaged target inside Pure Love Beam must still receive magenta pureLoveBeamRecoveryTimer');
+
+      console.log('      ✅ Pure Love Beam magenta visual gating verified for Sans, Saitama, and damaged targets.');
+    } finally {
+      state.fighters = prevFighters;
+      state.mode = prevMode;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+      state.illusions = prevIllusions;
+      state.cjDriveBys = prevDriveBys;
+    }
+  }
+
+  // ── TEST 178: Choso Convergence Matrix Aim Lock-In Phase Before Firing ──
+  console.log('\n🧪 Test 178: Choso Convergence Matrix Aim Lock-In Phase Before Firing...');
+  {
+    const { ChosoFighter } = await import('../js/entities/fighters/ChosoFighter.js');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevBlood = state.bloodEffects;
+
+    try {
+      state.arena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.gameState = 'playing';
+      state.bloodEffects = [];
+
+      const choso = new ChosoFighter({ x: 140, y: 460, hp: 420, maxHp: 420, color: '#A31D1D', controls: {} });
+      const target = new Fighter({ x: 350, y: 460, hp: 500, maxHp: 500, color: '#CCCCCC', controls: {} });
+      choso.reset?.();
+      target.reset?.();
+      choso.hp = choso.maxHp;
+      target.hp = target.maxHp;
+      state.fighters = [choso, target];
+      state.getFighterTeam = (idx) => (idx === 0 ? 'teamA' : 'teamB');
+
+      const lockFrames = CONFIG.choso?.laserLockInFrames ?? 14;
+      assert(lockFrames > 0, `CONFIG.choso.laserLockInFrames must be > 0 (got ${lockFrames})`);
+
+      // Seed 3 active blood nodes across arena
+      choso.spawnBloodNode(180, 340, 0, 0);
+      choso.spawnBloodNode(220, 560, 0, 0);
+      choso.spawnBloodNode(300, 320, 0, 0);
+      const started = choso._startLaserMatrix(target, choso._getActiveBloodParticles());
+      assert(started === true, 'Convergence Matrix should start when active blood exists');
+
+      const castTotal = (choso.laserMatrixCastMax || 50) + (choso.laserTelegraphMax || 12);
+      for (let f = 0; f < castTotal; f++) {
+        target.x = 340 + Math.sin(f * 0.1) * 20;
+        choso.update(target, 0, state.arena);
+      }
+
+      // Immediately after cast + telegraph completes, Choso must enter lock-in hold (not fired yet)
+      assert(choso.isCastingLaserMatrix === true, 'Choso must still be casting during lock-in phase');
+      assert(choso.isLaserMatrixLockedIn === true, 'Choso must enter isLaserMatrixLockedIn right after telegraph');
+      assert(choso.laserLockInTimer === lockFrames, `laserLockInTimer should equal ${lockFrames}, got ${choso.laserLockInTimer}`);
+      assert(choso.activeLaserBeams.length === 0, 'Beams must NOT fire before lock-in frames finish');
+
+      const snapshotPos = { x: choso._laserLockPos.x, y: choso._laserLockPos.y };
+      const lockedEnds = choso.bloodNodes.map(n => ({ x: n.lockedEndX, y: n.lockedEndY, ang: n.lockedAngle }));
+      assert(lockedEnds.every(e => typeof e.x === 'number' && typeof e.y === 'number'), 'Every ignited node must record locked ray endpoints');
+
+      // Render check during lock-in phase (Canvas 2D stack balance)
+      let depth = 0;
+      const noop = () => {};
+      const mockCtx = {
+        save() { depth++; },
+        restore() { depth--; },
+        translate: noop, rotate: noop, scale: noop, beginPath: noop, closePath: noop,
+        moveTo: noop, lineTo: noop, arc: noop, ellipse: noop, rect: noop, roundRect: noop,
+        fill: noop, stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
+        setLineDash: noop, fillText: noop, strokeText: noop, drawImage: noop,
+        measureText: () => ({ width: 20 }),
+        createLinearGradient: () => ({ addColorStop: noop }),
+        createRadialGradient: () => ({ addColorStop: noop }),
+        globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, font: '12px sans-serif',
+      };
+      choso.draw(mockCtx, target);
+      assert(depth === 0, `Choso draw during lock-in must keep Canvas 2D stack depth at 0 (got ${depth})`);
+
+      // Move target completely out of all locked beam lines during the lock-in frames
+      target.x = 85;
+      target.y = 285;
+      const evadingHp = target.hp;
+      for (let f = 0; f < lockFrames - 1; f++) {
+        choso.update(target, 0, state.arena);
+        assert(choso.isLaserMatrixLockedIn === true, `Should stay locked on frame ${f + 1}/${lockFrames}`);
+        assert(choso._laserLockPos.x === snapshotPos.x && choso._laserLockPos.y === snapshotPos.y, 'Locked coordinates must remain frozen while target moves');
+        assert(choso.bloodNodes[0].lockedEndX === lockedEnds[0].x && choso.bloodNodes[0].lockedEndY === lockedEnds[0].y, 'Node locked endpoint must remain frozen during lock-in');
+      }
+
+      // Final lock-in frame fires the Convergence beams along locked rays
+      choso.update(target, 0, state.arena);
+      assert(choso.isCastingLaserMatrix === false, 'Casting must finish upon discharge');
+      assert(choso.isLaserMatrixLockedIn === false, 'Lock-in flag must clear upon discharge');
+      assert(choso.activeLaserBeams.length === 3, `Expected 3 fired laser beams, got ${choso.activeLaserBeams.length}`);
+      assert(Math.abs(choso.activeLaserBeams[0].endX - lockedEnds[0].x) < 0.01 && Math.abs(choso.activeLaserBeams[0].endY - lockedEnds[0].y) < 0.01, 'Discharged beam must match pre-locked trajectory');
+      assert(target.hp === evadingHp, `Target who escaped locked beam rays must take 0 damage (hp ${target.hp} vs ${evadingHp})`);
+
+      // Second test: target standing in locked rays takes full Convergence damage
+      choso.ultCooldown = 0;
+      choso.skill3Cooldown = 0;
+      choso.bloodNodes = [];
+      state.bloodEffects = [];
+      choso.activeLaserBeams = [];
+      target.x = 340;
+      target.y = 460;
+      const stationaryHp = target.hp;
+      choso.spawnBloodNode(180, 340, 0, 0);
+      choso.spawnBloodNode(220, 560, 0, 0);
+      choso.spawnBloodNode(300, 320, 0, 0);
+      choso._startLaserMatrix(target, choso._getActiveBloodParticles());
+      for (let f = 0; f < castTotal + lockFrames; f++) {
+        choso.update(target, 0, state.arena);
+      }
+      assert(target.hp < stationaryHp, `Target remaining inside locked beam rays must take damage (hp ${target.hp} < ${stationaryHp})`);
+
+      // Interruption cleanup during lock-in
+      choso.ultCooldown = 0;
+      choso.bloodNodes = [];
+      choso.spawnBloodNode(200, 400, 0, 0);
+      choso._startLaserMatrix(target, choso._getActiveBloodParticles());
+      for (let f = 0; f < castTotal; f++) choso.update(target, 0, state.arena);
+      assert(choso.isLaserMatrixLockedIn === true, 'Must reach lock-in before interrupt check');
+      choso.interruptAttacks(true);
+      assert(choso.isLaserMatrixLockedIn === false && choso.laserLockInTimer === 0 && choso._laserLockPos === null, 'interruptAttacks must clean lock-in state');
+
+      console.log('      ✅ Choso Convergence Matrix aim lock-in phase verified.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+      state.bloodEffects = prevBlood;
     }
   }
 
