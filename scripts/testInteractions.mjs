@@ -16988,9 +16988,12 @@ async function runInteractionTests() {
     state.getFighterTeam = (idx) => (idx === 0 ? 0 : 1);
     state.fighters = [isagi, dummy];
 
-    // 1. Single Persistent Soccer Ball Standard
+    // 1. Single Persistent Soccer Ball Standard (Spawns at Arena Center)
     assert(isagi.soccerBall !== null && typeof isagi.soccerBall === 'object', 'Isagi must have exactly ONE persistent active soccer ball');
-    assert(isagi._hasSoccerBall() === true, 'Isagi must start with the ball at his feet in kicking range');
+    const initArena = state.arena || CONFIG.arena || arena;
+    const expectedMidX = initArena.x + initArena.width / 2;
+    const expectedMidY = initArena.y + initArena.height / 2;
+    assert(Math.abs(isagi.soccerBall.x - expectedMidX) < 0.5 && Math.abs(isagi.soccerBall.y - expectedMidY) < 0.5, `Soccer ball must spawn at the arena middle (${expectedMidX}, ${expectedMidY}), got (${isagi.soccerBall.x}, ${isagi.soccerBall.y})`);
     assert(isagi.soccerBalls === undefined || isagi.soccerBalls.length === 0, 'No multiple soccer ball arrays permitted');
 
     // 2. Kicking the Ball Directed Straight Towards the Enemy
@@ -18242,53 +18245,47 @@ async function runInteractionTests() {
     const currentModeMult = (typeof state !== 'undefined' && state.mode && typeof MODE_SPEED_MULTIPLIER !== 'undefined' && MODE_SPEED_MULTIPLIER[state.mode]) || 1;
     const expectedBaseSpd = (5.2 * currentModeMult).toFixed(1);
 
-    // A. Isagi Baseline Stats (Idle)
+    // A. Isagi Baseline Stats (Idle — general HUD stats only)
     isagi.isEgoActive = false;
     isagi.isFlowStateActive = false;
     const isagiIdleStats = getAdditionalInfoForFighter(isagi);
-    assert(isagiIdleStats.some(s => s.includes('<b>DMG:</b> 24')), 'Isagi idle stats must display base DMG: 24');
+    const expectedBaseDmg = CONFIG.isagi?.egoShotDamage ?? CONFIG.isagi?.damage ?? 24;
+    assert(isagiIdleStats.some(s => s.includes(`<b>DMG:</b> ${expectedBaseDmg}`)), `Isagi idle stats must display base DMG: ${expectedBaseDmg}`);
     assert(isagiIdleStats.some(s => s.includes(`<b>SPD:</b> ${expectedBaseSpd}`)), `Isagi idle stats must display base SPD: ${expectedBaseSpd}`);
-    assert(isagiIdleStats.some(s => s.includes('<b>KICK SPD:</b> 14.5')), 'Isagi idle stats must display base KICK SPD: 14.5');
-    assert(isagiIdleStats.some(s => s.includes('<b>ACCURACY:</b> 100%')), 'Isagi idle stats must display ACCURACY: 100%');
+    assert(!isagiIdleStats.some(s => s.includes('KICK SPD:') || s.includes('CONTROL:') || s.includes('ACCURACY:')), 'Isagi idle HUD stats must omit Blue-Lock-specific stat clutter');
 
     // B. Isagi Flow State Buffs (Metavision Slip)
     isagi.isFlowStateActive = true;
     isagi.flowStateTimer = 180;
     const isagiFlowStats = getAdditionalInfoForFighter(isagi);
-    assert(isagiFlowStats.some(s => s.includes('KICK SPD:') && s.includes('(FLOW)')), 'Isagi Flow state must boost KICK SPD in HUD stats');
     assert(isagiFlowStats.some(s => s.includes('Crit Rate:') && s.includes('FLOW 1.85x')), 'Isagi Flow state must display 100% Flow Crit Rate');
-    assert(isagiFlowStats.some(s => s.includes('STATE:') && s.includes('FLOW STATE')), 'Isagi Flow state must display live Flow indicator in HUD stats');
 
-    // C. Isagi EGO Awakening Buffs (Spatial Cooldown Cycling & Direct Volley Damage)
+    // C. Isagi EGO Awakening Buffs (Direct Volley Damage)
     isagi.isFlowStateActive = false;
     isagi.isEgoActive = true;
     isagi.egoDurationTimer = 360;
     const isagiEgoStats = getAdditionalInfoForFighter(isagi);
     assert(isagiEgoStats.some(s => s.includes('DMG:') && s.includes('▲ (+25% EGO)')), 'Isagi Ego state must boost DMG in HUD stats');
     assert(isagiEgoStats.some(s => s.includes(`<b>SPD:</b> ${expectedBaseSpd}`)), 'Isagi Ego state must NOT boost movement speed (preserves Chigiri role isolation)');
-    assert(isagiEgoStats.some(s => s.includes('KICK SPD:') && s.includes('(EGO)')), 'Isagi Ego state must boost KICK SPD in HUD stats');
-    assert(isagiEgoStats.some(s => s.includes('CDR:') && s.includes('+60%')), 'Isagi Ego state must display +60% CDR in HUD stats');
-    assert(isagiEgoStats.some(s => s.includes('EGO:') && s.includes('METAVISION FLOW')), 'Isagi Ego state must display METAVISION FLOW title in HUD stats');
+    assert(!isagiEgoStats.some(s => s.includes('EGO:') || s.includes('CDR:') || s.includes('KICK SPD:')), 'Isagi Ego HUD stats must show only general stats');
 
     // D. Chigiri EGO Awakening Buffs (Sprint Speed & Evade Slip)
     const chigiriStats = getAdditionalInfoForFighter(mockChigiri);
     assert(chigiriStats.some(s => s.includes('SPD:') && s.includes('▲ (+60% EGO)')), 'Chigiri Ego state must boost SPD by +60% in HUD stats');
     assert(chigiriStats.some(s => s.includes('EVADE:') && s.includes('25%')), 'Chigiri Ego state must display 25% EVADE in HUD stats');
-    assert(chigiriStats.some(s => s.includes('EGO:') && s.includes('44-PANTHER')), 'Chigiri Ego state must display 44-PANTHER title in HUD stats');
+    assert(!chigiriStats.some(s => s.includes('CONTROL:') || s.includes('EGO:')), 'Chigiri Ego HUD stats must show only general stats');
 
     // E. Barou EGO Awakening Buffs (Brute Force Strike Damage & Defense)
     activateBlueLockEgo(mockBarou, { egoDuration: 360 });
     const barouStats = getAdditionalInfoForFighter(mockBarou);
     assert(barouStats.some(s => s.includes('DMG:') && s.includes('▲ (+55% EGO)')), 'Barou Ego state must boost DMG by +55% in HUD stats');
     assert(barouStats.some(s => s.includes('DEF:') && s.includes('+20%')), 'Barou Ego state must display +20% DEF in HUD stats');
-    assert(barouStats.some(s => s.includes('EGO:') && s.includes('PREDATOR CANNON')), 'Barou Ego state must display The King title in HUD stats');
 
-    // F. Bachira EGO Awakening Buffs (Monster Dribbler Evasion & Passback)
+    // F. Bachira EGO Awakening Buffs (Monster Dribbler Evasion & Speed)
     activateBlueLockEgo(mockBachira, { egoDuration: 360 });
     const bachiraStats = getAdditionalInfoForFighter(mockBachira);
     assert(bachiraStats.some(s => s.includes('EVADE:') && s.includes('40%')), 'Bachira Ego state must display 40% EVADE in HUD stats');
     assert(bachiraStats.some(s => s.includes('SPD:') && s.includes('▲ (+30% EGO)')), 'Bachira Ego state must boost SPD by +30% in HUD stats');
-    assert(bachiraStats.some(s => s.includes('PASSBACK:') && s.includes('80%')), 'Bachira Ego state must display 80% PASSBACK in HUD stats');
 
     // 9. Canvas 2D Stack Integrity with Ego Aura
     mockCtx.resetStackDepth();
@@ -18560,9 +18557,10 @@ async function runInteractionTests() {
     chigiri.soccerBall.x = chigiri.x + 10;
     chigiri.soccerBall.y = chigiri.y;
 
-    // Dynamic HUD stats validation for Dribble / Ball Control
+    // General HUD stats validation (only DMG, SPD, EVADE — no Control/Dribble clutter)
     const dribbleHudStats = getBlueLockFighterStatsInfo(chigiri);
-    assert(dribbleHudStats.some(s => s.includes('DRIBBLE') || s.includes('CONTROL')), 'HUD stats must show dynamic DRIBBLE / CONTROL status');
+    assert(dribbleHudStats.some(s => s.includes('DMG:')) && dribbleHudStats.some(s => s.includes('SPD:')), 'HUD stats must include general DMG and SPD');
+    assert(!dribbleHudStats.some(s => s.includes('DRIBBLE:') || s.includes('CONTROL:') || s.includes('KICK SPD:')), 'HUD stats must omit Blue-Lock-specific DRIBBLE / CONTROL / KICK SPD lines');
 
     // Decrement cooldown until ready to kick
     while (chigiri.shootCooldown > 0) {
@@ -25475,6 +25473,350 @@ async function runInteractionTests() {
       state.fighters = prevFighters;
       state.arena = prevArena;
       state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+    }
+  }
+
+  // ── TEST 182: Blue Lock Bounce-Back Return Pass Keeps Character Moving & One-Touch Re-Kick ──
+  {
+    console.log('\n[TEST 182] Blue Lock Bounce-Back Return Pass Keeps Character Moving & One-Touch Re-Kick...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { executeSoccerKick, isWaitingForSoccerBallReturn } = await import('../js/systems/soccerBallSystem.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevSharedBall = state.sharedSoccerBall;
+    const prevState = state.gameState;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+
+      // Part A: Isagi kicks ball -> hits enemy -> triggers ONE-TWO bounce-back -> Isagi keeps moving and re-kicks immediately on return
+      state.sharedSoccerBall = null;
+      const isagi = new IsagiFighter({ id: 'isagi', x: 140, y: 450, radius: 25, hp: 420 });
+      const dummy = new Fighter({ id: 99, x: 390, y: 450, radius: 25, hp: 400, speed: 3, damage: 10, cooldown: 30, color: '#888' });
+      isagi.x = 140; isagi.y = 450; isagi.vx = 4; isagi.vy = 2; isagi.team = 0;
+      dummy.x = 390; dummy.y = 450; dummy.vx = 0; dummy.vy = 0; dummy.team = 1;
+      state.fighters = [isagi, dummy];
+      state.getFighterTeam = (idx) => (state.fighters[idx] === isagi ? 0 : 1);
+
+      executeSoccerKick(isagi, isagi.soccerBall, 0, 18, { bounceBackChance: 1.0, damage: 20 });
+      assert(isagi.soccerBall.shouldBounceBackToKicker === true, 'Forced bounceBackChance=1.0 should arm bounce-back flag');
+
+      // Step ball into enemy target to trigger ONE-TWO return pass
+      for (let f = 0; f < 25 && !isagi.isWaitingForBallBounceBack; f++) {
+        isagi.update(dummy, 0, testArena);
+      }
+      assert(isagi.isWaitingForBallBounceBack === true, 'Ball hitting enemy with bounce-back chance must arm Isagi return pass tracking');
+      assert(isWaitingForSoccerBallReturn(isagi, isagi.soccerBall) === true, 'isWaitingForSoccerBallReturn must be true while ball returns');
+
+      isagi.shootCooldown = 60;
+      const holdX = isagi.x;
+      const holdY = isagi.y;
+      for (let f = 0; f < 5; f++) {
+        isagi.update(dummy, 0, testArena);
+      }
+      assert(isagi.isWaitingForBallBounceBack === true, 'Returning ONE-TWO ball must not self-deflect off struck enemy on next frame');
+      assert(isagi.x !== holdX || isagi.y !== holdY, `Isagi must continue moving naturally while ball returns (stayed frozen at ${holdX},${holdY})`);
+
+      // Let ball finish returning to Isagi and confirm immediate one-touch re-kick launches the ball
+      for (let f = 0; f < 40 && isagi.isWaitingForBallBounceBack; f++) {
+        isagi.update(dummy, 0, testArena);
+      }
+      assert(isagi.isWaitingForBallBounceBack === false, 'Isagi must clear bounce-back return tracking once ball arrives');
+      assert(isagi.soccerBall.isKicked === true, 'Isagi must immediately re-kick the bounced-back ball even when shootCooldown was active');
+      const postKickSpeed = Math.hypot(isagi.soccerBall.vx || 0, isagi.soccerBall.vy || 0);
+      assert(postKickSpeed >= 12, `Re-kicked ball must move at full kick speed (got ${postKickSpeed.toFixed(2)})`);
+      const ballXBeforeMove = isagi.soccerBall.x;
+      const ballYBeforeMove = isagi.soccerBall.y;
+      isagi.update(dummy, 0, testArena);
+      const ballTravel = Math.hypot(isagi.soccerBall.x - ballXBeforeMove, isagi.soccerBall.y - ballYBeforeMove);
+      assert(ballTravel >= 10, `Re-kicked ball must travel forward after Isagi kicks it (moved ${ballTravel.toFixed(2)}px)`);
+
+      // Part B: Chigiri wall BANK PASS triggers bounce-back -> Chigiri continues moving naturally while returning
+      state.sharedSoccerBall = null;
+      const chigiri = new ChigiriFighter({ id: 'chigiri', x: 260, y: 450, radius: 25, hp: 400 });
+      chigiri.x = 260; chigiri.y = 450; chigiri.vx = 5; chigiri.vy = -3; chigiri.team = 0;
+      dummy.x = 120; dummy.y = 300;
+      state.fighters = [chigiri, dummy];
+      state.getFighterTeam = (idx) => (state.fighters[idx] === chigiri ? 0 : 1);
+
+      executeSoccerKick(chigiri, chigiri.soccerBall, 0, 22, { bounceBackChance: 1.0, damage: 20 });
+      for (let f = 0; f < 25 && !chigiri.isWaitingForBallBounceBack; f++) {
+        chigiri.update(dummy, 0, testArena);
+      }
+      assert(chigiri.isWaitingForBallBounceBack === true, 'Wall Bank Pass bounce-back must arm Chigiri return pass tracking');
+      const chigiriHoldX = chigiri.x;
+      const chigiriHoldY = chigiri.y;
+      for (let f = 0; f < 5; f++) {
+        chigiri.update(dummy, 0, testArena);
+      }
+      assert(chigiri.x !== chigiriHoldX || chigiri.y !== chigiriHoldY, `Chigiri must continue moving naturally while Bank Pass returns (stayed frozen at ${chigiriHoldX},${chigiriHoldY})`);
+      console.log('      ✅ Blue Lock bounce-back return free movement & immediate re-kick verified for Isagi & Chigiri.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.sharedSoccerBall = prevSharedBall;
+      state.gameState = prevState;
+    }
+  }
+
+  // ── TEST 183: Enemy Receives Slow Debuff Every Time They Get Hit By a Soccer Ball ──
+  {
+    console.log('\n[TEST 183] Enemy Receives Slow Debuff on Every Soccer Ball Hit...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { GojoFighter } = await import('../js/entities/fighters/GojoFighter.js');
+    const { executeSoccerKick, updateSoccerBallPhysics } = await import('../js/systems/soccerBallSystem.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevSharedBall = state.sharedSoccerBall;
+    const prevState = state.gameState;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.sharedSoccerBall = null;
+
+      const isagi = new IsagiFighter({ id: 'isagi', x: 140, y: 450, radius: 25, hp: 420 });
+      const chigiri = new ChigiriFighter({ id: 'chigiri', x: 160, y: 450, radius: 25, hp: 400 });
+      const dummy = new Fighter({ id: 99, x: 260, y: 450, radius: 25, hp: 500, speed: 3, damage: 10, cooldown: 30, color: '#888' });
+      isagi.team = 0;
+      chigiri.team = 0;
+      dummy.team = 1;
+      dummy.slowTimer = 0;
+      dummy.slowMultiplier = 1.0;
+      state.fighters = [isagi, dummy];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      // 1. Isagi ball hit applies slow debuff
+      executeSoccerKick(isagi, isagi.soccerBall, 0, 20, { damage: 20, bounceBackChance: 0 });
+      for (let f = 0; f < 15 && dummy.slowTimer <= 0; f++) {
+        updateSoccerBallPhysics(isagi.soccerBall, isagi, dummy, testArena, CONFIG.isagi);
+      }
+      const expectedIsagiDur = CONFIG.isagi?.ballEnemySlowDuration ?? 90;
+      const expectedIsagiMult = CONFIG.isagi?.ballEnemySlowMultiplier ?? 0.45;
+      assert(dummy.slowTimer >= expectedIsagiDur, `Enemy hit by Isagi ball must receive slowTimer >= ${expectedIsagiDur} (got ${dummy.slowTimer})`);
+      assert(dummy.slowMultiplier === expectedIsagiMult, `Enemy hit by Isagi ball must receive slowMultiplier === ${expectedIsagiMult} (got ${dummy.slowMultiplier})`);
+
+      // 2. Partial decay then second ball hit (Chigiri) refreshes slow debuff every time
+      dummy.slowTimer = 20;
+      dummy._ballHitCooldown = 0;
+      dummy._isagiBallHitCooldown = 0;
+      dummy.x = 260; dummy.y = 450;
+      state.fighters = [chigiri, dummy];
+      executeSoccerKick(chigiri, isagi.soccerBall, 0, 20, { damage: 20, bounceBackChance: 0 });
+      const expectedChigiriDur = CONFIG.chigiri?.ballEnemySlowDuration ?? 90;
+      for (let f = 0; f < 15 && dummy.slowTimer <= 20; f++) {
+        updateSoccerBallPhysics(isagi.soccerBall, chigiri, dummy, testArena, CONFIG.chigiri);
+      }
+      assert(dummy.slowTimer >= expectedChigiriDur, `Repeated ball hit must refresh enemy slowTimer to >= ${expectedChigiriDur} (got ${dummy.slowTimer})`);
+
+      // 3. Gojo Infinity block must NOT slow Gojo since ball is stopped before dealing damage
+      const gojo = new GojoFighter({ id: 'gojo', x: 260, y: 450, radius: 25, hp: 500 });
+      gojo.team = 1;
+      gojo.infinityCooldown = 0;
+      gojo.slowTimer = 0;
+      state.fighters = [isagi, gojo];
+      executeSoccerKick(isagi, isagi.soccerBall, 0, 20, { damage: 20, bounceBackChance: 0 });
+      for (let f = 0; f < 10; f++) {
+        updateSoccerBallPhysics(isagi.soccerBall, isagi, gojo, testArena, CONFIG.isagi);
+      }
+      assert(gojo.slowTimer === 0, `Ball stopped by Gojo Limitless Infinity must NOT apply slow debuff (got ${gojo.slowTimer})`);
+      console.log('      ✅ Enemy slow debuff applied and refreshed cleanly on every soccer ball hit.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.sharedSoccerBall = prevSharedBall;
+      state.gameState = prevState;
+    }
+  }
+
+  // ── TEST 184: EGO Mode Upgrades STRIKER! (Isagi Long Stun & Chigiri Faster Ball + Enemy-Targeted Ricochet) ──
+  {
+    console.log('\n[TEST 184] EGO Mode STRIKER! Upgrades for Isagi & Chigiri...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { activateBlueLockEgo, executeStrikerSkill, updateSoccerBallPhysics } = await import('../js/systems/soccerBallSystem.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevSharedBall = state.sharedSoccerBall;
+    const prevState = state.gameState;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.sharedSoccerBall = null;
+
+      // Part A: Isagi EGO Mode STRIKER! applies extended stun duration
+      const isagi = new IsagiFighter({ id: 'isagi', x: 150, y: 450, radius: 25, hp: 420 });
+      const enemyA = new Fighter({ id: 98, x: 250, y: 450, radius: 25, hp: 500, speed: 3, damage: 10, cooldown: 30, color: '#888' });
+      const enemyB = new Fighter({ id: 99, x: 250, y: 450, radius: 25, hp: 500, speed: 3, damage: 10, cooldown: 30, color: '#888' });
+      isagi.team = 0;
+      enemyA.team = 1;
+      enemyB.team = 1;
+      state.fighters = [isagi, enemyA];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      // Non-EGO STRIKER! baseline stun
+      isagi.isEgoActive = false;
+      executeStrikerSkill(isagi, isagi.soccerBall, enemyA, testArena, CONFIG.isagi);
+      for (let f = 0; f < 10 && !enemyA._strikerKnockback; f++) {
+        updateSoccerBallPhysics(isagi.soccerBall, isagi, enemyA, testArena, CONFIG.isagi);
+      }
+      const baseStunDur = enemyA._strikerKnockback?.stunDuration || 0;
+      assert(baseStunDur > 0, `Non-EGO Isagi STRIKER! must queue stunDuration (got ${baseStunDur})`);
+
+      // EGO Mode STRIKER! upgraded stun duration
+      state.fighters = [isagi, enemyB];
+      activateBlueLockEgo(isagi, CONFIG.isagi);
+      isagi.strikerCooldownTimer = 0;
+      isagi.directVolleyCooldownTimer = 0;
+      executeStrikerSkill(isagi, isagi.soccerBall, enemyB, testArena, CONFIG.isagi);
+      for (let f = 0; f < 10 && !enemyB._strikerKnockback; f++) {
+        updateSoccerBallPhysics(isagi.soccerBall, isagi, enemyB, testArena, CONFIG.isagi);
+      }
+      const egoStunDur = enemyB._strikerKnockback?.stunDuration || 0;
+      assert(egoStunDur > baseStunDur, `EGO Mode Isagi STRIKER! stun duration must exceed base (${egoStunDur} <= ${baseStunDur})`);
+
+      // Part B: Chigiri EGO Mode STRIKER! upgrades traveling ball speed & ricochets back at enemy
+      state.sharedSoccerBall = null;
+      const chigiri = new ChigiriFighter({ id: 'chigiri', x: 200, y: 450, radius: 25, hp: 400 });
+      const chigiriTarget = new Fighter({ id: 97, x: 350, y: 450, radius: 25, hp: 500, speed: 3, damage: 10, cooldown: 30, color: '#888' });
+      chigiri.team = 0;
+      chigiriTarget.team = 1;
+      state.fighters = [chigiri, chigiriTarget];
+
+      chigiri.isEgoActive = false;
+      executeStrikerSkill(chigiri, chigiri.soccerBall, chigiriTarget, testArena, CONFIG.chigiri, { speed: CONFIG.chigiri?.strikerSpeed || 26 });
+      const nonEgoSpeed = Math.hypot(chigiri.soccerBall.vx || 0, chigiri.soccerBall.vy || 0);
+      assert(chigiri.soccerBall.strikerRicochetCharges === 0, 'Non-EGO Chigiri STRIKER! must have 0 EGO ricochet charges');
+
+      activateBlueLockEgo(chigiri, CONFIG.chigiri);
+      chigiri.strikerCooldownTimer = 0;
+      executeStrikerSkill(chigiri, chigiri.soccerBall, chigiriTarget, testArena, CONFIG.chigiri, { speed: CONFIG.chigiri?.strikerSpeed || 26 });
+      const egoSpeed = Math.hypot(chigiri.soccerBall.vx || 0, chigiri.soccerBall.vy || 0);
+      assert(egoSpeed > nonEgoSpeed, `EGO Mode Chigiri STRIKER! ball speed must exceed non-EGO (${egoSpeed.toFixed(1)} <= ${nonEgoSpeed.toFixed(1)})`);
+      assert(chigiri.soccerBall.strikerRicochetCharges >= 2, `EGO Mode Chigiri STRIKER! must arm >= 2 ricochet charges (got ${chigiri.soccerBall.strikerRicochetCharges})`);
+      assert(chigiri.soccerBall.strikerRicochetTargetChance >= 0.35 && chigiri.soccerBall.strikerRicochetTargetChance <= 0.75, `EGO Mode Chigiri STRIKER! ricochet must blend enemy bias & randomness (got ${chigiri.soccerBall.strikerRicochetTargetChance})`);
+
+      // Verify wall bounce includes angular scatter (not 100% aimbot lock) and supports random pinball deflections
+      chigiri.soccerBall.strikerRicochetTargetChance = 1.0;
+      chigiri.soccerBall.x = testArena.x + testArena.width - chigiri.soccerBall.r;
+      chigiri.soccerBall.y = testArena.y + 40;
+      chigiri.soccerBall.vx = 30;
+      chigiri.soccerBall.vy = 0;
+      chigiriTarget.x = 180;
+      chigiriTarget.y = 520;
+      updateSoccerBallPhysics(chigiri.soccerBall, chigiri, chigiriTarget, testArena, CONFIG.chigiri);
+      assert(chigiri.soccerBall.lastWallRicochetTargeted === true, 'Chigiri EGO STRIKER! wall bounce must activate ricochet state');
+      assert(chigiri.soccerBall.isRicochetTrail === true && Array.isArray(chigiri.soccerBall._strikerTrailNodes) && chigiri.soccerBall._strikerTrailNodes.length > 0, 'Chigiri EGO STRIKER! ball must keep VFX comet trails intact across ricochets');
+      const toEnemyX = chigiriTarget.x - chigiri.soccerBall.x;
+      const toEnemyY = chigiriTarget.y - chigiri.soccerBall.y;
+      const lenEnemy = Math.hypot(toEnemyX, toEnemyY) || 1;
+      const spd = Math.hypot(chigiri.soccerBall.vx, chigiri.soccerBall.vy) || 1;
+      const dot = (toEnemyX / lenEnemy) * (chigiri.soccerBall.vx / spd) + (toEnemyY / lenEnemy) * (chigiri.soccerBall.vy / spd);
+      assert(dot >= 0.65 && dot < 0.996, `Biased ricochet must head generally toward enemy with angular scatter, not 100% aimbot lock (dot=${dot.toFixed(4)})`);
+
+      // Verify wild random pinball bounce when chance=0.0 deflects inward cleanly with varied vy
+      chigiri.soccerBall.strikerRicochetTargetChance = 0.0;
+      chigiri.soccerBall.x = testArena.x + testArena.width - chigiri.soccerBall.r;
+      chigiri.soccerBall.y = testArena.y + 180;
+      chigiri.soccerBall.vx = 28;
+      chigiri.soccerBall.vy = 0;
+      updateSoccerBallPhysics(chigiri.soccerBall, chigiri, chigiriTarget, testArena, CONFIG.chigiri);
+      assert(chigiri.soccerBall.vx < 0 && Math.abs(chigiri.soccerBall.vy) >= 5, `Wild ricochet bounce must deflect randomly inward (vx=${chigiri.soccerBall.vx.toFixed(1)}, vy=${chigiri.soccerBall.vy.toFixed(1)})`);
+
+      // Verify Chigiri cannot catch, dribble, or intercept-dash the ball while ricochet sequence is still active
+      chigiri.x = chigiri.soccerBall.x + 10;
+      chigiri.y = chigiri.soccerBall.y;
+      chigiri.shootCooldown = 0;
+      chigiri.pantherSprintCooldownTimer = 0;
+      assert(chigiri._hasSoccerBall() === false, 'Chigiri must NOT catch/kick his EGO STRIKER! ball while ricochet is still active');
+      chigiri._handleCombatAndBallMeeting(chigiriTarget, testArena, CONFIG.chigiri);
+      assert(chigiri.isPantherSprinting === false && chigiri.soccerBall.dribbler !== chigiri, 'Chigiri must NOT trap or Panther Sprint into ball mid-ricochet');
+
+      // Once ricochet finishes (charges === 0 and post-bounce settles), Chigiri can catch the ball again
+      chigiri.soccerBall.strikerRicochetCharges = 0;
+      chigiri.soccerBall.lastWallRicochetTargeted = false;
+      chigiri.soccerBall.isKicked = false;
+      chigiri.x = chigiri.soccerBall.x + 10;
+      chigiri.y = chigiri.soccerBall.y;
+      assert(chigiri._hasSoccerBall() === true, 'Chigiri must be able to reclaim the ball once ricochet completes');
+      console.log('      ✅ EGO Mode STRIKER! upgrades verified for Isagi (long stun) & Chigiri (speed + guided ricochet).');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.sharedSoccerBall = prevSharedBall;
+      state.gameState = prevState;
+    }
+  }
+
+  // ── TEST 185: Chigiri STRIKER! Always Damages Isagi Even When Metavision Slip Is Ready (Zero Fake-Hit CC on Dodge) ──
+  {
+    console.log('\n[TEST 185] Chigiri STRIKER! Damages Isagi Through Passive Metavision Slip...');
+    const { IsagiFighter } = await import('../js/entities/fighters/IsagiFighter.js');
+    const { ChigiriFighter } = await import('../js/entities/fighters/ChigiriFighter.js');
+    const { executeStrikerSkill, executeSoccerKick, updateSoccerBallPhysics } = await import('../js/systems/soccerBallSystem.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevSharedBall = state.sharedSoccerBall;
+    const prevState = state.gameState;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.sharedSoccerBall = null;
+
+      const chigiri = new ChigiriFighter({ id: 'chigiri', x: 150, y: 450, radius: 25, hp: 400 });
+      const isagi = new IsagiFighter({ id: 'isagi', x: 280, y: 450, radius: 25, hp: 420 });
+      chigiri.team = 0; isagi.team = 1;
+      chigiri.x = 150; chigiri.y = 450; isagi.x = 280; isagi.y = 450;
+      state.fighters = [chigiri, isagi];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      // 1. Chigiri STRIKER! hits Isagi cleanly even with Metavision Slip ready (metavisionCooldownTimer === 0)
+      isagi.metavisionCooldownTimer = 0;
+      const startHp = isagi.hp;
+      executeStrikerSkill(chigiri, chigiri.soccerBall, isagi, testArena, CONFIG.chigiri);
+      for (let f = 0; f < 10 && isagi.hp === startHp; f++) {
+        updateSoccerBallPhysics(chigiri.soccerBall, chigiri, isagi, testArena, CONFIG.chigiri);
+      }
+      assert(isagi.hp < startHp, `Chigiri STRIKER! must damage Isagi even when Metavision is off cooldown (start=${startHp}, end=${isagi.hp})`);
+      assert(isagi.slowTimer > 0, 'STRIKER! hit on Isagi must apply slow debuff alongside damage');
+
+      // 2. Basic Panther Shot evaded by Metavision Slip must NOT apply fake knockback/stun/slow for 0 damage
+      isagi.hp = startHp;
+      isagi.slowTimer = 0;
+      isagi.hitStunTimer = 0;
+      isagi.metavisionCooldownTimer = 0;
+      isagi._ballHitCooldown = 0;
+      isagi._isagiBallHitCooldown = 0;
+      isagi.x = 280; isagi.y = 450; chigiri.x = 150; chigiri.y = 450;
+      executeSoccerKick(chigiri, chigiri.soccerBall, 0, 18, { damage: 22, bounceBackChance: 0 });
+      for (let f = 0; f < 10 && isagi.metavisionCooldownTimer === 0; f++) {
+        updateSoccerBallPhysics(chigiri.soccerBall, chigiri, isagi, testArena, CONFIG.chigiri);
+      }
+      assert(isagi.metavisionCooldownTimer > 0, 'Basic shot should trigger Isagi Metavision Slip evade');
+      assert(isagi.hp === startHp, 'Evaded basic shot must deal 0 damage');
+      assert(isagi.slowTimer === 0 && isagi.hitStunTimer === 0, `Evaded basic shot must not apply fake slow or hitStun (slow=${isagi.slowTimer}, stun=${isagi.hitStunTimer})`);
+      console.log('      ✅ Chigiri STRIKER! damage through passive Metavision Slip & zero fake-hit CC verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.sharedSoccerBall = prevSharedBall;
       state.gameState = prevState;
     }
   }

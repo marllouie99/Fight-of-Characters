@@ -2468,23 +2468,7 @@ export function getBlueLockFighterStatsInfo(f) {
     info.push(`<b>SPD:</b> ${baseSpd.toFixed(1)}`);
   }
 
-  // 3. Kinetic Kick Speed (KICK SPD) — dynamic update when Flow State (1.5x) or Ego (1.2x - 1.5x) is active
-  const baseKickSpd = cfg.egoShotSpeed || cfg.kickSpeed || 15.5;
-  let kickMult = 1.0;
-  if (isFlow) kickMult *= (cfg.flowShotSpeedMult || 1.50);
-  if (isEgo && typeof egoBuffs.kickSpeedMultiplier === 'number') kickMult *= egoBuffs.kickSpeedMultiplier;
-  const totalKickSpd = parseFloat((baseKickSpd * kickMult).toFixed(1));
-  const kickDiff = parseFloat((totalKickSpd - baseKickSpd).toFixed(1));
-  if (kickDiff > 0.05) {
-    const tag = (isFlow && isEgo && egoBuffs.kickSpeedMultiplier) ? 'FLOW+EGO' : (isFlow ? 'FLOW' : 'EGO');
-    info.push(`<b>KICK SPD:</b> ${baseKickSpd.toFixed(1)} + ${kickDiff.toFixed(1)} <span style="color: ${themeColor}; font-size: 10px;">▲ (${tag})</span>`);
-  } else {
-    info.push(`<b>KICK SPD:</b> ${baseKickSpd.toFixed(1)}`);
-  }
-
-  // 4. Lore Weapon Buffs & Evasion / Defense / CDR Stats
-
-  // Evade chance: active during Panther Speed Surge or Ego Awakening
+  // 3. General Combat Modifiers (EVADE, DEF, Crit Rate — only shown when active)
   const hasSpeedSurge = Boolean(f.pantherSpeedBuffTimer && f.pantherSpeedBuffTimer > 0);
   const surgeEvadeChance = hasSpeedSurge ? (cfg.pantherSprintEvadeChance !== undefined ? cfg.pantherSprintEvadeChance : 0.35) : 0;
   const egoEvadeChance = (isEgo && typeof egoBuffs.dodgeChance === 'number') ? egoBuffs.dodgeChance : 0;
@@ -2498,48 +2482,8 @@ export function getBlueLockFighterStatsInfo(f) {
     const defBoost = Math.round((1 - egoBuffs.defenseMultiplier) * 100);
     info.push(`<b>DEF:</b> +${defBoost}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
   }
-  if (isEgo && typeof egoBuffs.cooldownRate === 'number' && egoBuffs.cooldownRate > 1.0) {
-    const cdrBoost = Math.round((egoBuffs.cooldownRate - 1.0) * 100);
-    info.push(`<b>CDR:</b> +${cdrBoost}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
-  }
-  if (isEgo && typeof egoBuffs.curvedShotRate === 'number') {
-    info.push(`<b>TRIVELA:</b> ${egoBuffs.curvedShotRate.toFixed(1)}x <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
-  }
-  if (isEgo && typeof egoBuffs.reboundBounceChance === 'number') {
-    info.push(`<b>PASSBACK:</b> ${Math.round(egoBuffs.reboundBounceChance * 100)}% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (EGO)</span>`);
-  }
   if (isFlow) {
     info.push(`<b>Crit Rate:</b> 100% <span style="color: ${themeColor}; font-size: 10px; font-weight: bold;">▲ (FLOW 1.85x)</span>`);
-  }
-
-  // 5. Dribble & Ball Control Status (Reflects character control archetype while moving with ball)
-  const isDribbling = Boolean(f.soccerBall && f.soccerBall.dribbler === f && f.shootCooldown > 0);
-  const controlRating = getFighterDribbleControl(f, cfg);
-  const controlPct = Math.round(controlRating * 100);
-  const styleName = cfg.dribbleStyle === 'mach_breakaway' ? 'MACH DRIBBLE' : (cfg.dribbleStyle === 'spatial_pocket' ? 'SPATIAL POCKET' : 'BALL CONTROL');
-
-  if (isDribbling) {
-    const spdBonus = Math.round(((cfg.dribbleSpeedMultiplier || 1.05) - 1.0) * 100);
-    const bonusTag = spdBonus > 0 ? ` (+${spdBonus}% SPD)` : '';
-    info.push(`<b>DRIBBLE:</b> <span style="color: ${themeColor}; font-weight: bold;">${controlPct}%</span> <span style="color: ${themeColor}; font-size: 10px;">▲ (${styleName}${bonusTag})</span>`);
-  } else {
-    info.push(`<b>CONTROL:</b> ${controlPct}% <span style="color: ${themeColor}; font-size: 10px;">(${styleName})</span>`);
-  }
-
-  // If no dynamic buff was pushed, display base kick accuracy
-  if (!isFlow && (!isEgo || (!egoBuffs.dodgeChance && !egoBuffs.defenseMultiplier && !egoBuffs.cooldownRate && !egoBuffs.curvedShotRate && !egoBuffs.reboundBounceChance))) {
-    const accPct = Math.round((f.kickAccuracy !== undefined ? f.kickAccuracy : (cfg.kickAccuracy ?? 1.0)) * 100);
-    info.push(`<b>ACCURACY:</b> ${accPct}%`);
-  }
-
-  // 5. Active EGO Title / Duration Indicator when Awakened (or Flow State indicator)
-  if (isEgo) {
-    const egoSec = Math.max(1, Math.ceil((f.egoDurationTimer || 0) / 60));
-    const egoTitle = f.egoTitle || reg?.title || 'AWAKENED';
-    info.push(`<b>EGO:</b> <span style="color: ${themeColor}; font-weight: bold;">${egoTitle.toUpperCase()}</span> <span style="color: ${themeColor}; font-size: 10px;">(${egoSec}S) ▲</span>`);
-  } else if (isFlow && (f.flowStateTimer || 0) > 0) {
-    const flowSec = Math.max(1, Math.ceil((f.flowStateTimer || 0) / 60));
-    info.push(`<b>STATE:</b> <span style="color: #00F0FF; font-weight: bold;">FLOW STATE</span> <span style="color: #00F0FF; font-size: 10px;">(${flowSec}S) ▲</span>`);
   }
 
   return info;

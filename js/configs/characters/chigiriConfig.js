@@ -55,6 +55,8 @@ export const chigiriConfig = {
   kickSlowMultiplier: 0.25, // Agile recovery movement
   ballHitSlowDuration: 14, // Duration in frames (~0.23s) of slowdown when ball successfully hits enemy
   ballHitSlowMultiplier: 0.25, // Movement speed multiplier during successful ball hit
+  ballEnemySlowDuration: 90, // Slow debuff duration (frames) applied to enemies hit by the ball (~1.5s)
+  ballEnemySlowMultiplier: 0.45, // Movement speed multiplier applied to slowed enemies (55% slow)
   kickAccuracy: 0.80, // 94% kick accuracy (slight spread chance)
   maxKickSpread: (18 * Math.PI) / 180, // Default maximum spread dispersion angle (~18 deg)
 
@@ -121,5 +123,8 @@ export const chigiriConfig = {
     kickSpeedMultiplier: 1.25, // +25% ball kinetic velocity
     damageMultiplier: 1.15, // +15% kick damage
     dodgeChance: 0.25, // 25% evasive dodge chance during extreme Mach speed
+    strikerSpeedMultiplier: 1.55, // +55% faster ball traveling speed on STRIKER! during Ego Mode
+    strikerRicochetTargetChance: 0.50, // 50% chance to angle loosely toward enemy, 50% wild random pinball bounce
+    strikerRicochetCount: 3, // Up to 3 chaotic high-speed wall ricochets per EGO STRIKER!
   },
 };

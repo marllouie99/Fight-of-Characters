@@ -593,7 +593,7 @@ export function drawSoccerBallProjectile(ctx, proj, options = {}) {
   const x = proj.x;
   const y = proj.y;
   const r = proj.r || 16;
-  const isDirectVolley = Boolean(proj.isDirectVolley || proj.isStriker || proj.isSuperShot || proj.isSpecialKick);
+  const isDirectVolley = Boolean(proj.isDirectVolley || proj.isStriker || proj.isSuperShot || proj.isSpecialKick || proj.isRicochetTrail);
   const isKicked = Boolean(proj.isKickedByIsagi || proj.isKicked || proj.lastKicker);
   const kickerColor = options.auraColor || proj.kickerThemeColor || (proj.lastKicker?.color) || (proj.lastKicker?.themeColor) || '#00F0FF';
 

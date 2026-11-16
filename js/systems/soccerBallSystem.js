@@ -59,10 +59,11 @@ export const BLUE_LOCK_EGO_REGISTRY = Object.freeze({
     title: 'Metavision Flow',
     themeColor: '#00F0FF',
     buffs: Object.freeze({
-      kickSpeedMultiplier: 1.30, // +30% ball kinetic speed
-      damageMultiplier: 1.25,    // +25% strike damage
-      cooldownRate: 1.6,         // 60% faster skill cooldown recovery (spatial processing)
-      sweetSpotDamageBonus: 8    // Enhanced spatial awareness direct sweet-spot hit damage
+      kickSpeedMultiplier: 1.30,          // +30% ball kinetic speed
+      damageMultiplier: 1.25,             // +25% strike damage
+      cooldownRate: 1.6,                  // 60% faster skill cooldown recovery (spatial processing)
+      sweetSpotDamageBonus: 8,            // Enhanced spatial awareness direct sweet-spot hit damage
+      strikerStunDurationMultiplier: 2.0  // 2x longer enemy stun on STRIKER! Direct Volley during Ego Mode
     })
   }),
   chigiri: Object.freeze({
@@ -71,10 +72,13 @@ export const BLUE_LOCK_EGO_REGISTRY = Object.freeze({
     title: '44-Panther Mach Pace',
     themeColor: '#EC4899',
     buffs: Object.freeze({
-      speedMultiplier: 1.60,     // Extreme +60% breakaway sprint speed!
+      speedMultiplier: 1.60,              // Extreme +60% breakaway sprint speed!
       kickSpeedMultiplier: 1.25,
       damageMultiplier: 1.15,
-      dodgeChance: 0.25
+      dodgeChance: 0.25,
+      strikerSpeedMultiplier: 1.55,       // +55% faster STRIKER! ball traveling speed during Ego Mode
+      strikerRicochetTargetChance: 0.50,  // 50% loose bias toward enemy, 50% random pinball ricochet
+      strikerRicochetCount: 3             // Up to 3 chaotic high-speed wall ricochets per EGO STRIKER!
     })
   }),
   rin: Object.freeze({
@@ -257,8 +261,9 @@ export function getOrCreateSharedSoccerBall(kicker = null, cfg = {}, stateRef = 
     return stateRef.sharedSoccerBall;
   }
 
-  // 3. Create a new single soccer ball instance
-  const newBall = createSoccerBall(kicker, cfg);
+  // 3. Create a new single soccer ball instance (spawns at arena center)
+  const arena = (stateRef && stateRef.arena) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null);
+  const newBall = createSoccerBall(kicker, cfg, arena, stateRef);
   if (stateRef) {
     stateRef.sharedSoccerBall = newBall;
   }
@@ -267,17 +272,27 @@ export function getOrCreateSharedSoccerBall(kicker = null, cfg = {}, stateRef = 
 
 /**
  * Creates a new standardized soccer ball entity for Blue Lock characters.
+ * Spawns at the center of the arena when available, falling back cleanly if no arena exists.
  *
  * @param {object} [kicker=null] - Owner / Initial kicker fighter
  * @param {object} [cfg={}] - Character config object
+ * @param {object} [arena=null] - Optional arena bounds override
+ * @param {object} [stateRef=state] - Optional state reference
  * @returns {object} Standardized soccer ball entity
  */
-export function createSoccerBall(kicker = null, cfg = {}) {
+export function createSoccerBall(kicker = null, cfg = {}, arena = null, stateRef = state) {
   const angle = kicker ? (kicker.angle || 0) : 0;
   const kickerR = kicker ? (kicker.r || 25) : 25;
   const r = cfg.egoShotRadius || 16;
-  const startX = kicker ? (kicker.x + Math.cos(angle) * (kickerR + r + 4)) : 200;
-  const startY = kicker ? (kicker.y + Math.sin(angle) * (kickerR + r + 4)) : 200;
+  const activeArena = arena || (stateRef && stateRef.arena) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null);
+  const hasArena = activeArena && typeof activeArena.x === 'number' && typeof activeArena.y === 'number' &&
+                   typeof activeArena.width === 'number' && typeof activeArena.height === 'number';
+  const startX = hasArena
+    ? (activeArena.x + activeArena.width / 2)
+    : (kicker ? (kicker.x + Math.cos(angle) * (kickerR + r + 4)) : 270);
+  const startY = hasArena
+    ? (activeArena.y + activeArena.height / 2)
+    : (kicker ? (kicker.y + Math.sin(angle) * (kickerR + r + 4)) : 465);
 
   return {
     x: startX,
@@ -296,6 +311,12 @@ export function createSoccerBall(kicker = null, cfg = {}) {
     isKickedByIsagi: false,
     shouldBounceBackToIsagi: false,
     shouldBounceBackToKicker: false,
+    returningToKicker: null,
+    strikerRicochetCharges: 0,
+    strikerRicochetTargetChance: 0,
+    strikerRicochetMinSpeed: 0,
+    lastWallRicochetTargeted: false,
+    isRicochetTrail: false,
     rotation: angle,
     rotSpeed: 0,
     startX: kicker ? kicker.x : startX,
@@ -336,18 +357,24 @@ export function resetSoccerBall(ball, kicker, cfg = {}, arena = null, stateRef =
   ball.isKickedByIsagi = false;
   ball.shouldBounceBackToKicker = false;
   ball.shouldBounceBackToIsagi = false;
+  ball.returningToKicker = null;
+  ball.strikerRicochetCharges = 0;
+  ball.strikerRicochetTargetChance = 0;
+  ball.strikerRicochetMinSpeed = 0;
+  ball.lastWallRicochetTargeted = false;
+  ball.isRicochetTrail = false;
   ball.rotSpeed = 0;
   ball.lastKicker = kicker || null;
   if (ball._strikerTrailNodes) ball._strikerTrailNodes.length = 0;
   if (ball._strikerSparks) ball._strikerSparks.length = 0;
   ball.kickerThemeColor = kicker ? (kicker.color || '#00F0FF') : '#00F0FF';
 
-  // Single Shared Ball Kick-off standard:
-  // If 2 or more Blue Lock fighters are present and arena is provided, spawn at pitch center
-  const blCount = countBlueLockFighters(stateRef);
-  if (blCount >= 2 && arena && typeof arena.width === 'number' && typeof arena.height === 'number') {
-    ball.x = arena.x + arena.width / 2;
-    ball.y = arena.y + arena.height / 2;
+  // Universal Center Pitch Kick-off standard: always place the soccer ball in the middle of the arena
+  const activeArena = arena || (stateRef && stateRef.arena) || (typeof CONFIG !== 'undefined' ? CONFIG.arena : null);
+  if (activeArena && typeof activeArena.x === 'number' && typeof activeArena.y === 'number' &&
+      typeof activeArena.width === 'number' && typeof activeArena.height === 'number') {
+    ball.x = activeArena.x + activeArena.width / 2;
+    ball.y = activeArena.y + activeArena.height / 2;
   } else if (kicker) {
     const angle = kicker.angle || 0;
     const kickerR = kicker.r || 25;
@@ -560,6 +587,25 @@ export function isHostileLethalBall(ball, fighter) {
 }
 
 /**
+ * Evaluates whether the soccer ball is still executing its EGO STRIKER! wall-ricochet sequence
+ * for its kicker. Prevents the kicker (e.g. Chigiri) from catching, dribbling, or intercepting
+ * their own ball mid-ricochet until the ricochet sequence finishes.
+ *
+ * @param {object} ball - Soccer ball entity
+ * @param {object} fighter - Evaluating kicker
+ * @returns {boolean} True while the ball must finish ricocheting before kicker may reclaim it
+ */
+export function isBallActivelyRicochetingForKicker(ball, fighter) {
+  if (!ball || !fighter) return false;
+  const isKicked = Boolean(ball.isKicked || ball.isKickedByIsagi || ball.isDirectVolley || ball.isStriker || ball.isSuperShot);
+  if (!isKicked) return false;
+  if (Math.hypot(ball.vx || 0, ball.vy || 0) < 3.0) return false;
+  const kicker = ball.lastKicker || ball.kicker;
+  if (!kicker || (kicker !== fighter && kicker.id !== fighter.id)) return false;
+  return (ball.strikerRicochetCharges || 0) > 0 || Boolean(ball.lastWallRicochetTargeted);
+}
+
+/**
  * Checks whether a fighter is within physical reach to kick the soccer ball.
  * Strictly guards against claiming or intercepting incoming lethal hostile kicks,
  * as well as acting during active hit stun or hit cooldown.
@@ -575,9 +621,9 @@ export function checkFighterCanKickBall(fighter, ball, reachMargin = 16) {
   if (fighter.hitStunTimer > 0 || fighter.paralyzeTimer > 0 || fighter.knockbackStunTimer > 0) return false;
   if (fighter._ballHitCooldown > 0 || fighter._isagiBallHitCooldown > 0) return false;
 
-  // Crucial: Cannot kick or possess a ball that is actively flying as a lethal hostile attack from an opponent!
-  // (Prevents enemy fighters from grabbing/negating incoming lethal kicks before damage resolves)
-  if (isHostileLethalBall(ball, fighter)) {
+  // Crucial: Cannot kick or possess a ball that is actively flying as a lethal hostile attack
+  // OR still executing an EGO STRIKER! ricochet sequence for the kicker!
+  if (isHostileLethalBall(ball, fighter) || isBallActivelyRicochetingForKicker(ball, fighter)) {
     return false;
   }
 
@@ -597,8 +643,89 @@ export function checkFighterCanKickBall(fighter, ball, reachMargin = 16) {
  * @param {object} [options={}] - Custom kick parameters
  * @returns {object} Ball reference
  */
+export function clearBallBounceBackWait(fighter, ball = null) {
+  if (fighter) {
+    fighter.isWaitingForBallBounceBack = false;
+    fighter.ballBounceBackWaitTimer = 0;
+  }
+  if (ball && (!fighter || ball.returningToKicker === fighter)) {
+    ball.returningToKicker = null;
+  }
+}
+
+export function isWaitingForSoccerBallReturn(fighter, ball = null) {
+  if (!fighter || !fighter.isWaitingForBallBounceBack) return false;
+  if (fighter.isDead || (typeof fighter.hp === 'number' && fighter.hp <= 0)) return false;
+  if (fighter.hitStunTimer > 0 || fighter.paralyzeTimer > 0 || fighter.knockbackStunTimer > 0) return false;
+  if ((fighter.ballBounceBackWaitTimer || 0) <= 0) return false;
+  const b = ball || fighter.soccerBall;
+  if (!b || b.returningToKicker !== fighter) return false;
+  if (b.dribbler && b.dribbler !== fighter) return false;
+  if (Math.hypot(b.vx || 0, b.vy || 0) < 0.8) return false;
+  return true;
+}
+
+export function stepBallBounceBackWait(fighter, ball = null) {
+  if (!fighter || !fighter.isWaitingForBallBounceBack) return false;
+  const b = ball || fighter.soccerBall;
+  if (
+    fighter.isDead || (typeof fighter.hp === 'number' && fighter.hp <= 0) ||
+    fighter.hitStunTimer > 0 || fighter.paralyzeTimer > 0 || fighter.knockbackStunTimer > 0 ||
+    !b || b.returningToKicker !== fighter ||
+    (b.dribbler && b.dribbler !== fighter) ||
+    Math.hypot(b.vx || 0, b.vy || 0) < 0.8
+  ) {
+    clearBallBounceBackWait(fighter, b);
+    return false;
+  }
+  const reach = (fighter.r || 25) + (b.r || 16) + 16;
+  if (Math.hypot(b.x - fighter.x, b.y - fighter.y) <= reach) {
+    // Grant an immediate one-touch kick upon receiving a bounced-back return pass
+    fighter.shootCooldown = 0;
+    clearBallBounceBackWait(fighter, b);
+    return false;
+  }
+  fighter.ballBounceBackWaitTimer = (fighter.ballBounceBackWaitTimer || 0) - 1;
+  if (fighter.ballBounceBackWaitTimer <= 0) {
+    clearBallBounceBackWait(fighter, b);
+    return false;
+  }
+  return true;
+}
+
+function _activateBallBounceBackReturn(ball, kicker, vx, vy) {
+  ball.vx = vx;
+  ball.vy = vy;
+  ball.shouldBounceBackToKicker = false;
+  ball.shouldBounceBackToIsagi = false;
+  ball.isKicked = false;
+  ball.isKickedByIsagi = false;
+  ball.isDirectVolley = false;
+  ball.isStriker = false;
+  ball.isSuperShot = false;
+  ball.isRebound = true;
+  ball.returningToKicker = kicker || null;
+
+  if (kicker && isBlueLockFighter(kicker) && !kicker.isDead) {
+    kicker.isWaitingForBallBounceBack = true;
+    kicker.ballBounceBackWaitTimer = 95;
+    kicker.vx = 0;
+    kicker.vy = 0;
+    if (kicker.isMetavisionDashing) {
+      kicker.isMetavisionDashing = false;
+      kicker.metavisionDashTimer = 0;
+    }
+    if (kicker.isPantherSprinting) {
+      kicker.isPantherSprinting = false;
+      kicker.pantherSprintDashTimer = 0;
+    }
+  }
+}
+
 export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
   if (!kicker || !ball) return ball;
+  if (ball.returningToKicker) clearBallBounceBackWait(ball.returningToKicker, ball);
+  clearBallBounceBackWait(kicker, ball);
 
   const kickerR = kicker.r || 25;
   const ballR = ball.r || 16;
@@ -628,10 +755,13 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
     }
   }
 
-  // 1b. Active EGO Awakening Buffs (kick speed, guaranteed crits & rebound chance)
+  // 1b. Active EGO Awakening Buffs (kick speed, striker upgrades & rebound chance)
+  const isStrikerOption = Boolean(options.isStriker || options.isDirectVolley || options.isSuperShot);
   const egoBuffs = getBlueLockEgoBuffs(kicker);
   if (egoBuffs) {
-    if (typeof egoBuffs.kickSpeedMultiplier === 'number') {
+    if (isStrikerOption && typeof egoBuffs.strikerSpeedMultiplier === 'number') {
+      speed *= egoBuffs.strikerSpeedMultiplier;
+    } else if (typeof egoBuffs.kickSpeedMultiplier === 'number') {
       speed *= egoBuffs.kickSpeedMultiplier;
     }
     if (typeof egoBuffs.reboundBounceChance === 'number' && options.bounceBackChance === undefined) {
@@ -691,6 +821,17 @@ export function executeSoccerKick(kicker, ball, angle, speed, options = {}) {
   const shouldBounce = Math.random() < bounceChance;
   ball.shouldBounceBackToKicker = shouldBounce;
   ball.shouldBounceBackToIsagi = (kicker.characterId === 'isagi') && shouldBounce;
+
+  // EGO-Upgraded STRIKER! Ricochet Setup (e.g. Chigiri wall ricochet homing back toward enemies)
+  ball.strikerRicochetCharges = (isStrikerShot && egoBuffs && typeof egoBuffs.strikerRicochetCount === 'number')
+    ? Math.max(0, egoBuffs.strikerRicochetCount)
+    : 0;
+  ball.strikerRicochetTargetChance = (isStrikerShot && egoBuffs && typeof egoBuffs.strikerRicochetTargetChance === 'number')
+    ? egoBuffs.strikerRicochetTargetChance
+    : 0;
+  ball.strikerRicochetMinSpeed = Math.max(18, speed * 0.75);
+  ball.lastWallRicochetTargeted = false;
+  ball.isRicochetTrail = ball.strikerRicochetCharges > 0;
 
   // 4. Visual Kick Impact Registration
   if (Array.isArray(kicker.activeKickImpacts)) {
@@ -839,6 +980,92 @@ function distToSegmentSquared(px, py, x1, y1, x2, y2) {
 }
 
 /**
+ * Finds the nearest living hostile target for EGO-empowered STRIKER! ricochets.
+ */
+function _findNearestHostileBallTarget(ball, activeKicker, primaryOpponent, stateRef) {
+  const candidates = [];
+  if (primaryOpponent && primaryOpponent !== activeKicker && !primaryOpponent.isDead) {
+    const isAlly = activeKicker && typeof activeKicker.isTeammate === 'function' ? activeKicker.isTeammate(primaryOpponent) : false;
+    if (!isAlly) candidates.push(primaryOpponent);
+  }
+  if (stateRef && Array.isArray(stateRef.fighters)) {
+    for (let i = 0; i < stateRef.fighters.length; i++) {
+      const f = stateRef.fighters[i];
+      if (!f || f === activeKicker || f.isDead || candidates.includes(f)) continue;
+      const isAlly = activeKicker && typeof activeKicker.isTeammate === 'function' ? activeKicker.isTeammate(f) : false;
+      if (!isAlly) candidates.push(f);
+    }
+  }
+  let best = null;
+  let bestDist = Infinity;
+  for (let i = 0; i < candidates.length; i++) {
+    const d = Math.hypot(candidates[i].x - ball.x, candidates[i].y - ball.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = candidates[i];
+    }
+  }
+  return best;
+}
+
+/**
+ * Applies EGO-upgraded wall ricochet motion (e.g. Chigiri's STRIKER! high-speed pinball bounce).
+ * Mixes chaotic random angular ricochets with a loose enemy-cone bias (never 100% aimbot).
+ * @returns {boolean} True when an EGO ricochet bounce executed
+ */
+function _applyStrikerWallRicochet(ball, activeKicker, primaryOpponent, stateRef, themeColor, arena) {
+  if (!ball || !ball.isKicked) return false;
+  if ((ball.strikerRicochetCharges || 0) <= 0) {
+    ball.lastWallRicochetTargeted = false;
+    ball.isRicochetTrail = false;
+    return false;
+  }
+  ball.strikerRicochetCharges--;
+  const ricochetChance = ball.strikerRicochetTargetChance ?? 0.5;
+  const enemy = _findNearestHostileBallTarget(ball, activeKicker, primaryOpponent, stateRef);
+  const ricochetSpeed = Math.max(Math.hypot(ball.vx, ball.vy) * 1.02, ball.strikerRicochetMinSpeed || 20);
+
+  let bounceAngle;
+  let targetedEnemy = false;
+  if (enemy && Math.random() < ricochetChance) {
+    // Loose cone toward enemy with natural angular scatter (never 100% dead-center aimbot)
+    const directAngle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
+    const scatter = (Math.random() < 0.5 ? -1 : 1) * (0.14 + Math.random() * 0.42);
+    bounceAngle = directAngle + scatter;
+    targetedEnemy = true;
+  } else {
+    // Wild random pinball bounce around the arena
+    const baseReflect = Math.atan2(ball.vy || 0, ball.vx || 0);
+    const randomTurn = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.65);
+    bounceAngle = baseReflect + randomTurn;
+  }
+
+  let nextVx = Math.cos(bounceAngle) * ricochetSpeed;
+  let nextVy = Math.sin(bounceAngle) * ricochetSpeed;
+  // Ensure randomized ricochet always heads cleanly inward from contacted arena walls
+  if (arena && typeof arena.width === 'number' && typeof arena.height === 'number') {
+    const r = ball.r || 16;
+    if (ball.x <= arena.x + r + 2 && nextVx <= 0) nextVx = Math.abs(nextVx) || ricochetSpeed * 0.5;
+    if (ball.x >= arena.x + arena.width - r - 2 && nextVx >= 0) nextVx = -(Math.abs(nextVx) || ricochetSpeed * 0.5);
+    if (ball.y <= arena.y + r + 2 && nextVy <= 0) nextVy = Math.abs(nextVy) || ricochetSpeed * 0.5;
+    if (ball.y >= arena.y + arena.height - r - 2 && nextVy >= 0) nextVy = -(Math.abs(nextVy) || ricochetSpeed * 0.5);
+  }
+
+  ball.vx = nextVx;
+  ball.vy = nextVy;
+  ball.rotSpeed = Math.max(Math.abs(ball.rotSpeed || 0), 0.45);
+  ball.lastWallRicochetTargeted = true;
+  ball.isRicochetTrail = true;
+  if (targetedEnemy && enemy) {
+    if (typeof enemy._ballHitCooldown === 'number') enemy._ballHitCooldown = Math.min(enemy._ballHitCooldown, 2);
+    if (typeof enemy._isagiBallHitCooldown === 'number') enemy._isagiBallHitCooldown = Math.min(enemy._isagiBallHitCooldown, 2);
+  }
+  spawnFloatingText('RICOCHET!', ball.x, ball.y - 18, themeColor);
+  spawnSparks(ball.x, ball.y, 12, themeColor);
+  return true;
+}
+
+/**
  * Universal Soccer Ball Physics & Target Collision Update Engine.
  * Handles 3D rolling, turf friction, arena ricochet, bank passes,
  * enemy damage, Gojo Infinity barrier checks, and One-Two return bounces.
@@ -964,7 +1191,7 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
   stepSoccerBall3DRotation(ball, ball.vx, ball.vy);
 
   // 1b. Update Epic Striker Ball Electric Comet Trail (Rule 25 compliant)
-  if (ball.isStriker || ball.isDirectVolley || ball.isSuperShot) {
+  if (ball.isStriker || ball.isDirectVolley || ball.isSuperShot || ball.isRicochetTrail) {
     updateStrikerBallTrail(ball);
   } else if ((ball._strikerTrailNodes && ball._strikerTrailNodes.length > 0) || (ball._strikerSparks && ball._strikerSparks.length > 0)) {
     decayStrikerBallTrail(ball);
@@ -982,6 +1209,9 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
     ball.isSuperShot = false;
     ball.isKicked = false;
     ball.isKickedByIsagi = false;
+    ball.strikerRicochetCharges = 0;
+    ball.lastWallRicochetTargeted = false;
+    ball.isRicochetTrail = false;
   }
   if (currentSpeed < 0.2) {
     ball.vx = 0;
@@ -992,6 +1222,9 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
     ball.isSuperShot = false;
     ball.isKicked = false;
     ball.isKickedByIsagi = false;
+    ball.strikerRicochetCharges = 0;
+    ball.lastWallRicochetTargeted = false;
+    ball.isRicochetTrail = false;
   }
 
   // 3. Continuous Arena Wall Ricochet
@@ -1033,8 +1266,10 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
       spawnSparks(ball.x, ball.y, 8, themeColor);
       playSound('Assets/Sound Effects/Attacks/punch.mp3', 0.55);
 
-      // Bank Pass: Chance to bounce back right to kicker off arena wall
-      const shouldBounceBack = Boolean(ball.shouldBounceBackToKicker || ball.shouldBounceBackToIsagi);
+      const didRicochetToEnemy = _applyStrikerWallRicochet(ball, activeKicker, primaryOpponent, stateRef, themeColor, arena);
+
+      // Bank Pass: Chance to bounce back right to kicker off arena wall (unless guided toward enemy)
+      const shouldBounceBack = !didRicochetToEnemy && Boolean(ball.shouldBounceBackToKicker || ball.shouldBounceBackToIsagi);
       if (shouldBounceBack && activeKicker) {
         const toKicker = Math.atan2(activeKicker.y - ball.y, activeKicker.x - ball.x);
         const returnSpeed = (cfg.egoShotSpeed || 14.5) * 0.85;
@@ -1043,14 +1278,7 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
         const movesInward = (ball.x <= minX + 2 && candVx > 0) || (ball.x >= maxX - 2 && candVx < 0) ||
                             (ball.y <= minY + 2 && candVy > 0) || (ball.y >= maxY - 2 && candVy < 0);
         if (movesInward) {
-          ball.vx = candVx;
-          ball.vy = candVy;
-          ball.shouldBounceBackToKicker = false;
-          ball.shouldBounceBackToIsagi = false;
-          ball.isKicked = false;
-          ball.isKickedByIsagi = false;
-          ball.isDirectVolley = false;
-          ball.isSuperShot = false;
+          _activateBallBounceBackReturn(ball, activeKicker, candVx, candVy);
           spawnFloatingText('BANK PASS!', ball.x, ball.y - 18, themeColor);
           if (typeof activeKicker._spawnPuzzleParticles === 'function') {
             activeKicker._spawnPuzzleParticles(ball.x, ball.y, 6, themeColor);
@@ -1120,16 +1348,15 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           ball.isDirectVolley = false;
           ball.isStriker = false;
           ball.isSuperShot = false;
+          ball.strikerRicochetCharges = 0;
+          ball.lastWallRicochetTargeted = false;
+          ball.isRicochetTrail = false;
 
           const shouldBounceBack = Boolean(ball.shouldBounceBackToKicker || ball.shouldBounceBackToIsagi);
           if (shouldBounceBack && activeKicker) {
-            ball.shouldBounceBackToKicker = false;
-            ball.shouldBounceBackToIsagi = false;
             const toKickerAngle = Math.atan2(activeKicker.y - ball.y, activeKicker.x - ball.x);
             const returnSpeed = cfg.bounceBackSpeed || 8.5;
-            ball.vx = Math.cos(toKickerAngle) * returnSpeed;
-            ball.vy = Math.sin(toKickerAngle) * returnSpeed;
-            ball.isRebound = true;
+            _activateBallBounceBackReturn(ball, activeKicker, Math.cos(toKickerAngle) * returnSpeed, Math.sin(toKickerAngle) * returnSpeed);
             spawnFloatingText('ONE-TWO!', ball.x, ball.y - 18, '#00E5FF');
           } else {
             ball.vx = -ball.vx * 0.4;
@@ -1179,8 +1406,48 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           }
         }
 
-        // Apply Damage via Universal Combat Helper
-        applyDamageToTarget(target, damage, activeKicker, { isSoccerKick: true, isSuper, arena });
+        // Apply Damage via Universal Combat Helper (STRIKER! super shots pierce passive Metavision/evade auto-slips)
+        const hitApplied = applyDamageToTarget(target, damage, activeKicker, {
+          isSoccerKick: true,
+          isSuper,
+          isStriker: isSuper,
+          bypassEvade: isSuper,
+          isGuaranteedHit: isSuper,
+          arena
+        }) !== false;
+
+        if (!hitApplied) {
+          // Attack was dodged, invulnerable, or parried: never apply fake knockback/stun/slow for 0 damage
+          ball.vx = -ball.vx * 0.45;
+          ball.vy = -ball.vy * 0.45;
+          ball.isKicked = false;
+          ball.isKickedByIsagi = false;
+          ball.isDirectVolley = false;
+          ball.isStriker = false;
+          ball.isSuperShot = false;
+          ball.strikerRicochetCharges = 0;
+          ball.lastWallRicochetTargeted = false;
+          ball.isRicochetTrail = false;
+          target._isagiBallHitCooldown = 12;
+          target._ballHitCooldown = 12;
+          break;
+        }
+
+        // Apply Slow debuff to the enemy every time they get hit by the ball
+        if (!target.isDead && (typeof target.hp !== 'number' || target.hp > 0)) {
+          const enemySlowDur = kickerCfg.ballEnemySlowDuration ?? cfg.ballEnemySlowDuration ?? 90;
+          const enemySlowMult = kickerCfg.ballEnemySlowMultiplier ?? cfg.ballEnemySlowMultiplier ?? 0.45;
+          if (enemySlowDur > 0 && enemySlowMult < 1) {
+            if (typeof target.applySlow === 'function') {
+              target.applySlow(enemySlowDur, enemySlowMult, { isSoccerBallSlow: true });
+            } else if (target.statusEffects && typeof target.statusEffects.applySlow === 'function') {
+              target.statusEffects.applySlow(enemySlowDur, enemySlowMult, { isSoccerBallSlow: true });
+            } else {
+              target.slowTimer = Math.max(target.slowTimer || 0, enemySlowDur);
+              target.slowMultiplier = Math.min(target.slowMultiplier || 1.0, enemySlowMult);
+            }
+          }
+        }
 
         // Universal Blue Lock "EGO" Meter Charge on Hit
         if (activeKicker && isBlueLockFighter(activeKicker)) {
@@ -1209,7 +1476,14 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
             : 1.0;
           const kbForce = (kickerCfg.strikerKnockback || kickerCfg.directVolleyKnockback || 20.0) * kbMultiplier;
           const kbDuration = kickerCfg.strikerKnockbackDuration || kickerCfg.directVolleyKnockbackDuration || 14;
-          const stunDuration = kickerCfg.strikerStunDuration || kickerCfg.directVolleyStunDuration || 100;
+          let stunDuration = kickerCfg.strikerStunDuration || kickerCfg.directVolleyStunDuration || 100;
+          if (kickerEgoBuffs) {
+            if (typeof kickerEgoBuffs.strikerStunDuration === 'number') {
+              stunDuration = kickerEgoBuffs.strikerStunDuration;
+            } else if (typeof kickerEgoBuffs.strikerStunDurationMultiplier === 'number') {
+              stunDuration = Math.round(stunDuration * kickerEgoBuffs.strikerStunDurationMultiplier);
+            }
+          }
 
           // 1. Directional Knockback: Launch target flying backwards along the ball trajectory
           const kbVx = Math.cos(kbAngle) * kbForce;
@@ -1282,29 +1556,42 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
           playSound('Assets/Sound Effects/Attacks/fleshhit.mp3', 0.7);
         }
 
-        // One-Two Return Pass
-        const shouldBounceBack = Boolean(ball.shouldBounceBackToKicker || ball.shouldBounceBackToIsagi);
-        if (shouldBounceBack && activeKicker) {
-          ball.shouldBounceBackToKicker = false;
-          ball.shouldBounceBackToIsagi = false;
+        // Post-Hit Ricochet / One-Two Return Pass Resolution
+        const hasStrikerRicochet = (ball.strikerRicochetCharges || 0) > 0;
+        const shouldBounceBack = !hasStrikerRicochet && Boolean(ball.shouldBounceBackToKicker || ball.shouldBounceBackToIsagi);
+        if (hasStrikerRicochet) {
+          // Keep ball hot so it caroms off an arena wall at random pinball angles!
+          const curSpd = Math.hypot(ball.vx, ball.vy);
+          const reboundSpd = Math.max(curSpd * 0.85, ball.strikerRicochetMinSpeed || 20);
+          const scatter = (Math.random() < 0.5 ? 1 : -1) * (0.35 + Math.random() * 0.55);
+          const reverseAngle = Math.atan2(-ball.vy, -ball.vx) + scatter;
+          ball.vx = Math.cos(reverseAngle) * reboundSpd;
+          ball.vy = Math.sin(reverseAngle) * reboundSpd;
+          ball.isRebound = true;
+          ball.isKicked = true;
+          ball.isRicochetTrail = true;
+        } else if (shouldBounceBack && activeKicker) {
           const toKickerAngle = Math.atan2(activeKicker.y - ball.y, activeKicker.x - ball.x);
           const returnSpeed = kickerCfg.bounceBackSpeed || cfg.bounceBackSpeed || 8.5;
-          ball.vx = Math.cos(toKickerAngle) * returnSpeed;
-          ball.vy = Math.sin(toKickerAngle) * returnSpeed;
-          ball.isRebound = true;
+          _activateBallBounceBackReturn(ball, activeKicker, Math.cos(toKickerAngle) * returnSpeed, Math.sin(toKickerAngle) * returnSpeed);
           spawnFloatingText('ONE-TWO!', ball.x, ball.y - 18, themeColor);
           if (typeof activeKicker._spawnPuzzleParticles === 'function') {
             activeKicker._spawnPuzzleParticles(ball.x, ball.y, 6, themeColor);
           }
+          ball.isKicked = false;
         } else {
           ball.vx = -ball.vx * 0.45;
           ball.vy = -ball.vy * 0.45;
+          ball.isKicked = false;
         }
 
         target._isagiBallHitCooldown = 20;
         target._ballHitCooldown = 20;
-        ball.isKicked = false;
-        ball.isKickedByIsagi = false;
+        if (!hasStrikerRicochet) {
+          ball.isKickedByIsagi = false;
+          ball.lastWallRicochetTargeted = false;
+          ball.isRicochetTrail = false;
+        }
         ball.isDirectVolley = false;
         ball.isStriker = false;
         ball.isSuperShot = false;
@@ -1326,6 +1613,7 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
     for (let i = 0; i < stateRef.fighters.length; i++) {
       const f = stateRef.fighters[i];
       if (f && f !== activeKicker && !f.isDead) {
+        if ((f._ballHitCooldown || 0) > 0 || (f._isagiBallHitCooldown || 0) > 0) continue;
         const isTeammate = activeKicker && typeof activeKicker.isTeammate === 'function' ? activeKicker.isTeammate(f) : false;
         if (!isTeammate) {
           const dist = Math.hypot(ball.x - f.x, ball.y - f.y);
@@ -1351,6 +1639,9 @@ export function updateSoccerBallPhysics(ball, kicker, primaryOpponentOrArena, ar
             ball.isDirectVolley = false;
             ball.isStriker = false;
             ball.isSuperShot = false;
+            if (ball.returningToKicker) {
+              clearBallBounceBackWait(ball.returningToKicker, ball);
+            }
             playSound('Assets/Sound Effects/Attacks/punch.mp3', 0.4);
             break;
           }
@@ -1450,13 +1741,16 @@ export function dribbleSoccerBall(fighter, ball, arena = null, cfg = {}) {
   if (fighter.isDead || (typeof fighter.hp === 'number' && fighter.hp <= 0)) return;
   if (fighter.hitStunTimer > 0 || fighter.paralyzeTimer > 0 || fighter.knockbackStunTimer > 0) return;
   if (fighter._ballHitCooldown > 0 || fighter._isagiBallHitCooldown > 0) return;
-  if (isHostileLethalBall(ball, fighter)) return;
+  if (isHostileLethalBall(ball, fighter) || isBallActivelyRicochetingForKicker(ball, fighter)) return;
 
   const charId = (fighter.characterId || fighter.type || '').toLowerCase();
   const effectiveControl = getFighterDribbleControl(fighter, cfg);
   const themeColor = fighter.themeColor || fighter.color || '#00F0FF';
 
   // 1. Initial Trap Registration (First frame of contact)
+  if (ball.returningToKicker) {
+    clearBallBounceBackWait(ball.returningToKicker, ball);
+  }
   if (ball.dribbler !== fighter) {
     spawnSparks(ball.x, ball.y, 4, themeColor);
     playSound('Assets/Sound Effects/Attacks/punch.mp3', 0.35);

@@ -54,7 +54,7 @@ export const genosConfig = {
   enableFlurry: true,        // Master toggle for Skill 1: Machine Gun Blows
   flurrySkillName: 'MACHINE GUN BLOWS',
   initialFlurryCooldown: 1200,  // Starts on cooldown at match start (~8.0s at 60fps)
-  flurryDamage: 7,
+  flurryDamage: 12,
   flurryHitCount: 15,
   flurryReach: 65,
   flurryArcAngle: Math.PI * 0.5, // 90 degree arc

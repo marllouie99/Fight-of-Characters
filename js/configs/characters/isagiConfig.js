@@ -34,7 +34,7 @@ export const isagiConfig = {
   startY: 250,
   startVx: 1.0,
   startVy: 1.0,
-  damage: 24,
+  damage: 25,
   cooldown: 36,
   projectileSpeedMultiplier: 1.0,
   attackRange: 320,
@@ -44,9 +44,9 @@ export const isagiConfig = {
   // ─── Basic Attack: Ego Shot (Soccer Ball Kinetic Drive) ───
   enableEgoShot: true, // Master toggle for basic attack
   egoShotSkillName: 'Ego Shot',
-  egoShotDamage: 24, // Direct hit damage
+  egoShotDamage: 25, // Direct hit damage
   egoShotReboundDamage: 32, // Rebound / Bank Volley damage (+33% bonus)
-  egoShotSpeed: 14.5, // Fast travel velocity
+  egoShotSpeed: 15.5, // Fast travel velocity
   egoShotRadius: 16, // Soccer ball collision radius (scaled up for prominent arcade visibility)
   egoShotCooldown: 100, // Attack cadence (~0.57s)
   egoShotMaxRebounds: 1, // Bounces once off arena walls
@@ -54,6 +54,8 @@ export const isagiConfig = {
   kickSlowMultiplier: 0.18, // Movement speed multiplier during kick recovery (very slow crawl)
   ballHitSlowDuration: 18, // Duration in frames (~0.30s) of slowdown when ball successfully hits enemy
   ballHitSlowMultiplier: 0.18, // Movement speed multiplier during successful ball hit
+  ballEnemySlowDuration: 90, // Slow debuff duration (frames) applied to enemies hit by the ball (~1.5s)
+  ballEnemySlowMultiplier: 0.45, // Movement speed multiplier applied to slowed enemies (55% slow)
   kickAccuracy: 1.0, // 100% kick accuracy: Every kick travels perfectly straight with ZERO spread
   maxKickSpread: (18 * Math.PI) / 180, // Default maximum spread dispersion angle for Blue Lock fighters (~18 deg)
 
@@ -89,7 +91,7 @@ export const isagiConfig = {
   flowShotSpeedMult: 1.5, // Projectile speed during Flow State
 
   // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Direct Volley Finisher) ───
-  enableStriker: 0, // Master toggle for Skill 2 (Direct Volley Finisher)
+  enableStriker: 1, // Master toggle for Skill 2 (Direct Volley Finisher)
   strikerSkillName: 'STRIKER!',
   strikerCooldown: 1080, // 18.0s cooldown
   strikerWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
@@ -111,14 +113,14 @@ export const isagiConfig = {
   bounceBackSpeed: 8.5, // Return velocity towards Isagi on rebound
 
   // ─── Universal Blue Lock Trait: EGO Awakening & Potential Unlocked ───
-  enableEgo: 0, // Master toggle for Ego mechanic
+  enableEgo: 1, // Master toggle for Ego mechanic
   egoSkillName: 'EGO',
   egoTitle: 'Metavision Flow', // Custom Ego Awakening Title
   maxEgoMeter: 100, // Maximum Ego capacity
   egoGainPerHit: 25, // Ego gained per standard soccer ball hit (+25% = 4 hits to fill)
   egoGainPerReboundHit: 35, // Ego gained on spatial rebound bank shots (+35%)
   egoGainPerStrikerHit: 50, // Ego gained on heavy "STRIKER!" finisher impacts (+50%)
-  egoDuration: 360, // Duration of awakened potential in frames (360 frames = 6.0s)
+  egoDuration: 500, // Duration of awakened potential in frames (360 frames = 6.0s)
   egoAwakenShake: 7, // Screen shake intensity on Ego awakening
   egoHitExtensionFrames: 30, // Extra duration added per ball hit while Ego is active (~0.5s)
   egoBuffs: {
@@ -126,5 +128,6 @@ export const isagiConfig = {
     damageMultiplier: 1.25, // +25% kick damage during Ego Mode
     cooldownRate: 1.6, // 60% accelerated skill cooldown recovery (spatial processing)
     sweetSpotDamageBonus: 8, // Enhanced spatial awareness direct sweet-spot hit damage
+    strikerStunDurationMultiplier: 2.0, // 2x longer enemy stun on STRIKER! Direct Volley during Ego Mode
   },
 };

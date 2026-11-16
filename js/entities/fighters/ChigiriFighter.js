@@ -41,6 +41,7 @@ import {
   resetSoccerBall,
   checkFighterCanKickBall,
   isHostileLethalBall,
+  isBallActivelyRicochetingForKicker,
   executeSoccerKick,
   executeStrikerSkill,
   updateSoccerBallPhysics,
@@ -58,7 +59,10 @@ import {
   decayBlueLockEgoTrail,
   decayStrikerBallTrail,
   getBlueLockEgoBuffs,
-  spawn16BitHitEffect
+  spawn16BitHitEffect,
+  clearBallBounceBackWait,
+  isWaitingForSoccerBallReturn,
+  stepBallBounceBackWait
 } from '../../systems/soccerBallSystem.js';
 import { playSound } from '../../systems/soundSystem.js';
 
@@ -113,6 +117,8 @@ export class ChigiriFighter extends Fighter {
     this.pantherSpeedBuffDuration = cfg.pantherSprintSpeedBuffDuration || 150;
     this.pantherSpeedBuffMultiplier = cfg.pantherSprintSpeedBuffMultiplier || 1.40;
     this.pantherSprintEvadeChance = cfg.pantherSprintEvadeChance !== undefined ? cfg.pantherSprintEvadeChance : 0.35;
+    this.isWaitingForBallBounceBack = false;
+    this.ballBounceBackWaitTimer = 0;
 
     // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate) ───
     this.strikerCooldownMax = cfg.strikerCooldown || 720;
@@ -204,6 +210,7 @@ export class ChigiriFighter extends Fighter {
     this.active16BitHits = [];
     this.kickSlowTimer = 0;
     this.kickSlowMultiplier = 1.0;
+    clearBallBounceBackWait(this, this.soccerBall);
     this.isPantherSprinting = false;
     this.pantherSprintDashTimer = 0;
     this.pantherSprintInvulnTimer = 0;
@@ -575,6 +582,7 @@ export class ChigiriFighter extends Fighter {
     if (isPrimaryBlueLockBallController(this, state)) {
       this._updateSoccerBallPhysics(opponent, arena);
     }
+    stepBallBounceBackWait(this, this.soccerBall);
 
     // 4. Combat & Natural Ball Interaction
     if (!this.isDead && opponent && !opponent.isDead) {
@@ -582,6 +590,7 @@ export class ChigiriFighter extends Fighter {
     }
 
     // 5. Centralized Movement & Physics (Rule 1.2)
+    // Chigiri moves 100% naturally via standard engine physics even during bounce-back return passes
     if (!this.isPantherSprinting && !this.isStrikerWindingUp) {
       let speedMult = 1.0;
       if (this.kickSlowTimer > 0) {
@@ -636,12 +645,13 @@ export class ChigiriFighter extends Fighter {
   _handleCombatAndBallMeeting(opponent, arena, cfg) {
     if (this.hitStunTimer > 0 || this.paralyzeTimer > 0 || this.knockbackStunTimer > 0) return;
     if (this._ballHitCooldown > 0 || this._isagiBallHitCooldown > 0) return;
-    if (isHostileLethalBall(this.soccerBall, this)) return;
+    if (isHostileLethalBall(this.soccerBall, this) || isBallActivelyRicochetingForKicker(this.soccerBall, this)) return;
 
     const hasBall = this._hasSoccerBall();
+    const waitingReturn = isWaitingForSoccerBallReturn(this, this.soccerBall);
 
     // 1. Skill 1: Panther Sprint (Ball Interception Dash & Lingering Speed Surge)
-    if (!hasBall && this.soccerBall && !isHostileLethalBall(this.soccerBall, this) && isSkillEnabled(cfg.enablePantherSprint, true) && this.pantherSprintCooldownTimer <= 0) {
+    if (!hasBall && !waitingReturn && this.soccerBall && !isHostileLethalBall(this.soccerBall, this) && isSkillEnabled(cfg.enablePantherSprint, true) && this.pantherSprintCooldownTimer <= 0) {
       const distToBall = Math.hypot(this.soccerBall.x - this.x, this.soccerBall.y - this.y);
       const interceptionRange = cfg.pantherSprintBallInterceptionRange || 180;
       const kickReach = this.r + this.soccerBall.r + 14;
@@ -654,6 +664,11 @@ export class ChigiriFighter extends Fighter {
 
     // 2. Check if Chigiri and the Soccer Ball naturally meet
     if (hasBall) {
+      const ballSpeed = Math.hypot(this.soccerBall.vx || 0, this.soccerBall.vy || 0);
+      if (this.isWaitingForBallBounceBack && this.soccerBall?.returningToKicker === this && ballSpeed >= 0.8) {
+        this.shootCooldown = 0;
+      }
+      clearBallBounceBackWait(this, this.soccerBall);
       // Re-aim at the opponent upon getting the ball
       if (opponent && !opponent.isDead) {
         this.aim(opponent);
@@ -892,6 +907,7 @@ export class ChigiriFighter extends Fighter {
     this.strikerWindupTimer = 0;
     this.isPantherSprinting = false;
     this.pantherSprintDashTimer = 0;
+    clearBallBounceBackWait(this, this.soccerBall);
     if (forceCancelAll) {
       this.pantherSpeedBuffTimer = 0;
       this.pantherSprintInvulnTimer = 0;

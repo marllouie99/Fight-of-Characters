@@ -47,6 +47,7 @@ import {
   resetSoccerBall,
   checkFighterCanKickBall,
   isHostileLethalBall,
+  isBallActivelyRicochetingForKicker,
   executeSoccerKick,
   executeStrikerSkill,
   updateSoccerBallPhysics,
@@ -64,7 +65,10 @@ import {
   updateBlueLockEgo,
   updateBlueLockEgoTrail,
   decayBlueLockEgoTrail,
-  getBlueLockEgoBuffs
+  getBlueLockEgoBuffs,
+  clearBallBounceBackWait,
+  isWaitingForSoccerBallReturn,
+  stepBallBounceBackWait
 } from '../../systems/soccerBallSystem.js';
 import { spawnSparks, spawnImpactFlash } from '../../graphics/particles/sparkEffect.js';
 import { playSound } from '../../systems/soundSystem.js';
@@ -143,6 +147,8 @@ export class IsagiFighter extends Fighter {
     // ─── Post-Kick Movement Slow (Brief Recovery Follow-Through) ───
     this.kickSlowTimer = 0;
     this.kickSlowMultiplier = 1.0;
+    this.isWaitingForBallBounceBack = false;
+    this.ballBounceBackWaitTimer = 0;
 
     // ─── Universal Blue Lock Trait: EGO Awakening & Potential Unlocked ───
     initBlueLockEgo(this, cfg);
@@ -184,6 +190,7 @@ export class IsagiFighter extends Fighter {
     this.active16BitHits = [];
     this.kickSlowTimer = 0;
     this.kickSlowMultiplier = 1.0;
+    clearBallBounceBackWait(this, this.soccerBall);
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.isagi) ? CONFIG.isagi : isagiConfig;
     initBlueLockEgo(this, cfg);
     this._syncSharedSoccerBall();
@@ -526,6 +533,7 @@ export class IsagiFighter extends Fighter {
     if (isPrimaryBlueLockBallController(this, state)) {
       this._updateSoccerBallPhysics(opponent, arena);
     }
+    stepBallBounceBackWait(this, this.soccerBall);
 
     // 5. Combat & Natural Ball Interaction: Attacks ONLY when he and the ball naturally meet!
     if (!this.isDead && opponent && !opponent.isDead) {
@@ -533,7 +541,7 @@ export class IsagiFighter extends Fighter {
     }
 
     // 6. Centralized Movement & Physics (Rule 1.2)
-    // Isagi moves 100% naturally via standard engine physics (ZERO artificial ball steering)
+    // Isagi moves 100% naturally via standard engine physics even during bounce-back return passes
     if (!this.isMetavisionDashing && !this.isDirectVolleyWindingUp) {
       let speedMult = 1.0;
       if (this.kickSlowTimer > 0) {
@@ -567,13 +575,14 @@ export class IsagiFighter extends Fighter {
   _handleCombatAndBallMeeting(opponent, arena, cfg) {
     if (this.hitStunTimer > 0 || this.paralyzeTimer > 0 || this.knockbackStunTimer > 0) return;
     if (this._ballHitCooldown > 0 || this._isagiBallHitCooldown > 0) return;
-    if (isHostileLethalBall(this.soccerBall, this)) return;
+    if (isHostileLethalBall(this.soccerBall, this) || isBallActivelyRicochetingForKicker(this.soccerBall, this)) return;
 
     const hasBall = this._hasSoccerBall();
+    const waitingReturn = isWaitingForSoccerBallReturn(this, this.soccerBall);
 
     // 1. Skill 1: Metavision Slip (Ball Interception Dash)
-    // ONLY activates when Isagi is close to the loose, friendly ball and Metavision is off cooldown!
-    if (!hasBall && this.soccerBall && !isHostileLethalBall(this.soccerBall, this) && isSkillEnabled(cfg.enableMetavision, true) && this.metavisionCooldownTimer <= 0) {
+    // ONLY activates when Isagi is close to the loose, friendly ball, off cooldown, and NOT holding ground for a bounce-back pass!
+    if (!hasBall && !waitingReturn && this.soccerBall && !isHostileLethalBall(this.soccerBall, this) && isSkillEnabled(cfg.enableMetavision, true) && this.metavisionCooldownTimer <= 0) {
       const distToBall = Math.hypot(this.soccerBall.x - this.x, this.soccerBall.y - this.y);
       const interceptionRange = cfg.metavisionBallInterceptionRange || 160;
       const kickReach = this.r + this.soccerBall.r + 14;
@@ -586,6 +595,11 @@ export class IsagiFighter extends Fighter {
 
     // 2. Check if Isagi and the Soccer Ball naturally meet
     if (hasBall) {
+      const ballSpeed = Math.hypot(this.soccerBall.vx || 0, this.soccerBall.vy || 0);
+      if (this.isWaitingForBallBounceBack && this.soccerBall?.returningToKicker === this && ballSpeed >= 0.8) {
+        this.shootCooldown = 0;
+      }
+      clearBallBounceBackWait(this, this.soccerBall);
       // Re-aim at the opponent upon getting the ball
       if (opponent && !opponent.isDead) {
         this.aim(opponent);
@@ -878,6 +892,7 @@ export class IsagiFighter extends Fighter {
     this.strikerWindupTimer = 0;
     this.isMetavisionDashing = false;
     this.metavisionDashTimer = 0;
+    clearBallBounceBackWait(this, this.soccerBall);
     if (forceCancelAll) {
       this.activeKickImpacts.length = 0;
       this.active16BitHits.length = 0;
