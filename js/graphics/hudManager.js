@@ -2061,6 +2061,17 @@ function getTopDuelTimerSecondsString() {
 }
 
 /**
+ * Wraps Top Duel HUD name markup with a back outer-stroke layer used in dark mode
+ * so white text + black inner stroke gets a crisp white outer outline on black backgrounds.
+ */
+function wrapTopHudNameLayers(nameHtml, isRoaringKnight = false) {
+  if (isRoaringKnight) {
+    return `<span class="hud-top-name__text">${nameHtml}</span>`;
+  }
+  return `<span class="hud-top-name__outline" aria-hidden="true">${nameHtml}</span><span class="hud-top-name__text">${nameHtml}</span>`;
+}
+
+/**
  * Builds the HTML structure for the Top Duel Combat HUD (Pop-Out Portrait Badge + Connected Top Health Bar + Lower Fighter Name & Win Badges + Center Timer).
  */
 export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2SkillsHTML = '', f3 = null, f3SkillsHTML = '') {
@@ -2149,9 +2160,12 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
   }
   const f2NameHtml = (typeof f2Name === 'string' && f2Name.includes('『')) ? formatFighterNameHTML(f2Name) : f2Name;
   const f3NameHtml = (typeof f3Name === 'string' && f3Name.includes('『')) ? formatFighterNameHTML(f3Name) : f3Name;
-  const f1SansClass = `${isF1Sans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(f1) ? ' hud-roaring-knight-name' : ''}`;
-  const f2SansClass = `${isF2Sans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(f2) ? ' hud-roaring-knight-name' : ''}`;
-  const f3SansClass = `${isF3Sans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(f3) ? ' hud-roaring-knight-name' : ''}`;
+  const isF1RoaringKnight = isRoaringKnightFighter(f1);
+  const isF2RoaringKnight = isRoaringKnightFighter(f2);
+  const isF3RoaringKnight = isRoaringKnightFighter(f3);
+  const f1SansClass = `${isF1Sans ? ' hud-sans-name' : ''}${isF1RoaringKnight ? ' hud-roaring-knight-name' : ''}`;
+  const f2SansClass = `${isF2Sans ? ' hud-sans-name' : ''}${isF2RoaringKnight ? ' hud-roaring-knight-name' : ''}`;
+  const f3SansClass = `${isF3Sans ? ' hud-sans-name' : ''}${isF3RoaringKnight ? ' hud-roaring-knight-name' : ''}`;
 
   const f1Grade = getFighterGrade(f1);
   const f2Grade = getFighterGrade(f2);
@@ -2197,7 +2211,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
                   <span class="health-card__bar-text hud-top-ghost-bar-text">${chalHp}</span>
                 </div>
                 <div class="hud-top-header hud-top-ghost-header">
-                  <span class="hud-top-name hud-top-ghost-name${nextNameClass}">${nextNameHtml}</span>
+                  <span class="hud-top-name hud-top-ghost-name${nextNameClass}">${wrapTopHudNameLayers(nextNameHtml, isNextRoaringKnight)}</span>
                 </div>
               </div>
               <div class="hud-top-profile hud-top-ghost-profile" data-grade="${nextGrade}">
@@ -2214,7 +2228,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
                 <span class="health-card__bar-text hud-top-ghost-bar-text">${chalHp}</span>
               </div>
               <div class="hud-top-header hud-top-ghost-header">
-                <span class="hud-top-name hud-top-ghost-name${nextNameClass}">${nextNameHtml}</span>
+                <span class="hud-top-name hud-top-ghost-name${nextNameClass}">${wrapTopHudNameLayers(nextNameHtml, isNextRoaringKnight)}</span>
               </div>
             </div>
             <div class="hud-top-profile hud-top-ghost-profile" data-grade="${nextGrade}"${isNextNamelessDeity ? ' data-character="namelessdeity"' : ''}>
@@ -2273,7 +2287,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
             `}
           </div>
           <div class="hud-top-header">
-            <span class="hud-top-name${f1SansClass}">${f1NameHtml}</span>
+            <span class="hud-top-name${f1SansClass}">${wrapTopHudNameLayers(f1NameHtml, isF1RoaringKnight)}</span>
             ${f1SkillsHTML ? `<div class="hud-top-skills">${f1SkillsHTML}</div>` : ''}
           </div>
         </div>
@@ -2321,7 +2335,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
             </div>
             <div class="hud-top-header">
               ${f2SkillsHTML ? `<div class="hud-top-skills">${f2SkillsHTML}</div>` : ''}
-              <span class="hud-top-name${f2SansClass}">${f2NameHtml}</span>
+              <span class="hud-top-name${f2SansClass}">${wrapTopHudNameLayers(f2NameHtml, isF2RoaringKnight)}</span>
             </div>
           </div>
           <div class="hud-top-profile" data-grade="${f2Grade}"${isF2NamelessDeity ? ' data-character="namelessdeity"' : ''}>
@@ -2362,7 +2376,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
             </div>
             <div class="hud-top-header">
               ${f3SkillsHTML ? `<div class="hud-top-skills">${f3SkillsHTML}</div>` : ''}
-              <span class="hud-top-name${f3SansClass}">${f3NameHtml}</span>
+              <span class="hud-top-name${f3SansClass}">${wrapTopHudNameLayers(f3NameHtml, isF3RoaringKnight)}</span>
             </div>
           </div>
           <div class="hud-top-profile" data-grade="${f3Grade}"${isF3NamelessDeity ? ' data-character="namelessdeity"' : ''}>
@@ -2410,7 +2424,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
           </div>
           <div class="hud-top-header">
             ${f2SkillsHTML ? `<div class="hud-top-skills">${f2SkillsHTML}</div>` : ''}
-            <span class="hud-top-name${f2SansClass}">${f2NameHtml}</span>
+            <span class="hud-top-name${f2SansClass}">${wrapTopHudNameLayers(f2NameHtml, isF2RoaringKnight)}</span>
           </div>
         </div>
         <div class="hud-top-profile" data-grade="${f2Grade}"${isF2NamelessDeity ? ' data-character="namelessdeity"' : ''}>

@@ -69,6 +69,255 @@ export const CHARACTER_VOICE_SPRITE_MANIFEST = {
       ]
     }
   },
+  "aizen": {
+    "sheetId": "char_voice_aizen",
+    "characterId": "aizen",
+    "audioUrl": "Assets/Sound Effects/Sprites/Characters/char_aizen_sfx.mp3",
+    "totalDuration": 28.13,
+    "sliceCount": 20,
+    "slices": {
+      "Assets/Sound Effects/AizenSFX/aizen-slash1.wav": [
+        0,
+        0.747
+      ],
+      "aizen-slash1.wav": [
+        0,
+        0.747
+      ],
+      "aizen-slash1": [
+        0,
+        0.747
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-kyoka-counter.wav": [
+        0.797,
+        1.028
+      ],
+      "aizen-kyoka-counter.wav": [
+        0.797,
+        1.028
+      ],
+      "aizen-kyoka-counter": [
+        0.797,
+        1.028
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-danku.wav": [
+        1.874,
+        1.001
+      ],
+      "aizen-danku.wav": [
+        1.874,
+        1.001
+      ],
+      "aizen-danku": [
+        1.874,
+        1.001
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-raikoho.wav": [
+        2.925,
+        0.799
+      ],
+      "aizen-raikoho.wav": [
+        2.925,
+        0.799
+      ],
+      "aizen-raikoho": [
+        2.925,
+        0.799
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-kurohitsugi-box.wav": [
+        3.775,
+        0.863
+      ],
+      "aizen-kurohitsugi-box.wav": [
+        3.775,
+        0.863
+      ],
+      "aizen-kurohitsugi-box": [
+        3.775,
+        0.863
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-kurohitsugi-crush.wav": [
+        4.688,
+        1.139
+      ],
+      "aizen-kurohitsugi-crush.wav": [
+        4.688,
+        1.139
+      ],
+      "aizen-kurohitsugi-crush": [
+        4.688,
+        1.139
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-kurohitsugi-shatter.wav": [
+        5.877,
+        0.65
+      ],
+      "aizen-kurohitsugi-shatter.wav": [
+        5.877,
+        0.65
+      ],
+      "aizen-kurohitsugi-shatter": [
+        5.877,
+        0.65
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-hogyoku-awaken.wav": [
+        6.577,
+        1.879
+      ],
+      "aizen-hogyoku-awaken.wav": [
+        6.577,
+        1.879
+      ],
+      "aizen-hogyoku-awaken": [
+        6.577,
+        1.879
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-fragor-explode.wav": [
+        8.506,
+        2.723
+      ],
+      "aizen-fragor-explode.wav": [
+        8.506,
+        2.723
+      ],
+      "aizen-fragor-explode": [
+        8.506,
+        2.723
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-slash2.wav": [
+        11.279,
+        0.661
+      ],
+      "aizen-slash2.wav": [
+        11.279,
+        0.661
+      ],
+      "aizen-slash2": [
+        11.279,
+        0.661
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-hit-slash.wav": [
+        11.991,
+        0.824
+      ],
+      "aizen-hit-slash.wav": [
+        11.991,
+        0.824
+      ],
+      "aizen-hit-slash": [
+        11.991,
+        0.824
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-hit-heavy.wav": [
+        12.864,
+        1.879
+      ],
+      "aizen-hit-heavy.wav": [
+        12.864,
+        1.879
+      ],
+      "aizen-hit-heavy": [
+        12.864,
+        1.879
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-shunpo.wav": [
+        14.794,
+        0.745
+      ],
+      "aizen-shunpo.wav": [
+        14.794,
+        0.745
+      ],
+      "aizen-shunpo": [
+        14.794,
+        0.745
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-final-awaken.wav": [
+        15.589,
+        2.429
+      ],
+      "aizen-final-awaken.wav": [
+        15.589,
+        2.429
+      ],
+      "aizen-final-awaken": [
+        15.589,
+        2.429
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-fragor-charge.wav": [
+        18.068,
+        2.264
+      ],
+      "aizen-fragor-charge.wav": [
+        18.068,
+        2.264
+      ],
+      "aizen-fragor-charge": [
+        18.068,
+        2.264
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-reiatsu-crush.wav": [
+        20.382,
+        1.065
+      ],
+      "aizen-reiatsu-crush.wav": [
+        20.382,
+        1.065
+      ],
+      "aizen-reiatsu-crush": [
+        20.382,
+        1.065
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-kyoka-voiceline.wav": [
+        21.498,
+        1.128
+      ],
+      "aizen-kyoka-voiceline.wav": [
+        21.498,
+        1.128
+      ],
+      "aizen-kyoka-voiceline": [
+        21.498,
+        1.128
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-kurohitsugi-voiceline.wav": [
+        22.676,
+        1.152
+      ],
+      "aizen-kurohitsugi-voiceline.wav": [
+        22.676,
+        1.152
+      ],
+      "aizen-kurohitsugi-voiceline": [
+        22.676,
+        1.152
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-hogyoku-voiceline.wav": [
+        23.878,
+        1.464
+      ],
+      "aizen-hogyoku-voiceline.wav": [
+        23.878,
+        1.464
+      ],
+      "aizen-hogyoku-voiceline": [
+        23.878,
+        1.464
+      ],
+      "Assets/Sound Effects/AizenSFX/aizen-fragor-voiceline.wav": [
+        25.392,
+        2.691
+      ],
+      "aizen-fragor-voiceline.wav": [
+        25.392,
+        2.691
+      ],
+      "aizen-fragor-voiceline": [
+        25.392,
+        2.691
+      ]
+    }
+  },
   "ash": {
     "sheetId": "char_voice_ash",
     "characterId": "ash",

@@ -1005,6 +1005,21 @@
         "knockback": 1,
         "cooldown": 1
       }
+    },
+    "aizen": {
+      "name": "Aizen",
+      "archetype": "swordsman",
+      "color": "#8B5CF6",
+      "hp": 260,
+      "speed": 6.0,
+      "baseRange": 76,
+      "baseDamage": 16,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
     }
   }
 }

@@ -1455,6 +1455,15 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
       return CONFIG.jevil?.soundVolumes?.attack1 ?? 0.78;
     },
     delay: 0,
+  },
+  'aizen': {
+    get src() {
+      return CONFIG.aizen?.sounds?.slash1 || 'Assets/Sound Effects/AizenSFX/aizen-slash1.wav';
+    },
+    get volume() {
+      return CONFIG.aizen?.soundVolumes?.slash1 ?? 0.72;
+    },
+    delay: 0,
   }
 };
 

@@ -175,6 +175,7 @@ const TYPE_THEME_MAP = {
   uryu: 'cyan',
   ishida: 'cyan',
   ulquiorra: 'emerald',
+  aizen: 'violet',
   makima: 'crimson',
   reze: 'violet',
   denji: 'gold',

@@ -1670,6 +1670,19 @@ export class PokemonCompanionEntity extends Fighter {
       // Phase 1: Shadow Step Dash (ticks 1–8)
       if (tick <= 8) {
         this.meleeMoveState = 'windup';
+        if (tick === 1) {
+          _playAshSound('greninjaSmoke');
+          if (this.owner && Array.isArray(this.owner.activeVisualEffects)) {
+            this.owner.activeVisualEffects.push({
+              type: 'greninjaSmoke',
+              x: this.x,
+              y: this.y,
+              size: 68,
+              timer: 16,
+              maxTimer: 16
+            });
+          }
+        }
         if (tick % 3 === 1) {
           if (!this.dashAfterImages) this.dashAfterImages = [];
           if (this.dashAfterImages.length >= 4) this.dashAfterImages.shift();
@@ -1698,11 +1711,23 @@ export class PokemonCompanionEntity extends Fighter {
         if (tick === 16 && !this.meleeHitDone.has('nightSlash') && tgt && tgt.hp > 0) {
           this.meleeHitDone.add('nightSlash');
           _playAshSound('hitStrong');
+          _playAshSound('nightSlashHit');
           triggerGlobalScreenShake(4.5, 8);
           const dmg = Math.round(26 * dmgMult);
           if (this.owner) {
             this.owner._dealPokemonDamage(tgt, dmg, { angle, knockback: 10, isSpecial: false, isMelee: true, attacker: this });
             this.owner._spawnRippleEffect(tgt.x, tgt.y, 52, '#8B5CF6', 'rgba(139, 92, 246, 0.24)', 16);
+            if (Array.isArray(this.owner.activeVisualEffects)) {
+              this.owner.activeVisualEffects.push({
+                type: 'nightSlashSpark',
+                x: tgt.x,
+                y: tgt.y,
+                angle,
+                size: 118,
+                timer: 12,
+                maxTimer: 12
+              });
+            }
           }
           if (typeof tgt.applyHitStun === 'function') tgt.applyHitStun(14);
           spawnImpactFlash(tgt.x, tgt.y, '#8B5CF6');
@@ -2284,6 +2309,18 @@ export class AshFighter extends Fighter {
           } else if (p.kind === 'waterShuriken') {
             spawnImpactFlash(p.x, p.y, '#E0F2FE');
             spawnSparks(p.x, p.y, 7, 'cyan', '#38BDF8');
+            if ((this._animTick || 0) - (this._lastWaterSplashSfxTick || -99) >= 4) {
+              this._lastWaterSplashSfxTick = this._animTick || 0;
+              _playAshSound('waterShurikenHit');
+            }
+            this.activeVisualEffects.push({
+              type: 'waterSplash',
+              x: p.x,
+              y: p.y,
+              size: p.r >= 15 ? 128 : 106,
+              timer: 20,
+              maxTimer: 20
+            });
           }
           this._spawnRippleEffect(
             p.x,
@@ -2742,19 +2779,30 @@ export class AshFighter extends Fighter {
         });
       }
     } else if (p.speciesId === 'greninja') {
-      // Water Shuriken 3-Star Fan Barrage
+      // Water Shuriken 3-Star Fan Barrage with MUGEN hydro eruption surge
+      _playAshSound('waterShurikenCharge');
+      this.activeVisualEffects.push({
+        type: 'waterBurst',
+        x: p.x,
+        y: p.y + 6,
+        size: 110,
+        timer: 20,
+        maxTimer: 20
+      });
       const count = spec.shurikenCount || 3;
       const spd = spec.shurikenSpeed || 11.5;
+      const centerIdx = Math.floor(count / 2);
       for (let i = 0; i < count; i++) {
         const spread = (i - (count - 1) / 2) * 0.18;
         const a = castAngle + spread;
+        const isCenterStar = i === centerIdx;
         this.activeElementalProjectiles.push({
           kind: 'waterShuriken',
           x: p.x + Math.cos(a) * (p.r + 6),
           y: p.y + Math.sin(a) * (p.r + 6),
-          vx: Math.cos(a) * spd,
-          vy: Math.sin(a) * spd,
-          r: 13,
+          vx: Math.cos(a) * (isCenterStar ? spd * 1.06 : spd),
+          vy: Math.sin(a) * (isCenterStar ? spd * 1.06 : spd),
+          r: isCenterStar ? 16 : 13,
           life: 50,
           damage: Math.round((spec.specialDamage || 14) * bonusMult),
           knockback: 9,

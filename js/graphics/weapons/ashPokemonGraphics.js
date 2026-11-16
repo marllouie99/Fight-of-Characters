@@ -356,6 +356,57 @@ export function _getCharizardFlameFrames() {
   return _charizardFlameFrames;
 }
 
+function _createAnimatedFrameLoader(framePaths, versionTag = 'v=1') {
+  const frames = new Array(framePaths.length).fill(null);
+  let loading = false;
+  return function getFrames() {
+    if (
+      frames.length === framePaths.length &&
+      frames.every(img => img && img.complete && ((img.naturalWidth || img.width || 0) > 0))
+    ) {
+      return frames;
+    }
+    if (!loading && typeof Image !== 'undefined') {
+      loading = true;
+      for (let i = 0; i < framePaths.length; i++) {
+        const img = new Image();
+        img.onload = () => { frames[i] = img; };
+        img.src = encodeURI(`${framePaths[i]}?${versionTag}`);
+        frames[i] = img;
+      }
+    }
+    return frames;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// MUGEN-Extracted Greninja VFX Frame Sequences
+// (Water Shuriken, Water Splash, Water Burst, Night Slash Spark, Smoke Poof)
+// ---------------------------------------------------------------------------
+export const _getWaterShurikenFrames = _createAnimatedFrameLoader(
+  Array.from({ length: 11 }, (_, i) => `Assets/model/ash/pokemon/greninja/Water_shuriken/water_shuriken-${i + 1}.png`)
+);
+export const _getWaterSplashFrames = _createAnimatedFrameLoader(
+  Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Water_splash/water_splash-${i + 1}.png`)
+);
+export const _getWaterBurstFrames = _createAnimatedFrameLoader(
+  Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Water_burst/water_burst-${i + 1}.png`)
+);
+export const _getNightSlashSparkFrames = _createAnimatedFrameLoader(
+  Array.from({ length: 4 }, (_, i) => `Assets/model/ash/pokemon/greninja/Night_slash_spark/night_slash_spark-${i + 1}.png`)
+);
+export const _getGreninjaSmokeFrames = _createAnimatedFrameLoader(
+  Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Smoke_poof/smoke_poof-${i + 1}.png`)
+);
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getWaterShurikenFrames();
+  _getWaterSplashFrames();
+  _getWaterBurstFrames();
+  _getNightSlashSparkFrames();
+  _getGreninjaSmokeFrames();
+}
+
 // ---------------------------------------------------------------------------
 // 12-Frame 12-Bit Charizard Charging Flame Animation
 // (Assets/model/ash/pokemon/charizard/Flame_charge/flame_charge-1.png .. flame_charge-12.png)
@@ -1157,6 +1208,24 @@ function _drawProjectileWakeTrail(ctx, proj, outerCol, innerCol, maxHalfW) {
   ctx.globalAlpha = 1.0;
 }
 
+function _drawCenteredSpriteVfx(ctx, frames, fx, progress, defaultSize = 112) {
+  if (!Array.isArray(frames) || frames.length === 0) return false;
+  const idx = Math.max(0, Math.min(frames.length - 1, Math.floor(progress * frames.length)));
+  const img = frames[idx];
+  if (!img || !img.complete || ((img.naturalWidth || img.width || 0) <= 0)) return false;
+
+  const size = fx.size || defaultSize;
+  const fadeAlpha = progress > 0.78 ? Math.max(0, (1 - progress) / 0.22) : 1.0;
+  ctx.save();
+  ctx.translate(fx.x, fx.y);
+  if (fx.angle) ctx.rotate(fx.angle);
+  ctx.globalAlpha = (fx.alpha ?? 1.0) * fadeAlpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, -size * 0.5, -size * 0.5, size, size);
+  ctx.restore();
+  return true;
+}
+
 function _drawWaterShurikenProjectile(ctx, proj, tick) {
   const sr = proj.r || 14;
   _drawProjectileWakeTrail(ctx, proj, 'rgba(56, 189, 248, 0.72)', 'rgba(224, 242, 254, 0.90)', sr * 0.55);
@@ -1167,7 +1236,21 @@ function _drawWaterShurikenProjectile(ctx, proj, tick) {
     ctx.drawImage(glowCanvas, -gs * 0.5, -gs * 0.5, gs, gs);
   }
 
-  // Spinning outer hydro vortex rim
+  // Primary MUGEN 11-Frame Animated Water Shuriken Sprite
+  const wsFrames = _getWaterShurikenFrames();
+  const frameIdx = Math.floor((tick * 0.55) % wsFrames.length);
+  const wsImg = wsFrames[frameIdx];
+  if (wsImg && wsImg.complete && ((wsImg.naturalWidth || wsImg.width || 0) > 0)) {
+    const drawSize = sr * 3.15;
+    ctx.save();
+    ctx.rotate(proj.rot || 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(wsImg, -drawSize * 0.5, -drawSize * 0.5, drawSize, drawSize);
+    ctx.restore();
+    return;
+  }
+
+  // Spinning outer hydro vortex rim (fallback when frames are not yet decoded)
   ctx.save();
   ctx.rotate(-(proj.rot || 0) * 0.55);
   ctx.strokeStyle = 'rgba(186, 230, 253, 0.68)';
@@ -1545,6 +1628,14 @@ export function drawAshVisualEffects(ctx, fighter) {
         ctx.restore();
       } else if (fx.type === 'pokemonSlash') {
         _drawPokemonSlashVisualEffect(ctx, fx, progress);
+      } else if (fx.type === 'waterSplash') {
+        _drawCenteredSpriteVfx(ctx, _getWaterSplashFrames(), fx, progress, 116);
+      } else if (fx.type === 'waterBurst') {
+        _drawCenteredSpriteVfx(ctx, _getWaterBurstFrames(), fx, progress, 108);
+      } else if (fx.type === 'nightSlashSpark') {
+        _drawCenteredSpriteVfx(ctx, _getNightSlashSparkFrames(), fx, progress, 118);
+      } else if (fx.type === 'greninjaSmoke') {
+        _drawCenteredSpriteVfx(ctx, _getGreninjaSmokeFrames(), fx, progress, 68);
       } else {
         // Rule 26: Sequential Water-Ripple Wavefront Staggering (t0 = 0.00, t1 = 0.12, t2 = 0.24)
         ctx.save();
@@ -2454,6 +2545,7 @@ function _drawPokemonSpecialCastAura(ctx, pokemon, r, groundY) {
   ctx.translate(0, cy);
   if (pokemon.speciesId === 'greninja') {
     const vr = r * (0.95 - chargeP * 0.30);
+    ctx.save();
     ctx.rotate(tick * 0.35);
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
     ctx.lineWidth = 2.6;
@@ -2465,6 +2557,16 @@ function _drawPokemonSpecialCastAura(ctx, pokemon, r, groundY) {
     ctx.beginPath();
     ctx.arc(0, 0, vr * 0.72, Math.PI, Math.PI * 2.15);
     ctx.stroke();
+
+    const wsFrames = _getWaterShurikenFrames();
+    const wsImg = wsFrames[Math.floor((tick * 0.6) % wsFrames.length)];
+    if (wsImg && wsImg.complete && ((wsImg.naturalWidth || wsImg.width || 0) > 0)) {
+      const chargeSize = r * (1.25 + chargeP * 0.65);
+      ctx.globalAlpha = 0.85;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(wsImg, -chargeSize * 0.5, -chargeSize * 0.5, chargeSize, chargeSize);
+    }
+    ctx.restore();
   } else {
     const ar = r * (1.05 - chargeP * 0.35);
     ctx.strokeStyle = 'rgba(34, 211, 238, 0.85)';

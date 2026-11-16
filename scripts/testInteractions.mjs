@@ -22535,6 +22535,14 @@ async function runInteractionTests() {
         ash.activeVisualEffects.some(fx => fx.type === 'pokemonSlash' && fx.tintKey === 'nightSlash'),
         'Greninja Night Slash must spawn violet pokemonSlash VFX'
       );
+      assert(
+        ash.activeVisualEffects.some(fx => fx.type === 'greninjaSmoke'),
+        'Greninja Night Slash dash must spawn MUGEN ninja smoke poof VFX'
+      );
+      assert(
+        ash.activeVisualEffects.some(fx => fx.type === 'nightSlashSpark'),
+        'Greninja Night Slash hit must spawn MUGEN purple cross-impact spark VFX'
+      );
 
       gren.interruptAttacks();
       gren.x = 80;
@@ -22542,6 +22550,10 @@ async function runInteractionTests() {
       enemy.x = 450;
       ash._executePokemonSpecial(gren, enemy, false);
       assert(gren.specialCastMax === 28, `Greninja specialCastMax must be set to 28, got ${gren.specialCastMax}`);
+      assert(
+        ash.activeVisualEffects.some(fx => fx.type === 'waterBurst'),
+        'Greninja Water Shuriken cast must spawn MUGEN waterBurst surge VFX'
+      );
       drawPokemonCompanion(vfxCtx, gren);
       assert(vfxCtx.getStackDepth() === 0, 'Greninja special cast aura render must maintain 0 stack depth');
       for (let t = 0; t < 4; t++) {
@@ -22552,6 +22564,15 @@ async function runInteractionTests() {
       assert(wsProj && Array.isArray(wsProj.trail) && wsProj.trail.length >= 2, 'Water Shuriken projectile must record trail points');
       drawAshVisualEffects(vfxCtx, ash);
       assert(vfxCtx.getStackDepth() === 0, 'Water Shuriken projectile trail render must maintain 0 stack depth');
+
+      // Verify Water Shuriken collision spawns MUGEN waterSplash impact VFX
+      wsProj.x = enemy.x;
+      wsProj.y = enemy.y;
+      ash._updateVisualEffects();
+      assert(
+        ash.activeVisualEffects.some(fx => fx.type === 'waterSplash'),
+        'Greninja Water Shuriken impact must spawn MUGEN waterSplash VFX'
+      );
       enemy.x = 240;
 
       // 5. Lucario Close Combat 4-Hit Flurry punchAttackImpact + Aura Sphere impact punch
@@ -22602,6 +22623,13 @@ async function runInteractionTests() {
         for (const framePath of sc.assetsObj[sc.listKey]) {
           assert(!framePath.includes('Slash Attack'), `${sc.key} must NOT reuse Ichigo's Slash Attack folder: ${framePath}`);
           assert(fs.existsSync(framePath), `16-bit slash frame must exist on disk: ${framePath}`);
+        }
+      }
+      for (const listKey of ['waterShurikenFrames', 'waterSplashFrames', 'waterBurstFrames', 'nightSlashSparkFrames', 'smokePoofFrames']) {
+        const frames = CONFIG.ash.assets.greninja[listKey];
+        assert(Array.isArray(frames) && frames.length >= 4, `Greninja must declare MUGEN VFX frames for ${listKey}`);
+        for (const fp of frames) {
+          assert(fs.existsSync(fp), `Greninja MUGEN VFX frame missing on disk: ${fp}`);
         }
       }
 
@@ -24641,6 +24669,10 @@ async function runInteractionTests() {
         rkTopHtml.includes('hud-top-name hud-roaring-knight-name'),
         'Roaring Knight Top HUD Name must apply hud-roaring-knight-name class for black fill + white outline'
       );
+      assert(
+        rkTopHtml.includes('hud-top-name__outline') && rkTopHtml.includes('hud-top-name__text'),
+        'buildTopDuelHUD must include outer outline and text layers for non-Knight Dark Mode white outline'
+      );
       const origHudLayoutStyle = CONFIG.hudLayoutStyle;
       const origTheme = state.arenaTheme;
       try {
@@ -24662,6 +24694,7 @@ async function runInteractionTests() {
         assert(topNameProbeCtx.getStackDepth() === 0, 'drawArenaMatchNames must preserve Canvas 2D stack depth 0');
         const rkStroke = nameCalls.find(c => c.op === 'stroke' && c.text.includes('ROARING KNIGHT'));
         const rkFill = nameCalls.find(c => c.op === 'fill' && c.text.includes('ROARING KNIGHT'));
+        const opponentStroke = nameCalls.find(c => c.op === 'stroke' && !c.text.includes('ROARING KNIGHT') && c.text !== 'VS');
         assert(
           rkStroke && String(rkStroke.strokeStyle).toUpperCase() === '#FFFFFF' && rkStroke.lineWidth >= 4,
           `Canvas top arena match name for Roaring Knight must stroke white outline (#FFFFFF), got ${JSON.stringify(rkStroke)}`
@@ -24669,6 +24702,10 @@ async function runInteractionTests() {
         assert(
           rkFill && String(rkFill.fillStyle).toUpperCase() === '#050609',
           `Canvas top arena match name for Roaring Knight must fill #050609, got ${JSON.stringify(rkFill)}`
+        );
+        assert(
+          opponentStroke && String(opponentStroke.strokeStyle).toUpperCase() === '#FFFFFF' && opponentStroke.lineWidth >= 4,
+          `Canvas top arena match name in Dark Mode must stroke white outline (#FFFFFF) for all fighters, got ${JSON.stringify(opponentStroke)}`
         );
       } finally {
         CONFIG.hudLayoutStyle = origHudLayoutStyle;
@@ -26721,6 +26758,353 @@ async function runInteractionTests() {
       state.arena = prevArena;
       state.gameState = prevState;
       state.projectiles = prevProjectiles;
+    }
+  }
+
+  // ⚡ Testing Yuta Pure Love Beam Post-First-Beam HP-Lost Recharge (Not Cooldown) ⚡
+  {
+    console.log('   Testing Yuta Pure Love Beam post-first-beam HP-lost recharge (combat & HUD)...');
+    const YutaClass = FIGHTER_CLASS_MAP['yuta'];
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+    const prevIllusions = state.illusions;
+    const prevGetTeam = state.getFighterTeam;
+
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450 };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+      state.illusions = [];
+
+      const yuta = new YutaClass({ name: 'Yuta', characterId: 'yuta', type: 'yuta', x: 150, y: 400, radius: 25, maxHp: 500, hp: 500 });
+      yuta.reset();
+      yuta.x = 150;
+      yuta.y = 400;
+      yuta.maxHp = 500;
+      yuta.hp = 500;
+      yuta.domainUseCount = 2; // Isolate Pure Love Beam from Domain Expansion trigger
+      const dummy = new Fighter({ name: 'Dummy', type: 'dummy', x: 350, y: 400, radius: 25, maxHp: 1000, hp: 1000 });
+      state.fighters = [yuta, dummy];
+      state.getFighterTeam = (idx) => idx;
+
+      // Activate Rika so Pure Love Beam can fire
+      yuta.rika.active = true;
+      yuta.rika.hp = yuta.rika.maxHp;
+      yuta.rika.isDying = false;
+      yuta.rika.disappearing = false;
+
+      // 1. Fire first beam via activatePureLoveBeam() and finish it
+      yuta.hp = 200; // <= 45% of 500 (225)
+      yuta.activatePureLoveBeam();
+      assert(yuta.hasUsedPureLoveBeam === true, 'activatePureLoveBeam must mark hasUsedPureLoveBeam = true');
+      assert(yuta.pureLoveBeamCooldownTimer === 0, `Pure Love Beam must NOT set cooldown timer (got ${yuta.pureLoveBeamCooldownTimer})`);
+
+      // Taking damage while beam is active must NOT pre-fill next beam's HP lost counter
+      yuta.invincibilityTimer = 0;
+      yuta.takeDamage(50, dummy, { isMelee: true, isGuaranteedHit: true, bypassBlock: true, bypassParry: true });
+      assert((yuta.pureLoveBeamDamageTaken || 0) === 0, 'Damage during active Pure Love Beam must NOT accumulate toward next beam');
+
+      // Finish active beam
+      yuta.pureLoveBeamActiveTimer = 1;
+      yuta.update(dummy, 0, testArena);
+      assert(yuta.isFiringPureLoveBeam === false, 'Beam should finish when activeTimer hits 0');
+      yuta.pureLoveBeamBreatherTimer = 0;
+
+      // Re-activate Rika and keep Yuta low HP (without taking new damage yet)
+      yuta.rika.active = true;
+      yuta.rika.hp = yuta.rika.maxHp;
+      yuta.rika.isDying = false;
+      yuta.rika.disappearing = false;
+      yuta.hp = 200; // Still below 45%, but 0 new HP lost since 1st beam!
+
+      const beamBarStart = getSkillDataForFighter(yuta).find(s => s.id === 'beam');
+      assert(beamBarStart && Math.round(beamBarStart.pct) === 0, `After 1st beam ends, HUD Pure Love Beam bar must start at 0% (got ${beamBarStart?.pct})`);
+
+      // Wait frames without taking damage -> 2nd beam must NOT trigger (even though pureLoveBeamCooldownTimer is 0 and HP <= 45%)
+      for (let i = 0; i < 10; i++) yuta.update(dummy, 0, testArena);
+      assert((yuta.beamRetreatSlideTimer || 0) === 0 && !yuta.isChannelingPureLoveBeam, '2nd Pure Love Beam must NOT trigger without losing HP after 1st beam');
+
+      // 2. Heal Yuta back up, then deal ~50% of required HP loss -> HUD bar must reflect ~50% (NOT CD!)
+      yuta.hp = 500;
+      const threshold = CONFIG.yuta?.pureLoveBeamHpThreshold ?? 0.45;
+      const hpNeeded = yuta.maxHp * (CONFIG.yuta?.pureLoveBeam2HpDamageRequired ?? Math.max(0.05, 1 - threshold));
+      yuta.takeDamage(hpNeeded * 0.5, dummy, { isMelee: true, isGuaranteedHit: true, bypassBlock: true, bypassParry: true });
+      const beamBarMid = getSkillDataForFighter(yuta).find(s => s.id === 'beam');
+      assert(beamBarMid && beamBarMid.pct > 40 && beamBarMid.pct < 60, `HUD Pure Love Beam bar must track ~50% HP lost (got ${beamBarMid?.pct})`);
+      assert((yuta.beamRetreatSlideTimer || 0) === 0, '2nd Pure Love Beam must NOT trigger at 50% of required HP lost');
+
+      // 3. Deal remaining HP lost -> HUD reaches 100% and 2nd Pure Love Beam triggers!
+      yuta.takeDamage(hpNeeded * 0.55, dummy, { isMelee: true, isGuaranteedHit: true, bypassBlock: true, bypassParry: true });
+      const beamBarFull = getSkillDataForFighter(yuta).find(s => s.id === 'beam');
+      assert(beamBarFull && beamBarFull.pct >= 99 && beamBarFull.ready === true, `HUD Pure Love Beam bar must reach 100% ready on HP lost (got ${JSON.stringify(beamBarFull)})`);
+      yuta.update(dummy, 0, testArena);
+      assert((yuta.beamRetreatSlideTimer || 0) > 0 || (yuta.rikaEmergingForBeamTimer || 0) > 0 || yuta.isChannelingPureLoveBeam, '2nd Pure Love Beam must trigger once required HP is lost after 1st beam');
+
+      console.log('      ✅ Yuta Pure Love Beam post-first-beam HP-lost recharge verified.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+      state.illusions = prevIllusions;
+      state.getFighterTeam = prevGetTeam;
+    }
+  }
+
+  // ⚔️ 192. Testing Sōsuke Aizen Full Combat Kit, Hostility Check & Cooldown Cadence ⚔️
+  console.log('\n   192. Testing Sōsuke Aizen Full Combat Kit, Hostility Check & Cooldown Cadence...');
+  {
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevFrameCount = state.frameCount;
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    try {
+      const aDef = CONFIG.aizen || {};
+      const AizenClass = FIGHTER_CLASS_MAP['aizen'];
+      assert(typeof AizenClass === 'function', 'AizenFighter class must be registered in FighterFactory');
+      const aizen = new AizenClass({ ...aDef, name: 'Aizen', characterId: 'aizen', type: 'aizen', x: 150, y: 450, radius: 25, hp: 260, maxHp: 260 });
+      const enemy = new Fighter({ name: 'Enemy', type: 'normal', x: 260, y: 450, radius: 25, hp: 3000, maxHp: 3000 });
+      enemy.maxHp = 3000;
+      enemy.hp = 3000;
+      const ally = new Fighter({ name: 'Ally', type: 'normal', x: 120, y: 420, radius: 25, hp: 500, maxHp: 500 });
+      state.arena = testArena;
+      state.fighters = [aizen, enemy, ally];
+
+      // 1. Hostility check in 1v1 (getFighterTeam returns null) and team modes (index-based)
+      state.getFighterTeam = () => null;
+      assert(aizen._isHostile(enemy) === true, 'Aizen _isHostile must return true in 1v1 mode when getFighterTeam returns null');
+      state.getFighterTeam = (idx) => (idx === 1 ? 1 : 0);
+      assert(aizen._isHostile(ally) === false, 'Aizen _isHostile must return false for same-team fighter');
+      assert(aizen._isHostile(enemy) === true, 'Aizen _isHostile must return true for opposing-team fighter');
+
+      // 2. Single-decrement cooldown cadence (must not double-tick base SkillManager cooldowns)
+      aizen.reset();
+      aizen.x = 150;
+      aizen.y = 450;
+      enemy.maxHp = 3000;
+      enemy.hp = 3000;
+      const startKuroCd = aizen.kurohitsugiCooldown;
+      state.frameCount = 1;
+      aizen.update(enemy, 0, testArena);
+      assert(aizen.kurohitsugiCooldown === startKuroCd - 1, `Aizen kurohitsugiCooldown must tick by 1 per frame (expected ${startKuroCd - 1}, got ${aizen.kurohitsugiCooldown})`);
+
+      // 3. Skill AI execution: Sword, Kyoka Counter stance + trigger, Raikoho Beam, Hogyoku Orbs, Danku, Kurohitsugi
+      let sawSword = false, sawKyoka = false, sawRaikohoBeam = false, sawHogyokuOrbs = false, sawDanku = false, sawKuro = false, sawKuroSlashSpark = false;
+      const stackCtx = createMockCtx();
+      for (let t = 2; t < 940; t++) {
+        state.frameCount = t;
+        aizen.update(enemy, 0, testArena);
+        aizen.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, `Aizen draw() must leave Canvas stack depth 0 at tick ${t}`);
+        if (aizen.isSlashing) sawSword = true;
+        if (aizen.isKyokaCounterStance) sawKyoka = true;
+        if (aizen.raikohoBeamState && aizen.raikohoBeamState.active) sawRaikohoBeam = true;
+        if (aizen.aizenProjectiles.some(p => p.kind === 'hogyoku_orb')) sawHogyokuOrbs = true;
+        if (aizen.dankuActive) sawDanku = true;
+        if (aizen.kurohitsugiState && aizen.kurohitsugiState.active) sawKuro = true;
+        if (aizen.activeVisualEffects.some(fx => fx.kind === 'kuroSlashSpark')) sawKuroSlashSpark = true;
+      }
+      assert(sawSword, 'Aizen must execute Kyoka Suigetsu 5-phase sword swings');
+      assert(sawKuroSlashSpark, 'Aizen sword hits and Kurohitsugi must spawn kuroSlashSpark (aizen-kuro-flash.png / MUGEN Action 7015)');
+      assert(sawKyoka, 'Aizen must activate Kyoka Suigetsu Counter stance');
+      assert(sawRaikohoBeam, 'Aizen Base Form must fire Hado #63 Raikoho sustained lightning beam (G8004)');
+      assert(sawHogyokuOrbs, 'Aizen Hogyoku Form must fire Multi-Balls hogyoku_orb barrage (G8125)');
+      assert(sawDanku, 'Aizen must activate Bakudo #81 Danku barrier');
+      assert(sawKuro, 'Aizen must cast Hado #90 Kurohitsugi');
+      assert(enemy.hp < 3000, `Aizen combat skills must deal damage to enemy (enemy hp=${enemy.hp})`);
+
+      // 4. Verify Kyoka Counter shatter proc + Rule 25 non-freezing VFX decay under time-stop
+      enemy.isDead = false;
+      enemy.dead = false;
+      enemy.hp = 500;
+      aizen.isKyokaCounterStance = true;
+      aizen.kyokaCounterTimer = 25;
+      const prevHp = enemy.hp;
+      const counterBlockedDmg = aizen.takeDamage(30, enemy, { isMelee: true });
+      assert(counterBlockedDmg === false, 'Kyoka Counter stance must negate incoming hit');
+      assert(enemy.hp < prevHp, 'Kyoka Counter must counter-attack attacker');
+      const shatterFx = [...aizen.activeVisualEffects].reverse().find(fx => fx.kind === 'kyokaShatter');
+      assert(Boolean(shatterFx), 'Kyoka Counter must spawn kyokaShatter VFX');
+      const vfxBeforeFreeze = shatterFx.timer;
+      aizen.applyTimeStop(10);
+      state.frameCount = 500;
+      aizen.update(enemy, 0, testArena);
+      assert(shatterFx.timer === vfxBeforeFreeze - 1, 'Rule 25: Aizen VFX timers must continue decaying while time-stopped');
+
+      // 5. Verify all MUGEN-upgraded Aizen VFX assets exist on disk & windup/blast renders keep 0 stack depth
+      const fs = await import('node:fs');
+      for (const [k, assetPath] of Object.entries(aDef.vfxAssets || {})) {
+        assert(fs.existsSync(assetPath), `Aizen VFX asset '${k}' missing on disk: ${assetPath}`);
+      }
+      aizen.raikohoWindupTimer = 8;
+      aizen.activeVisualEffects.push(
+        { kind: 'raikohoImpact', x: 240, y: 400, radius: 68, timer: 10, maxTimer: 22 },
+        { kind: 'hogyokuImpact', x: 240, y: 400, radius: 48, timer: 10, maxTimer: 22 },
+        { kind: 'fragorExplosion', x: 240, y: 400, radius: 105, timer: 14, maxTimer: 28 },
+        { kind: 'reiatsuCrush', x: 150, y: 450, radius: 115, timer: 12, maxTimer: 24 }
+      );
+      aizen.kurohitsugiState = { active: true, x: 240, y: 400, radius: 72, phase: 'shatter', progress: 0.4, timer: 10, castFrames: 26, crushFrames: 42, isPerfect: true, isBigBang: true, damage: 84 };
+      aizen.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Aizen windup + Big Bang + MUGEN blast VFX draw() must maintain Canvas stack depth 0');
+
+      // 6. Rikujōkōrō (Especials.cns State 1300-1302) Six-Beam Prison Option
+      const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+      aizen.reset();
+      aizen.aizenForm = 0;
+      aizen.hp = 140; // <= 70% threshold
+      aizen.rikujokoroCooldown = 0;
+      aizen.kurohitsugiCooldown = 400;
+      aizen.raikohoCooldown = 400;
+      aizen.kyokaCounterCooldown = 400;
+      aizen.dankuCooldown = 400;
+      aizen.x = 180;
+      aizen.y = 450;
+      enemy.isDead = false;
+      enemy.dead = false;
+      enemy.hp = 800;
+      enemy.x = 300;
+      enemy.y = 450;
+
+      const rikuHud = getSkillDataForFighter(aizen);
+      assert(rikuHud.some(s => s.id === 'rikujokoro' && s.color === (aDef.themeColor || '#8B5CF6')), 'Aizen HUD must include rikujokoro bar with unified themeColor');
+
+      let sawRikujokoro = false;
+      const hpBeforeRiku = enemy.hp;
+      for (let t = 600; t < 660; t++) {
+        state.frameCount = t;
+        aizen.update(enemy, 0, testArena);
+        aizen.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, `Aizen Rikujokoro draw() must keep stack depth 0 at tick ${t}`);
+        if (aizen.rikujokoroState && aizen.rikujokoroState.active) sawRikujokoro = true;
+      }
+      assert(sawRikujokoro, 'Aizen Rikujokoro (State 1300) must capture target in Six-Beam Prison');
+      assert(enemy.hp < hpBeforeRiku, 'Rikujokoro capture + periodic 15-frame seal ticks must deal damage');
+
+      // 7. Final Form Multi Explosions Flanking Spawns (Final Form.cns State 27200/27250)
+      aizen.reset();
+      aizen.rikujokoroState = null;
+      aizen.aizenForm = 2; // Final Form
+      aizen.kurohitsugiCooldown = 400;
+      aizen.multiExplosionsCooldown = 0;
+      aizen.x = 270;
+      aizen.y = 465;
+      enemy.hp = 900;
+      enemy.x = 340;
+      enemy.y = 465;
+
+      const multiHud = getSkillDataForFighter(aizen);
+      assert(multiHud.some(s => s.id === 'multi_explosions' && s.color === (aDef.themeColor || '#8B5CF6')), 'Final Form Aizen HUD must expose multi_explosions bar with unified themeColor');
+
+      let spawnedPillars = [];
+      let sawDarkBlast = false;
+      for (let t = 700; t < 775; t++) {
+        state.frameCount = t;
+        aizen.update(enemy, 0, testArena);
+        aizen.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, `Aizen Multi Explosions draw() must keep stack depth 0 at tick ${t}`);
+        for (const fx of aizen.activeVisualEffects) {
+          if (fx.kind === 'multiExplosionPillar' && fx.timer === fx.maxTimer) {
+            spawnedPillars.push({ x: fx.x, y: fx.y, ax: aizen.x });
+          }
+          if (fx.kind === 'darkBlast') sawDarkBlast = true;
+        }
+      }
+      assert(spawnedPillars.length >= 2, 'Final Form Multi Explosions (State 27200) must spawn staggered multiExplosionPillar waves');
+      assert(spawnedPillars.some(p => p.x > p.ax) && spawnedPillars.some(p => p.x < p.ax), 'Multi Explosions must erupt symmetrically on BOTH flanks around Aizen');
+      assert(sawDarkBlast && enemy.hp < 900, 'Multi Explosions flanking hits must deal damage and spawn Explod 13410 darkBlast VFX');
+
+      // Verify Rule 25 decay on Multi Explosions / Dark Blast VFX while time-stopped
+      aizen.activeVisualEffects.push({ kind: 'multiExplosionPillar', x: 270, y: 465, radius: 56, timer: 12, maxTimer: 26 });
+      const pBefore = aizen.activeVisualEffects[aizen.activeVisualEffects.length - 1].timer;
+      aizen.applyTimeStop(5);
+      state.frameCount = 780;
+      aizen.update(enemy, 0, testArena);
+      assert(aizen.activeVisualEffects[aizen.activeVisualEffects.length - 1].timer === pBefore - 1, 'Rule 25: Multi Explosions pillar VFX must continue decaying during time-stop');
+
+      // 8. Complete All-Form MUGEN Kit (Base States 400/1400/1500, Hogyoku 25300/25400/25500, Final Form 27000/27100/27300/27400/27500)
+      aizen.reset();
+      aizen.timeStopTimer = 0;
+      enemy.isDead = false; enemy.dead = false; enemy.hp = 2000;
+      enemy.x = 320; enemy.y = 450;
+      aizen.x = 180; aizen.y = 450;
+
+      // 8a. Base Form: Clone Attack, Consecutive Slashing, Complete Hypnosis & Form 0 HUD
+      aizen.aizenForm = 0;
+      const baseHud = getSkillDataForFighter(aizen);
+      assert(baseHud.some(s => s.id === 'clone_attack') && baseHud.some(s => s.id === 'complete_hypnosis') && !baseHud.some(s => s.id === 'thunderbolts') && !baseHud.some(s => s.id === 'rushing_crusher'), 'Base Form HUD must display only Base Form skills');
+      aizen._castCloneAttack(enemy, 0, aDef);
+      assert(aizen.aizenProjectiles.some(p => p.kind === 'clone_rush'), 'Clone Attack must spawn clone_rush projectile');
+      aizen._startConsecutiveSlashing(enemy, 0, aDef);
+      assert(aizen.consecutiveSlashingState?.active === true, 'Consecutive Slashing must enter active blitz');
+      for (let t = 800; t < 832; t++) { state.frameCount = t; aizen.update(enemy, 0, testArena); aizen.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
+      aizen._castCompleteHypnosis(enemy, 0, aDef, testArena);
+      assert(aizen.activeVisualEffects.some(fx => fx.kind === 'kyokaShatter'), 'Complete Hypnosis must spawn shatter ambush VFX');
+
+      // 8b. Hogyoku Form: Thunderbolts, Swallow Ground, Time Slowing + Reversal Counter & HUD check
+      aizen.aizenForm = 1;
+      const hogHud = getSkillDataForFighter(aizen);
+      assert(hogHud.every(s => s.color === (aDef.themeColor || '#8B5CF6')), 'Hogyoku HUD bars must enforce unified themeColor');
+      assert(hogHud.some(s => s.id === 'thunderbolts') && hogHud.some(s => s.id === 'swallow_ground') && hogHud.some(s => s.id === 'time_slowing'), 'Hogyoku HUD must expose Thunderbolts, Swallow Ground, Time Slowing');
+      aizen._startThunderbolts(0, aDef);
+      for (let t = 840; t < 868; t++) { state.frameCount = t; aizen.update(enemy, 0, testArena); aizen.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
+      assert(aizen.activeVisualEffects.some(fx => fx.kind === 'thunderboltPillar'), 'Thunderbolts must spawn thunderboltPillar VFX');
+      aizen._castSwallowGround(enemy, aDef);
+      assert(aizen.swallowGroundState?.active === true && aizen.activeVisualEffects.some(fx => fx.kind === 'swallowAbyss'), 'Swallow Ground must spawn swallowAbyss trap');
+      for (let t = 870; t < 906; t++) { state.frameCount = t; aizen.update(enemy, 0, testArena); aizen.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
+      aizen._castTimeSlowing(aDef);
+      assert(aizen.timeSlowFieldTimer > 0, 'Time Slowing must activate slow field');
+      aizen.update(enemy, 0, testArena);
+      aizen.isKyokaCounterStance = false;
+      enemy.invincibilityTimer = 0;
+      const hpPreCounter = enemy.hp;
+      assert(aizen.takeDamage(20, enemy, { isMelee: true }) === false && enemy.hp < hpPreCounter, 'Time Slowing reversal counter must negate hit and counter-strike attacker');
+
+      // 8c. Final Form: Rushing Crusher, Paralysis Vibrations, Souls Torture, Shadow Waves, Shells Inevitables
+      aizen.aizenForm = 2;
+      const finHud = getSkillDataForFighter(aizen);
+      assert(finHud.every(s => s.color === (aDef.themeColor || '#8B5CF6')), 'Final Form HUD bars must enforce unified themeColor');
+      assert(finHud.some(s => s.id === 'rushing_crusher') && finHud.some(s => s.id === 'paralysis_vibrations') && finHud.some(s => s.id === 'souls_torture') && finHud.some(s => s.id === 'shadow_waves') && finHud.some(s => s.id === 'shells_inevitables') && !finHud.some(s => s.id === 'thunderbolts'), 'Final Form HUD must expose Final Form MUGEN bars without Form 1 clutter');
+      aizen._startRushingCrusher(0, aDef);
+      for (let t = 910; t < 938; t++) { state.frameCount = t; aizen.update(enemy, 0, testArena); aizen.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
+      aizen._castParalysisVibrations(aDef);
+      assert(aizen.activeVisualEffects.some(fx => fx.kind === 'paralysisVibration'), 'Paralysis Vibrations must spawn paralysisVibration rings');
+      aizen._castSoulsTorture(enemy, aDef);
+      assert(aizen.activeVisualEffects.some(fx => fx.kind === 'soulsTortureMonolith'), 'Souls Torture must spawn soulsTortureMonolith');
+      aizen._castShadowWaves(enemy, 0, aDef);
+      assert(aizen.aizenProjectiles.some(p => p.kind === 'shadow_wave'), 'Shadow Waves must launch shadow_wave projectiles');
+      aizen._startShellsInevitables(enemy, 0, aDef);
+      for (let t = 940; t < 960; t++) { state.frameCount = t; aizen.update(enemy, 0, testArena); aizen.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
+      assert(aizen.aizenProjectiles.some(p => p.kind === 'shell_bolt'), 'Shells Inevitables must launch homing shell_bolt projectiles');
+      assert(enemy.hp < 1850, 'All-Form MUGEN skills must deal cumulative damage');
+
+      // 9. Rule 35 Pre-Warm Coverage & Manifest Integrity
+      const { prewarmMatchAssets } = await import('../js/graphics/mobileAssetScaler.js');
+      const { MOBILE_ASSET_MANIFEST } = await import('../js/configs/mobileAssetManifest.js');
+      const warmedVfxCount = aizen.prewarmAssets(stackCtx);
+      assert(warmedVfxCount >= 26, `Aizen prewarmAssets must queue all 26 VFX strips (got ${warmedVfxCount})`);
+      prewarmMatchAssets([aizen], stackCtx);
+      assert(stackCtx.getStackDepth() === 0, 'Aizen prewarmMatchAssets must leave Canvas stack depth 0');
+      assert(
+        Array.isArray(MOBILE_ASSET_MANIFEST['Assets/effects/aizen/aizen-kuro-flash.png']) &&
+        Array.isArray(MOBILE_ASSET_MANIFEST['Assets/effects/aizen/aizen-crush-smash.png']) &&
+        Array.isArray(MOBILE_ASSET_MANIFEST['Assets/effects/aizen/aizen-rikujokoro-beams.png']),
+        'MOBILE_ASSET_MANIFEST must include Aizen VFX strip pre-warm metadata'
+      );
+
+      console.log('      ✅ Sōsuke Aizen full 3-form MUGEN kit, hostility checks, Rule 18 HUD, Rule 25 & Rule 35 pre-warm verified.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.frameCount = prevFrameCount;
     }
   }
 

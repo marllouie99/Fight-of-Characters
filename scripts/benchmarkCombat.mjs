@@ -203,6 +203,7 @@ const { renderGame } = await import('../js/systems/renderSystem.js');
 const { updateGame } = await import('../js/systems/updateSystem.js');
 const { projectileSystem } = await import('../js/systems/projectileSystem.js');
 const { clearAllPools } = await import('../js/graphics/objectPool.js');
+const { prewarmMatchAssets } = await import('../js/graphics/mobileAssetScaler.js');
 
 // 3. Helper to fuzzy-match fighter definition
 function findFighterDef(query, defs) {
@@ -216,13 +217,14 @@ function findFighterDef(query, defs) {
   });
 }
 
-// 4. Canonical Top 5 Matchups for --all flag
+// 4. Canonical Matchups for --all flag
 const CANONICAL_MATCHUPS = [
   { f1: 'toji', f2: 'sukuna', title: 'Toji Fushiguro vs Ryomen Sukuna' },
   { f1: 'gojo', f2: 'mahoraga', title: 'Satoru Gojo vs Mahoraga' },
   { f1: 'denji', f2: 'john_wick', title: 'Denji (Chainsaw Man) vs John Wick' },
   { f1: 'escanor', f2: 'saitama', title: 'Lion Sin Escanor vs Saitama' },
-  { f1: 'yuta', f2: 'crazydave', title: 'Yuta Okkotsu vs Crazy Dave' }
+  { f1: 'yuta', f2: 'crazydave', title: 'Yuta Okkotsu vs Crazy Dave' },
+  { f1: 'aizen', f2: 'ichigo', title: 'Sōsuke Aizen vs Ichigo Kurosaki' }
 ];
 
 // 5. Benchmark runner for a single matchup
@@ -298,6 +300,9 @@ function runMatchupBenchmark({
   f2.fighterIndex = 1;
 
   state.fighters = [f1, f2];
+
+  // Pre-warm active matchup fighters & VFX caches before warmup/measurement (Rule 35)
+  prewarmMatchAssets(state.fighters, mockCtx);
 
   // Helper to maintain non-stop active combat throughout the benchmark
   const maintainCombatReadiness = () => {
@@ -559,7 +564,7 @@ Usage:
   node scripts/benchmarkCombat.mjs [options]
 
 Options:
-  --all               Run all 5 canonical matchups and print a comparative leaderboard
+  --all               Run all ${CANONICAL_MATCHUPS.length} canonical matchups and print a comparative leaderboard
   --gate, --ci        Run in CI/Budget Gate mode (fails if avg > 5.0ms or 99th% > 16.66ms)
   --max-avg=<ms>      Custom gate max average frame time in ms (default: 5.0)
   --max-p99=<ms>      Custom gate max 99th% frame time in ms (default: 16.66)
@@ -577,6 +582,7 @@ Canonical Matchups (--all):
   3. Denji vs John Wick
   4. Escanor vs Saitama
   5. Yuta vs Crazy Dave
+  6. Aizen vs Ichigo
 `);
     process.exit(0);
   }

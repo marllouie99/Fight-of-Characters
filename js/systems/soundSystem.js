@@ -224,7 +224,8 @@ export function getVoicelinePriority(src) {
       s.includes('mahito-domain') || s.includes('fuga') || s.includes('hollowpurple') ||
       s.includes('purelove') || s.includes('seriouspunch') || s.includes('champion') ||
       s.includes('faah') || s.includes('chessboard_shutdown') || s.includes('tadakaimagination') ||
-      s.includes('finalflash') || s.includes('cosmiclaser') || s.includes('universalannihilation')) {
+      s.includes('finalflash') || s.includes('cosmiclaser') || s.includes('universalannihilation') ||
+      s.includes('aizen-kurohitsugi-voiceline') || s.includes('aizen-fragor-voiceline')) {
     return 3;
   }
 
@@ -236,7 +237,7 @@ export function getVoicelinePriority(src) {
       s.includes('overtime') || s.includes('mybestfriend') || s.includes('bestfriend') ||
       s.includes('brother-voiceline') || s.includes('homiearrival') || s.includes('homiesarrival') ||
       s.includes('grovestreet4life') || s.includes('reze_boom') || s.includes('troop_buff') ||
-      s.includes('chain-voiceline')) {
+      s.includes('chain-voiceline') || s.includes('aizen-hogyoku-voiceline') || s.includes('aizen-kyoka-voiceline')) {
     return 2;
   }
 

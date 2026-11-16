@@ -424,6 +424,13 @@ export function prewarmMatchAssets(fighters, gameCtx = null) {
         } catch (_) {}
       }
 
+      // Pre-warm fighter-specific VFX strips and glow caches before Round 1 (Rule 35)
+      if (typeof f.prewarmAssets === 'function') {
+        try {
+          f.prewarmAssets(gameCtx || wCtx);
+        } catch (_) {}
+      }
+
       // Pre-warm active combatants' domain halos into the shared atlas (Rule 35)
       const fId = String(f.characterId || f.type || '').toLowerCase();
       if (fId === 'mahito') {

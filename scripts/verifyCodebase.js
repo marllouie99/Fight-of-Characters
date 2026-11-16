@@ -281,6 +281,51 @@ async function verifyAll() {
     console.log(`✅ Verified ${scannedAssets.size} asset paths with exact case sensitivity!`);
   }
 
+  // 2.55 Mobile Asset Manifest Freshness Scanner (Rule 35 — Shared with buildMobileAssets.mjs)
+  console.log('🔍 [Mobile Manifest Scanner] Verifying js/configs/mobileAssetManifest.js freshness against disk assets...');
+  let mobileManifestIssues = 0;
+  try {
+    const [{ collectMobileManifestCandidates }, { MOBILE_ASSET_MANIFEST }] = await Promise.all([
+      import('./buildMobileAssets.mjs'),
+      import('../js/configs/mobileAssetManifest.js')
+    ]);
+    const { expectedManifest } = await collectMobileManifestCandidates();
+    const expectedKeys = Object.keys(expectedManifest);
+    const actualKeys = Object.keys(MOBILE_ASSET_MANIFEST || {});
+
+    for (const key of expectedKeys) {
+      const exp = expectedManifest[key];
+      const act = MOBILE_ASSET_MANIFEST[key];
+      if (!Array.isArray(act)) {
+        console.error(`❌ [MOBILE MANIFEST MISSING]: '${key}' (${exp[0]}x${exp[1]}) missing from js/configs/mobileAssetManifest.js.`);
+        mobileManifestIssues++;
+        hasErrors = true;
+      } else if (act[0] !== exp[0] || act[1] !== exp[1]) {
+        console.error(`❌ [MOBILE MANIFEST STALE DIMS]: '${key}' has [${act[0]}, ${act[1]}], disk has [${exp[0]}, ${exp[1]}].`);
+        mobileManifestIssues++;
+        hasErrors = true;
+      }
+    }
+
+    for (const key of actualKeys) {
+      if (!Object.prototype.hasOwnProperty.call(expectedManifest, key)) {
+        console.error(`❌ [MOBILE MANIFEST ORPHAN]: '${key}' is in js/configs/mobileAssetManifest.js but missing/ineligible on disk.`);
+        mobileManifestIssues++;
+        hasErrors = true;
+      }
+    }
+
+    if (mobileManifestIssues === 0) {
+      console.log(`✅ Verified ${expectedKeys.length} mobile asset manifest entries match on-disk dimensions and pipeline thresholds!`);
+    } else {
+      console.error(`🚨 Run "node scripts/buildMobileAssets.mjs" to refresh js/configs/mobileAssetManifest.js (${mobileManifestIssues} issue(s)).`);
+    }
+  } catch (err) {
+    console.error(`❌ [MOBILE MANIFEST SCANNER ERROR]: ${err.message}`);
+    mobileManifestIssues++;
+    hasErrors = true;
+  }
+
   // 2.6 Audio Volume Normalization & Range Validator
   console.log('🔍 [Audio Normalization Scanner] Checking character audio volume definitions...');
   let invalidAudioCount = 0;
@@ -957,7 +1002,7 @@ async function verifyAll() {
 
   console.log('───────────────────────────────────────────────────────');
   if (hasErrors) {
-    console.error(`🚨 Verification failed: ${totalSyntaxErrors} syntax errors, ${totalDuplicates} duplicates, ${missingAssetsCount} broken assets, ${invalidAudioCount} invalid audio volumes.`);
+    console.error(`🚨 Verification failed: ${totalSyntaxErrors} syntax errors, ${totalDuplicates} duplicates, ${missingAssetsCount} broken assets, ${mobileManifestIssues} mobile manifest issues, ${invalidAudioCount} invalid audio volumes.`);
     process.exit(1);
   } else {
     console.log(`✅ All ${files.length} JavaScript files verified cleanly! No syntax errors, unbalanced braces, or duplicate declarations.`);

@@ -1564,23 +1564,20 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enablePureLoveBeam, true)) {
       let beamPct = 0;
       const beamCdTimer = f.pureLoveBeamCooldownTimer || 0;
-      const beamCdMax = cfg.pureLoveBeamCooldown || 1200;
-      if (f.isChannelingPureLoveBeam || (f.rikaEmergingForBeamTimer || 0) > 0) {
+      const beamThreshold = cfg.pureLoveBeamHpThreshold ?? 0.45;
+      if (f.isChannelingPureLoveBeam || (f.rikaEmergingForBeamTimer || 0) > 0 || (f.beamRetreatSlideTimer || 0) > 0) {
         beamPct = 100;
       } else if (f.isFiringPureLoveBeam) {
         f._maxBeamPct = 0;
         beamPct = 0;
       } else if (f.hasUsedPureLoveBeam) {
-        if (beamCdTimer > 0) {
-          beamPct = Math.max(0, Math.min(100, (1 - (beamCdTimer / beamCdMax)) * 100));
-        } else {
-          beamPct = 100;
-        }
-      } else if (beamCdTimer > 0) {
-        beamPct = Math.max(0, Math.min(100, (1 - (beamCdTimer / beamCdMax)) * 100));
+        const hpNeededRatio = cfg.pureLoveBeam2HpDamageRequired ?? Math.max(0.05, 1 - beamThreshold);
+        const hpNeeded = (f.maxHp || 200) * hpNeededRatio;
+        const hpLost = f.pureLoveBeamDamageTaken || 0;
+        beamPct = Math.max(0, Math.min(100, (hpLost / hpNeeded) * 100));
       } else {
-        const beamThreshold = cfg.pureLoveBeamHpThreshold ?? 0.60;
-        const rawBeamPct = Math.max(0, Math.min(100, ((1 - (f.hp / f.maxHp)) / (1 - beamThreshold)) * 100));
+        const denom = Math.max(0.05, 1 - beamThreshold);
+        const rawBeamPct = Math.max(0, Math.min(100, ((1 - (f.hp / f.maxHp)) / denom) * 100));
         f._maxBeamPct = Math.max(f._maxBeamPct || 0, rawBeamPct);
         beamPct = f._maxBeamPct;
       }
@@ -3831,6 +3828,104 @@ export const HUD_SKILL_PROVIDERS = {
     return skills;
   },
 
+  aizen(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.aizen) ? CONFIG.aizen : {};
+    const themeColor = f.color || cfg.themeColor || '#8B5CF6';
+    const formLevel = f.aizenForm || 0;
+    const skills = [];
+
+    const pushCdSkill = (id, enabled, cdVal, maxCdVal, defaultName, cfgKey, isActive = false) => {
+      if (!isSkillEnabled(enabled, true)) return;
+      const cd = cdVal || 0;
+      const maxCd = Math.max(1, maxCdVal, cd);
+      const baseName = cfgSkillName(cfg, [cfgKey], defaultName);
+      const pct = isActive ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      const label = cd > 0 && !isActive ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName;
+      skills.push({ id, pct, active: isActive, ready: !isActive && pct >= 99 && cd <= 0, color: themeColor, label });
+    };
+
+    // 1. Passive: Hōgyoku Evolution Gauge / Form Banner
+    if (isSkillEnabled(cfg.enableHogyoku, true)) {
+      const gauge = Math.max(0, Math.min(100, f.hogyokuGauge || 0));
+      const baseName = cfgSkillName(cfg, ['hogyokuSkillName'], 'HŌGYOKU');
+      const formTag = formLevel >= 2 ? 'FINAL FORM' : (formLevel === 1 ? 'HŌGYOKU FUSION' : baseName);
+      const pct = formLevel >= 2 ? 100 : (formLevel === 1 ? Math.max(50, gauge) : gauge);
+      skills.push({
+        id: 'hogyoku',
+        pct,
+        active: formLevel >= 1,
+        ready: formLevel >= 2,
+        color: themeColor,
+        label: formTag,
+      });
+    }
+
+    // 2. Form-Specific Skill Bars (Base -> Hōgyoku Fusion -> Final Form)
+    if (formLevel === 0) {
+      pushCdSkill('kyoka_counter', cfg.enableKyokaCounter, f.kyokaCounterCooldown, cfg.kyokaCounterCooldown || 300, 'KYŌKA SUIGETSU', 'kyokaCounterSkillName', Boolean(f.isKyokaCounterStance));
+      pushCdSkill('raikoho', cfg.enableRaikoho, f.raikohoCooldown, cfg.raikohoCooldown || 220, 'HADŌ #63: RAIKŌHŌ', 'raikohoSkillName');
+      pushCdSkill('danku', cfg.enableDanku, f.dankuCooldown, cfg.dankuCooldown || 340, 'BAKUDŌ #81: DANKU', 'dankuSkillName', Boolean(f.dankuActive));
+      pushCdSkill('rikujokoro', cfg.enableRikujokoro, f.rikujokoroCooldown, cfg.rikujokoroCooldown || 420, 'RIKUJŌKŌRŌ', 'rikujokoroSkillName', Boolean(f.rikujokoroState?.active));
+      pushCdSkill('consecutive_slashing', cfg.enableConsecutiveSlashing, f.consecutiveSlashingCooldown, cfg.consecutiveSlashingCooldown || 380, 'CONSECUTIVE SLASHING', 'consecutiveSlashingSkillName', Boolean(f.consecutiveSlashingState?.active));
+      pushCdSkill('complete_hypnosis', cfg.enableCompleteHypnosis, f.completeHypnosisCooldown, cfg.completeHypnosisCooldown || 440, 'COMPLETE HYPNOSIS', 'completeHypnosisSkillName');
+      pushCdSkill('clone_attack', cfg.enableCloneAttack, f.cloneAttackCooldown, cfg.cloneAttackCooldown || 260, 'CLONE ATTACK', 'cloneAttackSkillName');
+    } else if (formLevel === 1) {
+      if (isSkillEnabled(cfg.enableRaikoho, true)) {
+        const cd = f.raikohoCooldown || 0;
+        const maxCd = Math.max(1, cfg.raikohoCooldown || 220, cd);
+        const pct = Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+        const label = cd > 0 ? `MULTI-BALLS (${(cd / 60).toFixed(1)}S)` : 'MULTI-BALLS';
+        skills.push({ id: 'raikoho', pct, ready: pct >= 99 && cd <= 0, color: themeColor, label });
+      }
+      pushCdSkill('thunderbolts', cfg.enableThunderbolts, f.thunderboltsCooldown, cfg.thunderboltsCooldown || 300, 'THUNDERBOLTS', 'thunderboltsSkillName', Boolean(f.thunderboltsState?.active));
+      pushCdSkill('swallow_ground', cfg.enableSwallowGround, f.swallowGroundCooldown, cfg.swallowGroundCooldown || 380, 'SWALLOW GROUND', 'swallowGroundSkillName', Boolean(f.swallowGroundState?.active));
+      pushCdSkill('time_slowing', cfg.enableTimeSlowing, f.timeSlowingCooldown, cfg.timeSlowingCooldown || 420, 'TIME SLOWING', 'timeSlowingSkillName', (f.timeSlowFieldTimer || 0) > 0);
+      pushCdSkill('rikujokoro', cfg.enableRikujokoro, f.rikujokoroCooldown, cfg.rikujokoroCooldown || 420, 'RIKUJŌKŌRŌ', 'rikujokoroSkillName', Boolean(f.rikujokoroState?.active));
+      pushCdSkill('kyoka_counter', cfg.enableKyokaCounter, f.kyokaCounterCooldown, cfg.kyokaCounterCooldown || 300, 'KYŌKA SUIGETSU', 'kyokaCounterSkillName', Boolean(f.isKyokaCounterStance));
+      pushCdSkill('danku', cfg.enableDanku, f.dankuCooldown, cfg.dankuCooldown || 340, 'BAKUDŌ #81: DANKU', 'dankuSkillName', Boolean(f.dankuActive));
+    } else {
+      if (isSkillEnabled(cfg.enableRaikoho, true)) {
+        const cd = f.raikohoCooldown || 0;
+        const maxCd = Math.max(1, cfg.raikohoCooldown || 220, cd);
+        const pct = Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+        const label = cd > 0 ? `FRAGOR (${(cd / 60).toFixed(1)}S)` : 'FRAGOR';
+        skills.push({ id: 'raikoho', pct, ready: pct >= 99 && cd <= 0, color: themeColor, label });
+      }
+      pushCdSkill('rushing_crusher', cfg.enableRushingCrusher, f.rushingCrusherCooldown, cfg.rushingCrusherCooldown || 320, 'RUSHING CRUSHER', 'rushingCrusherSkillName', Boolean(f.rushingCrusherState?.active));
+      pushCdSkill('multi_explosions', cfg.enableMultiExplosions, f.multiExplosionsCooldown, cfg.multiExplosionsCooldown || 300, 'MULTI EXPLOSIONS', 'multiExplosionsSkillName', Boolean(f.multiExplosionsState?.active));
+      pushCdSkill('paralysis_vibrations', cfg.enableParalysisVibrations, f.paralysisVibrationsCooldown, cfg.paralysisVibrationsCooldown || 360, 'PARALYSIS VIBRATIONS', 'paralysisVibrationsSkillName');
+      pushCdSkill('souls_torture', cfg.enableSoulsTorture, f.soulsTortureCooldown, cfg.soulsTortureCooldown || 340, 'SOULS TORTURE', 'soulsTortureSkillName');
+      pushCdSkill('shadow_waves', cfg.enableShadowWaves, f.shadowWavesCooldown, cfg.shadowWavesCooldown || 260, 'SHADOW WAVES', 'shadowWavesSkillName');
+      pushCdSkill('shells_inevitables', cfg.enableShellsInevitables, f.shellsInevitablesCooldown, cfg.shellsInevitablesCooldown || 300, 'SHELLS INEVITABLES', 'shellsInevitablesSkillName', Boolean(f.shellsBarrageState?.active));
+      if (cfg.rikujokoroAllowAllForms === true) {
+        pushCdSkill('rikujokoro', cfg.enableRikujokoro, f.rikujokoroCooldown, cfg.rikujokoroCooldown || 420, 'RIKUJŌKŌRŌ', 'rikujokoroSkillName', Boolean(f.rikujokoroState?.active));
+      }
+    }
+
+    // 3. Form-Scaled Ultimate: Kurohitsugi -> Perfect Kurohitsugi -> Ultra Fragor
+    if (isSkillEnabled(cfg.enableKurohitsugi, true)) {
+      const cd = f.kurohitsugiCooldown || 0;
+      const maxCd = Math.max(1, cfg.kurohitsugiCooldown || 600, cd);
+      const isCasting = Boolean(f.kurohitsugiState && f.kurohitsugiState.active);
+      const baseName = formLevel >= 2 ? 'ULTRA FRAGOR' : (formLevel === 1 ? 'PERFECT KUROHITSUGI' : cfgSkillName(cfg, ['kurohitsugiSkillName'], 'KUROHITSUGI'));
+      const pct = isCasting ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      const label = cd > 0 && !isCasting ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'kurohitsugi',
+        pct,
+        active: isCasting,
+        ready: !isCasting && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
   pacman(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : {};
     const themeColor = f.color || cfg.themeColor || '#FACC15';
@@ -4645,6 +4740,7 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     error_sans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
     errorsans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
     jevil: ['final_chaos', 'finalchaos', 'FINAL CHAOS'],
+    aizen: ['kurohitsugi', 'KUROHITSUGI', 'PERFECT KUROHITSUGI', 'ULTRA FRAGOR'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 

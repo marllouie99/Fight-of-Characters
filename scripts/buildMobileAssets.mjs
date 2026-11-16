@@ -261,24 +261,43 @@ function walkDir(dir, out = []) {
   return out;
 }
 
-export async function buildMobileAssets(options = {}) {
-  const silent = Boolean(options.silent);
-  const log = silent ? () => {} : console.log;
+export const MOBILE_ASSET_TARGET_DIRS = [
+  'Assets/model',
+  'Assets/Overlays',
+  'Assets/effects',
+  'Assets/weapon',
+  'Assets/character',
+  'Assets/Sprites'
+];
 
-  log(`📱 [Mobile Asset Pipeline] Scanning for large assets (>= 1024px or > 500KB) with ${sharp ? 'Sharp WebP/PNG engine' : 'pure-JS PNG engine'}...`);
+export const MOBILE_ASSET_THRESHOLDS = {
+  modelOrWeaponMaxDim: 400,
+  modelOrWeaponMinBytes: 80 * 1024,
+  defaultMaxDim: 512,
+  defaultMinBytes: 200 * 1024
+};
 
-  const targetDirs = [
-    path.join(rootDir, 'Assets', 'model'),
-    path.join(rootDir, 'Assets', 'Overlays'),
-    path.join(rootDir, 'Assets', 'effects'),
-    path.join(rootDir, 'Assets', 'weapon'),
-    path.join(rootDir, 'Assets', 'character'),
-    path.join(rootDir, 'Assets', 'Sprites')
-  ];
+async function readImageDimensions(fullPath) {
+  if (sharp) {
+    try {
+      const meta = await sharp(fullPath).metadata();
+      return { width: meta.width || 0, height: meta.height || 0 };
+    } catch (e) {
+      return null;
+    }
+  }
+  const buf = fs.readFileSync(fullPath);
+  return readPngHeader(buf);
+}
 
+/**
+ * Scans target asset folders using the canonical size/dimension rules and
+ * returns the expected manifest map plus the list of downscale candidates.
+ */
+export async function collectMobileManifestCandidates() {
   const candidatePaths = [];
-  for (const dir of targetDirs) {
-    candidatePaths.push(...walkDir(dir));
+  for (const relDir of MOBILE_ASSET_TARGET_DIRS) {
+    candidatePaths.push(...walkDir(path.join(rootDir, relDir)));
   }
 
   // Ensure all canonical transparent .png files are processed BEFORE any .jpg concept-art fallbacks
@@ -288,46 +307,22 @@ export async function buildMobileAssets(options = {}) {
     return aIsPng - bIsPng;
   });
 
-  const outputBaseDir = path.join(rootDir, 'Assets', '_mobile05x');
-  fs.mkdirSync(outputBaseDir, { recursive: true });
-
-  const manifest = {};
-  let newlyGenerated = 0;
-  let skippedUpToDate = 0;
-  let totalSavedBytes = 0;
-  let totalDecodedRamSaved = 0;
+  const expectedManifest = {};
+  const candidates = [];
+  const hasWebpFlag = sharp !== null ? 1 : 0;
 
   for (const fullPath of candidatePaths) {
     const relAssetPath = path.relative(rootDir, fullPath).replace(/\\/g, '/');
     const srcStat = fs.statSync(fullPath);
 
-    let width = 0;
-    let height = 0;
-
-    if (sharp) {
-      try {
-        const meta = await sharp(fullPath).metadata();
-        width = meta.width || 0;
-        height = meta.height || 0;
-      } catch (e) {
-        continue;
-      }
-    } else {
-      const buf = fs.readFileSync(fullPath);
-      const header = readPngHeader(buf);
-      if (!header) continue;
-      width = header.width;
-      height = header.height;
-    }
-
-    if (width === 0 || height === 0) continue;
+    const dims = await readImageDimensions(fullPath);
+    if (!dims || dims.width === 0 || dims.height === 0) continue;
+    const { width, height } = dims;
 
     // Rule 22: Preserve hair assets at bit-exact 1x fidelity
-    const isHair = relAssetPath.toLowerCase().includes('-hair.png');
-    if (isHair) continue;
+    if (relAssetPath.toLowerCase().includes('-hair.png')) continue;
 
     // Paired JPEG / PNG check: If a transparent .png counterpart exists, the .png is the canonical in-game sprite!
-    // Skip downscaling this unkeyed/opaque .jpg so it does not overwrite the transparent .png/.webp quad.
     const ext = path.extname(fullPath).toLowerCase();
     const isJpg = ext === '.jpg' || ext === '.jpeg';
     const pairedPngPath = isJpg ? fullPath.slice(0, -ext.length) + '.png' : null;
@@ -335,25 +330,50 @@ export async function buildMobileAssets(options = {}) {
 
     if (hasPairedPng) {
       const relPngPath = path.relative(rootDir, pairedPngPath).replace(/\\/g, '/');
-      if (manifest[relPngPath]) {
-        manifest[relAssetPath] = manifest[relPngPath];
+      if (expectedManifest[relPngPath]) {
+        expectedManifest[relAssetPath] = expectedManifest[relPngPath];
       } else {
-        try {
-          const meta = sharp ? await sharp(pairedPngPath).metadata() : readPngHeader(fs.readFileSync(pairedPngPath));
-          if (meta) {
-            manifest[relAssetPath] = [meta.width, meta.height, sharp ? 1 : 0];
-          }
-        } catch (_) {}
+        const meta = await readImageDimensions(pairedPngPath);
+        if (meta && meta.width > 0 && meta.height > 0) {
+          expectedManifest[relAssetPath] = [meta.width, meta.height, hasWebpFlag];
+        }
       }
       continue;
     }
 
-    // Process all full-screen overlays (domains/ultimates) and all textures >= 400px (weapons/sprites) or >= 80KB
-    const isOverlay = relAssetPath.toLowerCase().includes('assets/overlays/');
-    const isModelOrWeapon = relAssetPath.toLowerCase().includes('assets/model/') || relAssetPath.toLowerCase().includes('assets/weapon/');
-    const isCandidate = Math.max(width, height) >= (isModelOrWeapon ? 400 : 512) || srcStat.size >= (isModelOrWeapon ? 80 * 1024 : 200 * 1024);
+    // Process all full-screen overlays (domains/ultimates) and assets matching size/dimension cutoffs
+    const lowerRel = relAssetPath.toLowerCase();
+    const isOverlay = lowerRel.includes('assets/overlays/');
+    const isModelOrWeapon = lowerRel.includes('assets/model/') || lowerRel.includes('assets/weapon/');
+    const minDim = isModelOrWeapon ? MOBILE_ASSET_THRESHOLDS.modelOrWeaponMaxDim : MOBILE_ASSET_THRESHOLDS.defaultMaxDim;
+    const minBytes = isModelOrWeapon ? MOBILE_ASSET_THRESHOLDS.modelOrWeaponMinBytes : MOBILE_ASSET_THRESHOLDS.defaultMinBytes;
+    const isCandidate = Math.max(width, height) >= minDim || srcStat.size >= minBytes;
     if (!isOverlay && !isCandidate) continue;
 
+    expectedManifest[relAssetPath] = [width, height, hasWebpFlag];
+    candidates.push({ fullPath, relAssetPath, srcStat, width, height });
+  }
+
+  return { expectedManifest, candidates };
+}
+
+export async function buildMobileAssets(options = {}) {
+  const silent = Boolean(options.silent);
+  const log = silent ? () => {} : console.log;
+
+  log(`📱 [Mobile Asset Pipeline] Scanning for large assets (>= 1024px or > 500KB) with ${sharp ? 'Sharp WebP/PNG engine' : 'pure-JS PNG engine'}...`);
+
+  const outputBaseDir = path.join(rootDir, 'Assets', '_mobile05x');
+  fs.mkdirSync(outputBaseDir, { recursive: true });
+
+  const { expectedManifest, candidates } = await collectMobileManifestCandidates();
+  const manifest = { ...expectedManifest };
+  let newlyGenerated = 0;
+  let skippedUpToDate = 0;
+  let totalSavedBytes = 0;
+  let totalDecodedRamSaved = 0;
+
+  for (const { fullPath, relAssetPath, srcStat, width, height } of candidates) {
     // Relative subpath after "Assets/"
     const subpath = relAssetPath.replace(/^Assets\//, '');
     const destPathBase = path.join(outputBaseDir, subpath);
@@ -374,9 +394,6 @@ export async function buildMobileAssets(options = {}) {
     const pngExists = fs.existsSync(destPngPath);
     const isWebpUpToDate = webpExists && fs.statSync(destWebpPath).mtimeMs >= srcStat.mtimeMs;
     const isPngUpToDate = pngExists && fs.statSync(destPngPath).mtimeMs >= srcStat.mtimeMs;
-
-    const hasWebp = sharp !== null;
-    manifest[relAssetPath] = [width, height, hasWebp ? 1 : 0];
 
     const force = Boolean(options.force);
     if (!force && isWebpUpToDate && isPngUpToDate) {

@@ -1733,9 +1733,10 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   };
 
   const getKnightAwareNameOpts = (entry, normalStrokeWidth, knightStrokeWidth) => {
-    if (entry && entry.isKnight) {
+    const isKnight = Boolean(entry && entry.isKnight);
+    if (isKnight || isDark) {
       return {
-        color: '#050609',
+        color: isKnight ? '#050609' : entry.color,
         stroke: true,
         strokeColor: '#FFFFFF',
         strokeWidth: knightStrokeWidth,
@@ -1745,7 +1746,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
     }
     return {
       color: entry.color,
-      stroke: !isDark,
+      stroke: true,
       strokeWidth: normalStrokeWidth
     };
   };

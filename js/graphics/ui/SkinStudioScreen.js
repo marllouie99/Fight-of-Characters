@@ -36,6 +36,7 @@ import { drawMegumiSkin, _drawMegumiHair, _getMegumiHairImage } from '../fighter
 import { drawNobaraSkin, _drawNobaraHair, _getNobaraHairImage } from '../fighters/nobaraSkin.js';
 import { drawInosukeSkin, _drawInosukeHair, _getInosukeHairImage } from '../fighters/inosukeSkin.js';
 import { drawUlquiorraSkin, _drawUlquiorraHair, _getUlquiorraHairImage } from '../fighters/ulquiorraSkin.js';
+import { drawAizenSkin, _drawAizenHair, _getAizenHairImage, _getAizenFinalHairImage } from '../fighters/aizenSkin.js';
 import { drawZeusSkin, _drawZeusHair, _getZeusHairImage, _drawZeusCrown, _getZeusCrownImage } from '../fighters/zeusSkin.js';
 import { drawCronosSkin } from '../fighters/cronosSkin.js';
 import { drawBomberPixelBody } from '../fighters/bomberSkin.js';
@@ -153,7 +154,7 @@ let _copyToastTimer = 0;
 // Fighter Category Tabs in Skin Studio Modal
 export const SKIN_STUDIO_CATEGORIES = [
   { id: 'ALL', label: 'ALL', filter: () => true },
-  { id: 'JJK', label: 'JJK', filter: (f) => ['ichigo', 'ulquiorra', 'gojo', 'sukuna', 'yuji', 'yuta', 'toji', 'todo', 'nanami', 'mahito', 'naoya', 'maki', 'choso', 'megumi', 'nobara'].includes(f.key) },
+  { id: 'JJK', label: 'JJK', filter: (f) => ['ichigo', 'ulquiorra', 'aizen', 'gojo', 'sukuna', 'yuji', 'yuta', 'toji', 'todo', 'nanami', 'mahito', 'naoya', 'maki', 'choso', 'megumi', 'nobara'].includes(f.key) },
     { id: 'NGNL', label: 'NGNL', filter: (fighter) => fighter.key === 'shiro' },
   { id: 'CHAINSAW', label: 'CSM', filter: (f) => ['makima', 'reze', 'power'].includes(f.key) },
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko', 'inosuke'].includes(f.key) },
@@ -736,6 +737,25 @@ export const SKIN_STUDIO_FIGHTERS = [
       { id: 'default', label: 'ESPADA #4' },
       { id: 'stage1', label: 'MURCIELAGO' },
       { id: 'segunda', label: 'SEGUNDA ETAPA' }
+    ]
+  },
+  {
+    key: 'aizen',
+    label: 'AIZEN',
+    asset: 'Assets/model/aizen/Aizen-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 2.76,
+    baseH: 2.15,
+    baseCrownY: -1.28,
+    visW: 860,
+    visH: 800,
+    centerX: 512,
+    topY: 112,
+    themeColor: '#8B5CF6',
+    forms: [
+      { id: 'default', label: 'BASE' },
+      { id: 'hogyoku', label: 'HŌGYOKU' },
+      { id: 'final', label: 'FINAL FORM' }
     ]
   },
   {
@@ -1553,6 +1573,16 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -525 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 30 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'aizen') {
+    return `// Calibrated Hair for Aizen (Assets/model/aizen/Aizen-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 860;\n` +
+           `const scaleY = targetHairHeight / 800;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -512 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 112 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'tanjiro') {
     return `// Calibrated Hair for Tanjiro (Assets/model/tanjiro/TANJRO-HAIR-MODEL.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
@@ -2161,6 +2191,9 @@ export function drawSkinStudioScreen() {
         dummyFighter.segundaEtapaActive = (state.studioSkinForm === 'segunda');
         dummyFighter.isSegundaEtapa = dummyFighter.segundaEtapaActive;
         drawUlquiorraSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'aizen') {
+        dummyFighter.aizenForm = state.studioSkinForm === 'final' ? 2 : (state.studioSkinForm === 'hogyoku' ? 1 : 0);
+        drawAizenSkin(ctx, dummyFighter);
       } else if (fDef.key === 'genos') {
         drawGenosSkin(ctx, dummyFighter);
         drawGenosHands(ctx, dummyFighter);

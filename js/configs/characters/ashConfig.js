@@ -450,7 +450,12 @@ export const ashConfig = {
       sleep: 'Assets/model/ash/pokemon/greninja/Sleep-Anim.png',
       victory: 'Assets/model/ash/pokemon/greninja/RearUp-Anim.png',
       nightSlash: 'Assets/model/ash/pokemon/greninja/Night_slash/night_slash-b.png',
-      nightSlashFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Night_slash/night_slash-${i + 1}.png`)
+      nightSlashFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Night_slash/night_slash-${i + 1}.png`),
+      waterShurikenFrames: Array.from({ length: 11 }, (_, i) => `Assets/model/ash/pokemon/greninja/Water_shuriken/water_shuriken-${i + 1}.png`),
+      waterSplashFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Water_splash/water_splash-${i + 1}.png`),
+      waterBurstFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Water_burst/water_burst-${i + 1}.png`),
+      nightSlashSparkFrames: Array.from({ length: 4 }, (_, i) => `Assets/model/ash/pokemon/greninja/Night_slash_spark/night_slash_spark-${i + 1}.png`),
+      smokePoofFrames: Array.from({ length: 12 }, (_, i) => `Assets/model/ash/pokemon/greninja/Smoke_poof/smoke_poof-${i + 1}.png`)
     },
     lucario: {
       idle: 'Assets/model/ash/pokemon/lucario/Idle-Anim.png',
@@ -503,10 +508,14 @@ export const ashConfig = {
 
     // Greninja Moves
     nightSlash: 'Assets/Sound Effects/PokemonSFX/nightslash-1.ogg',
-    nightSlashCast: 'Assets/Sound Effects/PokemonSFX/nightslash-2.ogg',
+    nightSlashCast: 'Assets/Sound Effects/PokemonSFX/greninja-nightslash-dash.ogg',
+    nightSlashHit: 'Assets/Sound Effects/PokemonSFX/greninja-nightslash-hit.ogg',
+    greninjaSmoke: 'Assets/Sound Effects/PokemonSFX/greninja-smoke.ogg',
     aerialAce: 'Assets/Sound Effects/PokemonSFX/aerialace.ogg',
-    waterShuriken: 'Assets/Sound Effects/PokemonSFX/waterpulse-1.ogg',
-    waterShurikenCast: 'Assets/Sound Effects/PokemonSFX/waterpulse-2.ogg',
+    waterShuriken: 'Assets/Sound Effects/PokemonSFX/greninja-shuriken-release.ogg',
+    waterShurikenCast: 'Assets/Sound Effects/PokemonSFX/greninja-shuriken-throw.ogg',
+    waterShurikenCharge: 'Assets/Sound Effects/PokemonSFX/greninja-shuriken-charge.ogg',
+    waterShurikenHit: 'Assets/Sound Effects/PokemonSFX/greninja-water-splash.ogg',
 
     // Lucario Moves
     closeCombat: 'Assets/Sound Effects/PokemonSFX/closecombat.ogg',
@@ -539,10 +548,14 @@ export const ashConfig = {
     flamethrower: 0.85,
     fireBlast: 0.85,
     nightSlash: 0.90,
-    nightSlashCast: 0.20,
+    nightSlashCast: 0.75,
+    nightSlashHit: 0.85,
+    greninjaSmoke: 0.70,
     aerialAce: 0.85,
     waterShuriken: 0.85,
     waterShurikenCast: 0.85,
+    waterShurikenCharge: 0.78,
+    waterShurikenHit: 0.82,
     closeCombat: 0.90,
     bulletPunch: 0.80,
     machPunch: 0.80,

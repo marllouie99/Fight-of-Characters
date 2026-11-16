@@ -80,6 +80,7 @@ import { roaringKnightConfig } from '../configs/characters/roaringKnightConfig.j
 import { kaizoKnightConfig } from '../configs/characters/kaizoKnightConfig.js';
 import { errorSansConfig } from '../configs/characters/errorSansConfig.js';
 import { jevilConfig } from '../configs/characters/jevilConfig.js';
+import { aizenConfig } from '../configs/characters/aizenConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -183,6 +184,10 @@ export const CONFIG = {
   uryu: uryuConfig,
   ishida: uryuConfig,
   ulquiorra: ulquiorraConfig,
+  aizen: aizenConfig,
+  Aizen: aizenConfig,
+  AIZEN: aizenConfig,
+  aizen_sosuke: aizenConfig,
   makima: makimaConfig,
   reze: rezeConfig,
   denji: denjiConfig,
@@ -2217,6 +2222,31 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: 1.0,
     ability: jevilConfig.ability || 'Devilsknife Cleave, Spade Ringaround, Chaos Suit Bombs & Final Chaos',
     desc: jevilConfig.desc,
+  },
+  {
+    id: 77,
+    name: aizenConfig.name || 'Aizen',
+    grade: aizenConfig.grade ?? DEFAULT_GRADE,
+    displayName: aizenConfig.displayName || aizenConfig.name || 'AIZEN',
+    category: aizenConfig.category || 'Anime',
+    color: aizenConfig.color || '#8B5CF6',
+    themeColor: aizenConfig.themeColor || '#8B5CF6',
+    secondaryColor: aizenConfig.secondaryColor || '#C084FC',
+    startX: aizenConfig.startX || 300,
+    startY: aizenConfig.startY || 250,
+    startVx: aizenConfig.startVx || 1.2,
+    startVy: aizenConfig.startVy || 1.1,
+    radius: aizenConfig.radius || aizenConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'aizen',
+    hp: aizenConfig.hp || 260,
+    damage: aizenConfig.swordDamage || 16,
+    cooldown: aizenConfig.swordCooldown || 28,
+    moveSpeed: aizenConfig.moveSpeed || aizenConfig.speed || 6.0,
+    projectileSpeedMultiplier: aizenConfig.projectileSpeedMultiplier || 1.0,
+    ability: aizenConfig.ability || 'Kyōka Suigetsu, Kurohitsugi & Hōgyoku Transcendence',
+    desc: aizenConfig.desc,
   }
 ];
 

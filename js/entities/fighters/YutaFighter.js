@@ -116,6 +116,7 @@ export class YutaFighter extends Fighter {
 
     // Pure Love Beam
     this.hasUsedPureLoveBeam = false;
+    this.pureLoveBeamDamageTaken = 0;
     this.isChannelingPureLoveBeam = false;
     this.isFiringPureLoveBeam = false;
     this.pureLoveBeamLockedAngle = undefined;
@@ -375,6 +376,7 @@ export class YutaFighter extends Fighter {
     this.hasActivatedDomainAt25Hp = false;
     this.domainUseCount = 0;
     this.hasUsedPureLoveBeam = false;
+    this.pureLoveBeamDamageTaken = 0;
     this.isChannelingPureLoveBeam = false;
     this.isFiringPureLoveBeam = false;
     this.pureLoveBeamLockedAngle = undefined;
@@ -1132,8 +1134,10 @@ export class YutaFighter extends Fighter {
       return; // Stop other logic while channeling
     }
 
-    if (this.isFiringPureLoveBeam && this.pureLoveBeamActiveTimer > 0) {
-      this.pureLoveBeamActiveTimer--;
+    if (this.isFiringPureLoveBeam) {
+      if (this.pureLoveBeamActiveTimer > 0) {
+        this.pureLoveBeamActiveTimer--;
+      }
       this.vx = 0;
       this.vy = 0;
       this.knockbackVx = 0;
@@ -1193,6 +1197,9 @@ export class YutaFighter extends Fighter {
       // Rika's HP already fully drained during charge phase — no additional drain needed here
       if (this.pureLoveBeamActiveTimer <= 0) {
         this.isFiringPureLoveBeam = false;
+        this.hasUsedPureLoveBeam = true;
+        this.pureLoveBeamDamageTaken = 0;
+        this._maxBeamPct = 0;
         this.pureLoveBeamChargeTimer = 0; // Reset charge timer
         this.pureLoveBeamBreatherTimer = 60; // 1-second post-beam breather recovery pause!
         this.pureLoveBeamLockedAngle = undefined; // Cleanly clear locked angle on beam finish
@@ -1498,13 +1505,19 @@ export class YutaFighter extends Fighter {
       return; // Hold Yuta in emergence pose until Rika is fully manifested!
     }
 
-    // Pure Love Beam Trigger: Automatically triggers when HP <= threshold and Rika is active
-    const pureLoveBeamThreshold = CONFIG.yuta.pureLoveBeamHpThreshold ?? 0.60;
+    // Pure Love Beam Trigger:
+    // - 1st cast: triggers when HP ratio drops to <= pureLoveBeamHpThreshold and Rika is active
+    // - 2nd+ casts: triggers based on cumulative HP lost since the previous beam ended (NOT cooldown!)
+    const pureLoveBeamThreshold = CONFIG.yuta?.pureLoveBeamHpThreshold ?? 0.45;
+    const hpDamageNeededForNextBeam = (this.maxHp || 200) * (CONFIG.yuta?.pureLoveBeam2HpDamageRequired ?? Math.max(0.05, 1 - pureLoveBeamThreshold));
+    const isBeamThresholdMet = this.hasUsedPureLoveBeam
+      ? ((this.pureLoveBeamDamageTaken || 0) >= hpDamageNeededForNextBeam)
+      : (hpRatio <= pureLoveBeamThreshold);
     const isRikaActive = (this.isRikaAliveInDomain() || (this.rika && this.rika.active && !this.rika.isDying && !this.rika.disappearing && this.rika.hp > 0));
     const isControlledRika = this.isMakimaControlledRikaTarget(this.rika);
 
     const isBeamAllowed = this.isSkillEnabled(CONFIG.yuta?.enablePureLoveBeam, true);
-    if (isBeamAllowed && !this.isDemoFighter && !this.isGrabbedByMahoraga && (this.pureLoveBeamCooldownTimer || 0) <= 0 && !this.isChannelingPureLoveBeam && !this.isFiringPureLoveBeam && !this.isChannelingDomain && !isEnemyDomainActive && hpRatio <= pureLoveBeamThreshold && isRikaActive && !isControlledRika) {
+    if (isBeamAllowed && !this.isDemoFighter && !this.isGrabbedByMahoraga && (this.pureLoveBeamCooldownTimer || 0) <= 0 && !this.isChannelingPureLoveBeam && !this.isFiringPureLoveBeam && !this.isChannelingDomain && !isEnemyDomainActive && isBeamThresholdMet && isRikaActive && !isControlledRika) {
       const targetEnemy = (opponent && this.hasSpottedEnemy(opponent, arena)) ? opponent : this._findSpottedEnemy();
 
       if (targetEnemy) {
@@ -1950,6 +1963,10 @@ export class YutaFighter extends Fighter {
       if (this.domainUseCount === 1 && !this.domainActive) {
         this.domain2DamageTaken = (this.domain2DamageTaken || 0) + amount;
       }
+      const isInBeamSequence = this.isChannelingPureLoveBeam || this.isFiringPureLoveBeam || (this.beamRetreatSlideTimer || 0) > 0 || (this.rikaEmergingForBeamTimer || 0) > 0;
+      if (this.hasUsedPureLoveBeam && !isInBeamSequence) {
+        this.pureLoveBeamDamageTaken = (this.pureLoveBeamDamageTaken || 0) + amount;
+      }
 
       // Track 3-second damage window for non-fatal heavy damage RCT heal trigger.
       if (isRCTEnabled && !opts.isHeal && !opts.isStorm && (this.rctCooldown || 0) <= 0 && this.rctRevivalTimer <= 0 && (this.rctHealTimer || 0) <= 0) {
@@ -2056,8 +2073,10 @@ export class YutaFighter extends Fighter {
     this.isChannelingPureLoveBeam = false;
     this.pureLoveBeamChargeTimer = 0; // Reset charge timer so isChannelingSkill() clears cleanly
     this.isFiringPureLoveBeam = true;
+    this.hasUsedPureLoveBeam = true;
+    this.pureLoveBeamDamageTaken = 0;
     this.pureLoveBeamActiveTimer = CONFIG.yuta?.pureLoveBeamDuration || 280;
-    this.pureLoveBeamCooldownTimer = CONFIG.yuta?.pureLoveBeamCooldown || 1200;
+    this.pureLoveBeamCooldownTimer = 0; // Subsequent Pure Love Beams recharge via HP lost, not cooldown
 
     // Lock release angle strictly to whatever angle was committed during channeling (NO snap auto-aim on fire!)
     if (this.pureLoveBeamLockedAngle === undefined) {

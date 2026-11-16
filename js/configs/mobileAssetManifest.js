@@ -75,6 +75,11 @@ export const MOBILE_ASSET_MANIFEST = {
     384,
     1
   ],
+  "Assets/model/ash/pokemon/charizard/Dragon_claw/dragon_claw-b.png": [
+    3072,
+    256,
+    1
+  ],
   "Assets/model/ash/pokemon/charizard/Flame/12-Frame Pixel Fire Projectile Animation.png": [
     2172,
     724,
@@ -250,6 +255,11 @@ export const MOBILE_ASSET_MANIFEST = {
     448,
     1
   ],
+  "Assets/model/ash/pokemon/greninja/Night_slash/night_slash-b.png": [
+    3072,
+    256,
+    1
+  ],
   "Assets/model/ash/pokemon/greninja/RearUp-Anim.png": [
     512,
     384,
@@ -328,6 +338,11 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/ash/pokemon/pikachu/Idle-Anim.png": [
     240,
     448,
+    1
+  ],
+  "Assets/model/ash/pokemon/pikachu/Iron_tail/iron_tail-b.png": [
+    3072,
+    256,
     1
   ],
   "Assets/model/ash/pokemon/pikachu/Shock-Anim.png": [
@@ -518,6 +533,16 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/chigiri/ego_trail/ego_trail-b.png": [
     3072,
     128,
+    1
+  ],
+  "Assets/model/choso/BloodSplash/BloodSplash-b.png": [
+    3072,
+    256,
+    1
+  ],
+  "Assets/model/choso/PiercingBlood/PiercingBlood-b.png": [
+    3072,
+    256,
     1
   ],
   "Assets/model/cj/CJ-baguvix-aura_frame_1.png": [
@@ -1140,6 +1165,16 @@ export const MOBILE_ASSET_MANIFEST = {
     768,
     1
   ],
+  "Assets/model/gojo/gojo_domain_arena_overlay.png": [
+    1200,
+    1200,
+    1
+  ],
+  "Assets/model/gojo/gojo_domain_splashes_overlay.png": [
+    1200,
+    1200,
+    1
+  ],
   "Assets/model/gojo/purple_explosion/explosion-b.png": [
     3072,
     256,
@@ -1300,6 +1335,21 @@ export const MOBILE_ASSET_MANIFEST = {
     496,
     1
   ],
+  "Assets/model/kaizo_knight/KaizoCrescentArc.png": [
+    752,
+    91,
+    1
+  ],
+  "Assets/model/kaizo_knight/RoaringFinalShatter.png": [
+    7680,
+    480,
+    1
+  ],
+  "Assets/model/kaizo_knight/SwordBreakVFX.png": [
+    2198,
+    227,
+    1
+  ],
   "Assets/model/knight/Knight-shield.png": [
     734,
     1281,
@@ -1326,8 +1376,8 @@ export const MOBILE_ASSET_MANIFEST = {
     1
   ],
   "Assets/model/mahito/MAHITO-CLAWS-WEAPON.png": [
-    569,
-    439,
+    600,
+    262,
     1
   ],
   "Assets/model/mahoraga/Mahoraga-eyewings.png": [
@@ -2105,6 +2155,16 @@ export const MOBILE_ASSET_MANIFEST = {
     744,
     1
   ],
+  "Assets/model/roaring_knight/PC _ Computer - Deltarune - Enemies & Bosses (Chapter 3) - The Roaring Knight.png": [
+    2448,
+    4210,
+    1
+  ],
+  "Assets/model/roaring_knight/RoaringSwoonLine.png": [
+    500,
+    44,
+    1
+  ],
   "Assets/model/ruby/Pixel Art Ruby Hair and Hood Sprite.png": [
     1024,
     1024,
@@ -2368,6 +2428,16 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/model/Tiles/stone-slabs-tiles-sprite-sheet.png": [
     512,
     256,
+    1
+  ],
+  "Assets/model/toji/inverted_spear_of_heaven.png": [
+    1354,
+    306,
+    1
+  ],
+  "Assets/model/toji/split_soul_katana.png": [
+    1292,
+    271,
     1
   ],
   "Assets/model/toji/Toji-skin.png": [
@@ -2915,6 +2985,136 @@ export const MOBILE_ASSET_MANIFEST = {
     941,
     1
   ],
+  "Assets/effects/aizen/aizen-bigbang-pillar.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-crush-smash.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-dark-blast.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-explosion-smoke.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-finisher-beam.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-fragor-burst.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-hogyoku-orb.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-hogyoku-pop.png": [
+    640,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-kuro-flash.png": [
+    512,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-kurohitsugi-coffin.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-kurohitsugi-vortex.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-kyoka-shatter.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-multi-explosion.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-raikoho-beam.png": [
+    1792,
+    160,
+    1
+  ],
+  "Assets/effects/aizen/aizen-raikoho-column.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-raikoho-lightning.png": [
+    896,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-reiatsu-pillar.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-rikujokoro-beams.png": [
+    768,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-rush-aura.png": [
+    896,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-shadow-wave.png": [
+    640,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-slash-wave.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-souls-torture.png": [
+    768,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-swallow-abyss.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-thunderbolt-arc.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/aizen/aizen-vibration-rings.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/Avatar/BloodSplatterParticle.png": [
+    341,
+    682,
+    1
+  ],
   "Assets/effects/Avatar/DeadStar.png": [
     512,
     512,
@@ -2936,6 +3136,11 @@ export const MOBILE_ASSET_MANIFEST = {
     1
   ],
   "Assets/effects/Avatar/FrostIllusion_Skull2.png": [
+    512,
+    512,
+    1
+  ],
+  "Assets/effects/Avatar/RiftInnerTexture.png": [
     512,
     512,
     1
