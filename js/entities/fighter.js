@@ -8,7 +8,7 @@ import { MODE_HP_MULTIPLIER, MODE_SPEED_MULTIPLIER, MODE_SETTINGS, GAME_MODES } 
 import { projectileSystem } from '../systems/projectileSystem.js';
 import { audioSystem } from '../systems/audioSystem.js';
 import { getBasicAttackSound } from '../soundEffects/basicAttackSounds.js';
-import { spawnDeathShatter, spawnEyeOfCthulhuDomainSlashGore } from '../graphics/particles/deathShatterEffect.js';
+import { spawnDeathShatter, spawnEyeOfCthulhuDomainSlashGore, isDeltaruneUndertaleFighter } from '../graphics/particles/deathShatterEffect.js';
 import { spawnDroppedMahoragaWheel } from '../graphics/particles/mahoragaDroppedWheel.js';
 import { spawnBloodEffect, spawnFatalBloodSplash, isBloodSuppressedEntity } from '../graphics/particles/bloodEffect.js';
 import { spawnIllusionDeath } from '../graphics/particles/illusionDeathEffect.js';
@@ -704,6 +704,12 @@ export class Fighter {
       d.characterId === 'sans' ||
       d.type === 'sans'
     );
+    const isErrorSans = Boolean(
+      this.characterId === 'error_sans' ||
+      this.type === 'error_sans' ||
+      d.characterId === 'error_sans' ||
+      d.type === 'error_sans'
+    );
 
     const isMakima = Boolean(
       this.characterId === 'makima' ||
@@ -722,6 +728,8 @@ export class Fighter {
 
     if (isSans) {
       this.maxHp = (typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : (d.hp || 1);
+    } else if (isErrorSans) {
+      this.maxHp = (typeof CONFIG !== 'undefined' && CONFIG.error_sans?.hp !== undefined) ? CONFIG.error_sans.hp : (d.hp || 1);
     } else if (!isTurretOrMinion && (MODE_SETTINGS[state.mode]?.fixedHp || modeFixed)) {
       const baseFixed = MODE_SETTINGS[state.mode]?.fixedHp || modeFixed;
       this.maxHp = Math.round(baseFixed * hpRatio);
@@ -2275,7 +2283,7 @@ export class Fighter {
     // Override in subclasses for special attack effects.
   }
 
-  onDeath() {
+  onDeath(attacker = null) {
     this.dead = true;
     this.isDead = true;
     this._hasDied = true;
@@ -2318,7 +2326,7 @@ export class Fighter {
 
     // Death shatter shard explosion (body physically shatters into pieces)
     if (typeof spawnDeathShatter === 'function' && !this.isTurret && !this.isDispenser) {
-      spawnDeathShatter(this);
+      spawnDeathShatter(this, this._lastKillingAttacker || null);
     }
 
     // Mahoraga wheel drop physics on death
@@ -3148,18 +3156,20 @@ export class Fighter {
     this.dead = true;
     this.isDead = true;
 
+    const realAttacker = (attacker && attacker.owner) ? attacker.owner : attacker;
+    this._lastKillingAttacker = realAttacker || null;
+
     // Clear flame particles if the dying fighter is the Flamewarden
     if (this._def && this._def.type === 'orange') {
       flamewardenFlameSystem.clear();
     }
-    this.onDeath();
+    this.onDeath(realAttacker);
     
     if (this.isTurret || this.isDispenser || this.isPlant || this.isMinion || this.isPlantMinion || this.isDeployable) {
       return;
     }
 
-    // Play death sound (suppressed if disintegrating in Nameless Deity beam, defeated by/as Sans, or flagged silent)
-    const realAttacker = (attacker && attacker.owner) ? attacker.owner : attacker;
+    // Play death sound (suppressed if disintegrating in Nameless Deity beam, defeated by/as Undertale/Deltarune fighter, or flagged silent)
     const isNamelessBeamDeath = Boolean(
       (opts && (opts.isNamelessBeam || opts.isBeamDPS || opts.noDeathSound || opts.suppressDeathSound)) ||
       (this.caughtInNamelessBeamTimer && this.caughtInNamelessBeamTimer > 0) ||
@@ -3182,10 +3192,9 @@ export class Fighter {
       this.owner
     );
 
-    const isSansDeath = !isMinionOrSummon && Boolean(
-      this.characterId === 'sans' ||
-      this.type === 'sans' ||
-      (realAttacker && (realAttacker.characterId === 'sans' || realAttacker.type === 'sans'))
+    const isSansDeath = !isMinionOrSummon && (
+      isDeltaruneUndertaleFighter(this) ||
+      isDeltaruneUndertaleFighter(realAttacker)
     );
 
     const isPacmanDeath = !isMinionOrSummon && Boolean(

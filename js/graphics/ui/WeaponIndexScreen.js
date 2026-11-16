@@ -38,6 +38,9 @@ import { drawCrazyDaveWeapon, drawCrazyDaveShovel } from '../weapons/crazyDaveWe
 import { drawPekkaWeapon } from '../weapons/pekkaWeaponGraphics.js';
 import { drawGutsWeaponPreview } from '../weapons/gutsWeaponGraphics.js';
 import { drawRoaringKnightWeaponPreview } from '../weapons/roaringKnightWeaponGraphics.js';
+import { drawKaizoKnightWeaponPreview } from '../weapons/kaizoKnightWeaponGraphics.js';
+import { drawErrorSansWeaponPreview } from '../weapons/errorSansWeaponGraphics.js';
+import { drawJevilWeaponPreview } from '../weapons/jevilWeaponGraphics.js';
 import { drawNamelessDeitySkin } from '../fighters/namelessDeitySkin.js';
 import { spawnHollowMaskShatter, updateDeathEffects, drawDeathEffects } from '../particles/deathShatterEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -1927,7 +1930,7 @@ function drawWeaponPreview(ctx, type, color) {
   else if (type === 'zeus' || type === 'darkslategray' || type === 'berserker' || type === 'bomber' || type === 'melee') offsetX = -35;
   else if (type === 'cronos') offsetX = -55;
   else if (type === 'ruby') offsetX = -75;
-  else if (type === 'toji' || type === 'denji' || type === 'power' || type === 'tanjiro' || type === 'zenitsu' || type === 'inosuke' || type === 'reze' || type === 'crazydave' || type === 'crazy_dave' || type === 'guts' || type === 'escanor' || type === 'roaring_knight') offsetX = -40;
+  else if (type === 'toji' || type === 'denji' || type === 'power' || type === 'tanjiro' || type === 'zenitsu' || type === 'inosuke' || type === 'reze' || type === 'crazydave' || type === 'crazy_dave' || type === 'guts' || type === 'escanor' || type === 'roaring_knight' || type === 'kaizo_knight' || type === 'error_sans' || type === 'jevil') offsetX = -40;
   else if (type === 'nezuko') offsetX = -35;
   else if (type === 'yuta') offsetX = -40;
   else if (type === 'megumi') offsetX = -45;
@@ -2343,6 +2346,18 @@ function drawWeaponPreview(ctx, type, color) {
 
       case 'roaring_knight':
         drawRoaringKnightWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
+        return;
+
+      case 'kaizo_knight':
+        drawKaizoKnightWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
+        return;
+
+      case 'error_sans':
+        drawErrorSansWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
+        return;
+
+      case 'jevil':
+        drawJevilWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
         return;
 
       case 'namelessdeity':

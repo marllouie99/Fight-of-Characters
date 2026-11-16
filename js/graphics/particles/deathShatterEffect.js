@@ -22,11 +22,24 @@ import {
 
 export { spawnChessTroopShatter, spawnTombstoneDeath, updateTombstoneDeathEffects, drawTombstoneDeathEffects, clearTombstoneDeathEffects };
 
+const DELTARUNE_UNDERTALE_IDS = new Set(['sans', 'error_sans', 'roaring_knight', 'kaizo_knight', 'jevil']);
+
+/**
+ * Returns true if the fighter belongs to the Undertale / Deltarune roster
+ * (triggers Red SOUL Heart Split & Shatter death animation on death and on kills).
+ */
+export function isDeltaruneUndertaleFighter(entity) {
+  if (!entity) return false;
+  const id = String(entity.characterId || entity.type || '').toLowerCase();
+  return DELTARUNE_UNDERTALE_IDS.has(id);
+}
+
 /**
  * Spawns a death shatter effect at the fighter's position.
  * @param {Object} fighter - The fighter that died
+ * @param {Object|null} [attacker=null] - The killer entity, if known
  */
-export function spawnDeathShatter(fighter) {
+export function spawnDeathShatter(fighter, attacker = null) {
   if (!fighter) return;
   // Pokémon companions never shatter or leave gravestones; they smoothly faint and are recalled into Poké Balls.
   if (fighter.isPokemon || fighter.isPokemonCompanion || fighter.isPokemonMinion || (typeof fighter.characterId === 'string' && fighter.characterId.startsWith('pokemon_')) || (typeof fighter.type === 'string' && fighter.type.startsWith('pokemon_'))) {
@@ -35,8 +48,16 @@ export function spawnDeathShatter(fighter) {
   // Spawn gravestone pop & ascending ghost soul
   spawnTombstoneDeath(fighter);
 
-  if (fighter.characterId === 'sans' || fighter.type === 'sans') {
-    return spawnSansHeartShatterDeath(fighter);
+  const isMinionVictim = Boolean(
+    fighter.isMinion || fighter.isSummon || fighter.isTurret || fighter.isIllusion ||
+    fighter.isPlant || fighter.isPlantMinion || fighter.isClone || fighter.isServant ||
+    fighter.isSubEntity || fighter.isCompanion || fighter.isDispenser || fighter.owner
+  );
+  const attackerId = String(attacker?.characterId || attacker?.type || '').toLowerCase();
+  const isVictimDeltarune = isDeltaruneUndertaleFighter(fighter);
+  const isKillerNonSansDeltarune = !isMinionVictim && isDeltaruneUndertaleFighter(attacker) && attackerId !== 'sans';
+  if (isVictimDeltarune || isKillerNonSansDeltarune) {
+    return spawnSansHeartShatterDeath(fighter, attacker);
   }
   if (fighter.characterId === 'eye_of_cthulhu' || fighter.type === 'eye_of_cthulhu' || fighter.isServantOfCthulhu) {
     return spawnEyeOfCthulhuTerrariaDeath(fighter, Boolean(fighter.isServantOfCthulhu));
@@ -583,7 +604,7 @@ export function spawnMachineCorpse(x, y, angle) {
  * exploding into pixel shards with HeartShatter.ogg, and Sans's death quote speech bubble.
  * @param {Object} fighter - The Sans fighter that died
  */
-export function spawnSansHeartShatterDeath(fighter) {
+export function spawnSansHeartShatterDeath(fighter, _attacker = null) {
   if (!fighter) return null;
   if (!state.deathEffects) state.deathEffects = [];
   if (typeof state !== 'undefined') state._hadSansDeath = true;
@@ -591,6 +612,11 @@ export function spawnSansHeartShatterDeath(fighter) {
   const x = fighter.x || 0;
   const y = fighter.y || 0;
   const r = fighter.r || 25;
+  const victimId = String(fighter.characterId || fighter.type || '').toLowerCase();
+  let quoteText = null;
+  if (victimId === 'sans') quoteText = "welp. i'm going to grillby's.";
+  else if (victimId === 'error_sans') quoteText = 'fatal error. crashing...';
+  else if (victimId === 'jevil') quoteText = 'bye-bye! chaos, chaos!';
 
   const effect = {
     x: x,
@@ -604,15 +630,15 @@ export function spawnSansHeartShatterDeath(fighter) {
     soundPlayedShatter: false,
     isSansHeartShatter: true,
     life: 1.0,
-    speechBubble: {
+    speechBubble: quoteText ? {
       text: '',
-      fullText: "welp. i'm going to grillby's.",
+      fullText: quoteText,
       charIndex: 0,
       timer: 160,
       maxTimer: 160,
       charTimer: 0,
       blipInterval: 3
-    }
+    } : null
   };
 
   state.deathEffects.push(effect);

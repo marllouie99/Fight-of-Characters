@@ -13,11 +13,17 @@ import { drawWeaponPreview } from './WeaponIndexScreen.js';
 import { _getZenitsuAssemblyImage } from '../weapons/demonSlayerWeaponGraphics.js';
 import { _getEscanorWeaponImage } from '../weapons/escanorWeaponGraphics.js';
 import { _preloadRoaringKnightWeaponSprites } from '../weapons/roaringKnightWeaponGraphics.js';
+import { _preloadKaizoKnightWeaponSprites } from '../weapons/kaizoKnightWeaponGraphics.js';
+import { _preloadErrorSansWeaponSprites } from '../weapons/errorSansWeaponGraphics.js';
+import { _preloadJevilWeaponSprites } from '../weapons/jevilWeaponGraphics.js';
 
 if (typeof window !== 'undefined') {
   _getZenitsuAssemblyImage?.();
   _getEscanorWeaponImage?.();
   _preloadRoaringKnightWeaponSprites?.();
+  _preloadKaizoKnightWeaponSprites?.();
+  _preloadErrorSansWeaponSprites?.();
+  _preloadJevilWeaponSprites?.();
 }
 
 // Currently selected weapon key in studio: 'mahito' | 'yuta' | 'toji' | 'cronos' | 'ruby'
@@ -148,6 +154,15 @@ function initCustomizations() {
   if (!state.weaponCustomizations.roaring_knight) {
     state.weaponCustomizations.roaring_knight = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
   }
+  if (!state.weaponCustomizations.kaizo_knight) {
+    state.weaponCustomizations.kaizo_knight = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
+  if (!state.weaponCustomizations.error_sans) {
+    state.weaponCustomizations.error_sans = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
+  if (!state.weaponCustomizations.jevil) {
+    state.weaponCustomizations.jevil = { offsetX: 0, offsetY: 0, scale: 1.15, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
   if (!state.weaponCustomizations.zenitsu) {
     state.weaponCustomizations.zenitsu = {
       offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0,
@@ -228,6 +243,7 @@ export function drawWeaponStudioScreen() {
     { key: 'cronos', label: 'CRONOS' },
     { key: 'ruby', label: 'RUBY' },
     { key: 'roaring_knight', label: 'R. KNIGHT' },
+    { key: 'kaizo_knight', label: 'K. KNIGHT' },
     { key: 'rubbick', label: 'RUBBICK' },
     { key: 'uryu', label: 'URYU' },
     { key: 'ulquiorra', label: 'ULQUIORRA' },
@@ -241,10 +257,10 @@ export function drawWeaponStudioScreen() {
     { key: 'guts', label: 'GUTS' }
   ];
 
-  // Distribute across 3 rows (6, 5, 6) preserving existing row3 chip coordinates
+  // Distribute across 3 balanced rows (6, 6, 6)
   const row1 = weapons.slice(0, 6);
-  const row2 = weapons.slice(6, 11);
-  const row3 = weapons.slice(11, 17);
+  const row2 = weapons.slice(6, 12);
+  const row3 = weapons.slice(12, 18);
 
   const rW = 80;
   const rH = 22;

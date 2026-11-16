@@ -189,6 +189,17 @@ export function isRoaringKnightFighter(f) {
   return charId === 'roaring_knight' || charId === 'roaringknight';
 }
 
+function isStaminaSansVariant(f) {
+  if (!f) return false;
+  const charId = String(
+    f.characterId ||
+    f.type ||
+    (f._def && (f._def.id || f._def.type)) ||
+    ''
+  ).toLowerCase();
+  return charId === 'sans' || charId === 'error_sans' || charId === 'errorsans';
+}
+
 export function getFighterThemeColor(f, fallbackColor = '#38bdf8') {
   if (!f) return fallbackColor;
   const isYuta = Boolean(
@@ -1779,7 +1790,7 @@ function updateTacticalCard(cardObj, f, index, accentColor) {
   }
   if (cardObj.card.style.display !== '') cardObj.card.style.display = '';
 
-  const isSans = f && (f.characterId === 'sans' || f.type === 'sans' );
+  const isSans = isStaminaSansVariant(f);
   const isDead = f.hp <= 0;
   let maxHp, hp, ratio, percent, barColor;
   if (isSans) {
@@ -2055,9 +2066,9 @@ function getTopDuelTimerSecondsString() {
 export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2SkillsHTML = '', f3 = null, f3SkillsHTML = '') {
   if (!f1 || !f2) return '';
 
-  const isF1Sans = Boolean(f1.characterId === 'sans' || f1.type === 'sans');
-  const isF2Sans = Boolean(f2.characterId === 'sans' || f2.type === 'sans');
-  const isF3Sans = Boolean(f3 && (f3.characterId === 'sans' || f3.type === 'sans'));
+  const isF1Sans = isStaminaSansVariant(f1);
+  const isF2Sans = isStaminaSansVariant(f2);
+  const isF3Sans = isStaminaSansVariant(f3);
   const isF1NamelessDeity = Boolean(f1.characterId === 'namelessdeity' || f1.characterId === 'nameless_deity' || f1.type === 'namelessdeity' || f1.type === 'nameless_deity');
   const isF2NamelessDeity = Boolean(f2.characterId === 'namelessdeity' || f2.characterId === 'nameless_deity' || f2.type === 'namelessdeity' || f2.type === 'nameless_deity');
   const isF3NamelessDeity = Boolean(f3 && (f3.characterId === 'namelessdeity' || f3.characterId === 'nameless_deity' || f3.type === 'namelessdeity' || f3.type === 'nameless_deity'));
@@ -2171,7 +2182,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
       const chalHp = MODE_SETTINGS[state.mode]?.challengerFixedHp ?? MODE_SETTINGS[state.mode]?.enemyFixedHp ?? 500;
       const nextBarColor = nextDef ? getFighterHealthBarColor(nextDef, 1.0, isDark) : 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)';
       const isNextNamelessDeity = Boolean(nextDef && (nextDef.characterId === 'namelessdeity' || nextDef.type === 'namelessdeity'));
-      const isNextSans = Boolean(nextDef && (nextDef.characterId === 'sans' || nextDef.type === 'sans'));
+      const isNextSans = isStaminaSansVariant(nextDef);
       const isNextRoaringKnight = isRoaringKnightFighter(nextDef);
       const nextNameClass = `${isNextSans ? ' hud-sans-name' : ''}${isNextRoaringKnight ? ' hud-roaring-knight-name' : ''}`;
 
@@ -2642,6 +2653,11 @@ function updateHealthHud() {
       }
 
       // 2. HP: 1/1 (True Glass Cannon)
+      info.push(`<b>HP:</b> 1/1`);
+    } else if (f.characterId === 'error_sans' || f.type === 'error_sans') {
+      const cfg = (typeof CONFIG !== 'undefined' && CONFIG.error_sans) ? CONFIG.error_sans : {};
+      const baseBoneDmg = cfg.basicBoneDamage || cfg.damage || 11;
+      info.push(`<b>DMG:</b> ${baseBoneDmg}`);
       info.push(`<b>HP:</b> 1/1`);
     } else if (f.characterId === 'yuta' || f.type === 'yuta') {
       const isRikaAlive = typeof f.isRikaAliveInDomain === 'function' ? f.isRikaAliveInDomain() : (f.rika && f.rika.active && !f.rika.isDying);
@@ -4010,7 +4026,7 @@ function updateHealthHud() {
     if (members && members.length > 0) {
       barsHTML = members.map((m, mIndex) => {
         const isMemberCj = isCjCustomHudActive(m);
-        const isMemberSans = m && (m.characterId === 'sans' || m.type === 'sans');
+        const isMemberSans = isStaminaSansVariant(m);
         let ratio, percent, barColor, hpText;
         if (isMemberSans) {
           const isDead = m.hp <= 0;
@@ -4145,7 +4161,7 @@ function updateHealthHud() {
       }).join('');
     } else {
       const isTargetCj = isCjCustomHudActive(targetFighter);
-      const isTargetSans = targetFighter && (targetFighter.characterId === 'sans' || targetFighter.type === 'sans');
+      const isTargetSans = isStaminaSansVariant(targetFighter);
       let percent, barColor, displayValue;
       if (isTargetSans) {
         const isDead = targetFighter.hp <= 0;
@@ -4334,7 +4350,7 @@ function updateHealthHud() {
         const ratio = maxHp > 0 ? Math.min(1.0, Math.max(0, Number(curHp) / Number(maxHp))) : 0;
         const percent = Math.min(100, Math.max(0, Math.round(ratio * 100)));
         const barColor = getFighterHealthBarColor(bossFighter, ratio, isDark);
-        const isBossSans = Boolean(bossFighter.characterId === 'sans' || bossFighter.type === 'sans');
+        const isBossSans = isStaminaSansVariant(bossFighter);
         const bossName = getFighterDisplayName(bossFighter, true);
         const bossSubname = getBossSubName(bossFighter);
         const bossColor = getFighterThemeColor(bossFighter, '#ef4444');
@@ -4446,7 +4462,7 @@ function updateHealthHud() {
         const fighterThemeColor = getFighterThemeColor(chFighter, chIdx === 0 ? '#38bdf8' : '#f43f5e');
         const chColor = fighterThemeColor || chFighter.color;
         let nameColor = isDark ? (fighterThemeColor || '#ffffff') : '#000000';
-        const isChSans = Boolean(chFighter.characterId === 'sans' || chFighter.type === 'sans');
+        const isChSans = isStaminaSansVariant(chFighter);
         const fighterName = getFighterDisplayName(chFighter, true);
         const fighterStats = state.leaderboard ? (state.leaderboard[chFighter.fighterIndex] || { wins: 0, losses: 0 }) : { wins: 0, losses: 0 };
         const careerWins = fighterStats.wins;
@@ -4780,7 +4796,7 @@ function updateHealthHud() {
         const is1v1Mode = (mode === '1v1' || mode === GAME_MODES.ONE_VS_ONE || mode === GAME_MODES.HORIZONTAL_1V1 || mode === '1v1 Widescreen Duel');
         const maxBulletsCount = (is1v1Mode && !isSideHud) ? 2 : 0;
 
-        const isSans = Boolean(fighter.characterId === 'sans' || fighter.type === 'sans' );
+        const isSans = isStaminaSansVariant(fighter);
         const fighterThemeColor = getFighterThemeColor(fighter, nameColor);
         const nameClass = `health-card__member-name${isSans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(fighter) ? ' hud-roaring-knight-name' : ''}`;
         const isFfaVertical = isFfa && !isH;
@@ -5060,7 +5076,7 @@ function updateHealthHud() {
         }
 
         const isCj = isCjCustomHudActive(fighter);
-        const isSans = fighter && (fighter.characterId === 'sans' || fighter.type === 'sans' );
+        const isSans = isStaminaSansVariant(fighter);
 
         if (m.nameEl) {
           const currentName = getFighterDisplayName(fighter, true);
@@ -5391,7 +5407,7 @@ function updateHealthHud() {
       }
 
       const isCj = isCjCustomHudActive(fighter);
-      const isSans = fighter && (fighter.characterId === 'sans' || fighter.type === 'sans' );
+      const isSans = isStaminaSansVariant(fighter);
       const isBossBar = Boolean(isBossBattle && _cachedTopContainer && cachedCard.hpBar && _cachedTopContainer.contains(cachedCard.hpBar));
       const curHp = (typeof fighter.getDisplayHp === 'function') ? fighter.getDisplayHp() : fighter.hp;
       let percent, barColor, metaValue;
@@ -5644,7 +5660,7 @@ function updateHealthHud() {
             cachedCard.lastBossNameOpacity = 1;
           }
         }
-        const isBossSans = Boolean(fighter.characterId === 'sans' || fighter.type === 'sans' );
+        const isBossSans = isStaminaSansVariant(fighter);
         const bossName = getFighterDisplayName(fighter, true);
         if (cachedCard.lastBossName !== bossName) {
           cachedCard.bossCardName.textContent = bossName;
@@ -5675,7 +5691,7 @@ function updateHealthHud() {
             cachedCard.lastChOpacity = 1;
           }
         }
-        const isChSans = Boolean(fighter.characterId === 'sans' || fighter.type === 'sans' );
+        const isChSans = isStaminaSansVariant(fighter);
         const chName = getFighterDisplayName(fighter, true);
         if (cachedCard.lastChName !== chName) {
           cachedCard.chCardName.textContent = chName;

@@ -18,6 +18,8 @@ import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../core/s
 import { audioSystem } from '../../systems/audioSystem.js';
 import { spawnSparks, spawnParrySparksEffect } from '../../graphics/particles/sparkEffect.js';
 import { drawRoaringKnightSkin, drawRoaringKnightGhostSkin } from '../../graphics/fighters/roaringKnightSkin.js';
+import { resetSpeechState, triggerFighterSpeech, updateFighterSpeech, tickFighterIntroAndWinSpeech } from '../../systems/undertaleSpeech.js';
+import { drawSansSpeechBubble } from '../../graphics/weapons/sansWeaponGraphics.js';
 import {
   drawRoaringKnightBlackKnife,
   drawFallingSwordEntity,
@@ -201,6 +203,7 @@ export class RoaringKnightFighter extends Fighter {
     this.afterImages = [];
     this._afterImageTick = 0;
 
+    resetSpeechState(this);
     this._registerCooldownExclusions();
   }
 
@@ -439,6 +442,8 @@ export class RoaringKnightFighter extends Fighter {
 
     this._spawnParryBlockEffects(attacker, opts, { lightweight: isContinuousHit && (this._parrySfxCooldownTimer || 0) > 0 });
     this._applyParryRiposte(attacker, opts);
+    const parryLines = ['futile.', '...too slow.', 'denied.'];
+    triggerFighterSpeech(this, parryLines[(this.parryCount || 0) % parryLines.length], { duration: 80, borderColor: '#18181B', blipSpeed: 0.62 });
     return true;
   }
 
@@ -558,6 +563,7 @@ export class RoaringKnightFighter extends Fighter {
    */
   _updateAllTransientEffects(opponent, arena) {
     this._vfxTick++;
+    updateFighterSpeech(this);
     if (this.parryHitAnimTimer > 0) this.parryHitAnimTimer--;
     if (this.parryWhiteFlashTimer > 0) this.parryWhiteFlashTimer--;
     if (this.parryShakeTimer > 0) this.parryShakeTimer--;
@@ -679,6 +685,11 @@ export class RoaringKnightFighter extends Fighter {
     const prevY = this.y;
 
     // 4. AI Combat Decision & Aggressive Steering
+    tickFighterIntroAndWinSpeech(this, opponent, {
+      introText: '...the roaring draws near.',
+      winText: '...darkness falls.',
+      speechStyle: { borderColor: '#18181B', blipSpeed: 0.62 },
+    });
     this._decideAndMove(opponent, arena);
 
     // 5. Centralized Physics & Wall Bounce via Fighter base class
@@ -3253,6 +3264,7 @@ export class RoaringKnightFighter extends Fighter {
     this.swoonCooldownTimer = cfg.swoonCooldown ?? 0;
     this.skillCastAngle = dashAngle;
     this.gunAngle = dashAngle;
+    triggerFighterSpeech(this, 'SWOON.', { duration: 105, force: true, preserveCase: true, borderColor: '#18181B', blipSpeed: 0.58 });
     this.vx = Math.cos(dashAngle) * dashSpeed;
     this.vy = Math.sin(dashAngle) * dashSpeed;
 
@@ -4032,8 +4044,9 @@ export class RoaringKnightFighter extends Fighter {
       });
     }
 
-    // 5. Mandatory Rule 21 Overhead HP & Status Indicators
+    // 5. Mandatory Rule 21 Overhead HP & Status Indicators + Deltarune Speech Bubble
     this.drawHealth(ctx);
     this.drawFreezeTimer(ctx);
+    drawSansSpeechBubble(ctx, this);
   }
 }

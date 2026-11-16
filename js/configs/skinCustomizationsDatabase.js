@@ -82,7 +82,10 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   nobara: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   inosuke: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   ulquiorra: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
-  roaring_knight: { widthScale: 1.20, heightScale: 1.20, offsetX: 0, offsetY: -5, angleOffset: 0, flipX: false, flipY: false }
+  roaring_knight: { widthScale: 1.20, heightScale: 1.20, offsetX: 0, offsetY: -5, angleOffset: 0, flipX: false, flipY: false },
+  kaizo_knight: { widthScale: 1.20, heightScale: 1.20, offsetX: 0, offsetY: -5, angleOffset: 0, flipX: false, flipY: false },
+  error_sans: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
+  jevil: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false }
 };
 
 export const DEFAULT_SKIN_CUSTOMIZATIONS = SKIN_CUSTOMIZATIONS_DATABASE;

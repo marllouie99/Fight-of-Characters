@@ -258,6 +258,21 @@ export function resetFighter(fighter) {
   fighter.reset();
 }
 
+export function _resolveModeFixedHp(fighter, baseFixedHp) {
+  if (!fighter) return baseFixedHp;
+  const charId = fighter.characterId || fighter.type;
+  if (charId === 'sans') {
+    return (typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1;
+  }
+  if (charId === 'error_sans') {
+    return (typeof CONFIG !== 'undefined' && CONFIG.error_sans?.hp !== undefined) ? CONFIG.error_sans.hp : 1;
+  }
+  if (charId === 'makima') {
+    return Math.round(baseFixedHp * (CONFIG.makima?.maxHpRatio ?? 1.0));
+  }
+  return baseFixedHp;
+}
+
 export function reinitFighters(isNewMatch = false) {
   // Proper cleanup of PixiJS Sprites before resetting lengths
   ParticleSystem.clearAll();
@@ -443,18 +458,14 @@ export function reinitFighters(isNewMatch = false) {
     const fixedHp = MODE_SETTINGS[state.mode]?.playerFixedHp || 1000;
     if (!state.fighters[0].isTurret && !state.fighters[0].isMinion) {
       const f = state.fighters[0];
-      const isSans = (f.characterId === 'sans' || f.type === 'sans');
-      const isMakima = (f.characterId === 'makima' || f.type === 'makima');
-      const hp = isSans ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1) : (isMakima ? Math.round(fixedHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : fixedHp);
+      const hp = _resolveModeFixedHp(f, fixedHp);
       f.maxHp = hp;
       f.hp = hp;
     }
     if (state.fighters[1] && !state.fighters[1].isTurret && !state.fighters[1].isMinion) {
       const f2 = state.fighters[1];
       const challengerHp = MODE_SETTINGS[state.mode]?.challengerFixedHp ?? MODE_SETTINGS[state.mode]?.enemyFixedHp ?? 500;
-      const isSans2 = (f2.characterId === 'sans' || f2.type === 'sans');
-      const isMakima2 = (f2.characterId === 'makima' || f2.type === 'makima');
-      const hp2 = isSans2 ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1) : (isMakima2 ? Math.round(challengerHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : challengerHp);
+      const hp2 = _resolveModeFixedHp(f2, challengerHp);
       f2.maxHp = hp2;
       f2.hp = hp2;
     }
@@ -465,9 +476,7 @@ export function reinitFighters(isNewMatch = false) {
         if (idx === 0) {
           BossManager.initializeBoss(f);
         } else {
-          const isSans = (f.characterId === 'sans' || f.type === 'sans');
-          const isMakima = (f.characterId === 'makima' || f.type === 'makima');
-          const hp = isSans ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1) : (isMakima ? Math.round(fixedHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : fixedHp);
+          const hp = _resolveModeFixedHp(f, fixedHp);
           f.maxHp = hp;
           f.hp = hp;
         }
@@ -477,9 +486,7 @@ export function reinitFighters(isNewMatch = false) {
     const fixedHp = MODE_SETTINGS[state.mode].fixedHp;
     state.fighters.forEach((f) => {
       if (f && !f.isTurret && !f.isMinion && !f.isDeployable && !f.isIceWall && !f.isIllusion) {
-        const isSans = (f.characterId === 'sans' || f.type === 'sans');
-        const isMakima = (f.characterId === 'makima' || f.type === 'makima');
-        const hp = isSans ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1) : (isMakima ? Math.round(fixedHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : fixedHp);
+        const hp = _resolveModeFixedHp(f, fixedHp);
         f.maxHp = hp;
         f.hp = hp;
       }
@@ -1077,9 +1084,7 @@ export function spawnTagInFighter(teamIndex) {
   newFighter.reset();
 
   const fixedHp = MODE_SETTINGS[state.mode]?.fixedHp || 1000;
-  const isSans = (newFighter.characterId === 'sans' || newFighter.type === 'sans');
-  const isMakima = (newFighter.characterId === 'makima' || newFighter.type === 'makima');
-  const hp = isSans ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1) : (isMakima ? Math.round(fixedHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : fixedHp);
+  const hp = _resolveModeFixedHp(newFighter, fixedHp);
   newFighter.maxHp = hp;
   newFighter.hp = hp;
 

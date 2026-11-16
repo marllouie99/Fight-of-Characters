@@ -347,7 +347,40 @@ export const AUDIO_CONFIG = {
   'roaring_knight_rotatingslash_line': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav',
   'roaring_knight_pulse2': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_pulse2.wav',
   'roaring_knight_stretch': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_stretch.wav',
-  'roaring_knight_puff': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav'
+  'roaring_knight_puff': 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav',
+
+  // Kaizo Knight (Deltarune Kaizo Mod v2.3.3)
+  'kaizo_knight_fountain_target': 'Assets/Sound Effects/KaizoKnightSFX/snd_fountain_target.ogg',
+  'kaizo_knight_fountain_make': 'Assets/Sound Effects/KaizoKnightSFX/snd_fountain_make.ogg',
+  'kaizo_knight_use_fountain': 'Assets/Sound Effects/KaizoKnightSFX/snd_usefountain.ogg',
+  'kaizo_knight_great_shine': 'Assets/Sound Effects/KaizoKnightSFX/snd_great_shine.ogg',
+  'kaizo_knight_him_quick': 'Assets/Sound Effects/KaizoKnightSFX/snd_him_quick.ogg',
+  'kaizo_knight_dtrans_flip': 'Assets/Sound Effects/KaizoKnightSFX/snd_dtrans_flip.ogg',
+  'kaizo_knight_dtrans_heavy': 'Assets/Sound Effects/KaizoKnightSFX/snd_dtrans_heavypassing.ogg',
+  'kaizo_knight_dtrans_twinkle': 'Assets/Sound Effects/KaizoKnightSFX/snd_dtrans_twinkle.ogg',
+  'kaizo_knight_dtrans_square': 'Assets/Sound Effects/KaizoKnightSFX/snd_dtrans_square.ogg',
+  'kaizo_knight_dtrans_drone': 'Assets/Sound Effects/KaizoKnightSFX/snd_dtrans_drone.ogg',
+  'kaizo_knight_icespell': 'Assets/Sound Effects/KaizoKnightSFX/snd_icespell.ogg',
+  'kaizo_knight_snowgrave': 'Assets/Sound Effects/KaizoKnightSFX/snd_snowgrave.ogg',
+  'kaizo_knight_pacify': 'Assets/Sound Effects/KaizoKnightSFX/snd_spell_pacify.ogg',
+  'kaizo_knight_revival': 'Assets/Sound Effects/KaizoKnightSFX/snd_revival.ogg',
+
+  // Error Sans (Anti-Void AU Destroyer)
+  'error_sans_badnoise1': 'Assets/Sound Effects/ErrorSans/badnoise1.mp3',
+  'error_sans_badnoise2': 'Assets/Sound Effects/ErrorSans/badnoise2.mp3',
+  'error_sans_badnoise3': 'Assets/Sound Effects/ErrorSans/badnoise3.mp3',
+
+  // Jevil (Deltarune Ch.1 Secret Boss)
+  'jevil_attack_1': 'Assets/Sound Effects/Jevil/jevil_attack_1.wav',
+  'jevil_hit_1': 'Assets/Sound Effects/Jevil/jevil_hit_1.wav',
+  'jevil_hit_2': 'Assets/Sound Effects/Jevil/jevil_hit_2.wav',
+  'jevil_laugh_1': 'Assets/Sound Effects/Jevil/jevil_laugh_1.wav',
+  'jevil_laugh_2': 'Assets/Sound Effects/Jevil/jevil_laugh_2.wav',
+  'jevil_alittlechaos': 'Assets/Sound Effects/Jevil/alittlechaos.wav',
+  'jevil_chaoschaos': 'Assets/Sound Effects/Jevil/chaoschaos.wav',
+  'jevil_icandoanything': 'Assets/Sound Effects/Jevil/icandoanything.wav',
+  'jevil_metamorphosis': 'Assets/Sound Effects/Jevil/metamorphosis.wav',
+  'jevil_byebye': 'Assets/Sound Effects/Jevil/byebye.wav'
 };
 
 

@@ -57,6 +57,12 @@ export { drawCreeperSkin, drawCreeperPixelBody, _drawCreeperHair } from './fight
 export { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from './fighters/wardenSkin.js';
 export { drawRoaringKnightSkin, drawRoaringKnightPixelBody, drawRoaringKnightGhostSkin, _drawRoaringKnightHair, _getRoaringKnightHairImage } from './fighters/roaringKnightSkin.js';
 export { drawRoaringKnightBlackKnife, drawRoaringKnightWeaponPreview, drawFallingSwordEntity, drawTrackingSwordSlashVFX, drawStarBurstProjectile, drawStarChildFragment, drawRoaringSwoonVFX, drawRotatingSlashTelegraph, drawRotatingSlashVFX, drawRoaringKnightFrontSlashTrail, isRoaringKnightFlurryReady } from './weapons/roaringKnightWeaponGraphics.js';
+export { drawKaizoKnightSkin, drawKaizoKnightPixelBody, drawKaizoKnightGhostSkin, _drawKaizoKnightHair, _getKaizoKnightHairImage } from './fighters/kaizoKnightSkin.js';
+export { drawKaizoKnightRadiantKnife, drawKaizoKnightWeaponPreview, drawKaizoCrescentProjectile, drawKaizoBoardSlashVFX, drawSoulSplitterVFX, drawDiamondStormProjectile, drawKaizoSwordVortexAndTunnelVFX, drawHypernovaStarstormVFX, drawRoaringDeltaVFX, drawKaizoParryVFX } from './weapons/kaizoKnightWeaponGraphics.js';
+export { drawErrorSansSkin, drawErrorSansPixelBody, drawErrorSansGhostSkin, _drawErrorSansHair, _getErrorSansHairImage } from './fighters/errorSansSkin.js';
+export { drawErrorSansWeaponPreview, drawErrorGasterBlaster, drawErrorBoneProjectile, drawErrorBoneTrap, drawErrorStringsVFX, drawForcedCrashVFX } from './weapons/errorSansWeaponGraphics.js';
+export { drawJevilSkin, drawJevilPixelBody, drawJevilGhostSkin, _drawJevilHair, _getJevilHairImage } from './fighters/jevilSkin.js';
+export { drawJevilDevilsknife, drawJevilWeaponPreview, drawJevilSuitBullet, drawJevilSuitBomb, drawJevilSpinningScythe, drawJevilMerryGoRound, drawJevilFinalChaosRipples } from './weapons/jevilWeaponGraphics.js';
 export { drawIsagiSkin, drawIsagiGhostSkin, drawIsagiPixelBody, _drawIsagiHair, _getIsagiHairImage, drawIsagiFist } from './fighters/isagiSkin.js';
 export { drawChigiriSkin, drawChigiriGhostSkin, drawChigiriPixelBody, _drawChigiriHair, _getChigiriHairImage, drawChigiriFist } from './fighters/chigiriSkin.js';
 export { drawMinecraftTntBlock, drawCreeperExplosion } from './weapons/creeperWeaponGraphics.js';

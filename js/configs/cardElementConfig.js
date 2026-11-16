@@ -177,6 +177,11 @@ const TYPE_ELEMENT_MAP = {
   zombie: 'dark',
   roaring_knight: 'dark',
   roaringknight: 'dark',
+  kaizo_knight: 'dark',
+  kaizoknight: 'dark',
+  error_sans: 'dark',
+  errorsans: 'dark',
+  jevil: 'dark',
 
   // Grass (Flora, Botanical & Nature)
   crazydave: 'grass',

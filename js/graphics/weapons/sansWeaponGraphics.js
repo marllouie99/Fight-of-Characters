@@ -629,49 +629,58 @@ export function drawSansSpeechBubble(ctx, fighter) {
   }
   ctx.globalAlpha = alpha;
 
-  const font = '700 13px "Comic Sans MS", "Comic Neue", "Chalkboard SE", monospace, sans-serif';
+  const font = bubble.font || '700 13px "Comic Sans MS", "Comic Neue", "Chalkboard SE", monospace, sans-serif';
   ctx.font = font;
-  const textW = ctx.measureText(text).width;
+  const textW = typeof ctx.measureText === 'function' ? ctx.measureText(text).width : text.length * 7.5;
   const padX = 12;
-  const padY = 5;
   const bubbleW = Math.max(56, textW + padX * 2);
   const bubbleH = 24;
 
-  const bubbleX = fighter.x;
-  const bubbleY = fighter.y - (fighter.z || 0) - fighter.r - 26;
+  const bubbleX = fighter.x || 0;
+  const bubbleY = (fighter.y || 0) - (fighter.z || 0) - (fighter.r || 25) - 26;
 
   const left = bubbleX - bubbleW / 2;
   const top = bubbleY - bubbleH / 2;
   const r = 5;
 
-  // Draw Speech Bubble Body (White fill with 2px Black Border)
-  ctx.fillStyle = '#FFFFFF';
-  ctx.strokeStyle = '#000000';
+  // Draw Speech Bubble Body (White fill with crisp 2px border)
+  ctx.fillStyle = bubble.bgColor || '#FFFFFF';
+  ctx.strokeStyle = bubble.borderColor || '#000000';
   ctx.lineWidth = 2.0;
 
   ctx.beginPath();
-  ctx.moveTo(left + r, top);
-  ctx.lineTo(left + bubbleW - r, top);
-  ctx.arcTo(left + bubbleW, top, left + bubbleW, top + r, r);
-  ctx.lineTo(left + bubbleW, top + bubbleH - r);
-  ctx.arcTo(left + bubbleW, top + bubbleH, left + bubbleW - r, top + bubbleH, r);
+  if (typeof ctx.arcTo === 'function') {
+    ctx.moveTo(left + r, top);
+    ctx.lineTo(left + bubbleW - r, top);
+    ctx.arcTo(left + bubbleW, top, left + bubbleW, top + r, r);
+    ctx.lineTo(left + bubbleW, top + bubbleH - r);
+    ctx.arcTo(left + bubbleW, top + bubbleH, left + bubbleW - r, top + bubbleH, r);
 
-  // Downward pointer tail pointing down towards Sans's head
-  ctx.lineTo(bubbleX + 4, top + bubbleH);
-  ctx.lineTo(bubbleX, top + bubbleH + 7);
-  ctx.lineTo(bubbleX - 4, top + bubbleH);
+    // Downward pointer tail pointing down towards fighter's head
+    ctx.lineTo(bubbleX + 4, top + bubbleH);
+    ctx.lineTo(bubbleX, top + bubbleH + 7);
+    ctx.lineTo(bubbleX - 4, top + bubbleH);
 
-  ctx.lineTo(left + r, top + bubbleH);
-  ctx.arcTo(left, top + bubbleH, left, top + bubbleH - r, r);
-  ctx.lineTo(left, top + r);
-  ctx.arcTo(left, top, left + r, top, r);
+    ctx.lineTo(left + r, top + bubbleH);
+    ctx.arcTo(left, top + bubbleH, left, top + bubbleH - r, r);
+    ctx.lineTo(left, top + r);
+    ctx.arcTo(left, top, left + r, top, r);
+  } else {
+    ctx.moveTo(left, top);
+    ctx.lineTo(left + bubbleW, top);
+    ctx.lineTo(left + bubbleW, top + bubbleH);
+    ctx.lineTo(bubbleX + 4, top + bubbleH);
+    ctx.lineTo(bubbleX, top + bubbleH + 7);
+    ctx.lineTo(bubbleX - 4, top + bubbleH);
+    ctx.lineTo(left, top + bubbleH);
+  }
   ctx.closePath();
 
   ctx.fill();
   ctx.stroke();
 
-  // Render strictly lowercase dialogue in crisp Undertale black
-  ctx.fillStyle = '#000000';
+  // Render dialogue in crisp Undertale ink
+  ctx.fillStyle = bubble.textColor || '#000000';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, bubbleX, bubbleY);

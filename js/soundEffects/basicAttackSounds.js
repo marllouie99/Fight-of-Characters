@@ -1428,6 +1428,33 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
       return CONFIG.roaring_knight?.soundVolumes?.cut1 ?? 0.90;
     },
     delay: 0,
+  },
+  'kaizo_knight': {
+    get src() {
+      return CONFIG.kaizo_knight?.sounds?.cut1 || 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_cut.wav';
+    },
+    get volume() {
+      return CONFIG.kaizo_knight?.soundVolumes?.cut1 ?? 0.90;
+    },
+    delay: 0,
+  },
+  'error_sans': {
+    get src() {
+      return CONFIG.error_sans?.sounds?.boneStab || 'Assets/Sound Effects/Sans/BoneStab.ogg';
+    },
+    get volume() {
+      return CONFIG.error_sans?.soundVolumes?.boneStab ?? 0.80;
+    },
+    delay: 0,
+  },
+  'jevil': {
+    get src() {
+      return CONFIG.jevil?.sounds?.attack1 || 'Assets/Sound Effects/Jevil/jevil_attack_1.wav';
+    },
+    get volume() {
+      return CONFIG.jevil?.soundVolumes?.attack1 ?? 0.78;
+    },
+    delay: 0,
   }
 };
 

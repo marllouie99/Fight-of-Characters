@@ -69,6 +69,9 @@ import { drawIsagiSkin, _drawIsagiHair, _getIsagiHairImage } from '../fighters/i
 import { drawChigiriSkin, _drawChigiriHair, _getChigiriHairImage } from '../fighters/chigiriSkin.js';
 import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighters/wardenSkin.js';
 import { drawRoaringKnightSkin, _drawRoaringKnightHair, _getRoaringKnightHairImage } from '../fighters/roaringKnightSkin.js';
+import { drawKaizoKnightSkin, _drawKaizoKnightHair, _getKaizoKnightHairImage } from '../fighters/kaizoKnightSkin.js';
+import { drawErrorSansSkin, _drawErrorSansHair, _getErrorSansHairImage } from '../fighters/errorSansSkin.js';
+import { drawJevilSkin, _drawJevilHair, _getJevilHairImage } from '../fighters/jevilSkin.js';
 import { drawGokuSkin, _drawGokuHair, _getGokuHairImage, _getGokuSuperSaiyanHairImage } from '../fighters/gokuSkin.js';
 import { drawVegetaSkin, _drawVegetaHair, _getVegetaHairImage, _getVegetaSuperSaiyanHairImage } from '../fighters/vegetaSkin.js';
 
@@ -156,7 +159,7 @@ export const SKIN_STUDIO_CATEGORIES = [
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko', 'inosuke'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
   { id: 'BLUELOCK', label: 'BLUE LOCK', filter: (f) => ['isagi', 'chigiri'].includes(f.key) },
-  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'roaring_knight', 'goku', 'vegeta'].includes(f.key) },
+  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'roaring_knight', 'kaizo_knight', 'error_sans', 'jevil', 'goku', 'vegeta'].includes(f.key) },
   { id: 'DBZ', label: 'DBZ', filter: (f) => ['goku', 'vegeta'].includes(f.key) }
 ];
 
@@ -1026,6 +1029,57 @@ export const SKIN_STUDIO_FIGHTERS = [
     ]
   },
   {
+    key: 'kaizo_knight',
+    label: 'KAIZO KNIGHT',
+    asset: 'Assets/model/kaizo_knight/KaizoKnight-hair.png',
+    assetDims: '156 x 76',
+    baseW: 2.38,
+    baseH: 1.22,
+    baseCrownY: -1.48,
+    visW: 156,
+    visH: 76,
+    centerX: 78,
+    topY: 0,
+    themeColor: '#86A2FF',
+    forms: [
+      { id: 'default', label: 'KAIZO ANOMALY' }
+    ]
+  },
+  {
+    key: 'error_sans',
+    label: 'ERROR SANS',
+    asset: 'Assets/model/error_sans/ErrorSans-hair.png',
+    assetDims: '148 x 68',
+    baseW: 2.86,
+    baseH: 1.32,
+    baseCrownY: -1.24,
+    visW: 124,
+    visH: 52,
+    centerX: 74,
+    topY: 4,
+    themeColor: '#DD0000',
+    forms: [
+      { id: 'default', label: 'ANTI-VOID GLITCH' }
+    ]
+  },
+  {
+    key: 'jevil',
+    label: 'JEVIL',
+    asset: 'Assets/model/jevil/Jevil-hair.png',
+    assetDims: '148 x 68',
+    baseW: 2.95,
+    baseH: 1.36,
+    baseCrownY: -1.30,
+    visW: 140,
+    visH: 40,
+    centerX: 74,
+    topY: 20,
+    themeColor: '#A855F7',
+    forms: [
+      { id: 'default', label: 'CHAOS JESTER' }
+    ]
+  },
+  {
     key: 'goku',
     label: 'SON GOKU',
     asset: 'Assets/model/goku/Pixel Art Spiky Black Hair Sprite.png',
@@ -1628,8 +1682,15 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 262 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
-  } else if (fDef.key === 'roaring_knight') {
-    return `// Calibrated Horned Antler Crown for Roaring Knight (Assets/model/roaring_knight/RoaringKnight-hair.png)\n` +
+  } else if (fDef.key === 'roaring_knight' || fDef.key === 'kaizo_knight' || fDef.key === 'error_sans' || fDef.key === 'jevil') {
+    const assetName = fDef.key === 'jevil'
+      ? 'Assets/model/jevil/Jevil-hair.png'
+      : (fDef.key === 'error_sans'
+        ? 'Assets/model/error_sans/ErrorSans-hair.png'
+        : (fDef.key === 'kaizo_knight'
+          ? 'Assets/model/kaizo_knight/KaizoKnight-hair.png'
+          : 'Assets/model/roaring_knight/RoaringKnight-hair.png'));
+    return `// Calibrated Horned Antler Crown (${assetName})\n` +
            `const drawW = r * ${targetW};\n` +
            `const drawH = r * ${targetH};\n` +
            `const drawX = -drawW * 0.5${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
@@ -2164,6 +2225,15 @@ export function drawSkinStudioScreen() {
       } else if (fDef.key === 'roaring_knight') {
         dummyFighter._isStudioDummy = true;
         drawRoaringKnightSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'kaizo_knight') {
+        dummyFighter._isStudioDummy = true;
+        drawKaizoKnightSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'error_sans') {
+        dummyFighter._isStudioDummy = true;
+        drawErrorSansSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'jevil') {
+        dummyFighter._isStudioDummy = true;
+        drawJevilSkin(ctx, dummyFighter);
       } else if (fDef.key === 'goku') {
         dummyFighter._isStudioDummy = true;
         dummyFighter.isSuperSaiyan = (state.studioSkinForm === 'super_saiyan');
@@ -2274,6 +2344,12 @@ export function drawSkinStudioScreen() {
       _drawWardenHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'roaring_knight') {
       _drawRoaringKnightHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'kaizo_knight') {
+      _drawKaizoKnightHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'error_sans') {
+      _drawErrorSansHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'jevil') {
+      _drawJevilHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'goku') {
       _drawGokuHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'super_saiyan');
     } else if (fDef.key === 'vegeta') {

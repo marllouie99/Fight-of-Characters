@@ -14,6 +14,83 @@ import { drawSansSkin } from '../../graphics/fighters/sansSkin.js';
 import { FighterRenderer } from '../../graphics/renderers/fighterRenderer.js';
 import { drawGasterBlaster, drawGasterBeam, drawBoneProjectile, drawBoneStabTrap, drawBlueSoulIndicator, drawSlamImpact, drawSansSpeechBubble, drawHeartShatterEffect } from '../../graphics/weapons/sansWeaponGraphics.js';
 
+/**
+ * Returns the protective barrier radius around a target if blocked by
+ * Gojo's Limitless Infinity or Knight's Shield; otherwise 0.
+ */
+export function getBlasterTargetBlockRadius(target) {
+  if (!target || target.hp <= 0) return 0;
+
+  // 1. Gojo's Limitless Infinity barrier
+  const isGojo =
+    target.characterId === 'gojo' ||
+    target.type === 'gojo' ||
+    target._def?.id === 'gojo' ||
+    target.constructor?.name === 'GojoFighter' ||
+    typeof target.hasActiveInfinity === 'function';
+  if (isGojo && !target.domainActive) {
+    const infinityActive = (typeof target.hasActiveInfinity === 'function')
+      ? target.hasActiveInfinity()
+      : Boolean(
+          target.infinityActive &&
+          (target.infinityCooldown || 0) <= 0 &&
+          !target.isMeleeMode &&
+          !target.isChainedByMakima &&
+          !target.isChannelingPurple &&
+          (target.infinityBarrierHp === undefined || target.infinityBarrierHp > 0)
+        );
+    if (infinityActive) {
+      return CONFIG.gojo?.infinityRadius ?? ((target.r || 25) + 30);
+    }
+  }
+
+  // 2. Knight's Shield
+  const isKnight =
+    target.characterId === 'knight' ||
+    target.type === 'knight' ||
+    target._def?.id === 'knight' ||
+    target.constructor?.name === 'KnightFighter' ||
+    target.shieldMaxHp !== undefined;
+  if (isKnight && !target.isShieldBroken && (target.shieldHp === undefined || target.shieldHp > 0)) {
+    return (target.r || 25) + 14;
+  }
+
+  return 0;
+}
+
+/**
+ * Clamps a Gaster Blaster beam's effective length against Infinity / Shield barriers.
+ */
+export function computeEffectiveBlasterReach(blaster, owner, targets, defaultReach = 800, defaultBeamWidth = 32) {
+  if (!blaster) return 0;
+  const maxReach = blaster.maxReach || blaster.reach || blaster.length || defaultReach;
+  let effectiveReach = maxReach;
+  const beamH = blaster.beamHeight || blaster.beamWidth || defaultBeamWidth;
+  const cosA = Math.cos(blaster.angle || 0);
+  const sinA = Math.sin(blaster.angle || 0);
+
+  for (const target of targets) {
+    if (!target || target === owner || (target.team !== undefined && target.team !== null && owner && target.team === owner.team) || target.hp <= 0) continue;
+    if (owner && typeof owner.isTeammate === 'function' && owner.isTeammate(target)) continue;
+
+    const blockRadius = getBlasterTargetBlockRadius(target);
+    if (blockRadius <= 0) continue;
+
+    const dx = target.x - blaster.x;
+    const dy = (target.y - (target.z || 0)) - blaster.y;
+    const projDist = dx * cosA + dy * sinA;
+    const perpDist = Math.abs(-dx * sinA + dy * cosA);
+
+    if (projDist > 0 && perpDist <= (beamH * 0.5 + blockRadius)) {
+      const stopDist = Math.max(0, projDist - blockRadius);
+      if (stopDist < effectiveReach) {
+        effectiveReach = stopDist;
+      }
+    }
+  }
+  return effectiveReach;
+}
+
 export class SansFighter extends Fighter {
   constructor(def = {}) {
     super(def);
@@ -1525,43 +1602,7 @@ export class SansFighter extends Fighter {
    * Gojo's Limitless Infinity active or Knight's Shield active. Otherwise returns 0.
    */
   _getTargetBeamBlockRadius(target) {
-    if (!target || target.hp <= 0) return 0;
-
-    // 1. Gojo's Limitless Infinity barrier
-    const isGojo =
-      target.characterId === 'gojo' ||
-      target.type === 'gojo' ||
-      target._def?.id === 'gojo' ||
-      target.constructor?.name === 'GojoFighter' ||
-      typeof target.hasActiveInfinity === 'function';
-    if (isGojo && !target.domainActive) {
-      const infinityActive = (typeof target.hasActiveInfinity === 'function')
-        ? target.hasActiveInfinity()
-        : Boolean(
-            target.infinityActive &&
-            (target.infinityCooldown || 0) <= 0 &&
-            !target.isMeleeMode &&
-            !target.isChainedByMakima &&
-            !target.isChannelingPurple &&
-            (target.infinityBarrierHp === undefined || target.infinityBarrierHp > 0)
-          );
-      if (infinityActive) {
-        return CONFIG.gojo?.infinityRadius ?? ((target.r || 25) + 30);
-      }
-    }
-
-    // 2. Knight's Shield
-    const isKnight =
-      target.characterId === 'knight' ||
-      target.type === 'knight' ||
-      target._def?.id === 'knight' ||
-      target.constructor?.name === 'KnightFighter' ||
-      target.shieldMaxHp !== undefined;
-    if (isKnight && !target.isShieldBroken && (target.shieldHp === undefined || target.shieldHp > 0)) {
-      return (target.r || 25) + 14;
-    }
-
-    return 0;
+    return getBlasterTargetBlockRadius(target);
   }
 
   /**
@@ -1571,45 +1612,15 @@ export class SansFighter extends Fighter {
   _getEffectiveBlasterBeamLength(blaster, opponent = null) {
     if (!blaster) return 0;
     const cfg = (CONFIG && CONFIG.sans) ? CONFIG.sans : sansConfig;
-    const maxReach = blaster.maxReach || blaster.reach || blaster.length || cfg.blasterLaserHeight || cfg.blasterLaserReach || 800;
-    let effectiveReach = maxReach;
-
-    const beamH = blaster.beamHeight || blaster.beamWidth || cfg.blasterBeamHeight || cfg.blasterBeamWidth || 32;
-    const cosA = Math.cos(blaster.angle || 0);
-    const sinA = Math.sin(blaster.angle || 0);
+    const defaultReach = cfg.blasterLaserHeight || cfg.blasterLaserReach || 800;
+    const defaultBeamW = cfg.blasterBeamHeight || cfg.blasterBeamWidth || 32;
 
     const targets = [];
-    if (state.fighters && Array.isArray(state.fighters)) {
-      targets.push(...state.fighters);
-    }
-    if (state.illusions && Array.isArray(state.illusions)) {
-      targets.push(...state.illusions);
-    }
-    if (opponent && !targets.includes(opponent)) {
-      targets.push(opponent);
-    }
+    if (state.fighters && Array.isArray(state.fighters)) targets.push(...state.fighters);
+    if (state.illusions && Array.isArray(state.illusions)) targets.push(...state.illusions);
+    if (opponent && !targets.includes(opponent)) targets.push(opponent);
 
-    for (const target of targets) {
-      if (!target || target === this || (target.team !== undefined && target.team !== null && target.team === this.team) || target.hp <= 0) continue;
-      if (typeof this.isTeammate === 'function' && this.isTeammate(target)) continue;
-
-      const blockRadius = this._getTargetBeamBlockRadius(target);
-      if (blockRadius <= 0) continue;
-
-      const dx = target.x - blaster.x;
-      const dy = (target.y - (target.z || 0)) - blaster.y;
-      const projDist = dx * cosA + dy * sinA;
-      const perpDist = Math.abs(-dx * sinA + dy * cosA);
-
-      if (projDist > 0 && perpDist <= (beamH * 0.5 + blockRadius)) {
-        const stopDist = Math.max(0, projDist - blockRadius);
-        if (stopDist < effectiveReach) {
-          effectiveReach = stopDist;
-        }
-      }
-    }
-
-    return effectiveReach;
+    return computeEffectiveBlasterReach(blaster, this, targets, defaultReach, defaultBeamW);
   }
 
   /**

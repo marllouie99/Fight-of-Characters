@@ -25929,6 +25929,661 @@ async function runInteractionTests() {
     console.log('      ✅ Denji forehead chainsaw silhouette suppression & zero duplicate teeth verified cleanly.');
   }
 
+  // ── TEST 188: Kaizo Knight (kaizo_knight) Full Kit, Rules 18/21/23/24/25/32 & Stack Balance ──
+  {
+    console.log('\n[TEST 188] Kaizo Knight Full Combat Kit & Repository Standards...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { KaizoKnightFighter } = await import('../js/entities/fighters/KaizoKnightFighter.js');
+    const { getSkillDataForFighter, isSkillExceptionInDarkMode } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+
+      const kaizo = new KaizoKnightFighter({ id: 'kaizo_knight', x: 180, y: 460, radius: 25, hp: 500 });
+      const dummy = new Fighter({ id: 99, x: 260, y: 460, radius: 25, hp: 900, speed: 4, damage: 10, cooldown: 30, color: '#888' });
+      kaizo.team = 0;
+      dummy.team = 1;
+      state.fighters = [kaizo, dummy];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      // 1. Rule 24 scaled radius & Rule 23 shoot suppression
+      assert(kaizo.r > 25, `Kaizo Knight must preserve super(def) scaled radius > 25 (got ${kaizo.r})`);
+      const beforeProjCount = state.projectiles.length;
+      kaizo.shoot(0);
+      assert(state.projectiles.length === beforeProjCount, 'Kaizo Knight shoot() must suppress generic bullet projectiles (Rule 23)');
+
+      // 2. Basic Attack 5-phase cleave + Crescent Wave + Board Slashes + Gloom slow
+      kaizo.basicAttackCooldownTimer = 0;
+      kaizo.skill1CooldownTimer = 999;
+      kaizo.hypernovaCooldownTimer = 999;
+      kaizo.update(dummy, 0, testArena);
+      assert(kaizo.isMeleeSwinging, 'Kaizo Knight must enter 5-phase Radiant Knife cleave on basic attack');
+      for (let f = 0; f < 25; f++) kaizo.update(dummy, 0, testArena);
+      assert(dummy.hp < 900, 'Kaizo Knight basic cleave / Crescent Wave must damage target');
+      assert(dummy.slowTimer > 0, 'Kaizo Knight Gloom must apply slow debuff on hit');
+
+      // 3. Verify randomized anti-repeat Skill 1 pool & test all 5 Kaizo active skills
+      const pickedIds = new Set();
+      let prevSkillId = null;
+      for (let v = 0; v < 12; v++) {
+        kaizo.isMeleeSwinging = false;
+        kaizo.isSkill1Channeling = false;
+        kaizo.isHypernovaCasting = false;
+        kaizo.skill1CooldownTimer = 0;
+        kaizo._castRandomSkill1(dummy, testArena, CONFIG.kaizo_knight);
+        assert(kaizo._activeSkill1Id !== prevSkillId, `Random Skill 1 must not repeat back-to-back (${prevSkillId} -> ${kaizo._activeSkill1Id})`);
+        prevSkillId = kaizo._activeSkill1Id;
+        pickedIds.add(kaizo._activeSkill1Id);
+        for (let f = 0; f < 40; f++) kaizo.update(dummy, 0, testArena);
+      }
+      assert(pickedIds.size >= 3, `Random Skill 1 pool must randomly pick across multiple Kaizo skills (picked=${Array.from(pickedIds).join(',')})`);
+      for (const reqSkill of ['soul_splitter', 'diamond_storm', 'vortex_storm', 'kaizo_tunnel', 'hypernova']) {
+        kaizo.isMeleeSwinging = false;
+        kaizo.isSkill1Channeling = false;
+        kaizo.isHypernovaCasting = false;
+        kaizo._executeSkill1ById(reqSkill, dummy, testArena, CONFIG.kaizo_knight);
+        for (let f = 0; f < 45; f++) kaizo.update(dummy, 0, testArena);
+      }
+
+      // 4. Ultimate (Roaring Delta) spawns directly in front of Kaizo Knight without center-arena teleport
+      kaizo.isSkill1Channeling = false;
+      kaizo.isHypernovaCasting = false;
+      kaizo.isMeleeSwinging = false;
+      kaizo.x = 120;
+      kaizo.y = 460;
+      dummy.x = 220;
+      dummy.y = 460;
+      kaizo.swoonBasicHits = CONFIG.kaizo_knight.swoonHitsRequired ?? 5;
+      kaizo.roaringDeltaCooldownTimer = 0;
+      kaizo._startRoaringDelta(dummy, testArena, CONFIG.kaizo_knight);
+      assert(kaizo.isRoaringDeltaActive, 'Roaring Delta Ultimate must activate cleanly');
+      assert(kaizo.x === 120 && kaizo.y === 460, `Roaring Delta must not teleport Kaizo Knight to arena center (pos=${kaizo.x},${kaizo.y})`);
+      assert(kaizo.roaringDeltaOrigin && kaizo.roaringDeltaOrigin.x > kaizo.x + kaizo.r, `Roaring Delta vortex must spawn directly in front of Kaizo Knight (kaizo.x=${kaizo.x}, origin.x=${kaizo.roaringDeltaOrigin?.x})`);
+      for (let f = 0; f < 95 && kaizo.isRoaringDeltaActive; f++) kaizo.update(dummy, 0, testArena);
+      assert(kaizo.roaringDeltaShatterTimer > 0, 'Roaring Delta must trigger final screen shatter overlay');
+
+      // 5. Rule 25 top-of-update VFX decay during freeze
+      const shatterBeforeFreeze = kaizo.roaringDeltaShatterTimer;
+      kaizo.timeStopTimer = 10;
+      kaizo.update(dummy, 0, testArena);
+      assert(kaizo.roaringDeltaShatterTimer < shatterBeforeFreeze, 'Kaizo Knight VFX must decay even while frozen (Rule 25)');
+      kaizo.timeStopTimer = 0;
+
+      // 6. Rule 18 HUD skills consistency & Canvas 2D stack depth == 0
+      const hudSkills = getSkillDataForFighter(kaizo, () => state.projectiles);
+      assert(hudSkills.length === 3, `Kaizo Knight HUD must expose 3 unified skill bars (got ${hudSkills.length})`);
+      assert(hudSkills.every(s => s.color === '#86A2FF'), 'All Kaizo Knight HUD bars must share unified #86A2FF themeColor (Rule 18)');
+      assert(isSkillExceptionInDarkMode(kaizo, hudSkills[2]), 'Roaring Delta signature ultimate must be registered in signatureMap');
+
+      let stack = 0;
+      let drawTextCalled = false;
+      const mockCtx = {
+        save() { stack++; },
+        restore() { stack--; },
+        translate() {},
+        rotate() {},
+        scale() {},
+        beginPath() {},
+        closePath() {},
+        moveTo() {},
+        lineTo() {},
+        quadraticCurveTo() {},
+        arc() {},
+        ellipse() {},
+        fill() {},
+        stroke() {},
+        fillRect() {},
+        strokeRect() {},
+        clearRect() {},
+        setLineDash() {},
+        drawImage() {},
+        fillText() { drawTextCalled = true; },
+        strokeText() { drawTextCalled = true; },
+        createLinearGradient() { return { addColorStop() {} }; },
+        createRadialGradient() { return { addColorStop() {} }; }
+      };
+      kaizo.draw(mockCtx);
+      assert(stack === 0, `Canvas 2D stack must be 0 after KaizoKnightFighter.draw() (got ${stack})`);
+      assert(drawTextCalled, 'KaizoKnightFighter.draw() must call drawHealth() (Rule 21)');
+
+      // 7. Match vs Roaring Knight: Kaizo Knight attacks must NEVER cancel Roaring Knight's activated skills
+      const RoaringClass = FIGHTER_CLASS_MAP['roaring_knight'];
+      const roaring = new RoaringClass({ id: 'roaring_knight', x: 260, y: 460, radius: 25, hp: 460 });
+      roaring.team = 1;
+      roaring.x = 260;
+      roaring.y = 460;
+      roaring.maxHp = 1000;
+      roaring.hp = 1000;
+      kaizo.x = 180;
+      kaizo.y = 460;
+      kaizo.hp = kaizo.maxHp;
+      state.gameState = 'playing';
+      roaring.enableParry = false;
+      const prevRkParry = CONFIG.roaring_knight?.enableParry;
+      const prevRkPassive = CONFIG.roaring_knight?.parryPassiveChance;
+      const prevRkActive = CONFIG.roaring_knight?.parryActiveChance;
+      if (CONFIG.roaring_knight) {
+        CONFIG.roaring_knight.enableParry = false;
+        CONFIG.roaring_knight.parryPassiveChance = 0;
+        CONFIG.roaring_knight.parryActiveChance = 0;
+      }
+      try {
+        state.fighters = [kaizo, roaring];
+        roaring.isStarBurstCasting = true;
+        roaring.isFallingSwordsCasting = true;
+        roaring._startFallingSwordsCast?.();
+        const hpBefore = roaring.hp;
+        kaizo._executeSkill1ById('soul_splitter', roaring, testArena, CONFIG.kaizo_knight);
+        for (let f = 0; f < 25; f++) kaizo.update(roaring, 0, testArena);
+        assert(roaring.hp < hpBefore, 'Soul Splitter must damage Roaring Knight');
+        assert(roaring.isStarBurstCasting && roaring.isFallingSwordsCasting, 'Kaizo Knight AOE skills must NEVER cancel Roaring Knight active skills');
+
+        kaizo.swoonBasicHits = CONFIG.kaizo_knight.swoonHitsRequired ?? 5;
+        kaizo.roaringDeltaCooldownTimer = 0;
+        kaizo._startRoaringDelta(roaring, testArena, CONFIG.kaizo_knight);
+        for (let f = 0; f < 95 && kaizo.isRoaringDeltaActive; f++) kaizo.update(roaring, 0, testArena);
+        assert(roaring.isStarBurstCasting && roaring.isFallingSwordsCasting, 'Kaizo Knight Roaring Delta must NEVER cancel Roaring Knight active skills');
+      } finally {
+        if (CONFIG.roaring_knight) {
+          CONFIG.roaring_knight.enableParry = prevRkParry;
+          CONFIG.roaring_knight.parryPassiveChance = prevRkPassive;
+          CONFIG.roaring_knight.parryActiveChance = prevRkActive;
+        }
+      }
+
+      console.log('      ✅ Kaizo Knight full kit, Rules 18/21/23/24/25/32, stack depth 0 & non-cancellation vs Roaring Knight verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+    }
+  }
+
+  // ── TEST 189: Error Sans (error_sans) Full Kit, Rules 18/21/23/24/25/32 & Stack Balance ──
+  {
+    console.log('\n[TEST 189] Error Sans Full Combat Kit & Repository Standards...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { ErrorSansFighter } = await import('../js/entities/fighters/ErrorSansFighter.js');
+    const { _resolveModeFixedHp } = await import('../js/core/gameFlow.js');
+    const { getSkillDataForFighter, isSkillExceptionInDarkMode } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+
+      const errSans = new ErrorSansFighter({ id: 'error_sans', x: 180, y: 460, radius: 25 });
+      const dummy = new Fighter({ id: 98, x: 260, y: 460, radius: 25, hp: 5000, speed: 4, damage: 10, cooldown: 30, color: '#888' });
+      dummy.maxHp = 5000;
+      dummy.hp = 5000;
+      errSans.team = 0;
+      dummy.team = 1;
+      errSans.x = 180;
+      errSans.y = 460;
+      dummy.x = 260;
+      dummy.y = 460;
+      state.fighters = [errSans, dummy];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      // 1. Rule 24 scaled radius, 1 HP mechanic (across constructor + gameFlow modes) & Rule 23 shoot suppression
+      assert(errSans.r > 25, `Error Sans must preserve super(def) scaled radius > 25 (got ${errSans.r})`);
+      assert(errSans.hp === 1 && errSans.maxHp === 1, `Error Sans must have authentic 1 HP (got ${errSans.hp}/${errSans.maxHp})`);
+      assert(_resolveModeFixedHp(errSans, 200) === 1 && _resolveModeFixedHp(errSans, 1000) === 1, `gameFlow mode fixedHp must preserve Error Sans 1 HP (got ${_resolveModeFixedHp(errSans, 200)})`);
+      assert(errSans.stamina === 100 && errSans.maxStamina === 100, `Error Sans must initialize 100 Dodge Stamina (got ${errSans.stamina})`);
+      const beforeProjCount = state.projectiles.length;
+      errSans.shoot(0);
+      assert(state.projectiles.length === beforeProjCount, 'Error Sans shoot() must suppress generic bullet projectiles (Rule 23)');
+
+      // 2. Passive 1: 1 HP Stamina Glitch Warp Dodge + Out-of-Stamina 1-hit KO
+      const stamBefore = errSans.stamina;
+      const oldX = errSans.x;
+      const oldY = errSans.y;
+      errSans.activeErrorBlasters.length = 0;
+      const dmgRes = errSans.takeDamage(25, dummy, { isMelee: true });
+      assert(dmgRes === 0 && errSans.hp === 1, 'Error Warp must negate hit while stamina remains');
+      assert(errSans.stamina < stamBefore, 'Error Warp must deduct dodge stamina proportional to incoming damage');
+      assert(Math.hypot(errSans.x - oldX, errSans.y - oldY) > 10, 'Error Warp must teleport Error Sans cleanly inside arena');
+      assert(errSans.activeErrorBlasters.length === (CONFIG.error_sans?.errorBlasterCount ?? 3), 'Error Sans must follow up Error Warp dodge with Skill 1B Error Gaster Blasters crossfire');
+      errSans.hitStunTimer = 10;
+      const guaranteedDodged = errSans.takeDamage(30, dummy, { isGuaranteedHit: true, bypassEvade: true });
+      assert(guaranteedDodged === 0 && errSans.hp === 1, 'Error Sans 100% dodge must evade isGuaranteedHit / bypassEvade / hitStun hits like Sans');
+      errSans.hitStunTimer = 0;
+      const sliceDodged = errSans.dodgeSliceLine({ angle: 0, damage: 20, isSukunaDomain: true, attacker: dummy });
+      assert(sliceDodged, 'Error Sans must dodge Sukuna domain slice lines when stamina remains');
+      assert(errSans.activeErrorBlasters.length === (CONFIG.error_sans?.errorBlasterCount ?? 3) * 3, 'Error Sans must also follow up slice-line dodge with Error Gaster Blasters crossfire');
+      const stamAfterDodges = errSans.stamina;
+      const blasterCost = CONFIG.error_sans?.blasterStaminaCost ?? 5;
+      const dodgeOnlyExpected = errSans._calculateDodgeStaminaCost(25, false)
+        + errSans._calculateDodgeStaminaCost(30, false)
+        + errSans._calculateDodgeStaminaCost(20, true);
+      assert(
+        Math.abs((stamBefore - stamAfterDodges) - (dodgeOnlyExpected + blasterCost * 3)) < 1e-6,
+        `Blaster follow-ups must consume blasterStaminaCost (${blasterCost}) on top of dodge cost (expected drain=${dodgeOnlyExpected + blasterCost * 3}, actual=${stamBefore - stamAfterDodges})`
+      );
+      for (let f = 0; f < 30; f++) errSans.update(dummy, 0, testArena);
+      assert(errSans.recoverStamina(10) === 0 && errSans.stamina === stamAfterDodges, `Error Sans must have zero stamina recovery (before=${stamAfterDodges}, after=${errSans.stamina})`);
+      errSans.activeErrorBlasters.length = 0;
+
+      const lowStamErr = new ErrorSansFighter({ id: 'error_sans', x: 180, y: 460, radius: 25 });
+      lowStamErr.team = 0;
+      if (blasterCost > 0) {
+        const belowBlasterStam = Math.max(0, blasterCost - 0.5);
+        lowStamErr.stamina = belowBlasterStam;
+        const blasterFiredLow = lowStamErr._spawnErrorBlasterCrossfire(dummy, testArena, CONFIG.error_sans);
+        assert(!blasterFiredLow && lowStamErr.activeErrorBlasters.length === 0 && lowStamErr.stamina === belowBlasterStam, 'Error Blaster must not fire or drain stamina when below blasterStaminaCost');
+      }
+
+      const exhaustedErr = new ErrorSansFighter({ id: 'error_sans', x: 180, y: 460, radius: 25 });
+      exhaustedErr.team = 0;
+      exhaustedErr.stamina = 0;
+      state.deathEffects = [];
+      state._hadSansDeath = false;
+      state.gameState = 'playing';
+      exhaustedErr.takeDamage(10, dummy, { isMelee: true });
+      assert(exhaustedErr.hp === 0, 'Error Sans must die cleanly in 1 hit when Dodge Stamina reaches 0');
+      assert(state._hadSansDeath && state.deathEffects.some(e => e && e.isSansHeartShatter), 'Error Sans death must spawn Sans Red SOUL Heart Split & Shatter animation');
+      state.deathEffects = [];
+      state._hadSansDeath = false;
+      state.gameState = 'playing';
+
+      // Verify Deltarune/Undertale fighters trigger Red SOUL Heart Shatter both on enemy kills and on self-death
+      const killVictim = new Fighter({ id: 96, x: 300, y: 460, radius: 25, hp: 5, speed: 4, damage: 10, cooldown: 30, color: '#999' });
+      killVictim.team = 1;
+      killVictim.maxHp = 5;
+      killVictim.hp = 5;
+      killVictim.takeDamage(20, errSans, { isMelee: true });
+      assert(state._hadSansDeath && state.deathEffects.some(e => e && e.isSansHeartShatter), 'Enemy killed by Error Sans must spawn Red SOUL Heart Split & Shatter animation');
+      state.deathEffects = [];
+      state._hadSansDeath = false;
+      state.gameState = 'playing';
+
+      const KnightClass = FIGHTER_CLASS_MAP['roaring_knight'];
+      const JevilClass = FIGHTER_CLASS_MAP['jevil'];
+      const KaizoClass = FIGHTER_CLASS_MAP['kaizo_knight'];
+      const prevDtRkParry = CONFIG.roaring_knight?.enableParry;
+      if (CONFIG.roaring_knight) CONFIG.roaring_knight.enableParry = false;
+      try {
+        for (const dtF of [
+          new KnightClass({ id: 'roaring_knight', x: 220, y: 460, radius: 25 }),
+          new KaizoClass({ id: 'kaizo_knight', x: 220, y: 460, radius: 25 }),
+          new JevilClass({ id: 'jevil', x: 220, y: 460, radius: 25 }),
+        ]) {
+          dtF.team = 0;
+          const dtVictim = new Fighter({ id: 95, x: 310, y: 460, radius: 25, hp: 5, speed: 4, damage: 10, cooldown: 30, color: '#aaa' });
+          dtVictim.team = 1;
+          dtVictim.maxHp = 5;
+          dtVictim.hp = 5;
+          state.deathEffects = [];
+          state._hadSansDeath = false;
+          state.gameState = 'playing';
+          for (let f = 0; f < 10; f++) dtF.update(dtVictim, 0, testArena);
+          assert(dtF.speechBubble && dtF.speechBubble.timer > 0 && dtF.speechBubble.text.length > 0, `${dtF.characterId} must render Sans-style typewriter chat speech bubble`);
+          dtVictim.hp = 5;
+          dtVictim.takeDamage(20, dtF, { isMelee: true });
+          assert(state.deathEffects.some(e => e && e.isSansHeartShatter), `Enemy killed by ${dtF.characterId} must spawn Deltarune Red SOUL Heart Shatter`);
+          state.deathEffects = [];
+          state._hadSansDeath = false;
+          state.gameState = 'playing';
+          dtF.hp = 1;
+          dtF.invulnerable = false;
+          dtF.parryCooldownTimer = 999;
+          dtF.takeDamage(50, dtVictim, { isGuaranteedHit: true, bypassShield: true });
+          assert(dtF.hp <= 0 && state.deathEffects.some(e => e && e.isSansHeartShatter), `${dtF.characterId} self-death must spawn Deltarune Red SOUL Heart Shatter`);
+        }
+      } finally {
+        if (CONFIG.roaring_knight) CONFIG.roaring_knight.enableParry = prevDtRkParry;
+      }
+      state.deathEffects = [];
+      state._hadSansDeath = false;
+      state.gameState = 'playing';
+
+      // 3. Basic Glitch Bone Volley + Error Karma DoT
+      dummy.hp = 5000;
+      const dummyHpBeforeBasic = dummy.hp;
+      errSans.x = 180;
+      errSans.y = 460;
+      dummy.x = 260;
+      dummy.y = 460;
+      errSans.basicAttackCooldownTimer = 0;
+      errSans.skill1CooldownTimer = 999;
+      errSans.update(dummy, 0, testArena);
+      assert(errSans.activeErrorBones.length >= 1, 'Error Sans basic attack must fire Glitch Bone Volley');
+      for (let f = 0; f < 25; f++) errSans.update(dummy, 0, testArena);
+      assert(dummy.hp < dummyHpBeforeBasic, 'Glitch Bone Volley must damage opponent');
+      assert(errSans.errorKarmaTargets.has(dummy), 'Error Sans hits must apply Error Karma corruption stacks');
+      assert(errSans.speechBubble && errSans.speechBubble.timer > 0 && errSans.speechBubble.text.length > 0, 'Error Sans must display Sans-style typewriter chat speech bubble in combat');
+
+      // 4. Randomized anti-repeat Skill 1 pool & execution across all 3 skills
+      errSans.stamina = errSans.maxStamina;
+      const picked = new Set();
+      let prevId = null;
+      for (let i = 0; i < 24; i++) {
+        dummy.hp = 5000;
+        errSans.skill1CooldownTimer = 0;
+        errSans._castRandomSkill1(dummy, testArena, CONFIG.error_sans);
+        assert(errSans._activeSkill1Id !== prevId, `Random Skill 1 must not repeat back-to-back (${prevId} -> ${errSans._activeSkill1Id})`);
+        prevId = errSans._activeSkill1Id;
+        picked.add(errSans._activeSkill1Id);
+        for (let f = 0; f < 6; f++) errSans.update(dummy, 0, testArena);
+      }
+      assert(picked.size === 3, `Error Sans Skill 1 must cycle all 3 skills (picked=${Array.from(picked).join(',')})`);
+
+      // 5. Ultimate: FORCED CRASH + Rule 25 top-of-update freeze decay
+      dummy.x = 260;
+      dummy.y = 460;
+      errSans.crashHits = CONFIG.error_sans.crashHitsRequired ?? 5;
+      errSans.forcedCrashCooldownTimer = 0;
+      errSans._startForcedCrash(dummy, testArena, CONFIG.error_sans);
+      assert(errSans.isForcedCrashActive, 'FORCED CRASH ultimate must activate cleanly');
+      for (let f = 0; f < 85 && errSans.isForcedCrashActive; f++) errSans.update(dummy, 0, testArena);
+      assert(!errSans.isForcedCrashActive && errSans.activeShockwaveRipples.length > 0, 'FORCED CRASH must finish and spawn clean concentric shatter ripples');
+
+      const rippleLifeBefore = errSans.activeShockwaveRipples[0].life;
+      errSans.timeStopTimer = 10;
+      errSans.update(dummy, 0, testArena);
+      assert(errSans.activeShockwaveRipples[0].life < rippleLifeBefore, 'Error Sans VFX must decay even while frozen (Rule 25)');
+      errSans.timeStopTimer = 0;
+
+      // 6. Rule 18 HUD skills (Error Warp lives on main Stamina Bar, no duplicate skill bar) & Canvas 2D stack depth == 0 + Rule 21 drawHealth
+      const hudSkills = getSkillDataForFighter(errSans, () => state.projectiles);
+      assert(hudSkills.length === 2 && !hudSkills.some(s => s.id === 'error_warp'), `Error Sans HUD must expose 2 active skill bars without duplicating Error Warp stamina (got ${hudSkills.length})`);
+      assert(hudSkills.every(s => s.color === '#DD0000'), 'All Error Sans HUD bars must share unified #DD0000 themeColor (Rule 18)');
+      assert(isSkillExceptionInDarkMode(errSans, hudSkills[1]), 'FORCED CRASH signature ultimate must be registered in signatureMap');
+
+      let stack = 0;
+      let drawTextCalled = false;
+      const mockCtx = {
+        save() { stack++; },
+        restore() { stack--; },
+        translate() {},
+        rotate() {},
+        scale() {},
+        beginPath() {},
+        closePath() {},
+        moveTo() {},
+        lineTo() {},
+        quadraticCurveTo() {},
+        arc() {},
+        ellipse() {},
+        fill() {},
+        stroke() {},
+        fillRect() {},
+        strokeRect() {},
+        clearRect() {},
+        setLineDash() {},
+        drawImage() {},
+        fillText() { drawTextCalled = true; },
+        strokeText() { drawTextCalled = true; },
+        createLinearGradient() { return { addColorStop() {} }; },
+        createRadialGradient() { return { addColorStop() {} }; }
+      };
+      errSans.draw(mockCtx);
+      assert(stack === 0, `Canvas 2D stack must be 0 after ErrorSansFighter.draw() (got ${stack})`);
+      assert(drawTextCalled, 'ErrorSansFighter.draw() must call drawHealth() (Rule 21)');
+
+      // 7. Non-cancellation vs Roaring Knight active casts
+      const RoaringClass = FIGHTER_CLASS_MAP['roaring_knight'];
+      const roaring = new RoaringClass({ id: 'roaring_knight', x: 260, y: 460, radius: 25, hp: 1000 });
+      roaring.team = 1;
+      roaring.x = 260;
+      roaring.y = 460;
+      roaring.maxHp = 1000;
+      roaring.hp = 1000;
+      state.gameState = 'playing';
+      const prevRkParry = CONFIG.roaring_knight?.enableParry;
+      const prevRkPassive = CONFIG.roaring_knight?.parryPassiveChance;
+      const prevRkActive = CONFIG.roaring_knight?.parryActiveChance;
+      if (CONFIG.roaring_knight) {
+        CONFIG.roaring_knight.enableParry = false;
+        CONFIG.roaring_knight.parryPassiveChance = 0;
+        CONFIG.roaring_knight.parryActiveChance = 0;
+      }
+      try {
+        state.fighters = [errSans, roaring];
+        roaring.isStarBurstCasting = true;
+        roaring.isFallingSwordsCasting = true;
+        errSans._executeSkill1ById('glitch_zone', roaring, testArena, CONFIG.error_sans);
+        for (let f = 0; f < 30; f++) errSans.update(roaring, 0, testArena);
+        assert(roaring.hp < 1000 && roaring.hp > 0, 'Error Sans Glitch Zone must damage Roaring Knight');
+        assert(roaring.isStarBurstCasting && roaring.isFallingSwordsCasting, 'Error Sans skills must NEVER cancel Roaring Knight active casts');
+      } finally {
+        if (CONFIG.roaring_knight) {
+          CONFIG.roaring_knight.enableParry = prevRkParry;
+          CONFIG.roaring_knight.parryPassiveChance = prevRkPassive;
+          CONFIG.roaring_knight.parryActiveChance = prevRkActive;
+        }
+      }
+
+      // 8. Gojo Infinity interaction parity with Sans Gaster Blaster (blocked damage + beam reach clamp)
+      const GojoClass = FIGHTER_CLASS_MAP['gojo'];
+      const gojoTarget = new GojoClass({ id: 'gojo', x: 300, y: 460, radius: 25, hp: 500 });
+      gojoTarget.team = 1;
+      gojoTarget.x = 300;
+      gojoTarget.y = 460;
+      gojoTarget.maxHp = 500;
+      gojoTarget.hp = 500;
+      gojoTarget.infinityActive = true;
+      gojoTarget.infinityCooldown = 0;
+      gojoTarget.domainActive = false;
+      state.fighters = [errSans, gojoTarget];
+      errSans.activeErrorBlasters = [{
+        x: 120,
+        y: 460,
+        angle: 0,
+        scale: 1.0,
+        isCharging: false,
+        isFiring: true,
+        chargeTimer: 0,
+        chargeMax: 20,
+        fireTimer: 10,
+        fireMax: 24,
+        beamWidth: 34,
+        reach: 900,
+        damage: 25,
+        firstHitSet: new Set(),
+        tickTimers: new Map(),
+      }];
+      errSans._checkBlasterBeamHits(errSans.activeErrorBlasters[0], [gojoTarget], CONFIG.error_sans);
+      assert(gojoTarget.hp === 500, 'Gojo Infinity must block Error Sans Blaster beam damage identically to Sans');
+      assert(errSans.activeErrorBlasters[0].effectiveReach < 180 && errSans.activeErrorBlasters[0].effectiveReach >= 100, `Error Blaster beam effectiveReach must clamp cleanly at Gojo Infinity barrier (got ${errSans.activeErrorBlasters[0].effectiveReach})`);
+      errSans.activeErrorBlasters.length = 0;
+
+      console.log('      ✅ Error Sans full kit, Rules 18/21/23/24/25/32, stack depth 0 & non-cancellation verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+    }
+  }
+
+  // ── TEST 190: Jevil (jevil) Full Kit, Rules 18/21/23/24/25/30/32 & Stack Balance ──
+  {
+    console.log('\n[TEST 190] Jevil Full Combat Kit & Repository Standards...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { JevilFighter } = await import('../js/entities/fighters/JevilFighter.js');
+    const { getSkillDataForFighter, isSkillExceptionInDarkMode } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+
+      const jevil = new JevilFighter({ id: 'jevil', x: 180, y: 460, radius: 25 });
+      const dummy = new Fighter({ id: 97, x: 260, y: 460, radius: 25, hp: 8000, speed: 4, damage: 10, cooldown: 30, color: '#888' });
+      jevil.team = 0;
+      dummy.team = 1;
+      jevil.x = 180;
+      jevil.y = 460;
+      dummy.x = 260;
+      dummy.y = 460;
+      state.fighters = [jevil, dummy];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      // 1. Rule 24 scaled radius & Rule 23 shoot suppression
+      assert(jevil.r > 25, `Jevil must preserve super(def) scaled radius > 25 (got ${jevil.r})`);
+      const beforeProjCount = state.projectiles.length;
+      jevil.shoot(0);
+      assert(state.projectiles.length === beforeProjCount, 'Jevil shoot() must suppress generic bullet projectiles (Rule 23)');
+
+      // 2. Basic 5-phase Devilsknife cleave + 3-way Spade volley
+      jevil.basicAttackCooldownTimer = 0;
+      jevil.skill1CooldownTimer = 999;
+      jevil.update(dummy, 0, testArena);
+      assert(jevil.isMeleeSwinging, 'Jevil must enter 5-phase Devilsknife cleave on basic attack');
+      for (let f = 0; f < 30; f++) jevil.update(dummy, 0, testArena);
+      assert(dummy.hp < 8000, 'Jevil Devilsknife cleave / Spade volley must damage opponent');
+      assert(jevil.finalChaosHits >= 1, 'Jevil basic hit must charge FINAL CHAOS hits');
+
+      // 3. Randomized anti-repeat Skill 1 pool across all 6 Deltarune chaos skills + deterministic execution
+      const picked = new Set();
+      let prevId = null;
+      for (let i = 0; i < 36; i++) {
+        jevil.isMeleeSwinging = false;
+        jevil.isSkill1Channeling = false;
+        jevil._diamondBarrageSeq = null;
+        jevil._metamorphosisSeq = null;
+        jevil._carouselSeq = null;
+        jevil.skill1CooldownTimer = 0;
+        jevil._castRandomSkill1(dummy, testArena, CONFIG.jevil);
+        assert(jevil._activeSkill1Id !== prevId, `Random Skill 1 must not repeat back-to-back (${prevId} -> ${jevil._activeSkill1Id})`);
+        prevId = jevil._activeSkill1Id;
+        picked.add(jevil._activeSkill1Id);
+        for (let f = 0; f < 6; f++) jevil.update(dummy, 0, testArena);
+      }
+      assert(picked.size === 6, `Jevil Skill 1 must cycle all 6 chaos skills (picked=${Array.from(picked).join(',')})`);
+      for (const reqSkill of ['spade_ring', 'suit_bombs', 'devilsknife_carousel', 'merry_go_round', 'diamond_barrage', 'metamorphosis']) {
+        jevil.isMeleeSwinging = false;
+        jevil.isSkill1Channeling = false;
+        jevil._diamondBarrageSeq = null;
+        jevil._metamorphosisSeq = null;
+        jevil._carouselSeq = null;
+        jevil._executeSkill1ById(reqSkill, dummy, testArena, CONFIG.jevil);
+        for (let f = 0; f < 36; f++) jevil.update(dummy, 0, testArena);
+      }
+      assert(jevil.activeCarouselHorses.length >= 0, 'Carousel wave array initialized cleanly');
+
+      // 4. Ultimate: FINAL CHAOS + Rule 25 freeze VFX decay
+      jevil.isMeleeSwinging = false;
+      jevil.isSkill1Channeling = false;
+      dummy.x = 260;
+      dummy.y = 460;
+      jevil.finalChaosHits = CONFIG.jevil.finalChaosHitsRequired ?? 5;
+      jevil.finalChaosCooldownTimer = 0;
+      jevil._startFinalChaos(dummy, testArena, CONFIG.jevil);
+      assert(jevil.isFinalChaosActive, 'FINAL CHAOS ultimate must activate cleanly');
+      for (let f = 0; f < 90 && jevil.isFinalChaosActive; f++) jevil.update(dummy, 0, testArena);
+      assert(!jevil.isFinalChaosActive && jevil.activeChaosRipples.length > 0, 'FINAL CHAOS must finish and spawn clean concentric shockwave ripples');
+
+      const rippleLifeBefore = jevil.activeChaosRipples[0].life;
+      jevil.timeStopTimer = 10;
+      jevil.update(dummy, 0, testArena);
+      assert(jevil.activeChaosRipples[0].life < rippleLifeBefore, 'Jevil VFX must decay even while frozen (Rule 25)');
+      jevil.timeStopTimer = 0;
+
+      // 5. Rule 18 HUD skills & Canvas 2D stack depth == 0 + Rule 21 drawHealth
+      const hudSkills = getSkillDataForFighter(jevil, () => state.projectiles);
+      assert(hudSkills.length === 3, `Jevil HUD must expose 3 unified skill bars (got ${hudSkills.length})`);
+      assert(hudSkills.every(s => s.color === '#A855F7'), 'All Jevil HUD bars must share unified #A855F7 themeColor (Rule 18)');
+      assert(isSkillExceptionInDarkMode(jevil, hudSkills[2]), 'FINAL CHAOS signature ultimate must be registered in signatureMap');
+
+      let stack = 0;
+      let drawTextCalled = false;
+      const mockCtx = {
+        save() { stack++; },
+        restore() { stack--; },
+        translate() {},
+        rotate() {},
+        scale() {},
+        beginPath() {},
+        closePath() {},
+        moveTo() {},
+        lineTo() {},
+        quadraticCurveTo() {},
+        arc() {},
+        ellipse() {},
+        fill() {},
+        stroke() {},
+        fillRect() {},
+        strokeRect() {},
+        clearRect() {},
+        setLineDash() {},
+        drawImage() {},
+        fillText() { drawTextCalled = true; },
+        strokeText() { drawTextCalled = true; },
+        createLinearGradient() { return { addColorStop() {} }; },
+        createRadialGradient() { return { addColorStop() {} }; }
+      };
+      jevil.draw(mockCtx);
+      assert(stack === 0, `Canvas 2D stack must be 0 after JevilFighter.draw() (got ${stack})`);
+      assert(drawTextCalled, 'JevilFighter.draw() must call drawHealth() (Rule 21)');
+
+      // 6. Non-cancellation vs Roaring Knight active casts
+      const RoaringClass = FIGHTER_CLASS_MAP['roaring_knight'];
+      const roaring = new RoaringClass({ id: 'roaring_knight', x: 260, y: 460, radius: 25, hp: 1000 });
+      roaring.team = 1;
+      roaring.x = 260;
+      roaring.y = 460;
+      roaring.maxHp = 1000;
+      roaring.hp = 1000;
+      state.gameState = 'playing';
+      const prevRkParry = CONFIG.roaring_knight?.enableParry;
+      const prevRkPassive = CONFIG.roaring_knight?.parryPassiveChance;
+      const prevRkActive = CONFIG.roaring_knight?.parryActiveChance;
+      if (CONFIG.roaring_knight) {
+        CONFIG.roaring_knight.enableParry = false;
+        CONFIG.roaring_knight.parryPassiveChance = 0;
+        CONFIG.roaring_knight.parryActiveChance = 0;
+      }
+      try {
+        state.fighters = [jevil, roaring];
+        roaring.isStarBurstCasting = true;
+        roaring.isFallingSwordsCasting = true;
+        jevil._executeSkill1ById('devilsknife_carousel', roaring, testArena, CONFIG.jevil);
+        for (let f = 0; f < 45; f++) jevil.update(roaring, 0, testArena);
+        assert(roaring.hp < 1000 && roaring.hp > 0, 'Jevil Devilsknife Carousel must damage Roaring Knight');
+        assert(roaring.isStarBurstCasting && roaring.isFallingSwordsCasting, 'Jevil skills must NEVER cancel Roaring Knight active casts');
+      } finally {
+        if (CONFIG.roaring_knight) {
+          CONFIG.roaring_knight.enableParry = prevRkParry;
+          CONFIG.roaring_knight.parryPassiveChance = prevRkPassive;
+          CONFIG.roaring_knight.parryActiveChance = prevRkActive;
+        }
+      }
+
+      console.log('      ✅ Jevil full kit, Rules 18/21/23/24/25/30/32, stack depth 0 & non-cancellation verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+    }
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');

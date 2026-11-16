@@ -3542,6 +3542,239 @@ export const HUD_SKILL_PROVIDERS = {
     return skills;
   },
 
+  kaizo_knight(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.kaizo_knight) ? CONFIG.kaizo_knight : {};
+    const themeColor = f.color || cfg.themeColor || '#86A2FF';
+    const skills = [];
+
+    // 1. Passive: Kaizo Step & Gloom Chill
+    if (isSkillEnabled(cfg.enableKaizoGloom, true)) {
+      const dashTimer = f.kaizoStepCooldownTimer || 0;
+      const dashMax = Math.max(1, cfg.kaizoStepCooldown || 105, dashTimer);
+      const dashPct = Math.max(0, Math.min(100, (1 - dashTimer / dashMax) * 100));
+      const dashName = cfgSkillName(cfg, ['kaizoGloomSkillName'], 'KAIZO STEP');
+      const dashLabel = dashTimer > 0
+        ? `${dashName} (${(dashTimer / 60).toFixed(1)}S)`
+        : dashName;
+      skills.push({
+        id: 'kaizo_gloom',
+        pct: dashPct,
+        ready: dashTimer <= 0,
+        color: themeColor,
+        label: dashLabel,
+      });
+    }
+
+    // 2. Unified Randomized Skill 1 Slot (Soul Splitter / Diamond Storm / Vortex Storm / Kaizo Tunnel / Hypernova)
+    const hasAnySkill1 =
+      isSkillEnabled(cfg.enableSoulSplitter, true) ||
+      isSkillEnabled(cfg.enableDiamondStorm, true) ||
+      isSkillEnabled(cfg.enableVortexStorm, true) ||
+      isSkillEnabled(cfg.enableKaizoTunnel, true) ||
+      isSkillEnabled(cfg.enableHypernova, true);
+    if (isSkillEnabled(cfg.enableSkill1, true) && hasAnySkill1) {
+      const cdTimer = f.skill1CooldownTimer || 0;
+      const cdMax = Math.max(1, f.skill1CooldownMax || cfg.skill1Cooldown || 390, cdTimer);
+      const isChanneling = Boolean(f.isSkill1Channeling || f.isHypernovaCasting || f.activeSoulSplitter || f._diamondSeq || f._vortexSeq || f._tunnelSeq || f._hypernovaSeq);
+      const skill1Default = cfgSkillName(cfg, ['skill1Name'], 'KAIZO ART');
+      const baseName = isChanneling ? (f._activeSkill1Label || skill1Default) : (f._activeSkill1Label || skill1Default);
+      const pct = (isChanneling && cdTimer <= 0)
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = cdTimer > 0 ? `${baseName} (${(cdTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'kaizo_skill1',
+        pct,
+        active: isChanneling && cdTimer <= 0,
+        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 3. Ultimate: Roaring Delta (Activated at N Basic Attack Hits)
+    if (isSkillEnabled(cfg.enableRoaringDelta, true)) {
+      const hitsReq = Math.max(1, cfg.swoonHitsRequired ?? 5);
+      const curHits = Math.min(hitsReq, f.swoonBasicHits || 0);
+      const cdTimer = f.roaringDeltaCooldownTimer || 0;
+      const isChanneling = Boolean(f.isRoaringDeltaActive || (f.roaringDeltaShatterTimer || 0) > 0);
+      const isReady = !isChanneling && curHits >= hitsReq && cdTimer <= 0;
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const deltaName = cfgSkillName(cfg, ['roaringDeltaSkillName'], 'ROARING DELTA');
+      const label = (isChanneling || isReady)
+        ? deltaName
+        : `${deltaName} (${curHits}/${hitsReq})`;
+
+      skills.push({
+        id: 'roaring_delta',
+        pct,
+        active: isChanneling,
+        ready: isReady,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
+  error_sans(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.error_sans) ? CONFIG.error_sans : {};
+    const themeColor = f.color || cfg.themeColor || '#DD0000';
+    const skills = [];
+
+    // Note: ERROR WARP uses the main Sans-style top/card Stamina Bar (100/100) via hudManager.js
+    // 1. Unified Randomized Skill 1 Slot (Blue Strings / Error Blaster / Glitch Zone)
+    const hasAnySkill1 =
+      isSkillEnabled(cfg.enableErrorStrings, true) ||
+      isSkillEnabled(cfg.enableErrorBlaster, true) ||
+      isSkillEnabled(cfg.enableGlitchZone, true);
+    if (isSkillEnabled(cfg.enableSkill1, true) && hasAnySkill1) {
+      const cdTimer = f.skill1CooldownTimer || 0;
+      const cdMax = Math.max(1, f.skill1CooldownMax || cfg.skill1Cooldown || 330, cdTimer);
+      const isChanneling = Boolean(
+        (f.activeErrorStrings && f.activeErrorStrings.length > 0) ||
+        (f.activeErrorBlasters && f.activeErrorBlasters.length > 0) ||
+        (f.activeErrorTraps && f.activeErrorTraps.length > 0)
+      );
+      const skill1Default = cfgSkillName(cfg, ['skill1Name'], 'ERROR ART');
+      const baseName = f._activeSkill1Label || skill1Default;
+      const pct = (isChanneling && cdTimer <= 0)
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = cdTimer > 0 ? `${baseName} (${(cdTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'error_skill1',
+        pct,
+        active: isChanneling && cdTimer <= 0,
+        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 3. Signature Ultimate: FORCED CRASH
+    if (isSkillEnabled(cfg.enableForcedCrash, true)) {
+      const hitsReq = Math.max(1, cfg.crashHitsRequired ?? 5);
+      const curHits = Math.min(hitsReq, f.crashHits || 0);
+      const cdTimer = f.forcedCrashCooldownTimer || 0;
+      const isChanneling = Boolean(f.isForcedCrashActive);
+      const isReady = !isChanneling && curHits >= hitsReq && cdTimer <= 0;
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const crashName = cfgSkillName(cfg, ['forcedCrashSkillName'], 'FORCED CRASH');
+      const label = (isChanneling || isReady)
+        ? crashName
+        : `${crashName} (${curHits}/${hitsReq})`;
+      skills.push({
+        id: 'forced_crash',
+        pct,
+        active: isChanneling,
+        ready: isReady,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
+  jevil(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.jevil) ? CONFIG.jevil : {};
+    const themeColor = f.color || cfg.themeColor || '#A855F7';
+    const skills = [];
+
+    // 1. Passive: Chaos Warp
+    if (isSkillEnabled(cfg.enableChaosWarp, true)) {
+      const warpTimer = f.chaosWarpCooldownTimer || 0;
+      const warpMax = Math.max(1, cfg.chaosWarpCooldown || 115, warpTimer);
+      const warpPct = Math.max(0, Math.min(100, (1 - warpTimer / warpMax) * 100));
+      const warpName = cfgSkillName(cfg, ['chaosWarpSkillName'], 'CHAOS WARP');
+      const warpLabel = warpTimer > 0
+        ? `${warpName} (${(warpTimer / 60).toFixed(1)}S)`
+        : warpName;
+      skills.push({
+        id: 'chaos_warp',
+        pct: warpPct,
+        ready: warpTimer <= 0,
+        color: themeColor,
+        label: warpLabel,
+      });
+    }
+
+    // 2. Unified Randomized Skill 1 Slot (6 Deltarune Chaos Patterns)
+    const hasAnySkill1 =
+      isSkillEnabled(cfg.enableSpadeRing, true) ||
+      isSkillEnabled(cfg.enableSuitBombs, true) ||
+      isSkillEnabled(cfg.enableDevilsknifeCarousel, true) ||
+      isSkillEnabled(cfg.enableMerryGoRound, true) ||
+      isSkillEnabled(cfg.enableDiamondBarrage, true) ||
+      isSkillEnabled(cfg.enableMetamorphosis, true);
+    if (isSkillEnabled(cfg.enableSkill1, true) && hasAnySkill1) {
+      const cdTimer = f.skill1CooldownTimer || 0;
+      const cdMax = Math.max(1, f.skill1CooldownMax || cfg.skill1Cooldown || 210, cdTimer);
+      const isChanneling = Boolean(
+        f.isSkill1Channeling ||
+        (f.activeSuitBombs && f.activeSuitBombs.length > 0) ||
+        (f.activeCarouselHorses && f.activeCarouselHorses.length > 0) ||
+        f._diamondBarrageSeq ||
+        f._metamorphosisSeq
+      );
+      const skill1Default = cfgSkillName(cfg, ['skill1Name'], 'CHAOS ART');
+      const baseName = f._activeSkill1Label || skill1Default;
+      const pct = (isChanneling && cdTimer <= 0)
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = cdTimer > 0 ? `${baseName} (${(cdTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'jevil_skill1',
+        pct,
+        active: isChanneling && cdTimer <= 0,
+        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 3. Signature Ultimate: FINAL CHAOS
+    if (isSkillEnabled(cfg.enableFinalChaos, true)) {
+      const hitsReq = Math.max(1, cfg.finalChaosHitsRequired ?? 5);
+      const curHits = Math.min(hitsReq, f.finalChaosHits || 0);
+      const cdTimer = f.finalChaosCooldownTimer || 0;
+      const isChanneling = Boolean(f.isFinalChaosActive);
+      const isReady = !isChanneling && curHits >= hitsReq && cdTimer <= 0;
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const chaosName = cfgSkillName(cfg, ['finalChaosSkillName'], 'FINAL CHAOS');
+      const label = (isChanneling || isReady)
+        ? chaosName
+        : `${chaosName} (${curHits}/${hitsReq})`;
+      skills.push({
+        id: 'final_chaos',
+        pct,
+        active: isChanneling,
+        ready: isReady,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
   pacman(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : {};
     const themeColor = f.color || cfg.themeColor || '#FACC15';
@@ -4351,6 +4584,11 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     warden: ['sonic_boom', 'sonicboom', 'SONIC BOOM', 'sonic'],
     roaring_knight: ['roaring_swoon', 'roaringswoon', 'ROTATING SLASH', 'rotating_slash', 'rotatingslash', 'ROARING SWOON', 'swoon'],
     roaringknight: ['roaring_swoon', 'roaringswoon', 'ROTATING SLASH', 'rotating_slash', 'rotatingslash', 'ROARING SWOON', 'swoon'],
+    kaizo_knight: ['roaring_delta', 'roaringdelta', 'ROARING DELTA', 'kaizo_delta', 'kaizodelta'],
+    kaizoknight: ['roaring_delta', 'roaringdelta', 'ROARING DELTA', 'kaizo_delta', 'kaizodelta'],
+    error_sans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
+    errorsans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
+    jevil: ['final_chaos', 'finalchaos', 'FINAL CHAOS'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 

@@ -287,6 +287,8 @@ export const roaringKnightConfig = {
     attackVoice2: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav',
     attackGrowl: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav',
     ultRoar: 'Assets/Sound Effects/RoaringKnightSFX/snd_knightroar.wav',
+    heartSplit: 'Assets/Sound Effects/Sans/HeartSplit.ogg',
+    heartShatter: 'Assets/Sound Effects/Sans/HeartShatter.ogg',
   },
   soundVolumes: {
     cut1: 0.90,
@@ -318,5 +320,7 @@ export const roaringKnightConfig = {
     attackVoice2: 0.42,
     attackGrowl: 0.50,
     ultRoar: 0.92,
+    heartSplit: 0.90,
+    heartShatter: 0.95,
   },
 };
