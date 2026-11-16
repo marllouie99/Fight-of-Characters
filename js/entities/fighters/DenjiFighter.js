@@ -750,10 +750,8 @@ export class DenjiFighter extends Fighter {
           const bloodAngle = Math.atan2(t.y - this.y, t.x - this.x);
           const rampSparks = Math.min(4, Math.floor(rampTick * 0.4));
           const primaryBlade = blades[0] || { startX: t.x, startY: t.y, endX: this.x, endY: this.y };
-          const midContactX = (t.x + (primaryBlade.startX + primaryBlade.endX) * 0.5) * 0.5;
-          const midContactY = (t.y + (primaryBlade.startY + primaryBlade.endY) * 0.5) * 0.5;
           if (didDamage) {
-            spawnBloodEffect(midContactX, midContactY, bloodAngle);
+            spawnBloodEffect(t, Math.max(10, finalDamage * 3), bloodAngle, { count: Math.min(5, 2 + bladeCount) });
           }
           // Spawn sparks on alternating blade to keep active particles tightly budgeted
           const activeBladeIdx = (this.consecutiveShredTicks || 0) % blades.length;
@@ -812,7 +810,7 @@ export class DenjiFighter extends Fighter {
               const firstBlade = blades && blades[0];
               const burstX = firstBlade ? (t.x + (firstBlade.startX + firstBlade.endX) * 0.5) * 0.5 : t.x;
               const burstY = firstBlade ? (t.y + (firstBlade.startY + firstBlade.endY) * 0.5) * 0.5 : t.y;
-              spawnBloodEffect(burstX, burstY, bloodAngle, { count: 8, minSize: 2.5, maxSize: 5.0 });
+              spawnBloodEffect(t, 28, bloodAngle, { count: 8, minSize: 2.5, maxSize: 5.0 });
               spawnImpactFlash(burstX, burstY, '#DC2626', 20);
             }
           }
@@ -1110,7 +1108,7 @@ export class DenjiFighter extends Fighter {
       // Visual & Audio Impact Feedback
       spawnFloatingText(hitTarget.x, hitTarget.y - 20, '⚡ STUNNED!', '#FACC15');
       spawnImpactFlash(hitTarget.x, hitTarget.y, '#FACC15');
-      spawnBloodEffect(hitTarget.x, hitTarget.y, 10);
+      spawnBloodEffect(hitTarget, Math.max(24, damage), hitAngle, { count: 6 });
       spawnSparks(hitTarget.x, hitTarget.y, '#FACC15', 12);
 
       this._playSound('lungeImpact', 'Assets/Sound Effects/Attacks/heavypunch1.mp3', 0.80, 1.0);
@@ -1122,6 +1120,7 @@ export class DenjiFighter extends Fighter {
       this.lungeVx = 0;
       this.lungeVy = 0;
       this.lungeHitRecoveryTimer = cfg.lungeHitRecoveryFrames !== undefined ? cfg.lungeHitRecoveryFrames : 16;
+      this.shredTickTimer = 0;
       
       // Immediately trigger initial chainsaw shred impact tick
       this._updateChainsawShredCollision(hitTarget);
@@ -1277,7 +1276,8 @@ export class DenjiFighter extends Fighter {
         }
       }
       if (didDamage) {
-        spawnBloodEffect(this.massacreTarget.x, this.massacreTarget.y, 8);
+        const massacreAngle = Math.atan2(this.massacreTarget.y - this.y, this.massacreTarget.x - this.x);
+        spawnBloodEffect(this.massacreTarget, 16, massacreAngle, { count: 5 });
       }
     }
 

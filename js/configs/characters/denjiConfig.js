@@ -57,7 +57,7 @@ export const denjiConfig = {
   enableHemorrhage: true,           // Compatibility toggle
   shredBleedThreshold: 10,          // Shred count required on enemy to trigger Bleed debuff
   shredBleedDuration: 180,          // Bleed debuff duration in frames (3.0s @ 60fps)
-  shredBleedDamagePerTick: 5,       // Bleed damage per tick
+  shredBleedDamagePerTick: 1,       // Bleed damage per tick
   shredBleedIntervalFrames: 30,     // Bleed damage tick interval (0.5s @ 60fps)
   shredCountDecayFrames: 90,        // Frames of shred inactivity before shred count resets (1.5s)
   maxHemorrhageStacks: 6,

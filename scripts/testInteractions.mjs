@@ -25821,6 +25821,114 @@ async function runInteractionTests() {
     }
   }
 
+  // ── TEST 186: Denji Engine Lunge & Continuous Chainsaw Shred Spawn Blood on Enemy in All Directions ──
+  {
+    console.log('\n[TEST 186] Denji Engine Lunge & Chainsaw Shred Blood Spawning...');
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { DenjiFighter } = await import('../js/entities/fighters/DenjiFighter.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevBlood = state.bloodEffects;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.bloodEffects = [];
+
+      // Position enemy ABOVE Denji so bloodAngle = -PI/2 (< 0), which previously caused spawnBloodEffect(x, y, bloodAngle) to fail dmgAmount <= 0!
+      const denji = new DenjiFighter({ id: 'denji', x: 250, y: 500, radius: 25, hp: 360 });
+      const victim = new Fighter({ id: 99, x: 250, y: 360, radius: 25, hp: 500, speed: 3, damage: 10, cooldown: 30, color: '#888' });
+      denji.team = 0;
+      victim.team = 1;
+      denji.x = 250; denji.y = 500;
+      victim.x = 250; victim.y = 360;
+      state.fighters = [denji, victim];
+      state.getFighterTeam = (idx) => state.fighters[idx]?.team ?? idx;
+
+      denji._startEngineLunge(victim);
+      let lungeImpactBloodCount = 0;
+      for (let f = 0; f < 45 && denji.isEngineLunging; f++) {
+        denji.update(victim, 0, testArena);
+      }
+      lungeImpactBloodCount = state.bloodEffects.length;
+      assert(lungeImpactBloodCount >= 6, `Denji Engine Lunge impact must spawn blood particles on enemy (got ${lungeImpactBloodCount})`);
+
+      // Step through post-lunge recovery chainsaw shred ticks and confirm blood keeps spawning
+      const hpBeforeRecoveryShred = victim.hp;
+      for (let f = 0; f < 18; f++) {
+        denji.update(victim, 0, testArena);
+      }
+      assert(victim.hp < hpBeforeRecoveryShred, 'Denji must continuously shred enemy after Engine Lunge impact');
+      assert(state.bloodEffects.length > lungeImpactBloodCount, `Continuous Chainsaw Shred must spawn additional blood particles on enemy (before=${lungeImpactBloodCount}, after=${state.bloodEffects.length})`);
+      console.log('      ✅ Denji Engine Lunge & Chainsaw Shred blood spawning verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
+      state.bloodEffects = prevBlood;
+    }
+  }
+
+  // ── TEST 187: Denji Forehead Chainsaw Silhouette Suppression & Zero Duplicate Teeth ──
+  {
+    console.log('\n[TEST 187] Denji Forehead Chainsaw Silhouette Suppression & Zero Duplicate Teeth...');
+    const { DenjiFighter } = await import('../js/entities/fighters/DenjiFighter.js');
+    const denji = new DenjiFighter({ id: 'denji', x: 250, y: 250, radius: 25, hp: 360 });
+    let stack = 0;
+    let fillRectCount = 0;
+    const mockCtx = {
+      save() { stack++; },
+      restore() { stack--; },
+      translate() {},
+      rotate() {},
+      scale() {},
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      arc() {},
+      ellipse() {},
+      fill() {},
+      stroke() {},
+      fillRect() { fillRectCount++; },
+      clearRect() {},
+      drawImage() {},
+      createLinearGradient() { return { addColorStop() {} }; },
+      createRadialGradient() { return { addColorStop() {} }; }
+    };
+
+    // 1. Silhouette pass (_isSilhouettePass = true, hideWeapon = true) must suppress forehead chainsaw as well as arm chainsaws
+    fillRectCount = 0;
+    denji._isSilhouettePass = true;
+    denji._suppressWeaponsInSilhouettePass = true;
+    denji.hideWeapon = true;
+    denji.drawBody(mockCtx);
+    const silhouetteRects = fillRectCount;
+    assert(stack === 0, `Canvas 2D stack must be 0 after Denji silhouette drawBody (got ${stack})`);
+
+    // 2. Explicit hideForeheadChainsaw = true must produce the exact same rect count as _isSilhouettePass = true
+    fillRectCount = 0;
+    denji._isSilhouettePass = false;
+    denji._suppressWeaponsInSilhouettePass = false;
+    denji.hideWeapon = true;
+    denji.hideForeheadChainsaw = true;
+    denji.drawBody(mockCtx);
+    const bodyOnlyRects = fillRectCount;
+    assert(silhouetteRects === bodyOnlyRects, `Denji silhouette pass must suppress forehead chainsaw to prevent duplicate #050609 silhouette teeth (silhouette=${silhouetteRects}, bodyOnly=${bodyOnlyRects})`);
+
+    // 3. Normal combat pass renders all 3 chainsaws cleanly with stack = 0
+    fillRectCount = 0;
+    denji.hideWeapon = false;
+    denji.hideForeheadChainsaw = false;
+    denji.drawBody(mockCtx);
+    assert(fillRectCount > bodyOnlyRects, `Normal Denji drawBody must render forehead and arm chainsaws (normal=${fillRectCount}, bodyOnly=${bodyOnlyRects})`);
+    assert(stack === 0, `Canvas 2D stack must be 0 after normal Denji drawBody (got ${stack})`);
+    console.log('      ✅ Denji forehead chainsaw silhouette suppression & zero duplicate teeth verified cleanly.');
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');

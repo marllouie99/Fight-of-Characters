@@ -30,7 +30,7 @@ export const nanamiConfig = {
   startY: 250,
   startVx: 1.1,
   startVy: 1.0,
-  damage: 7,
+  damage: 50,
   cooldown: 55,
   projectileSpeedMultiplier: 1.0,
   ability: 'Ratio Technique (7:3)',
@@ -88,7 +88,7 @@ export const nanamiConfig = {
   cleaverSkillName: 'Blunt Cleaver Chop',
   cleaverRange: 55,                 // 65px melee reach
   cleaverArc: (130 * Math.PI) / 180,// 130° frontal arc
-  cleaverDamage: 30,                 // Base chop damage
+  cleaverDamage: 50,                 // Base chop damage
   cleaverCooldown: 100,              // Frames between swings (~0.92s)
   cleaverKnockback: 16,             // Base physical knockback force
   chopStrikeFrames: 10,             // Cutting sweep frames (frame-by-frame blade collision check)
@@ -102,7 +102,7 @@ export const nanamiConfig = {
   lungeSkillName: 'DECISIVE STRIKE',
   lungeCooldown: 500,               // 7.0s (420 frames)
   lungeDamage: 14,                  // Base path cleave damage
-  lungeCritDamage: 50,              // 36 True Damage on 7:3 Critical primary hit
+  lungeCritDamage: 100,              // 36 True Damage on 7:3 Critical primary hit
   lungeDistance: 180,               // 180px dash travel distance
   lungeDuration: 16,                // 16 frames travel time
   lungeSpeed: 15.25,                // Dash travel speed (px per frame, e.g. 180 / 16 = 11.25)

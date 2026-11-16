@@ -60,16 +60,27 @@ export function drawDenjiSkin(ctx, fighter) {
   );
 
   const isHybrid = (fighter.isHybridModeActive !== false) || Boolean(fighter.isExecutingMassacre);
-  const hideForeheadChainsaw = Boolean(fighter.hideHeadChainsaw || fighter.hideForeheadChainsaw);
-  const hideChainsaws = Boolean(fighter.hideChainsaws || fighter.hideChainsaw || fighter.hideWeapon || (typeof state !== 'undefined' && (state.hideDenjiChainsaws || state.showSkinOnly)));
+  const isSilhouettePass = Boolean(fighter._isSilhouettePass || fighter._suppressWeaponsInSilhouettePass);
+  const hideForeheadChainsaw = Boolean(
+    fighter.hideHeadChainsaw ||
+    fighter.hideForeheadChainsaw ||
+    isSilhouettePass
+  );
+  const hideChainsaws = Boolean(
+    fighter.hideChainsaws ||
+    fighter.hideChainsaw ||
+    fighter.hideWeapon ||
+    isSilhouettePass ||
+    (typeof state !== 'undefined' && (state.hideDenjiChainsaws || state.showSkinOnly))
+  );
   const hideHands = Boolean(fighter.hideHands || fighter.hideFrontHand || fighter.hideBackHand || hideChainsaws || (typeof state !== 'undefined' && state.showSkinOnly));
 
   let denjiShakeX = 0;
   let denjiShakeY = 0;
   if (fighter.shredShakeTimer && fighter.shredShakeTimer > 0) {
     const intensity = fighter.shredShakeIntensity || 2.0;
-    denjiShakeX = (Math.random() - 0.5) * intensity * 2;
-    denjiShakeY = (Math.random() - 0.5) * intensity * 2;
+    denjiShakeX = Math.sin(now * 0.85) * intensity;
+    denjiShakeY = Math.cos(now * 1.15) * intensity;
   }
 
   ctx.save();

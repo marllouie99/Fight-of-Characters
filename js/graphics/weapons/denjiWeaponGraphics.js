@@ -184,8 +184,9 @@ export function drawAuthenticChainsawBlade(ctx, length, thickness, now = Date.no
       // Calibrated sleek tooth proportions (Rule 19 & Anime Reference proportions)
       const toothH = bladeH * 0.38;
       const toothW = toothH * (232 / 143);
-      const toothSpacing = Math.max(6, Math.round(bladeH * 0.52)); // ~8px - 10px pitch spacing
-      const numTeeth = Math.ceil(totalPerimeter / toothSpacing);
+      const baseToothSpacing = Math.max(6, Math.round(bladeH * 0.52)); // ~8px - 10px target pitch spacing
+      const numTeeth = Math.max(1, Math.round(totalPerimeter / baseToothSpacing));
+      const toothSpacing = totalPerimeter / numTeeth;
 
       // High-speed realistic chainsaw motor RPM (turned ON buzz)
       const bladeCount = opts?.shredBladeCount || 1;
