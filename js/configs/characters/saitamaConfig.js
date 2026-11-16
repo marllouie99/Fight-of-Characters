@@ -31,6 +31,7 @@ export const saitamaConfig = {
 
   // Basic Attack: Normal Punch
   normalPunchEnabled: 1,        // Set to false to disable Normal Punch basic attack
+  normalPunchSkillName: 'NORMAL PUNCH',
   punchEnabled: true,              // Alias toggle
   disableNormalPunch: false,       // If true, disables Normal Punch basic attack
   punchDamage: 0.25,               // Punch damage as % ratio of game mode fixed HP (0.90 = 90% of fixed HP)
@@ -61,6 +62,7 @@ export const saitamaConfig = {
 
   // Skill 1: Consecutive Normal Punches
   consecutivePunchesEnabled: true, // Set to false to disable Consecutive Normal Punches (Skill 1)
+  consecutivePunchesSkillName: 'CONSECUTIVE PUNCHES',
   flurryEnabled: true,             // Alias toggle
   disableConsecutivePunches: false, // If true, disables Consecutive Normal Punches
   flurryDamage: 20,                 // Damage per rapid punch hit
@@ -89,11 +91,13 @@ export const saitamaConfig = {
 
   // Skill 2: Serious Side Hops
   enableSideHops: true,          // Master toggle for Skill 2: Serious Side Hops
+  sideHopsSkillName: 'Serious Side Hops',
   sideHopsCooldown: 420, // 7 seconds at 60fps
   sideHopsDistance: 100,
 
   // Ultimate: Serious Punch
   enableSeriousPunch: true,      // Master toggle for Ultimate: Serious Punch
+  seriousPunchSkillName: 'SERIOUS PUNCH',
   seriousPunchWindupFrames: 90, // 1.5 seconds at 60fps
   seriousPunchDamage: 999, // True damage one-shot
   seriousPunchBeamWidth: 80,
@@ -101,12 +105,14 @@ export const saitamaConfig = {
 
   // Passive: Hero for Fun
   enableHeroForFun: true,        // Master toggle for Passive: Hero for Fun
+  heroForFunSkillName: 'Hero for Fun',
   boredomStackInterval: 300, // 5 seconds at 60fps
   boredomMaxStacks: 5,
   boredomDamagePerStack: 0.15, // +15% per stack
 
   // Passive: Caped Baldy Reflexes (Dodge Teleport)
   enableDodge: true,             // Master toggle for Passive: Caped Baldy Reflexes
+  dodgeSkillName: 'Caped Baldy Reflexes',
   dodgeChance: 0.90,             // Probability (0-1) of successfully dodging incoming attacks
   domainDodgeChance: 0.85,       // Probability (0-1) of dodging spatial slice lines in Domain Expansions (e.g. Malevolent Shrine)
   beamDodgeChance: 1.0,          // Probability (0-1) of dodging lethal super-beams (Nameless Destroyer, Pure Love Beam)
@@ -126,6 +132,7 @@ export const saitamaConfig = {
 
   // Passive: Serious Skill Counter (Teleport Behind Punch)
   enableSeriousCounter: true,    // Master toggle for Serious Skill Counter
+  seriousCounterSkillName: 'Serious Skill Counter',
   enableCounterAutoAim: true,    // Master toggle for smooth auto-aim tracking during counter wind-up
   counterAutoAimTurnRate: 0.045, // Controlled turn rate (radians/frame) for smooth, non-fast rotation during counter wind-up (~2.5 deg/frame)
   counterAimLockFrames: 30,      // Lock aim for the final 0.5s, giving enemies time to dodge the lethal counter punch

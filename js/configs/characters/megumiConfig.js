@@ -33,6 +33,7 @@ export const megumiConfig = {
 
   // Melee & Cursed Dagger Attack
   enableDaggerAttack: true,    // Master toggle for basic cursed dagger attack
+  daggerSkillName: 'Cursed Dagger Combo',
   punchSpeed: 18,
   daggerRange: 55,
   daggerDamage: 14,
@@ -41,6 +42,7 @@ export const megumiConfig = {
 
   // Passive: Liquid Shadow Reservoir & Shadow Sink
   enableShadowSink: true,      // Master toggle for Shadow Sink passive
+  shadowSinkSkillName: 'SHADOW SINK',
   shadowSinkCooldown: 300, // 5.0s (300 frames)
   shadowSinkRequiredWallBounces: 1, // Number of arena wall bounces required before eruption
   shadowSinkGlideSpeedMultiplier: 1.45, // Submerged movement speed boost
@@ -53,12 +55,14 @@ export const megumiConfig = {
 
   // Skill 1: Divine Dog: Totality (Kon: Zen)
   enableTotality: true,        // Master toggle for Divine Dog: Totality
+  totalitySkillName: 'DIVINE DOG: TOTALITY',
   totalityCooldown: 420, // 7.0s
   totalityDamage: 22,
   totalityBleedDuration: 180, // 3.0s
 
   // Skill 2: Nue (Thunder Bird) & Toad (Gama)
   enableNue: true,             // Master toggle for Nue & Toad summons
+  nueSkillName: 'NUE: THUNDER BIRD',
   nueCooldown: 360, // 6.0s
   nueDamage: 18,
   nueStunFrames: 45, // 0.75s electric stun
@@ -66,16 +70,19 @@ export const megumiConfig = {
 
   // Skill 3: Max Elephant & Rabbit Escape
   enableMaxElephant: true,     // Master toggle for Max Elephant & Rabbit Escape
+  maxElephantSkillName: 'Max Elephant & Rabbit Escape',
   maxElephantCooldown: 600, // 10.0s
   maxElephantDamage: 35,
   rabbitEscapeCooldown: 480, // 8.0s
 
   // Domain Expansion: Chimera Shadow Garden
   enableDomainExpansion: true,  // Master toggle for Chimera Shadow Garden
+  domainSkillName: 'CHIMERA SHADOW GARDEN',
   domainDuration: 600, // 10.0s
   domainSlowMultiplier: 0.50,
 
   // Desperation Climax: Mahoraga Ritual
   enableMahoragaRitual: true,  // Master toggle for Mahoraga Ritual desperation summon
+  mahoragaRitualSkillName: 'SUMMON MAHORAGA',
   mahoragaThresholdHpPercent: 0.20, // 20% max HP
 };

@@ -178,6 +178,17 @@ export function getFighterHealthBarColor(fighter, ratio, isDark = null) {
 /**
  * Resolves the primary theme color for any fighter entity.
  */
+export function isRoaringKnightFighter(f) {
+  if (!f) return false;
+  const charId = String(
+    f.characterId ||
+    f.type ||
+    (f._def && (f._def.id || f._def.type)) ||
+    ''
+  ).toLowerCase();
+  return charId === 'roaring_knight' || charId === 'roaringknight';
+}
+
 export function getFighterThemeColor(f, fallbackColor = '#38bdf8') {
   if (!f) return fallbackColor;
   const isYuta = Boolean(
@@ -2127,9 +2138,9 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
   }
   const f2NameHtml = (typeof f2Name === 'string' && f2Name.includes('『')) ? formatFighterNameHTML(f2Name) : f2Name;
   const f3NameHtml = (typeof f3Name === 'string' && f3Name.includes('『')) ? formatFighterNameHTML(f3Name) : f3Name;
-  const f1SansClass = isF1Sans ? ' hud-sans-name' : '';
-  const f2SansClass = isF2Sans ? ' hud-sans-name' : '';
-  const f3SansClass = isF3Sans ? ' hud-sans-name' : '';
+  const f1SansClass = `${isF1Sans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(f1) ? ' hud-roaring-knight-name' : ''}`;
+  const f2SansClass = `${isF2Sans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(f2) ? ' hud-roaring-knight-name' : ''}`;
+  const f3SansClass = `${isF3Sans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(f3) ? ' hud-roaring-knight-name' : ''}`;
 
   const f1Grade = getFighterGrade(f1);
   const f2Grade = getFighterGrade(f2);
@@ -2160,6 +2171,9 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
       const chalHp = MODE_SETTINGS[state.mode]?.challengerFixedHp ?? MODE_SETTINGS[state.mode]?.enemyFixedHp ?? 500;
       const nextBarColor = nextDef ? getFighterHealthBarColor(nextDef, 1.0, isDark) : 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)';
       const isNextNamelessDeity = Boolean(nextDef && (nextDef.characterId === 'namelessdeity' || nextDef.type === 'namelessdeity'));
+      const isNextSans = Boolean(nextDef && (nextDef.characterId === 'sans' || nextDef.type === 'sans'));
+      const isNextRoaringKnight = isRoaringKnightFighter(nextDef);
+      const nextNameClass = `${isNextSans ? ' hud-sans-name' : ''}${isNextRoaringKnight ? ' hud-roaring-knight-name' : ''}`;
 
       ghostStackHtml = `
         <div class="hud-top-ghost-stack" data-remaining="${remainingAfterCurrent}">
@@ -2172,7 +2186,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
                   <span class="health-card__bar-text hud-top-ghost-bar-text">${chalHp}</span>
                 </div>
                 <div class="hud-top-header hud-top-ghost-header">
-                  <span class="hud-top-name hud-top-ghost-name">${nextNameHtml}</span>
+                  <span class="hud-top-name hud-top-ghost-name${nextNameClass}">${nextNameHtml}</span>
                 </div>
               </div>
               <div class="hud-top-profile hud-top-ghost-profile" data-grade="${nextGrade}">
@@ -2189,7 +2203,7 @@ export function buildTopDuelHUD(f1, f2, isDark = false, f1SkillsHTML = '', f2Ski
                 <span class="health-card__bar-text hud-top-ghost-bar-text">${chalHp}</span>
               </div>
               <div class="hud-top-header hud-top-ghost-header">
-                <span class="hud-top-name hud-top-ghost-name">${nextNameHtml}</span>
+                <span class="hud-top-name hud-top-ghost-name${nextNameClass}">${nextNameHtml}</span>
               </div>
             </div>
             <div class="hud-top-profile hud-top-ghost-profile" data-grade="${nextGrade}"${isNextNamelessDeity ? ' data-character="namelessdeity"' : ''}>
@@ -4115,7 +4129,7 @@ function updateHealthHud() {
         let memberNameColor = isDarkTheme ? (isMemberYuta ? '#FF1493' : defaultNameColor) : defaultNameColor;
         const memberThemeColor = getFighterThemeColor(m, memberNameColor);
         const memberName = getFighterDisplayName(m, true);
-        const memberNameClass = isMemberSans ? 'health-card__member-name hud-sans-name' : 'health-card__member-name';
+        const memberNameClass = `health-card__member-name${isMemberSans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(m) ? ' hud-roaring-knight-name' : ''}`;
         const memberGrade = getFighterGrade(m);
         const memberGradeMeta = getGradeMeta(memberGrade);
         const memberHeaderHTML = `
@@ -4381,7 +4395,7 @@ function updateHealthHud() {
         const bossSubname = getBossSubName(bossFighter);
         const bossColor = getFighterThemeColor(bossFighter, '#ef4444');
         const hpValText = `${Math.floor(Math.max(0, Number(curHp) || 0))} / ${Math.floor(maxHp)}`;
-        const bossNameClass = isBossSans ? 'boss-card__name hud-sans-name' : 'boss-card__name';
+        const bossNameClass = `boss-card__name${isBossSans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(bossFighter) ? ' hud-roaring-knight-name' : ''}`;
 
         const bossGrade = getFighterGrade(bossFighter);
         const bossGradeMeta = getGradeMeta(bossGrade);
@@ -4499,7 +4513,7 @@ function updateHealthHud() {
         const shakeTimer = chFighter._healthBarShakeTimer || 0;
         const matchWins = (state.scores && fighterIndex >= 0 && state.scores[fighterIndex]) ? state.scores[fighterIndex] : 0;
         const cardDesc = (fighterDef && mode !== GAME_MODES.FFA) ? fighterDef.desc : '';
-        const chNameClass = isChSans ? 'challenger-name hud-sans-name' : 'challenger-name';
+        const chNameClass = `challenger-name${isChSans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(chFighter) ? ' hud-roaring-knight-name' : ''}`;
         const chGrade = getFighterGrade(chFighter);
         const chGradeMeta = getGradeMeta(chGrade);
 
@@ -4824,7 +4838,7 @@ function updateHealthHud() {
 
         const isSans = Boolean(fighter.characterId === 'sans' || fighter.type === 'sans' );
         const fighterThemeColor = getFighterThemeColor(fighter, nameColor);
-        const nameClass = isSans ? 'health-card__member-name hud-sans-name' : 'health-card__member-name';
+        const nameClass = `health-card__member-name${isSans ? ' hud-sans-name' : ''}${isRoaringKnightFighter(fighter) ? ' hud-roaring-knight-name' : ''}`;
         const isFfaVertical = isFfa && !isH;
         const ffaAlign = isFfaVertical ? (index === 0 ? 'left' : (index === 2 ? 'right' : 'center')) : (index % 2 === 0 ? 'left' : 'right');
         const ffaJustify = ffaAlign === 'left' ? 'flex-start' : (ffaAlign === 'right' ? 'flex-end' : 'center');

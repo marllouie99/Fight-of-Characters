@@ -109,8 +109,6 @@ export class LaserFighter extends Fighter {
   applyBeamEffectsToTarget(target, ownerIndex) {
     if (!target || target === this) return;
 
-    target.caughtInLaserBeamTimer = 10;
-
     let hitState = this.beamHitState.get(target);
     if (!hitState) {
       hitState = { initialHitDone: false, continuousDamageTimer: 0 };
@@ -130,6 +128,7 @@ export class LaserFighter extends Fighter {
         skillShotId: 'laser_beam'
       });
       if (applied) {
+        target.caughtInLaserBeamTimer = 10;
         // Slow (chance)
         const slowChance = Number(CONFIG.laser.slowChance || 1);
         const shouldSlow = slowChance >= 1 ? true : (Math.random() <= slowChance);
@@ -165,6 +164,7 @@ export class LaserFighter extends Fighter {
         skillShotId: 'laser_beam'
       });
       if (applied) {
+        target.caughtInLaserBeamTimer = 10;
         // Continuous push direction (from beam owner -> target)
         const pushStrength = Number(CONFIG.laser.initialKnockback) || 0;
         if (pushStrength !== 0 && !target.immuneToPush && !target.immuneToKnockback && target.characterId !== 'escanor') {

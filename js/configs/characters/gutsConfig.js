@@ -42,6 +42,7 @@ export const gutsConfig = {
   // Passive 1: The Struggler (Heavy Poise & Defiance)
   // ──────────────────────────────────────────
   enableTheStruggler: true,      // Master toggle for Passive 1 (Heavy Poise & Lethal Defiance 1-HP survival)
+  theStrugglerSkillName: 'The Struggler',
   enableLethalDefiance: true,   // Alias toggle for 1-HP survival gate
   maxPoise: 100,
   poiseRegenRate: 1.5,
@@ -54,6 +55,7 @@ export const gutsConfig = {
   // Passive 2: Brand of Sacrifice & Od Meter
   // ──────────────────────────────────────────
   enableBrandOfSacrifice: true, // Master toggle for Passive 2 (Od Meter charging from combat damage)
+  brandSkillName: 'Brand of Sacrifice',
   enableOdMeter: true,          // Alias toggle for Od Meter
   maxOdGauge: 100,
   odChargePerDamageTaken: 0.15,
@@ -63,6 +65,7 @@ export const gutsConfig = {
   // Basic Attack: Dragon Slayer 2-Hit Melee Cleaves (Knight Standard 5-Phase Swing)
   // ──────────────────────────────────────────
   enableDragonSlayer: 0,     // Master toggle for Basic Attack (Dragon Slayer Sword Swing)
+  dragonSlayerSkillName: 'Dragon Slayer 2-Hit Cleave',
   enableSword: true,            // Alias toggle for Dragon Slayer
   enableMeleeCombo: true,       // Alias toggle
   enableBasicAttack: true,      // Standard alias
@@ -127,6 +130,7 @@ export const gutsConfig = {
   //   Frame 12: Poised settle & smooth weighted return to neutral battle stance (24f)
   // ──────────────────────────────────────────
   enableSkill1: true,            // Master toggle for Skill 1
+  skill1Name: 'CALAMITY CLEAVE',
   enableCalamityCleave: true,    // Alias toggle for Calamity Cleave
   skill1CooldownMax: 420,        // 7.0s cooldown
   calamityCooldownMax: 420,
@@ -165,6 +169,7 @@ export const gutsConfig = {
   // Skill 2: Prosthetic Arm Cannon & Repeating Crossbow
   // ──────────────────────────────────────────
   enableSkill2: 0,              // Master toggle for Skill 2 (0 = off while testing Skill 1)
+  skill2Name: 'WRIST CANNON / BOLTS',
   enableArmCannon: true,        // Alias toggle for Arm Cannon
   enableCannon: true,           // Alias toggle for Arm Cannon
   cannonCooldownMax: 420, // 7.0s
@@ -182,6 +187,7 @@ export const gutsConfig = {
   // Skill 2: Iron Cyclone / Cleaving Rush
   // ──────────────────────────────────────────
   enableCyclone: 0,             // Master toggle for Skill 2 (Iron Cyclone / Cleaving Rush)
+  cycloneSkillName: 'CYCLONE CLEAVE',
   enableIronCyclone: true,      // Alias toggle for Iron Cyclone
   enableSkill2: 0,              // Alias toggle for Skill 2
   cycloneCooldownMax: 540, // 9.0s
@@ -194,6 +200,7 @@ export const gutsConfig = {
   // Ultimate Skill: Awakening of the Beast (Berserker Armor)
   // ──────────────────────────────────────────
   enableBerserkerArmor: 0,   // Master toggle for Ultimate (Berserker Armor Awakening)
+  berserkerArmorSkillName: 'BERSERKER ARMOR',
   enableBerserker: true,        // Alias toggle for Berserker Armor
   enableUltimate: true,         // Alias toggle for Ultimate
   berserkerCooldownMax: 1800, // 30.0s

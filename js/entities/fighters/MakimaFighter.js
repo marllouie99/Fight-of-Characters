@@ -1288,6 +1288,9 @@ export class MakimaFighter extends Fighter {
     for (let t of allTargets) {
       const d = Math.hypot(t.x - this.x, t.y - this.y);
       if (d <= range + (t.r || 25) && this._isPointNearLineSegment(t.x, t.y, startX, startY, endX, endY, (t.r || 25) + chainWidth * 0.5)) {
+        if (typeof t.tryParryExternalCC === 'function' && t.tryParryExternalCC(this, { isSkill: true, isMakimaChains: true })) {
+          continue;
+        }
         this.chainedTargets.push(t);
         t.isChainedByMakima = true;
         t._makimaChainer = this;

@@ -18,6 +18,8 @@ export const hydraConfig = {
   cooldown: 0, // Doesn't fire normally
   moveSpeed: 8.5, // Slow
   projectileSpeedMultiplier: 1.0,
+  // ── Passive & Ultimate: Projectile Shatter, Weapon Theft & The Overdrive (Tuned in HydraFighter) ──
   ability: 'The Overdrive',
+  overdriveSkillName: 'The Overdrive',
   desc: 'Extremely tanky. Steals physical weapons upon being hit (copying their exact damage). Passively destroys incoming projectiles. Ultimate grants CC immunity.',
 };

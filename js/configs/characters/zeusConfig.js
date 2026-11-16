@@ -49,6 +49,7 @@ export const zeusConfig = {
 
   // ── Critical Strike Mechanics & Scaling ──
   enableThunderCrit: true,         // Master toggle for Thunder Strike Critical mechanic
+  thunderCritSkillName: 'Lightning Critical Strike',
   thunderCritChance: 0.25,         // Base critical hit chance on thunder strikes (25%)
   thunderCritMultiplier: 1.80,     // Base critical hit damage multiplier (1.80x / 180%)
   staticCritBonus: 0.25,           // Synergistic bonus crit chance against targets afflicted with Static (+25% -> 50% total)
@@ -58,6 +59,7 @@ export const zeusConfig = {
 
   // ── Basic Attack: Chain Lightning (Fast Projectile) ──
   enableChainLightning: true,  // Master toggle for Chain Lightning basic attack
+  chainLightningSkillName: 'Chain Lightning',
   lightningDamage: 30,         // Base damage per lightning hit (balanced with Sukuna slashes & Gojo basic)
   lightningSpeed: 30,          // Supersonic bolt speed (px/frame)
   lightningRadius: 6,          // Radius of chain lightning bolt projectile
@@ -87,6 +89,7 @@ export const zeusConfig = {
 
   // ── Passive: Aegis Shield (Melee Counter) ──
   enableAegisShield: true,     // Master toggle for Aegis Shield melee counter
+  aegisShieldSkillName: 'AEGIS SHIELD',
   aegisCooldown: 300,          // Recharge cooldown in frames (5.0s at 60fps)
   aegisShockDamage: 12,        // Shock counter damage dealt to melee attackers (tuned with Sukuna Spiderweb: 15)
   aegisParalyzeDuration: 60,   // Duration in frames (~1.0s) of slow applied to attacker
@@ -98,6 +101,7 @@ export const zeusConfig = {
 
   // ── Ultimate: Thunder Storm (Map-Wide Divine Wrath) ──
   enableThunderStorm: true,    // Master toggle for Thunder Storm ultimate
+  thunderStormSkillName: 'THUNDER STORM',
   stormCooldown: 1000,         // 25.0s Cooldown (balanced with Gojo Hollow Purple & Sukuna Fuga / Domain)
   stormDuration: 300,          // 5.0 seconds total active storm duration
   stormStrikesPerSec: 3,       // Frequency of lightning strikes per enemy (3 per sec = 15 strikes total)

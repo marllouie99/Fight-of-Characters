@@ -24,6 +24,7 @@ export const bombermanConfig = {
   damageNumberColor: '#F97316', // Fiery Blast Orange
 
   // ── Basic Attack: Tile-Centered Bomb Plant & Passive Bomb Up Cadence ──
+  basicAttackSkillName: 'Bomb Plant',
   showHeldBomb: true, // When true, displays bomb resting cleanly in right hand when ready to plant (set false for pure classic two-hand symmetry)
   plantCooldown: 90, // 1.50s basic attack cooldown; each time this CD finishes, Passive Bomb Up adds +1 active bomb capacity!
   plantInitialCooldown: 90, // Initial delay (frames) before first bomb plant (0 = immediate first lay)
@@ -44,11 +45,13 @@ export const bombermanConfig = {
 
   // ── Passive: Bomb Up (Max. 10 — Scales +1 Every Basic Attack Cooldown) ──
   enableBombUp: true,
+  bombUpSkillName: 'BOMB UP',
   initialMaxBombs: 1, // First lay: 1 active bomb; after 1st basic CD: 2 active bombs; after 2nd basic CD: 3 active bombs, etc.
   maxBombsCap: 10, // Hard cap: Max 10 simultaneous active bombs
 
   // ── Skill 1: Fire Up (Max. 10) ──
   enableFireUp: true,
+  fireUpSkillName: 'FIRE UP',
   initialFireLevel: 1, // Starts at Level 1 blast reach (~1.15 tiles)
   maxFireLevelCap: 20, // Hard cap: Max Level 10 full-arena cross reach
   fireUpCooldown: 210, // ~3.50s between Fire Up power-up activations
@@ -60,6 +63,7 @@ export const bombermanConfig = {
 
   // ── Skill 2: Kick (Bomb Kick — Traveling Bombs & Mid-Travel Explosion) ──
   enableBombKick: true,
+  bombKickSkillName: 'BOMB KICK',
   canKickBombs: true, // Allows Bomberman to kick planted bombs across the arena
   bombKickRange: 64, // Must be very close to the bomb (within touching/adjacent boot range) to kick it
   kickHitPauseFrames: 5, // Small kick impact freeze between Bomberman and the bomb upon kick contact (~83ms)
@@ -71,6 +75,7 @@ export const bombermanConfig = {
 
   // ── Ultimate: Invincible (Incoming Attack Immunity) ──
   enableInvincible: true,
+  invincibleSkillName: 'INVINCIBLE',
   invincibleDuration: 300, // ~8.33s incoming attack immunity at 60 FPS (500 frames)
   invincibleCooldown: 1000, // ~16.67s cooldown after activation (1000 frames)
   invincibleInitialCooldown: 1000, // ~16.67s initial charge before first Ultimate cast (1000 frames)

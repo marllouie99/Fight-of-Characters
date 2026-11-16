@@ -39,6 +39,7 @@ export const makimaConfig = {
 
   // Passive 1: Prime Minister Contract (Citizen Redirection)
   enableCitizenContract: true,      // Master toggle for Passive 1: Prime Minister Contract & Shatter Revive
+  citizenContractSkillName: 'CONTRACT',
   maxCitizenLives: 3,               // 5 citizen sacrifice stocks
   citizenReviveHpPercent: 1.00,     // Revives with 100% Max HP
   citizenReviveDurationFrames: 75,  // 1.25s death shatter & magnetic reassembly duration
@@ -48,6 +49,7 @@ export const makimaConfig = {
 
   // Primary Attack: "Bang!" (Lightning-Fast Full-Screen Invisible Beam)
   enableBang: true,                 // Master toggle for Primary Attack: "Bang!"
+  bangSkillName: 'BANG!',
   bangDamage: 70,                   // Direct hit damage
   bangWallBounceDamage: 22,         // Bonus damage when slammed into arena walls
   bangKnockbackForce: 46,           // Massive directional knockback
@@ -63,6 +65,7 @@ export const makimaConfig = {
 
   // Skill 1: Chains of Domination (Shihai no Kusari)
   enableSkill1: 1,                  // Master toggle for Skill 1: Chains of Domination (Shihai no Kusari)
+  skill1Name: 'CHAINS OF DOMINATION',
   enableChains: true,               // Alias toggle for Skill 1
   chainsCooldown: 500,              // 9.0s (540 frames)
   chainsRange: 400,                 // Tether reach in pixels
@@ -82,6 +85,7 @@ export const makimaConfig = {
 
   // Skill 2: Angel's Armory (100-Year Halberds & 1000-Year Spear)
   enableSkill2: 0,                  // Master toggle for Skill 2: Angel's Armory (1000-Year Holy Spear)
+  skill2Name: "ANGEL'S ARMORY",
   enableAngelArmory: true,          // Alias toggle for Skill 2
   enableThousandYearSpear: true,    // Alias toggle for 1000-Year Spear
   angelCooldown: 1500,               // 13.5s (810 frames)
@@ -93,6 +97,7 @@ export const makimaConfig = {
 
   // Ultimate: Crucifixion (Drop of Dominion) / Kyoto Shrine Ritual
   enableUltimate: 1,                // Master toggle for Ultimate: Crucifixion (Drop of Dominion)
+  ultimateSkillName: 'CRUCIFIXION',
   enableCrucifixion: true,          // Alias toggle for Crucifixion
   enableShrine: true,               // Alias toggle for Ultimate
   enableShrineRitual: true,         // Alias toggle for Ultimate

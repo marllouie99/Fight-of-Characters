@@ -34,6 +34,7 @@ export const engineerConfig = {
 
   // Primary Ranged Attack: Shotgun
   enableShotgun: true,         // Master toggle for Shotgun primary ranged attack
+  shotgunSkillName: 'Shotgun Blast',
   shotgunCooldown: 100,
   shotgunPellets: 8,
   shotgunSpread: 0.45,         // Spread angle in radians (~26°)
@@ -46,6 +47,7 @@ export const engineerConfig = {
 
   // Melee Weapon & Repair Tool: Wrench
   enableWrench: true,          // Master toggle for Wrench melee & repair tool
+  wrenchSkillName: 'Wrench Swing & Repair',
   wrenchCooldown: 30,
   wrenchDamage: 15,
   wrenchRange: 85,             // Melee engagement distance
@@ -56,6 +58,7 @@ export const engineerConfig = {
 
   // Skill 1: Sentry Turret (Primary Combat Building)
   enableSentryTurret: true,    // Master toggle for Sentry Turret
+  sentrySkillName: 'SENTRY',
   skillCooldown: 500,          // Rebuild cooldown after destruction (~8.3s)
   turretRadius: 18,            // Physical collision radius
   turretAimSpeed: 0.08,        // Aim rotation speed in radians per frame
@@ -97,6 +100,7 @@ export const engineerConfig = {
 
   // Skill 2: Dispenser (Secondary Support Building)
   enableDispenser: true,       // Master toggle for Dispenser
+  dispenserSkillName: 'DISPENSER',
   dispenserHp: 300,            // Dispenser max health
   dispenserRadius: 19,         // Physical collision radius
   dispenserBuildTime: 200,     // Construction duration (~1.8s)

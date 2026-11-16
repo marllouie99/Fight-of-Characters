@@ -28,13 +28,15 @@ export const spartanConfig = {
     spear: 'Assets/model/spartan/spartan_spear.png',
   },
 
-  // ── Hoplon Round Bronze Shield (Passive Frontal Deflection) ──
+  // ── Passive: Hoplon Round Bronze Shield (Frontal Deflection) ──
+  hoplonShieldSkillName: 'Hoplon Shield',
   shieldBlockChance: 0.35,         // 35% passive frontal block chance with bronze shield
   blockFlashFrames: 16,
   shieldHoldFrames: 45,
   blockHitPauseFrames: 7,
 
-  // ── Dory Spear Linear Melee Thrust (5-Phase Melee Standard: Rule 30) ──
+  // ── Basic Attack: Dory Spear Linear Melee Thrust (5-Phase Melee Standard: Rule 30) ──
+  dorySpearSkillName: 'Dory Spear Thrust',
   spearRange: 95,                  // Long melee reach (longer than swords)
   spearCooldown: 34,
   spearDamage: 32,
@@ -50,7 +52,8 @@ export const spartanConfig = {
   hitHitPauseFrames: 8,            // Visceral freeze on spear impale
   hitHitStunFrames: 12,
 
-  // ── Heavy Javelin Throw (Medium/Long Range Active Skill) ──
+  // ── Skill 1: Heavy Javelin Throw (Medium/Long Range Active Skill) ──
+  javelinSkillName: 'JAVELIN HURL',
   javelinCooldown: 360,            // 6.0 second cooldown (360 frames @ 60 FPS)
   javelinMinRange: 110,            // Trigger throw when target is beyond 110px
   javelinDamage: 52,               // Heavy burst damage

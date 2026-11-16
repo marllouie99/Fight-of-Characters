@@ -19,7 +19,8 @@ export const circeConfig = {
   ability: 'Poison Grenade',
   desc: 'Throws a poison and deals AOE damage and poisons them.',
 
-  // Skill Tuning (CONFIG.grenadier)
+  // ── Skill 1: Poison Grenade (AOE Blast & Toxic DoT) ──
+  poisonGrenadeSkillName: 'Poison Grenade',
   attackRadius: 150, // pixels; enemy must be closer than this to trigger a throw
   throwCooldown: 120, // frames between grenade throws
   poisonTicks: 5,            // number of poison ticks

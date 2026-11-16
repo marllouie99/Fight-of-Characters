@@ -41,6 +41,7 @@ export const gokuConfig = {
 
   // ─── Basic Attack: Hybrid Martial Arts & Follow-Up Ki Barrage Engine ───
   enableBasicMelee: true,             // Master toggle for Melee Mode Basic Attack
+  basicMeleeSkillName: 'HYBRID CQC',
   initialMeleeDuration: 120,          // Duration of continuous CQC Melee Mode brawling in frames (2.0s at 60fps)
   meleeReach: 68,                     // Frontal arc strike reach in pixels (75 in Super Saiyan)
   meleeGapCloseRange: 150,            // Distance within which basic attack executes Z-Vanish step-in
@@ -54,6 +55,7 @@ export const gokuConfig = {
   meleeBackstepDistance: 120,         // Distance vaulted backward after finisher (pixels)
   meleeModeSeparationCooldown: 180,   // Separation delay in frames before initiating next melee mode (3.0s at 60fps)
   enableFollowUpKiBarrage: true,      // Master toggle for follow-up Ki Blast Barrage
+  kiBarrageSkillName: 'KI BARRAGE',
   followUpKiCount: 10,                 // Number of Ki blasts fired in follow-up barrage
   followUpKiDamage: 8,                // Damage per Ki blast in follow-up barrage (11 in Super Saiyan)
   followUpKiSpeed: 16,                // Projectile speed of follow-up Ki blasts (px/frame)
@@ -62,6 +64,7 @@ export const gokuConfig = {
 
   // ─── Skill 1: Dragon Hammer & Z-Burst Combo ───
   enableDragonHammer: true,           // Master toggle for Skill 1
+  dragonHammerSkillName: 'DRAGON HAMMER',
   dragonHammerCooldown: 420,          // 7.0s cooldown at 60fps
   dragonHammerFlurryHits: 4,          // Number of rapid martial hits
   dragonHammerDamage: [12, 12, 14, 28],// Multi-strike damage distribution
@@ -71,6 +74,7 @@ export const gokuConfig = {
 
   // ─── Skill 2: Kaioken Burst & Heavy Dragon Strike ───
   enableKaiokenStrike: true,          // Master toggle for Skill 2
+  kaiokenSkillName: 'KAIOKEN STRIKE',
   kaiokenCooldown: 390,               // 6.5s cooldown at 60fps
   kaiokenDamage: 45,                  // Burst physical damage (58 in Super Saiyan)
   kaiokenDashDistance: 200,           // Dash distance in pixels
@@ -79,6 +83,7 @@ export const gokuConfig = {
 
   // ─── Ultimate: Super Kamehameha ───
   enableKamehameha: true,             // Master toggle for Ultimate
+  kamehamehaSkillName: 'SUPER KAMEHAMEHA',
   kamehamehaCooldown: 1800,           // 30.0s cooldown at 60fps
   kamehamehaChargeFrames: 60,         // 1.0s chanted windup
   kamehamehaFireFrames: 48,           // Active beam firing duration
@@ -91,6 +96,7 @@ export const gokuConfig = {
 
   // ─── Super Saiyan Transformation (Stats Multiplier Buff) ───
   enableSuperSaiyan: true,            // Master toggle for Super Saiyan Transformation
+  superSaiyanSkillName: 'SUPER SAIYAN',
   superSaiyanHpThreshold: 0.35,       // Health threshold to trigger transformation (35% HP)
   superSaiyanDuration: 900,           // Duration of transformation in frames (15.0s at 60fps)
   superSaiyanDmgMultiplier: 1.30,     // Damage multiplier (+30% attack power)
@@ -100,6 +106,7 @@ export const gokuConfig = {
 
   // ─── Z-Vanish Afterimage Dodge System (Saitama & Sans Standard) ───
   enableDodge: true,                  // Master toggle for autonomous Z-Vanish evasion
+  zVanishSkillName: 'Z-Vanish Afterimage',
   dodgeChance: 0.85,                  // Base evasion probability against incoming attacks (85%)
   domainDodgeChance: 0.80,            // Evasion probability against Domain spatial slices (80%)
   beamDodgeChance: 0.90,              // Evasion probability against lethal super-beams (90%)

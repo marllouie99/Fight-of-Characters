@@ -42,6 +42,7 @@ export const naoyaConfig = {
 
   // Passive: Projection Sorcery (Permanent Speed & Evade Stacking on Hit)
   enableProjectionSorcery: true,
+  projectionSorcerySkillName: 'Projection Sorcery',
   maxFrameStacks: 20,               // Max speed & evade stacks
   speedBonusPerStack: 1.00,         // +0.50 permanent movement speed per hit
   baseEvadeChance: 0.05,            // 5% starting base evade chance
@@ -64,6 +65,7 @@ export const naoyaConfig = {
 
   // Passive: 24-Frame Palm Touch & Frame Stasis Freeze
   enableFrameFreeze: 1,             // ⚡ 24-Frame Palm Touch Frame Stasis Freeze
+  frameFreezeSkillName: '24-Frame Palm Touch',
   frameFreezeChance: 0.35,          // ⚡ Trigger chance per flurry punch (35%)
   frameFreezeDuration: 60,          // ⚡ 1.0s duration (60 frames)
   frameFreezeCooldown: 30,          // ⚡ Cooldown between passive palm touch freezes
@@ -73,6 +75,7 @@ export const naoyaConfig = {
   frameShatterRadius: 75,
 
   // Primary Attack: Rapid 24 FPS Hypersonic Brawler Punch Flurry Barrage (Attack-Teleport-Attack Sequence)
+  basicFlurrySkillName: '24 FPS Punch Flurry',
   meleeReach: 72,
   meleeArc: (140 * Math.PI) / 180,  // 140° frontal arc
   basicComboHits: 15,               // ⚡ How many total punches in a flurry sequence (e.g. 10, 20, 30)
@@ -99,6 +102,7 @@ export const naoyaConfig = {
 
   // Skill 1: Frame Blitz (Nijūyon Koma Senkō)
   enableFrameBlitz: 0,
+  frameBlitzSkillName: 'FRAME BLITZ',
   skill1Cooldown: 330,              // 5.5s (330 frames)
   skill1Damage: 24,
   skill1DashDist: 220,
@@ -107,6 +111,7 @@ export const naoyaConfig = {
 
   // Skill 2: Sonic Boom Rebound Kick (Onpoku Kyaku)
   enableSonicKick: 1,
+  sonicKickSkillName: 'SONIC REBOUND',
   skill2Cooldown: 480,              // 8.0s (480 frames)
   skill2Damage: 26,
   skill2WallImpactDamage: 18,
@@ -116,6 +121,7 @@ export const naoyaConfig = {
 
   // Ultimate: 24 FPS Mach 3 Runway Breach — Out-of-Bounds Acceleration & Sonic Shatter
   enableUltimate: 1,
+  ultimateSkillName: 'Mach 3 Runway Breach',
   ultCooldown: 1440,                // 24.0s (1440 frames)
   ultPostComboDelayFrames: 120,     // ⚡ Buffer delay (frames) after completing a tanto stab finisher before ultimate can be cast (~2.0s cooldown buffer)
   ultStartupPauseFrames: 28,        // ⚡ Duration (frames) of the initial arena time-stop pause where Naoya stops before running (~0.45s)
@@ -148,6 +154,7 @@ export const naoyaConfig = {
   // OPTION B: VENGEFUL CURSE REBIRTH & AWAKENED JET MECHANICS
   // ═══════════════════════════════════════════════════════════
   enableCurseRebirth: 0,         // ⚡ Master toggle for Vengeful Curse Rebirth upon lethal damage (hp <= 0)
+  curseRebirthSkillName: 'CURSED REBIRTH',
   startInCurseForm: false,          // ⚡ Debug / testing toggle to start battle directly in Curse Form
   curseRebirthHpPercent: 0.50,      // ⚡ Reborn with 50% max HP (95 HP)
   curseWombDurationFrames: 60,      // ⚡ Duration (frames) of Cursed Womb cocoon phase before hatching (~1.0s)
@@ -161,6 +168,7 @@ export const naoyaConfig = {
   
   // Ramjet Mach 3 Gauge (1. Mach 3 Propulsion & Flight)
   enableMachGauge: 1,               // ⚡ Mach 3 Overdrive Gauge (0-100%)
+  machGaugeSkillName: 'MACH 3 OVERDRIVE',
   machGaugeRampPerSecond: 16,       // ⚡ Passive gauge charge rate per second while moving
   machGaugePerRicochet: 25,         // ⚡ Gauge bonus on arena wall bounce
   machGaugePerHit: 20,              // ⚡ Gauge bonus when landing melee attacks
@@ -184,6 +192,7 @@ export const naoyaConfig = {
 
   // Awakened Skill 1: Mach 3 Propulsion & Flight (Chōsoku Ramjet)
   enableCurseRamjet: 1,
+  curseRamjetSkillName: 'MACH 3 RAMJET',
   curseSkill1Cooldown: 300,          // 5.0s (300 frames)
   curseRamjetChargeFrames: 10,      // Armor panels open & compress air spool-up
   curseRamjetTravelFrames: 16,      // Supersonic Mach 3 vector thrust
@@ -193,6 +202,7 @@ export const naoyaConfig = {
 
   // Awakened Skill 2: Air Compression Attacks (Explosive Air Bursts)
   enableCurseTurbineCannon: 1,
+  curseTurbineSkillName: 'AIR COMPRESSION',
   curseSkill2Cooldown: 390,          // 6.5s (390 frames)
   curseTurbineInhaleRadius: 230,    // Intake vent air compression suction radius
   curseTurbineInhaleDuration: 18,   // Air compression charge frames
@@ -202,6 +212,7 @@ export const naoyaConfig = {
 
   // Awakened Ultimate: Domain Expansion — Time Cell Moon Palace (時胞月宮殿 - Tokyū Gesshōkyū)
   enableCurseDomain: 0,
+  curseDomainSkillName: 'Time Cell Moon Palace',
   curseDomainInitialCooldown: 240,   // ⚡ Initial cooldown (4.0s = 240 frames) when transforming into Curse Form before Domain can be opened
   curseDomainChannelFrames: 90,      // ⚡ Domain Expansion channeling wind-up duration (1.5s = 90 frames, matching Gojo & Sukuna)
   curseUltCooldown: 1200,            // 20.0s (1200 frames)

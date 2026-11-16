@@ -38,8 +38,9 @@ export const gojoConfig = {
   title: 'The Honored One',
   desc: 'Uses Blue to pull and Reversal Red to repel. Hollow Purple pierces everything, and Unlimited Void stuns all enemies.',
 
-  // ── 1. Limitless Infinity Passive Barrier ──
+  // ── 1. Passive: Limitless Infinity Barrier ──
   enableInfinity: 1,                    // Master toggle for Limitless Infinity barrier
+  infinitySkillName: 'Limitless Infinity',
   infinityCooldown: 100,                   // Recharge cooldown in frames before Infinity barrier reactivates after blocking
   infinityActiveDuration: 100,              // Frames Infinity continues to block multiple attacks after first impact
   infinityOnlyActiveInRangedMode: true,     // Infinity barrier is ONLY active in Ranged Mode; disabled in Melee Mode
@@ -60,6 +61,7 @@ export const gojoConfig = {
   
   // ── 2. Basic Attack & Movement (Cursed Technique Lapse: Blue) ──
   enableBlue: true,                        // Master toggle for Basic Attack: Lapse Blue
+  blueSkillName: 'Cursed Technique Lapse: Blue',
   blueCooldown: 300,         // Fire rate for basic attack (Blue orb) - Lower is faster
   blueSpeed: 10.5,          // Speed of Blue orb projectile
   blueRadius: 100,           // Radius of Blue projectile orb (hitbox & visual sprite) - Directly configurable
@@ -76,8 +78,9 @@ export const gojoConfig = {
   interruptCooldown: 270,   // Penalty cooldown in frames (~4.5s) applied to a skill when interrupted
   postSkillCooldown: 300,   // Anti-spam shared cooldown in frames (5.0s @ 60fps) after releasing any skill before triggering another skill
 
-  // ── 3. Skill: Cursed Technique Reversal: Red ──
+  // ── 3. Skill 1: Cursed Technique Reversal: Red ──
   enableRed: true,                         // Master toggle for Skill: Reversal Red
+  redSkillName: 'REVERSAL RED',
   redCooldown: 1000,         // Cooldown of Red (frames)
   redDamage: 250,           // Base damage dealt by Reversal Red blast
   redKnockback: 10,         // Supersonic knockback force of Red
@@ -103,8 +106,9 @@ export const gojoConfig = {
   redDimOpacity: 0.94,      // Opacity of the full-screen Reversal Red dim effect
   redDimColor: '#060002',   // Deep obsidian-crimson tone of the Red dim backdrop
 
-  // ── 4. Secret Technique: Hollow Purple (100% & 200% Empowered Cast) ──
+  // ── 4. Skill 2 / Secret Technique: Hollow Purple (100% & 200% Empowered Cast) ──
   enablePurple: true,                      // Master toggle for Secret Technique: Hollow Purple
+  purpleSkillName: 'HOLLOW PURPLE',
   purpleCooldown: 1500,      // Cooldown of Hollow Purple
   purpleChargeMax: 100,     // Frames required to mix Red and Blue into Purple (channeling duration)
   purpleChannelTurnRate: 0.045, // Smooth aim rotation turn rate while channeling Hollow Purple
@@ -143,6 +147,7 @@ export const gojoConfig = {
 
   // ── 5. Ultimate: Domain Expansion (Unlimited Void) ──
   enableDomain: true,                      // Master toggle for Ultimate: Domain Expansion
+  domainSkillName: 'UNLIMITED VOID',
   domainVerseEqualization: false,          // false = Non-JJK fighters are NOT paralyzed (can still move very slowly & attack); true = Unlimited Void freezes all non-immune enemies
   domainNonJjkSlowMultiplier: 0.20,        // Movement speed multiplier for non-JJK fighters inside Unlimited Void when Verse Equalization is off
   domainNonJjkVelocityDampening: 0.82,     // Velocity dampening per frame applied to non-JJK fighters moving faster than slowed speed inside Unlimited Void
@@ -157,6 +162,7 @@ export const gojoConfig = {
 
   // ── 6. Reverse Cursed Technique (RCT) Healing ──
   enableRCTHeal: true,                     // Enable Gojo's Reverse Cursed Technique healing
+  rctSkillName: 'RCT',
   reverseCursedTechniqueHpThreshold: 0.10, // Triggers RCT when HP drops to 25% or below
   reverseCursedTechniqueHealPercent: 0.30, // Percentage of Max HP healed per RCT trigger (0.50 = 50% = 100 HP)
   reverseCursedTechniqueCooldown: 1200,     // 15 second cooldown between RCT heals
@@ -167,6 +173,7 @@ export const gojoConfig = {
 
   // ── 7. Melee Mode & Hand-to-Hand Martial Arts ──
   enableMeleeMode: 1,                   // Master toggle for Melee Mode & Hand-to-Hand Martial Arts
+  meleeSkillName: 'Cursed Martial Arts',
   closeRangeRadius: 120,                   // Proximity distance (pixels) to enter Melee Mode (direct contact only)
   leaveMeleeRadius: 150,                   // Distance (pixels) beyond which Melee Mode is instantly disengaged
   initialMeleeDuration: 100,                // Active melee clash duration in frames (~1.0s at 60fps)

@@ -62,6 +62,7 @@ export const eyeOfCthulhuConfig = {
 
   // ── Signature Skill: Servant of Cthulhu Summons (Phase 1) ──
   enableServantSummons: true,
+  servantsSkillName: 'SERVANTS OF CTHULHU',
   enableServants: true,
   servantSpawnCooldown: 300, // 5.0s at 60 FPS
   servantSpawnIntervalInHover: 140, // spawns a minion every ~2.3s during hover state
@@ -79,6 +80,7 @@ export const eyeOfCthulhuConfig = {
   servantHealOrbValue: 80,
 
   // ── Phase 1: Telegraphed Triple Ram (Terraria State Machine) ──
+  tripleRamSkillName: 'TRIPLE RAM',
   hoverDurationFrames: 260, // ~4.3s hovering before initiating ram sequence
   ramCooldown: 600, // 10.0s
   ramWindupFrames: 24, // 0.4s telegraph windup
@@ -117,6 +119,7 @@ export const eyeOfCthulhuConfig = {
   phase2Radius: 36,
 
   // ── Phase 2: Relentless Continuous Physical Charges ──
+  berserkRamSkillName: 'BERSERK RAM',
   p2RamWindupFrames: 10, // rapid telegraph before each charge (0.16s)
   p2RamSpeedBase: 19.5, // initial charge speed
   p2RamSpeedEnraged: 23.5, // sub-25% HP berserk speed
@@ -127,6 +130,7 @@ export const eyeOfCthulhuConfig = {
   p2RamRecoveryPauseFrames: 12, // brief alignment breather before next charge chain (0.20s)
 
   // ── Phase 2: Basic Attack (Ravenous Chomp) ──
+  chompSkillName: 'Ravenous Chomp',
   chompDamage: 40,
   chompReach: 75,
   chompArc: 120 * (Math.PI / 180),
@@ -137,6 +141,7 @@ export const eyeOfCthulhuConfig = {
   bleedHealReduction: 0.50,
 
   // ── Phase 2: Crimson Roar & Blood Spike Burst ──
+  roarSkillName: 'CRIMSON ROAR',
   roarCooldown: 840, // 14.0s
   roarWindupFrames: 15,
   roarShockwaveRadius: 160,
@@ -146,6 +151,7 @@ export const eyeOfCthulhuConfig = {
   roarSpikeRange: 320,
 
   // ── Ultimate: True Night Horrors (Blood Moon Frenzy) ──
+  bloodMoonSkillName: 'True Night Horrors',
   bloodMoonCooldown: 2100, // 35.0s
   bloodMoonDuration: 360, // 6.0s
   bloodMoonIchorPoolDuration: 240, // 4.0s

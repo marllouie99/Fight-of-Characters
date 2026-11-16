@@ -312,8 +312,12 @@ export function detonateRed(fighter) {
         f._timeStopFrozenGunAngle = null;
 
         // Damage target
+        let redApplied = true;
         if (typeof f.takeDamage === 'function') {
-          f.takeDamage(redDamage, fighter, { isRed: true, isSkill: true, isAdaptableSkillShot: true, skillShotId: 'red', bypassEvade: true, isGuaranteedHit: true });
+          redApplied = f.takeDamage(redDamage, fighter, { isRed: true, isSkill: true, isAdaptableSkillShot: true, skillShotId: 'red', bypassEvade: true, isGuaranteedHit: true });
+        }
+        if (redApplied === false && f.characterId === 'roaring_knight') {
+          continue;
         }
 
         // Heavy directional knockback pushing enemies away along the repulsion blast vector

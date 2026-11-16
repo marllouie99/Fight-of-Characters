@@ -49,6 +49,39 @@ export function isSkillEnabled(...args) {
 }
 
 /**
+ * Resolves an editable skill name string from a character config (supporting nested dot paths),
+ * falling back cleanly to the default HUD label when unset or blank.
+ * @param {object} cfg
+ * @param {string|string[]} keys
+ * @param {string} fallback
+ * @returns {string}
+ */
+export function cfgSkillName(cfg, keys, fallback) {
+  if (!cfg || typeof cfg !== 'object') return fallback;
+  const list = Array.isArray(keys) ? keys : [keys];
+  for (let i = 0; i < list.length; i++) {
+    const key = list[i];
+    if (!key) continue;
+    let val;
+    if (key.includes('.')) {
+      const parts = key.split('.');
+      let cur = cfg;
+      for (let j = 0; j < parts.length; j++) {
+        if (!cur || typeof cur !== 'object') { cur = undefined; break; }
+        cur = cur[parts[j]];
+      }
+      val = cur;
+    } else {
+      val = cfg[key];
+    }
+    if (typeof val === 'string' && val.trim().length > 0) {
+      return val;
+    }
+  }
+  return fallback;
+}
+
+/**
  * Alias map normalizing variant character/type identifiers to their canonical HUD skill provider key.
  */
 const HUD_SKILL_PROVIDER_ALIASES = {
@@ -127,7 +160,8 @@ export const HUD_SKILL_PROVIDERS = {
         const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
         const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
         const ready = pct >= 99 && cdTimer <= 0;
-        const label = cdTimer > 0 ? `DRAGON'S BREATH (${(cdTimer / 60).toFixed(1)}S)` : "DRAGON'S BREATH";
+        const name = cfgSkillName(cfg, ['dragonsBreathSkillName'], "DRAGON'S BREATH");
+        const label = cdTimer > 0 ? `${name} (${(cdTimer / 60).toFixed(1)}S)` : name;
         skills.push({ id: 'dragons_breath', pct, ready, color: themeColor, label });
       }
     }
@@ -139,7 +173,8 @@ export const HUD_SKILL_PROVIDERS = {
       const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
       const ready = pct >= 99 && cdTimer <= 0;
-      const label = cdTimer > 0 ? `WING BUFFET (${(cdTimer / 60).toFixed(1)}S)` : 'WING BUFFET';
+      const name = cfgSkillName(cfg, ['wingBuffetSkillName'], 'WING BUFFET');
+      const label = cdTimer > 0 ? `${name} (${(cdTimer / 60).toFixed(1)}S)` : name;
       skills.push({ id: 'wing_buffet', pct, ready, color: themeColor, label });
     }
 
@@ -150,7 +185,8 @@ export const HUD_SKILL_PROVIDERS = {
       const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
       const ready = pct >= 99 && cdTimer <= 0;
-      const label = cdTimer > 0 ? `VOID DIVEBOMB (${(cdTimer / 60).toFixed(1)}S)` : 'VOID DIVEBOMB';
+      const name = cfgSkillName(cfg, ['divebombSkillName'], 'VOID DIVEBOMB');
+      const label = cdTimer > 0 ? `${name} (${(cdTimer / 60).toFixed(1)}S)` : name;
       skills.push({ id: 'divebomb_strafe', pct, ready, color: themeColor, label, isSignature: true, signature: true });
     }
 
@@ -161,7 +197,8 @@ export const HUD_SKILL_PROVIDERS = {
       const effectiveMax = Math.max(cdMax, cdTimer || 0) || 1;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / effectiveMax) * 100));
       const ready = pct >= 99 && cdTimer <= 0;
-      const label = cdTimer > 0 ? `VOID CATACLYSM (${(cdTimer / 60).toFixed(1)}S)` : 'VOID CATACLYSM';
+      const name = cfgSkillName(cfg, ['voidCataclysmSkillName'], 'VOID CATACLYSM');
+      const label = cdTimer > 0 ? `${name} (${(cdTimer / 60).toFixed(1)}S)` : name;
       skills.push({ id: 'void_cataclysm', pct, ready, color: themeColor, label, isSignature: true, signature: true, isUltimate: true });
     }
 
@@ -189,7 +226,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: blasterPct,
         ready: blasterPct >= 99 && blasterTimer <= 0 && hasStamina,
         color: themeColor,
-        label: 'GASTER BLASTER',
+        label: cfgSkillName(cfg, ['gasterBlasterSkillName'], 'GASTER BLASTER'),
         isSignature: true,
         signature: true
       });
@@ -201,7 +238,7 @@ export const HUD_SKILL_PROVIDERS = {
       const boneTimer = f.boneZoneCooldown !== undefined ? f.boneZoneCooldown : 0;
       const effectiveBoneMax = Math.max(boneMax, boneTimer);
       const bonePct = Math.max(0, Math.min(100, (1 - (boneTimer / (effectiveBoneMax || 1))) * 100));
-      skills.push({ id: 'bone_zone', pct: bonePct, ready: bonePct >= 99 && boneTimer <= 0, color: themeColor, label: 'BONE ZONE' });
+      skills.push({ id: 'bone_zone', pct: bonePct, ready: bonePct >= 99 && boneTimer <= 0, color: themeColor, label: cfgSkillName(cfg, ['boneZoneSkillName'], 'BONE ZONE') });
     }
 
     // 3. Bad Time & Blue Soul Gravity Slam (Ultimate)
@@ -217,7 +254,7 @@ export const HUD_SKILL_PROVIDERS = {
         const effectiveSlamMax = Math.max(slamMax, slamTimer);
         slamPct = Math.max(0, Math.min(100, (1 - (slamTimer / (effectiveSlamMax || 1))) * 100));
       }
-      skills.push({ id: 'bad_time', pct: slamPct, ready: (slamPct >= 99 && slamTimer <= 0) || f.isBadTimeActive, color: themeColor, label: 'BAD TIME' });
+      skills.push({ id: 'bad_time', pct: slamPct, ready: (slamPct >= 99 && slamTimer <= 0) || f.isBadTimeActive, color: themeColor, label: cfgSkillName(cfg, ['gravitySlamSkillName'], 'BAD TIME') });
     }
 
     return skills;
@@ -249,7 +286,7 @@ export const HUD_SKILL_PROVIDERS = {
         mandalaPct = Math.max(0, Math.min(100, (1 - (mandalaTimer / mandalaMax)) * 100));
         mandalaReady = (mandalaPct >= 99 && mandalaTimer <= 0);
       }
-      skills.push({ id: 'supercluster', pct: mandalaPct, ready: mandalaReady, color: themeColor, label: 'STAR MANDALA' });
+      skills.push({ id: 'supercluster', pct: mandalaPct, ready: mandalaReady, color: themeColor, label: cfgSkillName(cfg, ['superclusterSkillName'], 'STAR MANDALA') });
     }
 
     // 2. Nameless Destroyer (Ultimate Super-Beam)
@@ -275,7 +312,7 @@ export const HUD_SKILL_PROVIDERS = {
         beamPct = Math.max(0, Math.min(100, (1 - (beamTimer / beamMax)) * 100));
         beamReady = (beamPct >= 99 && beamTimer <= 0);
       }
-      skills.push({ id: 'destroyer', pct: beamPct, ready: beamReady, color: themeColor, label: 'NAMELESS DESTROYER' });
+      skills.push({ id: 'destroyer', pct: beamPct, ready: beamReady, color: themeColor, label: cfgSkillName(cfg, ['namelessDestroyerSkillName'], 'NAMELESS DESTROYER') });
     }
 
     return skills;
@@ -294,7 +331,7 @@ export const HUD_SKILL_PROVIDERS = {
       const cryoMax = cfg.cryonicCooldown || 360;
       const cryoTimer = f.cryonicCooldown !== undefined ? f.cryonicCooldown : 0;
       const cryoPct = Math.max(0, Math.min(100, (1 - (cryoTimer / cryoMax)) * 100));
-      skills.push({ id: 'cryonic', pct: cryoPct, ready: cryoPct >= 99 && cryoTimer <= 0, color: '#00F5D4', label: 'CRYONIC ZERO' });
+      skills.push({ id: 'cryonic', pct: cryoPct, ready: cryoPct >= 99 && cryoTimer <= 0, color: '#00F5D4', label: cfgSkillName(cfg, ['cryonicZeroSkillName'], 'CRYONIC ZERO') });
     }
 
     // 2. Visceral Torrent
@@ -302,7 +339,7 @@ export const HUD_SKILL_PROVIDERS = {
       const viscMax = cfg.visceralCooldown || 390;
       const viscTimer = f.visceralCooldown !== undefined ? f.visceralCooldown : 0;
       const viscPct = Math.max(0, Math.min(100, (1 - (viscTimer / viscMax)) * 100));
-      skills.push({ id: 'visceral', pct: viscPct, ready: viscPct >= 99 && viscTimer <= 0, color: '#FF0055', label: 'VISCERAL TORRENT' });
+      skills.push({ id: 'visceral', pct: viscPct, ready: viscPct >= 99 && viscTimer <= 0, color: '#FF0055', label: cfgSkillName(cfg, ['visceralTorrentSkillName'], 'VISCERAL TORRENT') });
     }
 
     // 3. Dark Portal Strikes
@@ -310,7 +347,7 @@ export const HUD_SKILL_PROVIDERS = {
       const portMax = cfg.portalCooldown || 480;
       const portTimer = f.portalCooldown !== undefined ? f.portalCooldown : 0;
       const portPct = Math.max(0, Math.min(100, (1 - (portTimer / portMax)) * 100));
-      skills.push({ id: 'portal', pct: portPct, ready: portPct >= 99 && portTimer <= 0, color: themeColor, label: 'PORTAL STRIKES' });
+      skills.push({ id: 'portal', pct: portPct, ready: portPct >= 99 && portTimer <= 0, color: themeColor, label: cfgSkillName(cfg, ['portalStrikesSkillName'], 'PORTAL STRIKES') });
     }
 
     // 4. Universal Annihilation (Ultimate)
@@ -330,7 +367,7 @@ export const HUD_SKILL_PROVIDERS = {
         annPct = Math.max(0, Math.min(100, (1 - (annTimer / annMax)) * 100));
         annReady = (annPct >= 99 && annTimer <= 0);
       }
-      skills.push({ id: 'annihilation', pct: annPct, ready: annReady, color: '#00F5D4', label: 'UNIVERSAL ANNIHILATION' });
+      skills.push({ id: 'annihilation', pct: annPct, ready: annReady, color: '#00F5D4', label: cfgSkillName(cfg, ['universalAnnihilationSkillName'], 'UNIVERSAL ANNIHILATION') });
     }
 
     return skills;
@@ -359,7 +396,7 @@ export const HUD_SKILL_PROVIDERS = {
         domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
       }
       const isDomainReady = domainPct >= 99 && !f.domainActive && !f.isChannelingDomainExpansion && (f.domainCooldown || 0) <= 0;
-      skills.push({ id: 'uv', pct: domainPct, ready: isDomainReady, color: themeColor, label: 'UNLIMITED VOID', cooldown: domainTimer, active: f.domainActive || f.isChannelingDomainExpansion });
+      skills.push({ id: 'uv', pct: domainPct, ready: isDomainReady, color: themeColor, label: cfgSkillName(cfg, ['domainSkillName'], 'UNLIMITED VOID'), cooldown: domainTimer, active: f.domainActive || f.isChannelingDomainExpansion });
     }
 
     // 2. Hollow Purple (purple)
@@ -383,8 +420,8 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         purplePct = Math.max(0, Math.min(100, (1 - (purpleTimer / purpleMax)) * 100));
       }
-      const label100 = cfg.purpleSecondCastTextHeader100 || 'PURPLE';
-      const label200 = cfg.purpleSecondCastTextHeader200 || 'PURPLE';
+      const label100 = cfgSkillName(cfg, ['purpleSkillName', 'purpleSecondCastTextHeader100'], 'PURPLE');
+      const label200 = cfgSkillName(cfg, ['purpleSecondCastTextHeader200', 'purpleSkillName'], 'PURPLE');
       const purpleLabel = (f.purpleUseCount === 1) ? label200 : label100;
       skills.push({ id: 'purple', pct: purplePct, ready: purplePct >= 99, color: themeColor, label: purpleLabel, cooldown: purpleTimer, active: f.isChannelingPurple || !!purpleOrb });
     }
@@ -394,7 +431,7 @@ export const HUD_SKILL_PROVIDERS = {
       const redMax = cfg.redCooldown || 1000;
       const redTimer = f.redCooldown !== undefined ? f.redCooldown : redMax;
       const redPct = Math.max(0, Math.min(100, (1 - (redTimer / redMax)) * 100));
-      skills.push({ id: 'red', pct: redPct, ready: redPct >= 99, color: themeColor, label: 'REVERSAL RED', cooldown: redTimer });
+      skills.push({ id: 'red', pct: redPct, ready: redPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['redSkillName'], 'REVERSAL RED'), cooldown: redTimer });
     }
 
     // 4. Reverse Cursed Technique (rct)
@@ -402,7 +439,7 @@ export const HUD_SKILL_PROVIDERS = {
       const rctMax = cfg.reverseCursedTechniqueCooldown || 700;
       const rctTimer = f.reverseCursedTechniqueCooldown !== undefined ? f.reverseCursedTechniqueCooldown : 0;
       const rctPct = Math.max(0, Math.min(100, (1 - (rctTimer / rctMax)) * 100));
-      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && !f.isChannelingRCT && (f.reverseCursedTechniqueCooldown || 0) <= 0, color: themeColor, label: 'RCT', cooldown: rctTimer, active: f.isChannelingRCT });
+      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && !f.isChannelingRCT && (f.reverseCursedTechniqueCooldown || 0) <= 0, color: themeColor, label: cfgSkillName(cfg, ['rctSkillName'], 'RCT'), cooldown: rctTimer, active: f.isChannelingRCT });
     }
 
     return skills;
@@ -439,7 +476,7 @@ export const HUD_SKILL_PROVIDERS = {
         else if (ph === 'FINISHER_DASH' || ph === 'FINISHER_SLASH') { ap = 0.95; }
         ambushPct = Math.max(0, 100 - ap * 100);
       }
-      skills.push({ id: 'ambush', pct: ambushPct, ready: ambushPct >= 99, color: themeColor, label: 'STEALTH AMBUSH' });
+      skills.push({ id: 'ambush', pct: ambushPct, ready: ambushPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['ambushSkillName'], 'STEALTH AMBUSH') });
     }
 
     // 2. Curse Inventory (Ultimate)
@@ -459,7 +496,7 @@ export const HUD_SKILL_PROVIDERS = {
           ultPct = Math.max(0, Math.min(100, (remainingSwarm / totalMax) * 100));
         }
       }
-      skills.push({ id: 'ult', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'CURSE INVENTORY' });
+      skills.push({ id: 'ult', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['ultimateSkillName'], 'CURSE INVENTORY') });
     }
 
     return skills;
@@ -488,7 +525,7 @@ export const HUD_SKILL_PROVIDERS = {
         domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
       }
       const isDomainReady = domainPct >= 99 && !f.domainActive && !f.isChannelingDomainExpansion && (f.domainCooldown || 0) <= 0;
-      skills.push({ id: 'ms', pct: domainPct, ready: isDomainReady, color: themeColor, label: 'MALEVOLENT SHRINE', cooldown: domainTimer, active: f.domainActive || f.isChannelingDomainExpansion });
+      skills.push({ id: 'ms', pct: domainPct, ready: isDomainReady, color: themeColor, label: cfgSkillName(cfg, ['domainSkillName'], 'MALEVOLENT SHRINE'), cooldown: domainTimer, active: f.domainActive || f.isChannelingDomainExpansion });
     }
 
     // 2. Fuga / Furnace (fuga)
@@ -505,7 +542,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         flamePct = Math.max(0, Math.min(100, (1 - (flameTimer / flameMax)) * 100));
       }
-      skills.push({ id: 'fuga', pct: flamePct, ready: flamePct >= 99, color: themeColor, label: 'FUGA (FURNACE)', cooldown: flameTimer, active: f.isChannelingDivineFlame });
+      skills.push({ id: 'fuga', pct: flamePct, ready: flamePct >= 99, color: themeColor, label: cfgSkillName(cfg, ['furnaceSkillName'], 'FUGA (FURNACE)'), cooldown: flameTimer, active: f.isChannelingDivineFlame });
     }
 
     // 3. Reverse Cursed Technique (rct)
@@ -513,7 +550,7 @@ export const HUD_SKILL_PROVIDERS = {
       const sukunaRctMax = cfg.reverseCursedTechniqueCooldown || 700;
       const sukunaRctTimer = f.reverseCursedTechniqueCooldown !== undefined ? f.reverseCursedTechniqueCooldown : 0;
       const rctPct = Math.max(0, Math.min(100, (1 - (sukunaRctTimer / sukunaRctMax)) * 100));
-      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && (f.reverseCursedTechniqueCooldown || 0) <= 0 && (f.rctVisualTimer || 0) <= 0, color: themeColor, label: 'RCT', cooldown: sukunaRctTimer, active: (f.rctVisualTimer || 0) > 0 });
+      skills.push({ id: 'rct', pct: rctPct, ready: rctPct >= 99 && (f.reverseCursedTechniqueCooldown || 0) <= 0 && (f.rctVisualTimer || 0) <= 0, color: themeColor, label: cfgSkillName(cfg, ['rctSkillName'], 'RCT'), cooldown: sukunaRctTimer, active: (f.rctVisualTimer || 0) > 0 });
     }
 
     // 4. Optional Skill: Ten Shadows — Mahoraga summon
@@ -527,7 +564,7 @@ export const HUD_SKILL_PROVIDERS = {
         ? 100
         : (isConsumed ? 0 : Math.max(0, Math.min(100, (1 - (summonTimer / summonMax)) * 100)));
       const isReady = !isConsumed && (summonLive || (summonPct >= 99 && (f.mahoragaSummonCooldown || 0) <= 0));
-      skills.push({ id: 'mahoraga', pct: summonPct, ready: isReady, color: themeColor, label: 'MAHORAGA', active: summonLive, cooldown: summonTimer });
+      skills.push({ id: 'mahoraga', pct: summonPct, ready: isReady, color: themeColor, label: cfgSkillName(cfg, ['mahoragaSummonSkillName'], 'MAHORAGA'), active: summonLive, cooldown: summonTimer });
     }
 
     // 5. Minion Mahoraga Skill Bars (when actively summoned)
@@ -571,8 +608,9 @@ export const HUD_SKILL_PROVIDERS = {
       const isCoolingDown = (f.fatalAdaptCooldown || 0) > 0;
       const cdMax = f.fatalAdaptCooldownMax || cfg.fatalAdaptCooldownFrames || 180;
 
+      const woaName = cfgSkillName(cfg, ['wheelSkillName'], 'WOA');
       let wheelPct = 0;
-      let wheelLabel = `WOA - LVL ${lvlStr}`;
+      let wheelLabel = `${woaName} - LVL ${lvlStr}`;
       let wheelReady = false;
 
       if ((f.wheelClickTimer || 0) > 0 || (f.adaptationPauseTimer || 0) > 0 || f.pendingDomainAdaptation || f.pendingNamelessBeamAdaptation) {
@@ -583,12 +621,12 @@ export const HUD_SKILL_PROVIDERS = {
         wheelPct = Math.max(0, Math.min(100, (1 - (f.fatalAdaptCooldown / cdMax)) * 100));
         wheelReady = false;
         const secondsLeft = (f.fatalAdaptCooldown / 60).toFixed(1);
-        wheelLabel = `WOA COOLDOWN (${secondsLeft}s)`;
+        wheelLabel = `${woaName} COOLDOWN (${secondsLeft}s)`;
       } else {
         const accum = f.totalAccumDamage || 0;
         wheelPct = Math.max(0, Math.min(100, (accum / windowThreshold) * 100));
         wheelReady = wheelPct >= 99;
-        wheelLabel = `WOA - LVL ${lvlStr}`;
+        wheelLabel = `${woaName} - LVL ${lvlStr}`;
       }
       skills.push({ id: 'wheel', pct: wheelPct, ready: wheelReady, color: themeColor, label: wheelLabel, isSignature: true, signature: true, isUltimate: true });
     }
@@ -606,7 +644,9 @@ export const HUD_SKILL_PROVIDERS = {
         throwPct = Math.max(0, Math.min(100, (1 - (throwTimer / throwMax)) * 100));
       }
 
-      const rawThrowLabel = isLevel8 ? 'WALL SLAM THROW' : 'THROW';
+      const throwBaseName = cfgSkillName(cfg, ['throwSkillName'], 'THROW');
+      const wallSlamName = cfgSkillName(cfg, ['wallSlamSkillName'], 'WALL SLAM THROW');
+      const rawThrowLabel = isLevel8 ? wallSlamName : throwBaseName;
       if (!f._throwLabelAnimation) {
         f._throwLabelAnimation = { prev: rawThrowLabel, active: false, timer: 0 };
       }
@@ -620,7 +660,7 @@ export const HUD_SKILL_PROVIDERS = {
       if (f._throwLabelAnimation.active && f._throwLabelAnimation.timer > 0) {
         f._throwLabelAnimation.timer--;
         const opacity = Math.abs(f._throwLabelAnimation.timer - 10) / 10;
-        const displayLabel = f._throwLabelAnimation.timer > 10 ? (isLevel8 ? 'THROW' : 'WALL SLAM THROW') : rawThrowLabel;
+        const displayLabel = f._throwLabelAnimation.timer > 10 ? (isLevel8 ? throwBaseName : wallSlamName) : rawThrowLabel;
         throwLabelHtml = `<span style="display: inline-block; opacity: ${opacity.toFixed(2)}; transition: opacity 0.1s ease-in-out;">${displayLabel}</span>`;
         if (f._throwLabelAnimation.timer <= 0) {
           f._throwLabelAnimation.active = false;
@@ -639,7 +679,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         shoutPct = Math.max(0, Math.min(100, (1 - (shoutTimer / shoutMax)) * 100));
       }
-      skills.push({ id: 'shout', pct: shoutPct, ready: shoutPct >= 99, color: themeColor, label: 'DIVINE SHOUT' });
+      skills.push({ id: 'shout', pct: shoutPct, ready: shoutPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['shoutSkillName'], 'DIVINE SHOUT') });
     }
 
     return skills;
@@ -661,20 +701,20 @@ export const HUD_SKILL_PROVIDERS = {
       const punchTimer = f.punchCooldownTimer !== undefined ? f.punchCooldownTimer : 0;
       const punchPct = Math.max(0, Math.min(100, (1 - (punchTimer / punchMax)) * 100));
       const punchReady = punchPct >= 99;
-      list.push({ id: 'punch', pct: punchPct, ready: punchReady, color: themeColor, label: 'NORMAL PUNCH' });
+      list.push({ id: 'punch', pct: punchPct, ready: punchReady, color: themeColor, label: cfgSkillName(cfg, ['normalPunchSkillName'], 'NORMAL PUNCH') });
     }
     if (isPunishEnabled) {
       const punishMax = cfg.skillPunishCooldown || 2000;
       const punishTimer = f.skillPunishCooldown !== undefined ? f.skillPunishCooldown : punishMax;
       const isExecuting = Boolean((f._counterPunchTimer && f._counterPunchTimer > 0) || (f._postCounterRecoveryTimer && f._postCounterRecoveryTimer > 0) || f.isCountering);
       const punishPct = isExecuting ? 100 : Math.max(0, Math.min(100, (1 - (punishTimer / punishMax)) * 100));
-      list.push({ id: 'punish', pct: punishPct, ready: punishPct >= 99, color: themeColor, label: 'SERIOUS PUNCH' });
+      list.push({ id: 'punish', pct: punishPct, ready: punishPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['seriousPunchSkillName'], 'SERIOUS PUNCH') });
     }
     if (isFlurryEnabled) {
       const flurryMax = cfg.flurryCooldown || 540;
       const flurryTimer = f.flurryCooldown !== undefined ? f.flurryCooldown : flurryMax;
       const flurryPct = f.isFlurrying ? 100 : Math.max(0, Math.min(100, (1 - (flurryTimer / flurryMax)) * 100));
-      list.push({ id: 'flurry', pct: flurryPct, ready: flurryPct >= 99, color: themeColor, label: 'CONSECUTIVE PUNCHES' });
+      list.push({ id: 'flurry', pct: flurryPct, ready: flurryPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['consecutivePunchesSkillName'], 'CONSECUTIVE PUNCHES') });
     }
     return list;
   },
@@ -692,12 +732,13 @@ export const HUD_SKILL_PROVIDERS = {
     const shieldPct = Math.max(0, Math.min(100, (shieldCur / shieldMax) * 100));
     const isBroken = Boolean(f.isShieldBroken || shieldCur <= 0);
 
+    const shieldBaseName = cfgSkillName(cfg, ['towerShieldSkillName'], 'TOWER SHIELD');
     skills.push({
       id: 'tower_shield',
       pct: shieldPct,
       ready: !isBroken,
       color: isBroken ? '#ef4444' : themeColor,
-      label: isBroken ? 'SHIELD: BROKEN (50% DEF)' : `TOWER SHIELD: ${Math.round(shieldCur)}/${shieldMax}`,
+      label: isBroken ? 'SHIELD: BROKEN (50% DEF)' : `${shieldBaseName}: ${Math.round(shieldCur)}/${shieldMax}`,
       isSignature: true,
       signature: true,
       fullWidth: true
@@ -712,7 +753,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: dashPct,
         ready: dashPct >= 99,
         color: themeColor,
-        label: 'FORWARD DASH'
+        label: cfgSkillName(cfg, ['dashSkillName'], 'FORWARD DASH')
       });
     }
 
@@ -731,14 +772,14 @@ export const HUD_SKILL_PROVIDERS = {
       const bombMax = cfg.maleficBombCooldown || 200;
       const bombTimer = f.maleficBombCooldown !== undefined ? f.maleficBombCooldown : bombMax;
       const bombPct = Math.max(0, Math.min(100, (1 - (bombTimer / bombMax)) * 100));
-      skills.push({ id: 'bomb', pct: bombPct, ready: bombPct >= 99, color: themeColor, label: 'MALEFIC BOMB' });
+      skills.push({ id: 'bomb', pct: bombPct, ready: bombPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['maleficBombSkillName'], 'MALEFIC BOMB') });
     }
 
     if (isSkillEnabled(cfg.enableVoidProjectile, cfg.enableVoidDash, true)) {
       const dashMax = cfg.voidDashCooldown || 120;
       const dashTimer = f.voidDashCooldown !== undefined ? f.voidDashCooldown : dashMax;
       const dashPct = Math.max(0, Math.min(100, (1 - (dashTimer / dashMax)) * 100));
-      skills.push({ id: 'dash', pct: dashPct, ready: dashPct >= 99, color: themeColor, label: 'VOID PROJECTILE' });
+      skills.push({ id: 'dash', pct: dashPct, ready: dashPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['voidProjectileSkillName'], 'VOID PROJECTILE') });
     }
 
     if (isSkillEnabled(cfg.enableDestructionRush, cfg.enableDestructionBarrage, cfg.enableUltimate, true)) {
@@ -750,7 +791,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
       }
-      skills.push({ id: 'ult', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'DESTRUCTION RUSH' });
+      skills.push({ id: 'ult', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['destructionRushSkillName'], 'DESTRUCTION RUSH') });
     }
 
     return skills;
@@ -770,7 +811,7 @@ export const HUD_SKILL_PROVIDERS = {
       const clapMax = Math.round((cfg.clapCooldown || 120) * cdMult);
       const clapTimer = f.boogieWoogieCooldown !== undefined ? f.boogieWoogieCooldown : clapMax;
       const clapPct = Math.max(0, Math.min(100, (1 - (clapTimer / clapMax)) * 100));
-      skills.push({ id: 'clap', pct: clapPct, ready: clapPct >= 99, color: themeColor, label: 'BOOGIE WOOGIE' });
+      skills.push({ id: 'clap', pct: clapPct, ready: clapPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['boogieWoogieSkillName'], 'BOOGIE WOOGIE') });
     }
 
     if (isSkillEnabled(cfg.enableCursedRock, true)) {
@@ -779,7 +820,8 @@ export const HUD_SKILL_PROVIDERS = {
       const rockTimer = f.rockThrowCooldown !== undefined ? f.rockThrowCooldown : rockMax;
       const rockPct = hasTeammate ? 0 : Math.max(0, Math.min(100, (1 - (rockTimer / rockMax)) * 100));
       const rockReady = !hasTeammate && rockPct >= 99;
-      const rockLabel = hasTeammate ? 'CURSED ROCK (SOLO)' : 'CURSED ROCK';
+      const rockName = cfgSkillName(cfg, ['cursedRockSkillName'], 'CURSED ROCK');
+      const rockLabel = hasTeammate ? `${rockName} (SOLO)` : rockName;
       skills.push({ id: 'rock', pct: rockPct, ready: rockReady, color: themeColor, label: rockLabel });
     }
 
@@ -807,7 +849,7 @@ export const HUD_SKILL_PROVIDERS = {
         ultPct = Math.round(f._maxTakadaUltPct);
         ultReady = ultPct >= 99 || hpRatio <= hpThreshold;
       }
-      skills.push({ id: 'takada', pct: ultPct, ready: ultReady, color: themeColor, label: 'IDOL MOTIVATION' });
+      skills.push({ id: 'takada', pct: ultPct, ready: ultReady, color: themeColor, label: cfgSkillName(cfg, ['takadaSkillName'], 'IDOL MOTIVATION') });
     }
 
     return skills;
@@ -825,7 +867,7 @@ export const HUD_SKILL_PROVIDERS = {
       const dashMax = cfg.divergentDashCooldown || 240;
       const dashPct = Math.max(0, Math.min(100, (1 - (f.divergentDashCooldown || 0) / dashMax) * 100));
       const dashReady = (f.divergentDashCooldown || 0) <= 0;
-      skills.push({ id: 'dash', pct: dashPct, ready: dashReady, color: themeColor, label: 'DIVERGENT DASH' });
+      skills.push({ id: 'dash', pct: dashPct, ready: dashReady, color: themeColor, label: cfgSkillName(cfg, ['divergentDashSkillName'], 'DIVERGENT DASH') });
     }
 
     if (isSkillEnabled(cfg.enableBlackFlash, true)) {
@@ -833,7 +875,7 @@ export const HUD_SKILL_PROVIDERS = {
         ? (cfg.soulSwapBlackFlashThreshold || 2)
         : (f.blackFlashThreshold || cfg.blackFlashThreshold || 4);
       const bfThresholdPct = Math.max(0, Math.min(100, ((f.blackFlashCharge || 0) / bfThreshold) * 100));
-      skills.push({ id: 'bf_threshold', pct: bfThresholdPct, ready: bfThresholdPct >= 99, color: themeColor, label: 'BLACK FLASH CHARGE' });
+      skills.push({ id: 'bf_threshold', pct: bfThresholdPct, ready: bfThresholdPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['blackFlashSkillName'], 'BLACK FLASH CHARGE') });
     }
 
     const isSoulSwapAllowed = isSkillEnabled(cfg.enableSoulSwap, true) && !isSukunaPresentInMatch(f);
@@ -851,7 +893,7 @@ export const HUD_SKILL_PROVIDERS = {
         ultPct = Math.max(0, Math.min(100, ((1 - (f.hp / f.maxHp)) / (1 - ultThresholdHp)) * 100));
         ultReady = ultPct >= 99 && (f.hp / f.maxHp <= ultThresholdHp);
       }
-      skills.push({ id: 'ult', pct: ultPct, ready: ultReady, color: themeColor, label: 'SOUL SWAP' });
+      skills.push({ id: 'ult', pct: ultPct, ready: ultReady, color: themeColor, label: cfgSkillName(cfg, ['soulSwapSkillName'], 'SOUL SWAP') });
     }
 
     return skills;
@@ -875,7 +917,7 @@ export const HUD_SKILL_PROVIDERS = {
       );
       const skillPct = Math.max(0, Math.min(100, (1 - (skillCd / maxSkillCd)) * 100));
       const skillReady = skillPct >= 99;
-      skills.push({ id: 'idle_transfiguration', pct: skillPct, ready: skillReady, color: themeColor, label: 'IDLE TRANSFIGURATION' });
+      skills.push({ id: 'idle_transfiguration', pct: skillPct, ready: skillReady, color: themeColor, label: cfgSkillName(cfg, ['idleTransfigurationSkillName'], 'IDLE TRANSFIGURATION') });
     }
 
     if (isSkillEnabled(cfg.enableSoulMultiplicity, true)) {
@@ -883,7 +925,7 @@ export const HUD_SKILL_PROVIDERS = {
       const multiplicityCd = f.soulMultiplicityCooldown !== undefined ? f.soulMultiplicityCooldown : 0;
       const multiplicityPct = Math.max(0, Math.min(100, (1 - (multiplicityCd / maxMultiplicityCd)) * 100));
       const multiplicityReady = multiplicityPct >= 99;
-      skills.push({ id: 'soul_multiplicity', pct: multiplicityPct, ready: multiplicityReady, color: themeColor, label: 'SOUL MULTIPLICITY' });
+      skills.push({ id: 'soul_multiplicity', pct: multiplicityPct, ready: multiplicityReady, color: themeColor, label: cfgSkillName(cfg, ['soulMultiplicity.skillName'], 'SOUL MULTIPLICITY') });
     }
 
     if (isSkillEnabled(cfg.enableDomainExpansion, cfg.enableDomain, true)) {
@@ -891,18 +933,19 @@ export const HUD_SKILL_PROVIDERS = {
       const domainTimer = f.domainCooldown !== undefined ? f.domainCooldown : domainMax;
       let domainPct;
       let domainReady = false;
-      let domainLabel = 'SELF-EMBODIMENT OF PERFECTION';
+      const domainName = cfgSkillName(cfg, ['domainExpansion.skillName'], 'SELF-EMBODIMENT OF PERFECTION');
+      let domainLabel = domainName;
 
       if (f.isChannelingDomainExpansion) {
         domainPct = 100;
         domainReady = true;
-        domainLabel = 'SELF-EMBODIMENT OF PERFECTION';
+        domainLabel = domainName;
       } else if (f.domainActive) {
         const domainDuration = cfg.domainExpansion?.duration || 600;
         const remaining = f.domainTimer || 0;
         domainPct = Math.max(0, Math.min(100, (remaining / domainDuration) * 100));
         domainReady = true;
-        domainLabel = 'SELF-EMBODIMENT OF PERFECTION';
+        domainLabel = domainName;
       } else {
         domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
         domainReady = domainPct >= 99;
@@ -913,7 +956,7 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableEvasion, cfg.enableSoulEvasion, true)) {
       let evasionPct = 0;
       let evasionReady = false;
-      const evasionLabel = 'SOUL EVASION';
+      const evasionLabel = cfgSkillName(cfg, ['evasion.skillName'], 'SOUL EVASION');
       const evasionThreshold = cfg.evasion?.threshold || 0.75;
 
       if (f.isEvading) {
@@ -936,7 +979,7 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.transformation?.enabled, cfg.enableTransformation, false)) {
       let formPct = 0;
       let formReady = false;
-      let formLabel = 'DISTORTED KILLING';
+      let formLabel = cfgSkillName(cfg, ['transformation.skillName'], 'DISTORTED KILLING');
 
       if (f.isTransformed) {
         const maxDuration = cfg.transformation?.duration || 600;
@@ -986,7 +1029,7 @@ export const HUD_SKILL_PROVIDERS = {
         lungePct = Math.max(0, Math.min(100, (1 - (lungeTimer / effectiveMax)) * 100));
         lungeReady = lungePct >= 99;
       }
-      skills.push({ id: 'lunge', pct: lungePct, ready: lungeReady, color: themeColor, label: 'DECISIVE STRIKE' });
+      skills.push({ id: 'lunge', pct: lungePct, ready: lungeReady, color: themeColor, label: cfgSkillName(cfg, ['lungeSkillName'], 'DECISIVE STRIKE') });
     }
 
     // Skill 2: Collapse (Falling Rubble)
@@ -994,7 +1037,7 @@ export const HUD_SKILL_PROVIDERS = {
       const collapseMax = f.collapseCooldownMax || cfg.collapseCooldown || 600;
       const collapseTimer = f.collapseCooldown !== undefined ? f.collapseCooldown : 0;
       const collapsePct = Math.max(0, Math.min(100, (1 - (collapseTimer / collapseMax)) * 100));
-      skills.push({ id: 'collapse', pct: collapsePct, ready: collapsePct >= 99, color: themeColor, label: 'COLLAPSE' });
+      skills.push({ id: 'collapse', pct: collapsePct, ready: collapsePct >= 99, color: themeColor, label: cfgSkillName(cfg, ['collapseSkillName'], 'COLLAPSE') });
     }
 
     // Ultimate: 4-Fold Black Flash Blitz
@@ -1002,14 +1045,15 @@ export const HUD_SKILL_PROVIDERS = {
       const ultMax = f.ultimateCooldownMax || cfg.ultimateCooldown || 2000;
       const ultTimer = f.ultimateCooldown !== undefined ? f.ultimateCooldown : ultMax;
       const ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
-      skills.push({ id: 'blitz', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: '4-FOLD BLACK FLASH' });
+      skills.push({ id: 'blitz', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['blackFlashSkillName'], '4-FOLD BLACK FLASH') });
     }
 
     // Overtime Passive Gauge
     if (isSkillEnabled(cfg.enableOvertime, true)) {
       let overtimePct = 0;
       let overtimeReady = f.isOvertimeActive;
-      let overtimeLabel = f.isOvertimeActive ? 'OVERTIME (120%)' : 'WORK SHIFT (85%)';
+      const overtimeName = cfgSkillName(cfg, ['overtimeSkillName'], 'OVERTIME');
+      let overtimeLabel = f.isOvertimeActive ? `${overtimeName} (120%)` : 'WORK SHIFT (85%)';
 
       if (f.isOvertimeActive) {
         overtimePct = 100;
@@ -1039,7 +1083,7 @@ export const HUD_SKILL_PROVIDERS = {
       const hairpinMax = f.hairpinCooldownMax || cfg.hairpinCooldown || 330;
       const hairpinTimer = f.hairpinCooldown !== undefined ? f.hairpinCooldown : 0;
       const hairpinPct = Math.max(0, Math.min(100, (1 - (hairpinTimer / hairpinMax)) * 100));
-      skills.push({ id: 'hairpin', pct: hairpinPct, ready: hairpinPct >= 99, color: themeColor, label: 'KANZASHI (HAIRPIN)' });
+      skills.push({ id: 'hairpin', pct: hairpinPct, ready: hairpinPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['hairpinSkillName'], 'KANZASHI (HAIRPIN)') });
     }
 
     // Skill 2: Straw Doll Technique: Resonance (Tomonari)
@@ -1048,7 +1092,7 @@ export const HUD_SKILL_PROVIDERS = {
       const resonanceTimer = f.resonanceCooldown !== undefined ? f.resonanceCooldown : 0;
       let resonancePct = Math.max(0, Math.min(100, (1 - (resonanceTimer / resonanceMax)) * 100));
       if (f.isResonating) resonancePct = 100;
-      skills.push({ id: 'resonance', pct: resonancePct, ready: resonancePct >= 99, color: themeColor, label: 'RESONANCE' });
+      skills.push({ id: 'resonance', pct: resonancePct, ready: resonancePct >= 99, color: themeColor, label: cfgSkillName(cfg, ['resonanceSkillName'], 'RESONANCE') });
     }
 
     // Ultimate: Black Flash: Supreme Resonance
@@ -1057,14 +1101,15 @@ export const HUD_SKILL_PROVIDERS = {
       const ultTimer = f.ultimateCooldown !== undefined ? f.ultimateCooldown : ultMax;
       let ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
       if (f.isBlitzing) ultPct = 100;
-      skills.push({ id: 'blitz', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'BLACK FLASH' });
+      skills.push({ id: 'blitz', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['ultimateSkillName'], 'BLACK FLASH') });
     }
 
     // Passive Gauge: Unflinching Ecstasy
     if (isSkillEnabled(cfg.enableEcstasy, true)) {
       const isEcstasy = Boolean(f.isEcstasyActive || ((f.hp / (f.maxHp || 400)) <= 0.50));
       const ecstasyPct = isEcstasy ? 100 : Math.max(0, Math.min(100, (1 - (f.hp / (f.maxHp || 400))) * 200));
-      const ecstasyLabel = isEcstasy ? 'ECSTASY (ACTIVE)' : 'BATTLE FOCUS';
+      const ecstasyName = cfgSkillName(cfg, ['ecstasySkillName'], 'ECSTASY');
+      const ecstasyLabel = isEcstasy ? `${ecstasyName} (ACTIVE)` : 'BATTLE FOCUS';
       skills.push({ id: 'ecstasy', pct: ecstasyPct, ready: isEcstasy, color: themeColor, label: ecstasyLabel });
     }
 
@@ -1091,13 +1136,14 @@ export const HUD_SKILL_PROVIDERS = {
         pct: bangPct,
         ready: bangReady,
         color: themeColor,
-        label: 'BANG!'
+        label: cfgSkillName(mcfg, ['bangSkillName'], 'BANG!')
       });
     }
 
     // 2. Skill 1: Chains of Domination (Shihai no Kusari)
     const enableSkill1 = isSkillEnabled(mcfg.enableSkill1, mcfg.enableChains, mcfg.enableChainsOfDomination, true);
     if (enableSkill1) {
+      const chainsName = cfgSkillName(mcfg, ['skill1Name'], 'CHAINS OF DOMINATION');
       if (f.isPreparingChain) {
         const windupMax = f.chainWindupMax || mcfg.chainsWindupFrames || 14;
         const curTimer = f.chainWindupTimer !== undefined ? f.chainWindupTimer : 0;
@@ -1107,7 +1153,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: windupPct,
           ready: false,
           color: themeColor,
-          label: 'CHAINS OF DOMINATION'
+          label: chainsName
         });
       } else if (f.isThrowingChain && !f.isChainingActive) {
         const throwMax = f.chainThrowAnimMax || 22;
@@ -1118,7 +1164,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: throwPct,
           ready: false,
           color: themeColor,
-          label: 'CHAINS OF DOMINATION'
+          label: chainsName
         });
       } else if (f.isChainingActive) {
         const chainMax = f.chainMaxTimer || mcfg.chainsDuration || mcfg.chainsDurationFrames || mcfg.chainsStasisFrames || 240;
@@ -1129,7 +1175,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: chainPct,
           ready: false,
           color: themeColor,
-          label: 'CHAINS OF DOMINATION'
+          label: chainsName
         });
       } else {
         const chainsMax = f.chainsCooldownMax || mcfg.chainsCooldown || 500;
@@ -1141,7 +1187,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: chainsPct,
           ready: chainsReady,
           color: themeColor,
-          label: 'CHAINS OF DOMINATION'
+          label: chainsName
         });
       }
     }
@@ -1152,7 +1198,8 @@ export const HUD_SKILL_PROVIDERS = {
       const livesMax = f.citizenLivesMax || mcfg.maxCitizenLives || 3;
       const livesCur = f.citizenLives !== undefined ? f.citizenLives : livesMax;
       const livesText = livesCur === 1 ? '1 LIFE' : `${livesCur} LIVES`;
-      const contractLabel = livesCur > 0 ? `CONTRACT - ${livesText}` : 'CONTRACT - 0 LIVES';
+      const contractName = cfgSkillName(mcfg, ['citizenContractSkillName'], 'CONTRACT');
+      const contractLabel = livesCur > 0 ? `${contractName} - ${livesText}` : `${contractName} - 0 LIVES`;
 
       if (f.isRevivingFromContract || f.isShatterReviving) {
         const reviveMax = f.reviveStasisMax || mcfg.citizenReviveDurationFrames || 75;
@@ -1180,6 +1227,7 @@ export const HUD_SKILL_PROVIDERS = {
     // 4. Skill 2: Angel's Armory (1000-Year Holy Spear)
     const enableSkill2 = isSkillEnabled(mcfg.enableSkill2, mcfg.enableAngel, mcfg.enableAngelArmory, mcfg.enableThousandYearSpear, false);
     if (enableSkill2) {
+      const angelName = cfgSkillName(mcfg, ['skill2Name'], "ANGEL'S ARMORY");
       if (f.isSummoningSpear) {
         const spearMax = f.spearMaxTimer || mcfg.thousandYearSpearChannelFrames || 100;
         const spearCur = f.spearTimer !== undefined ? f.spearTimer : 0;
@@ -1189,7 +1237,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: spearPct,
           ready: false,
           color: themeColor,
-          label: "ANGEL'S ARMORY"
+          label: angelName
         });
       } else {
         const angelMax = f.angelCooldownMax || mcfg.angelCooldown || 1500;
@@ -1201,7 +1249,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: angelPct,
           ready: angelReady,
           color: themeColor,
-          label: "ANGEL'S ARMORY"
+          label: angelName
         });
       }
     }
@@ -1209,6 +1257,7 @@ export const HUD_SKILL_PROVIDERS = {
     // 5. Ultimate: Crucifixion (Drop of Dominion) / Kyoto Shrine Ritual
     const enableUlt = isSkillEnabled(mcfg.enableUltimate, mcfg.enableCrucifixion, mcfg.enableShrine, mcfg.enableShrineRitual, true);
     if (enableUlt) {
+      const ultName = cfgSkillName(mcfg, ['ultimateSkillName'], 'CRUCIFIXION');
       if (f.isCrucifixionSliding || f.isExecutingCrucifixion || f.isExecutingRitual) {
         const ultMax = f.crucifixionMaxTimer || f.ritualMaxTimer || mcfg.crucifixionDurationFrames || mcfg.shrineChannelFrames || 140;
         const ultCur = (f.crucifixionTimer !== undefined && f.isExecutingCrucifixion) ? f.crucifixionTimer : (f.ritualTimer !== undefined ? f.ritualTimer : 0);
@@ -1218,7 +1267,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: ultPct,
           ready: false,
           color: themeColor,
-          label: 'CRUCIFIXION'
+          label: ultName
         });
       } else {
         const ultMax = f.crucifixionCooldownMax || f.shrineCooldownMax || mcfg.crucifixionCooldown || mcfg.shrineCooldown || 1920;
@@ -1230,7 +1279,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: ultPct,
           ready: ultReady,
           color: themeColor,
-          label: 'CRUCIFIXION'
+          label: ultName
         });
       }
     }
@@ -1251,7 +1300,7 @@ export const HUD_SKILL_PROVIDERS = {
       const totalityMax = f.totalityCooldownMax || cfg.totalityCooldown || 420;
       const totalityTimer = f.totalityCooldown !== undefined ? f.totalityCooldown : 0;
       const totalityPct = Math.max(0, Math.min(100, (1 - (totalityTimer / totalityMax)) * 100));
-      skills.push({ id: 'totality', pct: totalityPct, ready: totalityPct >= 99, color: themeColor, label: 'DIVINE DOG: TOTALITY' });
+      skills.push({ id: 'totality', pct: totalityPct, ready: totalityPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['totalitySkillName'], 'DIVINE DOG: TOTALITY') });
     }
 
     // Skill 2: Nue (Thunder Bird)
@@ -1259,7 +1308,7 @@ export const HUD_SKILL_PROVIDERS = {
       const nueMax = f.nueCooldownMax || cfg.nueCooldown || 360;
       const nueTimer = f.nueCooldown !== undefined ? f.nueCooldown : 0;
       const nuePct = Math.max(0, Math.min(100, (1 - (nueTimer / nueMax)) * 100));
-      skills.push({ id: 'nue', pct: nuePct, ready: nuePct >= 99, color: themeColor, label: 'NUE: THUNDER BIRD' });
+      skills.push({ id: 'nue', pct: nuePct, ready: nuePct >= 99, color: themeColor, label: cfgSkillName(cfg, ['nueSkillName'], 'NUE: THUNDER BIRD') });
     }
 
     // Skill 3: Shadow Sink (Evasion)
@@ -1267,13 +1316,15 @@ export const HUD_SKILL_PROVIDERS = {
       const sinkMax = f.shadowSinkCooldownMax || cfg.shadowSinkCooldown || 300;
       const sinkTimer = f.shadowSinkCooldown !== undefined ? f.shadowSinkCooldown : 0;
       const sinkPct = Math.max(0, Math.min(100, (1 - (sinkTimer / sinkMax)) * 100));
-      skills.push({ id: 'shadow', pct: sinkPct, ready: sinkPct >= 99, color: themeColor, label: 'SHADOW SINK' });
+      skills.push({ id: 'shadow', pct: sinkPct, ready: sinkPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['shadowSinkSkillName'], 'SHADOW SINK') });
     }
 
     // Domain Expansion / Desperation Mahoraga Ritual
     if (isSkillEnabled(cfg.enableDomainExpansion, cfg.enableDomain, cfg.enableMahoragaRitual, true)) {
       const isDesperation = (f.hp / (f.maxHp || 380)) <= (cfg.mahoragaThresholdHpPercent || 0.20);
-      const domainLabel = isDesperation ? 'SUMMON MAHORAGA' : 'CHIMERA SHADOW GARDEN';
+      const domainLabel = isDesperation
+        ? cfgSkillName(cfg, ['mahoragaRitualSkillName'], 'SUMMON MAHORAGA')
+        : cfgSkillName(cfg, ['domainSkillName'], 'CHIMERA SHADOW GARDEN');
       const domainPct = f.domainActive ? 100 : (isDesperation ? 100 : Math.max(0, Math.min(100, (1 - (f.hp / (f.maxHp || 380))) * 100)));
       skills.push({ id: 'domain', pct: domainPct, ready: domainPct >= 99, color: themeColor, label: domainLabel });
     }
@@ -1296,7 +1347,7 @@ export const HUD_SKILL_PROVIDERS = {
       const currentAmmo = f.heatAmmo !== undefined ? f.heatAmmo : maxAmmo;
       let ammoPct = 0;
       let ammoReady = false;
-      let ammoLabel = 'HEAT AMMO';
+      let ammoLabel = cfgSkillName(cfg, ['meleeStanceSkillName'], 'HEAT AMMO');
       if (f.ammoReloadTimer > 0) {
         const reloadMax = f.ammoReloadMax || cfg.ammoReloadFrames || 300;
         ammoPct = Math.max(0, Math.min(100, (1 - (f.ammoReloadTimer / reloadMax)) * 100));
@@ -1314,7 +1365,7 @@ export const HUD_SKILL_PROVIDERS = {
       const flurryMax = cfg.flurryCooldown || 480;
       const flurryTimer = f.flurryCooldown !== undefined ? f.flurryCooldown : 0;
       const flurryPct = Math.max(0, Math.min(100, (1 - (flurryTimer / flurryMax)) * 100));
-      skills.push({ id: 'flurry', pct: flurryPct, ready: flurryPct >= 99, color: themeColor, label: 'MACHINE GUN BLOWS' });
+      skills.push({ id: 'flurry', pct: flurryPct, ready: flurryPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['flurrySkillName'], 'MACHINE GUN BLOWS') });
     }
 
     // Incineration Cannon (Ultimate)
@@ -1322,14 +1373,15 @@ export const HUD_SKILL_PROVIDERS = {
       const ultMax = cfg.ultCooldown || 1680;
       const ultTimer = f.ultCooldown !== undefined ? f.ultCooldown : 0;
       const ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
-      skills.push({ id: 'ult', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'INCINERATION CANNON' });
+      skills.push({ id: 'ult', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['ultimateSkillName'], 'INCINERATION CANNON') });
     }
 
     // Self-Destruct (Core Overdrive)
     if (isSkillEnabled(cfg.enableSelfDestruct, true)) {
       let sdPct = 0;
       let sdReady = false;
-      let sdLabel = 'SELF DESTRUCT';
+      const sdName = cfgSkillName(cfg, ['selfDestructSkillName'], 'SELF DESTRUCT');
+      let sdLabel = sdName;
 
       if (f.isSelfDestructing) {
         const sdMax = cfg.selfDestructCountdownFrames || 150;
@@ -1347,11 +1399,11 @@ export const HUD_SKILL_PROVIDERS = {
         if (currentHpRatio <= threshold) {
           sdPct = 100;
           sdReady = true;
-          sdLabel = 'SELF DESTRUCT READY';
+          sdLabel = `${sdName} READY`;
         } else {
           sdPct = Math.max(0, Math.min(100, ((1 - currentHpRatio) / (1 - threshold)) * 100));
           sdReady = false;
-          sdLabel = 'SELF DESTRUCT';
+          sdLabel = sdName;
         }
       }
       skills.push({ id: 'selfdestruct', pct: sdPct, ready: sdReady, color: themeColor, label: sdLabel });
@@ -1370,7 +1422,7 @@ export const HUD_SKILL_PROVIDERS = {
     const sphereMax = cfg.sphereCooldown || 1200;
     const sphereTimer = f.sphereCooldown !== undefined ? f.sphereCooldown : sphereMax;
     const spherePct = Math.max(0, Math.min(100, (1 - (sphereTimer / sphereMax)) * 100));
-    return [{ id: 'sphere', pct: spherePct, ready: spherePct >= 99, color: themeColor, label: 'TIME SPHERE' }];
+    return [{ id: 'sphere', pct: spherePct, ready: spherePct >= 99, color: themeColor, label: cfgSkillName(cfg, ['sphereSkillName'], 'TIME SPHERE') }];
   },
 
   // ─────────────────────────────────────────────
@@ -1383,7 +1435,7 @@ export const HUD_SKILL_PROVIDERS = {
     const flurryMax = cfg.flurryCooldown || 900;
     const flurryTimer = f.flurryCooldown !== undefined ? f.flurryCooldown : flurryMax;
     const flurryPct = Math.max(0, Math.min(100, (1 - (flurryTimer / flurryMax)) * 100));
-    return [{ id: 'flurry', pct: flurryPct, ready: flurryPct >= 99, color: themeColor, label: 'NITEN ICHIRYU FLURRY' }];
+    return [{ id: 'flurry', pct: flurryPct, ready: flurryPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['flurrySkillName'], 'NITEN ICHIRYU FLURRY') }];
   },
 
   // ─────────────────────────────────────────────
@@ -1427,7 +1479,7 @@ export const HUD_SKILL_PROVIDERS = {
         f._smoothRikaPct += (rikaPct - f._smoothRikaPct) * 0.15;
       }
       rikaPct = Math.max(0, Math.min(100, f._smoothRikaPct));
-      skills.push({ id: 'rika', pct: rikaPct, ready: rikaPct >= 99 && (!rk || !rk.active), color: themeColor, label: 'RIKA SUMMON' });
+      skills.push({ id: 'rika', pct: rikaPct, ready: rikaPct >= 99 && (!rk || !rk.active), color: themeColor, label: cfgSkillName(cfg, ['rikaSkillName'], 'RIKA SUMMON') });
     }
 
     // 2. Domain Expansion: Authentic Mutual Love
@@ -1449,7 +1501,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         domainPct = 0;
       }
-      skills.push({ id: 'domain', pct: domainPct, ready: domainPct >= 99 && !f.domainActive, color: themeColor, label: 'AUTHENTIC MUTUAL LOVE' });
+      skills.push({ id: 'domain', pct: domainPct, ready: domainPct >= 99 && !f.domainActive, color: themeColor, label: cfgSkillName(cfg, ['domainSkillName'], 'AUTHENTIC MUTUAL LOVE') });
     }
 
     // 3. Pure Love Beam (Ultimate)
@@ -1476,7 +1528,7 @@ export const HUD_SKILL_PROVIDERS = {
         f._maxBeamPct = Math.max(f._maxBeamPct || 0, rawBeamPct);
         beamPct = f._maxBeamPct;
       }
-      skills.push({ id: 'beam', pct: beamPct, ready: beamPct >= 99 && (rk && rk.active) && beamCdTimer <= 0, color: themeColor, label: 'PURE LOVE BEAM' });
+      skills.push({ id: 'beam', pct: beamPct, ready: beamPct >= 99 && (rk && rk.active) && beamCdTimer <= 0, color: themeColor, label: cfgSkillName(cfg, ['pureLoveBeamSkillName'], 'PURE LOVE BEAM') });
     }
 
     return skills;
@@ -1499,7 +1551,7 @@ export const HUD_SKILL_PROVIDERS = {
       pct: s1Pct,
       ready: s1Timer <= 0,
       color: themeColor,
-      label: 'BASKERVILLE'
+      label: cfgSkillName(cfg, ['skill1Name'], 'BASKERVILLE')
     });
 
     // Skill 2: Shadow Phase
@@ -1511,7 +1563,7 @@ export const HUD_SKILL_PROVIDERS = {
       pct: s2Pct,
       ready: s2Timer <= 0,
       color: themeColor,
-      label: f.isShadowPhasing ? 'PHASING...' : 'SHADOW PHASE'
+      label: f.isShadowPhasing ? 'PHASING...' : cfgSkillName(cfg, ['skill2Name'], 'SHADOW PHASE')
     });
 
     // Skill 3: Illusion Counter
@@ -1523,7 +1575,7 @@ export const HUD_SKILL_PROVIDERS = {
       pct: s3Pct,
       ready: s3Timer <= 0,
       color: themeColor,
-      label: f.isCounterStance ? 'MOCKING...' : 'ILLUSION COUNTER'
+      label: f.isCounterStance ? 'MOCKING...' : cfgSkillName(cfg, ['skill3Name'], 'ILLUSION COUNTER')
     });
 
     return skills;
@@ -1558,7 +1610,7 @@ export const HUD_SKILL_PROVIDERS = {
     }
 
     return [
-      { id: 'laser_beam', pct: pct, ready: ready, color: themeColor, label: 'LASER BEAM' }
+      { id: 'laser_beam', pct: pct, ready: ready, color: themeColor, label: cfgSkillName(cfg, ['laserBeamSkillName'], 'LASER BEAM') }
     ];
   },
 
@@ -1574,20 +1626,21 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableThunderStorm, true)) {
       const stormMax = f.stormCooldownMax || cfg.stormCooldown || 1500;
       const stormTimer = f.stormCooldown !== undefined ? f.stormCooldown : 0;
+      const stormName = cfgSkillName(cfg, ['thunderStormSkillName'], 'THUNDER STORM');
       let stormPct = 0;
-      let stormLabel = 'THUNDER STORM';
+      let stormLabel = stormName;
       let isReady = false;
 
       if (f.isChargingStorm) {
         const telegraphMax = cfg.stormTelegraphFrames || 120;
         const curCharge = f.stormChargeTimer !== undefined ? f.stormChargeTimer : (telegraphMax - (f.stormTelegraphTimer || 0));
         stormPct = Math.max(0, Math.min(100, (curCharge / telegraphMax) * 100));
-        stormLabel = 'THUNDER STORM (CHARGING)';
+        stormLabel = `${stormName} (CHARGING)`;
       } else if (f.stormActive) {
         const stormDur = cfg.stormDuration || 300;
         const remaining = f.stormTimer !== undefined ? f.stormTimer : stormDur;
         stormPct = Math.max(0, Math.min(100, (remaining / stormDur) * 100));
-        stormLabel = 'THUNDER STORM (ACTIVE)';
+        stormLabel = `${stormName} (ACTIVE)`;
         isReady = true;
       } else {
         stormPct = Math.max(0, Math.min(100, (1 - (stormTimer / stormMax)) * 100));
@@ -1616,7 +1669,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: aegisPct,
         ready: aegisPct >= 99,
         color: themeColor,
-        label: 'AEGIS SHIELD'
+        label: cfgSkillName(cfg, ['aegisShieldSkillName'], 'AEGIS SHIELD')
       });
     }
 
@@ -1637,9 +1690,10 @@ export const HUD_SKILL_PROVIDERS = {
     // Passive: Hollow Mask Awakening
     if (isSkillEnabled(cfg.enableHollowMask, true)) {
       const hollowMaxDuration = cfg.hollowMaskDuration ?? 800;
+      const hollowName = cfgSkillName(cfg, ['hollowMaskSkillName'], 'HOLLOW MASK');
       let hollowPct = 0;
       let hollowReady = false;
-      let hollowLabel = 'HOLLOW MASK';
+      let hollowLabel = hollowName;
       const isBankaiActive = Boolean(f.bankaiActive);
 
       if (f.hollowMaskActive) {
@@ -1651,7 +1705,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else if (!isBankaiActive) {
         hollowPct = 0;
         hollowReady = false;
-        hollowLabel = 'HOLLOW MASK';
+        hollowLabel = hollowName;
         f._maxHollowPct = 0;
       } else {
         const bankaiDuration = f.bankaiDurationMax || cfg.bankaiDuration || 1000;
@@ -1659,7 +1713,7 @@ export const HUD_SKILL_PROVIDERS = {
         const timeProg = Math.max(0, Math.min(1.0, 1.0 - (bankaiRemaining / bankaiDuration)));
         hollowPct = Math.max(0, Math.min(100, timeProg * 100));
         hollowReady = (bankaiRemaining <= 0 || hollowPct >= 99);
-        hollowLabel = 'HOLLOW MASK';
+        hollowLabel = hollowName;
       }
       skills.push({ id: 'hollow', pct: hollowPct, ready: hollowReady, color: themeColor, label: hollowLabel });
     }
@@ -1701,7 +1755,7 @@ export const HUD_SKILL_PROVIDERS = {
         ultPct = f._maxBankaiPct;
         ultReady = hpRatio <= ultThreshold || ultPct >= 99;
       }
-      skills.push({ id: 'bankai', pct: ultPct, ready: ultReady, color: themeColor, label: 'BANKAI' });
+      skills.push({ id: 'bankai', pct: ultPct, ready: ultReady, color: themeColor, label: cfgSkillName(cfg, ['bankaiSkillName'], 'BANKAI') });
     }
 
     return skills;
@@ -1722,11 +1776,11 @@ export const HUD_SKILL_PROVIDERS = {
       const bullets = f.magazineBullets !== undefined ? f.magazineBullets : maxMag;
       let magPct = 0;
       let magReady = false;
-      let weaponName = 'PISTOL';
+      let weaponName = cfgSkillName(cfg, ['pistolSkillName'], 'PISTOL');
       if (f.currentEquippedWeapon === 'shotgun') {
-        weaponName = 'SHOTGUN';
+        weaponName = cfgSkillName(cfg, ['shotgunSkillName'], 'SHOTGUN');
       } else if (f.currentEquippedWeapon === 'rifle') {
-        weaponName = 'M4 RIFLE';
+        weaponName = cfgSkillName(cfg, ['rifleSkillName'], 'M4 RIFLE');
       }
 
       if (f.weaponSwitchTimer && f.weaponSwitchTimer > 0) {
@@ -1763,7 +1817,7 @@ export const HUD_SKILL_PROVIDERS = {
       const rollbacks = f.rollbackCount || 0;
       let ultPct = 0;
       let ultReady = false;
-      let ultLabel = 'EXCOMMUNICADO';
+      let ultLabel = cfgSkillName(cfg, ['excommunicadoSkillName'], 'EXCOMMUNICADO');
 
       if (currentWeapon === 'pistol') {
         const magSpent = Math.max(0, Math.min(1.0, 1 - (bullets / maxMag)));
@@ -1827,7 +1881,8 @@ export const HUD_SKILL_PROVIDERS = {
       } else {
         sentryLvl = Math.max(1, Math.min(3, f.sentryBuildLevel || 1));
       }
-      const sentryLabel = `SENTRY LVL ${sentryLvl}`;
+      const sentryName = cfgSkillName(cfg, ['sentrySkillName'], 'SENTRY');
+      const sentryLabel = `${sentryName} LVL ${sentryLvl}`;
       skills.push({ id: 'turret', pct: sentryPct, ready: sentryReady, color: themeColor, label: sentryLabel });
     }
 
@@ -1853,7 +1908,7 @@ export const HUD_SKILL_PROVIDERS = {
         dispenserPct = Math.max(0, Math.min(100, (1 - (current / dispenserMax)) * 100));
         dispenserReady = dispenserPct >= 99;
       }
-      skills.push({ id: 'dispenser', pct: dispenserPct, ready: dispenserReady, color: themeColor, label: 'DISPENSER' });
+      skills.push({ id: 'dispenser', pct: dispenserPct, ready: dispenserReady, color: themeColor, label: cfgSkillName(cfg, ['dispenserSkillName'], 'DISPENSER') });
     }
 
     return skills;
@@ -1873,7 +1928,9 @@ export const HUD_SKILL_PROVIDERS = {
       const maxRespect = f.maxRespect || cfg.maxRespect || 100;
       const respectPct = Math.max(0, Math.min(100, (respect / maxRespect) * 100));
       const respectReady = f.isGroveStreetOg || respect >= 50;
-      const respectLabel = (f.isGroveStreetOg || respect >= 100 || f.hasTriggeredTier2) ? 'RESPECTED' : 'RESPECT+';
+      const respectLabel = (f.isGroveStreetOg || respect >= 100 || f.hasTriggeredTier2)
+        ? 'RESPECTED'
+        : cfgSkillName(cfg, ['respectSkillName'], 'RESPECT+');
       skills.push({ id: 'respect', pct: respectPct, ready: respectReady, color: skillColor, label: respectLabel });
     }
 
@@ -1881,7 +1938,7 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableHesoyam, true)) {
       let hesoPct = 0;
       let hesoReady = false;
-      const hesoLabel = 'HESOYAM';
+      const hesoLabel = cfgSkillName(cfg, ['hesoyamSkillName'], 'HESOYAM');
       const hesoThreshold = cfg.hesoyamHpThreshold ?? 0.50;
       const hpRatio = (f.maxHp && f.maxHp > 0) ? (f.hp / f.maxHp) : 1.0;
 
@@ -1900,7 +1957,8 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableJetpack, true)) {
       let jpPct = 0;
       let jpReady = false;
-      const jpLabel = f.isJetpackActive ? 'ROCKETMAN (ACTIVATED)' : 'ROCKETMAN';
+      const jpName = cfgSkillName(cfg, ['jetpackSkillName'], 'ROCKETMAN');
+      const jpLabel = f.isJetpackActive ? `${jpName} (ACTIVATED)` : jpName;
       if (f.isJetpackActive) {
         const jpDur = f.jetpackMaxTimer || cfg.jetpackDuration || 270;
         jpPct = Math.max(0, Math.min(100, (f.jetpackTimer / jpDur) * 100));
@@ -1918,7 +1976,8 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableDriveBy, true)) {
       let dbPct = 0;
       let dbReady = false;
-      const dbLabel = f.isDriveByActive ? 'GROVE ST. (ACTIVE)' : 'GROVE ST.';
+      const dbName = cfgSkillName(cfg, ['driveBySkillName'], 'GROVE ST.');
+      const dbLabel = f.isDriveByActive ? `${dbName} (ACTIVE)` : dbName;
       if (f.isDriveByActive) {
         const stayDur = f.driveByMaxTimer || cfg.driveByStayDuration || 240;
         const currentTimer = (f.driveByTimer !== undefined) ? f.driveByTimer : stayDur;
@@ -1937,7 +1996,8 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableBaguvix, true)) {
       let ultPct = 0;
       let ultReady = false;
-      const ultLabel = f.isBaguvixActive ? 'BAGUVIX - GODMODE (ACTIVATED)' : 'BAGUVIX - GODMODE';
+      const ultName = cfgSkillName(cfg, ['baguvixSkillName'], 'BAGUVIX - GODMODE');
+      const ultLabel = f.isBaguvixActive ? `${ultName} (ACTIVATED)` : ultName;
       if (f.isBaguvixActive) {
         const bagDur = f.baguvixMaxTimer || cfg.baguvixDuration || 300;
         ultPct = Math.max(0, Math.min(100, (f.baguvixTimer / bagDur) * 100));
@@ -1987,7 +2047,7 @@ export const HUD_SKILL_PROVIDERS = {
     // Passive 1: Sklaverei Reishi Gauge
     if (isSkillEnabled(cfg.enableReishiAbsorption, true)) {
       let reishiPct = f.reishiGauge !== undefined ? f.reishiGauge : 0;
-      let reishiLabel = 'SKLAVEREI GAUGE';
+      let reishiLabel = cfgSkillName(cfg, ['reishiAbsorptionSkillName'], 'SKLAVEREI GAUGE');
       let reishiReady = reishiPct >= 99;
       if (f.isPiercingLightActive) {
         const plMax = f.piercingLightMax || 360;
@@ -2003,7 +2063,7 @@ export const HUD_SKILL_PROVIDERS = {
       const hMax = cfg.hirenkyakuCooldown || 360;
       const hTimer = f.hirenkyakuCooldown !== undefined ? f.hirenkyakuCooldown : 0;
       const hPct = Math.max(0, Math.min(100, (1 - hTimer / hMax) * 100));
-      skills.push({ id: 'hirenkyaku', pct: hPct, ready: hPct >= 99, color: themeColor, label: 'HIRENKYAKU' });
+      skills.push({ id: 'hirenkyaku', pct: hPct, ready: hPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['hirenkyakuSkillName'], 'HIRENKYAKU') });
     }
 
     // Skill 2: Sprenger
@@ -2011,7 +2071,7 @@ export const HUD_SKILL_PROVIDERS = {
       const sMax = cfg.sprengerCooldown || 480;
       const sTimer = f.sprengerCooldown !== undefined ? f.sprengerCooldown : 0;
       const sPct = Math.max(0, Math.min(100, (1 - sTimer / sMax) * 100));
-      skills.push({ id: 'sprenger', pct: sPct, ready: sPct >= 99, color: themeColor, label: 'SPRENGER' });
+      skills.push({ id: 'sprenger', pct: sPct, ready: sPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['sprengerSkillName'], 'SPRENGER') });
     }
 
     // Ultimate: The Antithesis
@@ -2019,7 +2079,7 @@ export const HUD_SKILL_PROVIDERS = {
       const uMax = cfg.ultimateCooldown || 1200;
       const uTimer = f.ultimateCooldown !== undefined ? f.ultimateCooldown : 0;
       let uPct = Math.max(0, Math.min(100, (1 - uTimer / uMax) * 100));
-      let uLabel = 'THE ANTITHESIS';
+      let uLabel = cfgSkillName(cfg, ['antithesisSkillName'], 'THE ANTITHESIS');
       if (f.vollstandigActive) {
         uPct = 100;
         uLabel = 'VOLLSTÄNDIG ACTIVE';
@@ -2030,7 +2090,8 @@ export const HUD_SKILL_PROVIDERS = {
     if (f.ransotengaiActive && isSkillEnabled(cfg.enableRansotengai, true)) {
       const pMax = f.ransotengaiMaxTimer || 360;
       const puppetPct = Math.max(0, Math.min(100, ((f.ransotengaiTimer || 0) / pMax) * 100));
-      skills.push({ id: 'ransotengai', pct: puppetPct, ready: true, color: themeColor, label: 'RANSŌTENGAI (ACTIVE)' });
+      const ransoName = cfgSkillName(cfg, ['ransotengaiSkillName'], 'RANSŌTENGAI');
+      skills.push({ id: 'ransotengai', pct: puppetPct, ready: true, color: themeColor, label: `${ransoName} (ACTIVE)` });
     }
 
     return skills;
@@ -2047,7 +2108,7 @@ export const HUD_SKILL_PROVIDERS = {
       const sMax = cfg.sonidoCooldown || 300;
       const sTimer = f.sonidoCooldown !== undefined ? f.sonidoCooldown : 0;
       const sPct = Math.max(0, Math.min(100, (1 - sTimer / sMax) * 100));
-      skills.push({ id: 'sonido', pct: sPct, ready: sPct >= 99, color: themeColor, label: 'SONÍDO' });
+      skills.push({ id: 'sonido', pct: sPct, ready: sPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['sonidoSkillName'], 'SONÍDO') });
     }
 
     // Skill 2: Cero / Cero Oscuras
@@ -2056,7 +2117,8 @@ export const HUD_SKILL_PROVIDERS = {
       const cTimer = f.ceroCooldown !== undefined ? f.ceroCooldown : 0;
       const cPct = Math.max(0, Math.min(100, (1 - cTimer / cMax) * 100));
       const isOscuras = Boolean(f.stage1Active || f.segundaEtapaActive);
-      const ceroLabel = isOscuras ? 'CERO OSCURAS' : 'CERO';
+      const ceroName = cfgSkillName(cfg, ['ceroSkillName'], 'CERO');
+      const ceroLabel = isOscuras ? `${ceroName} OSCURAS` : ceroName;
       skills.push({ id: 'cero', pct: cPct, ready: cPct >= 99, color: themeColor, label: ceroLabel });
     }
 
@@ -2074,7 +2136,7 @@ export const HUD_SKILL_PROVIDERS = {
         const maxHp = f.maxHp || 240;
         const hpPct = (f.hp / maxHp);
         ultPct = Math.max(0, Math.min(100, ((0.60 - Math.max(0, hpPct - 0.40)) / 0.60) * 100));
-        ultLabel = 'RESURRECCIÓN GAUGE';
+        ultLabel = cfgSkillName(cfg, ['resurreccionSkillName'], 'RESURRECCIÓN GAUGE');
       }
       skills.push({ id: 'resurreccion', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: ultLabel });
     }
@@ -2117,7 +2179,8 @@ export const HUD_SKILL_PROVIDERS = {
     // 1. Ultimate: Spell Steal / Stolen Ability
     if (isSkillEnabled(rcfg.enableSpellSteal, true)) {
       let stealPct = 0;
-      let stealLabel = 'SPELL STEAL';
+      const spellStealName = cfgSkillName(rcfg, ['spellStealSkillName'], 'SPELL STEAL');
+      let stealLabel = spellStealName;
       let stealReady = false;
 
       if (f.stolenType) {
@@ -2188,7 +2251,7 @@ export const HUD_SKILL_PROVIDERS = {
         stealPct = Math.max(0, Math.min(100, (1 - (stealTimer / stealMax)) * 100));
         const isSkillActive = (typeof f.hasActiveSkillInArena === 'function') ? f.hasActiveSkillInArena() : false;
         stealReady = stealPct >= 99 && !isSkillActive;
-        stealLabel = 'SPELL STEAL';
+        stealLabel = spellStealName;
       }
       skills.push({ id: 'spellsteal', pct: stealPct, ready: stealReady, color: themeColor, label: stealLabel });
     }
@@ -2197,20 +2260,21 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(rcfg.enableTelekinesis, true)) {
       const tkMax = rcfg?.telekinesisCooldown || 400;
       const tkTotalDuration = rcfg?.telekinesisDuration || 90;
+      const tkName = cfgSkillName(rcfg, ['telekinesisSkillName'], 'TELEKINESIS');
       let tkPct = 0;
-      let tkLabel = 'TELEKINESIS';
+      let tkLabel = tkName;
       let tkReady = false;
 
       if (f.tkTimer > 0) {
         tkPct = Math.max(0, Math.min(100, (f.tkTimer / tkTotalDuration) * 100));
         tkReady = false;
-        tkLabel = 'TELEKINESIS';
+        tkLabel = tkName;
       } else {
         const tkTimer = f.telekinesisCooldown !== undefined ? f.telekinesisCooldown : 0;
         tkPct = Math.max(0, Math.min(100, (1 - (tkTimer / tkMax)) * 100));
         const isSkillActive = (typeof f.hasActiveSkillInArena === 'function') ? f.hasActiveSkillInArena() : false;
         tkReady = tkPct >= 99 && !isSkillActive;
-        tkLabel = 'TELEKINESIS';
+        tkLabel = tkName;
       }
       skills.push({ id: 'telekinesis', pct: tkPct, ready: tkReady, color: themeColor, label: tkLabel });
     }
@@ -2232,7 +2296,7 @@ export const HUD_SKILL_PROVIDERS = {
     const nukeMax = f.nukeCooldownMax || cfg.nukeCooldown || 1500;
     const nukeTimer = f.nukeCooldown !== undefined ? f.nukeCooldown : nukeMax;
     let nukePct = 0;
-    let nukeLabel = 'MEGATON NUKE';
+    let nukeLabel = cfgSkillName(cfg, ['megatonNukeSkillName'], 'MEGATON NUKE');
     if (f.isExecutingNuke) {
       nukePct = 100;
       nukeLabel = 'NUKE (DIVING)';
@@ -2261,19 +2325,19 @@ export const HUD_SKILL_PROVIDERS = {
       const sparkMax = f.sparkCooldownMax || cfg.sparkCooldown || 180;
       const sparkTimer = f.sparkCooldown !== undefined ? f.sparkCooldown : 0;
       const sparkPct = Math.max(0, Math.min(100, (1 - (sparkTimer / sparkMax)) * 100));
-      skills.push({ id: 'spark', pct: sparkPct, ready: sparkPct >= 99, color: themeColor, label: 'SPARK FLECHETTE' });
+      skills.push({ id: 'spark', pct: sparkPct, ready: sparkPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['sparkFlechetteSkillName'], 'SPARK FLECHETTE') });
     }
     if (isSkillEnabled(cfg.enableClusterBomb, cfg.enableDecoyBomb, true)) {
       const clusterMax = f.clusterCooldownMax || f.decoyCooldownMax || cfg.clusterBombCooldown || cfg.decoyCooldown || 320;
       const clusterTimer = f.clusterCooldown !== undefined ? f.clusterCooldown : (f.decoyCooldown !== undefined ? f.decoyCooldown : 0);
       const clusterPct = Math.max(0, Math.min(100, (1 - (clusterTimer / clusterMax)) * 100));
-      skills.push({ id: 'cluster_bomb', pct: clusterPct, ready: clusterPct >= 99, color: themeColor, label: 'CLUSTER BOMBS' });
+      skills.push({ id: 'cluster_bomb', pct: clusterPct, ready: clusterPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['clusterBombSkillName'], 'CLUSTER BOMBS') });
     }
     if (isSkillEnabled(cfg.enableRocketLunge, true)) {
       const rocketMax = f.rocketCooldownMax || cfg.rocketCooldown || 300;
       const rocketTimer = f.rocketCooldown !== undefined ? f.rocketCooldown : 0;
       const rocketPct = f.isRocketLunging ? 100 : Math.max(0, Math.min(100, (1 - (rocketTimer / rocketMax)) * 100));
-      skills.push({ id: 'rocket', pct: rocketPct, ready: rocketPct >= 99, color: themeColor, label: 'ROCKET LUNGE' });
+      skills.push({ id: 'rocket', pct: rocketPct, ready: rocketPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['rocketLungeSkillName'], 'ROCKET LUNGE') });
     }
 
     return skills;
@@ -2291,21 +2355,21 @@ export const HUD_SKILL_PROVIDERS = {
       const ultMax = f.dragonDanceCooldownMax || cfg.ultimateCooldown || 1440;
       const ultTimer = f.dragonDanceCooldown !== undefined ? f.dragonDanceCooldown : 0;
       const ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
-      skills.push({ id: 'dragon_dance', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'DRAGON SUN DANCE' });
+      skills.push({ id: 'dragon_dance', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['dragonSunDanceSkillName'], 'DRAGON SUN DANCE') });
     }
 
     if (isSkillEnabled(cfg.enableConstantFlux, true)) {
       const fluxMax = f.fluxCooldownMax || cfg.fluxCooldown || 270;
       const fluxTimer = f.fluxCooldown !== undefined ? f.fluxCooldown : 0;
       const fluxPct = Math.max(0, Math.min(100, (1 - (fluxTimer / fluxMax)) * 100));
-      skills.push({ id: 'constant_flux', pct: fluxPct, ready: fluxPct >= 99, color: themeColor, label: 'CONSTANT FLUX' });
+      skills.push({ id: 'constant_flux', pct: fluxPct, ready: fluxPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['constantFluxSkillName'], 'CONSTANT FLUX') });
     }
 
     if (isSkillEnabled(cfg.enableClearBlueSky, true)) {
       const sunMax = f.sunCooldownMax || cfg.sunCooldown || 360;
       const sunTimer = f.sunCooldown !== undefined ? f.sunCooldown : 0;
       const sunPct = Math.max(0, Math.min(100, (1 - (sunTimer / sunMax)) * 100));
-      skills.push({ id: 'clear_blue_sky', pct: sunPct, ready: sunPct >= 99, color: themeColor, label: 'CLEAR BLUE SKY' });
+      skills.push({ id: 'clear_blue_sky', pct: sunPct, ready: sunPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['clearBlueSkySkillName'], 'CLEAR BLUE SKY') });
     }
 
     return skills;
@@ -2323,21 +2387,21 @@ export const HUD_SKILL_PROVIDERS = {
       const ultMax = f.awakeningCooldownMax || cfg.ultimateCooldown || 1500;
       const ultTimer = f.awakeningCooldown !== undefined ? f.awakeningCooldown : 0;
       const ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
-      skills.push({ id: 'demon_awakening', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'DEMON AWAKENING' });
+      skills.push({ id: 'demon_awakening', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['fullAwakeningSkillName'], 'DEMON AWAKENING') });
     }
 
     if (isSkillEnabled(cfg.enableExplodingBlood, cfg.enableBakketsu, true)) {
       const bakketsuMax = f.bakketsuCooldownMax || cfg.bakketsuCooldown || 330;
       const bakketsuTimer = f.bakketsuCooldown !== undefined ? f.bakketsuCooldown : 0;
       const bakketsuPct = Math.max(0, Math.min(100, (1 - (bakketsuTimer / bakketsuMax)) * 100));
-      skills.push({ id: 'bakketsu', pct: bakketsuPct, ready: bakketsuPct >= 99, color: themeColor, label: 'EXPLODING BLOOD' });
+      skills.push({ id: 'bakketsu', pct: bakketsuPct, ready: bakketsuPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['explodingBloodSkillName'], 'EXPLODING BLOOD') });
     }
 
     if (isSkillEnabled(cfg.enableFlyingDropkick, cfg.enableDropkick, true)) {
       const dropkickMax = f.dropkickCooldownMax || cfg.dropkickCooldown || 240;
       const dropkickTimer = f.dropkickCooldown !== undefined ? f.dropkickCooldown : 0;
       const dropkickPct = Math.max(0, Math.min(100, (1 - (dropkickTimer / dropkickMax)) * 100));
-      skills.push({ id: 'dropkick', pct: dropkickPct, ready: dropkickPct >= 99, color: themeColor, label: 'FLYING DROPKICK' });
+      skills.push({ id: 'dropkick', pct: dropkickPct, ready: dropkickPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['flyingDropkickSkillName'], 'FLYING DROPKICK') });
     }
 
     return skills;
@@ -2355,8 +2419,9 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableThunderclap, true)) {
       const thunderMax = f.thunderclapCooldownMax || cfg.thunderclapCooldown || 228;
       const thunderTimer = f.thunderclapCooldown !== undefined ? f.thunderclapCooldown : 0;
+      const thunderName = cfgSkillName(cfg, ['thunderclapSkillName'], 'THUNDERCLAP & FLASH');
       let thunderPct = 0;
-      let thunderLabel = 'THUNDERCLAP & FLASH';
+      let thunderLabel = thunderName;
       let isReady = false;
 
       if (f.isChannelingThunderclap) {
@@ -2389,18 +2454,19 @@ export const HUD_SKILL_PROVIDERS = {
       // Basic Attack Gauge shown when Skill 1 is disabled so cooldown is visible
       const basicMax = f.shootCooldownMax || cfg.basicAttackCooldown || cfg.basicDashCooldown || cfg.cooldown || 60;
       const basicTimer = f.shootCooldown !== undefined ? f.shootCooldown : 0;
+      const basicName = cfgSkillName(cfg, ['basicAttackSkillName'], 'HEKIREKI ISSEN');
       let basicPct = 0;
-      let basicLabel = 'HEKIREKI ISSEN (DASH)';
+      let basicLabel = `${basicName} (DASH)`;
       let isReady = false;
 
       if (f.isBasicDashPreparing) {
         const prepMax = f.basicDashPrepMaxTimer || cfg.basicDashWindupFrames || 8;
         const remaining = f.basicDashPrepTimer || 0;
         basicPct = Math.max(0, Math.min(100, (1 - (remaining / prepMax)) * 100));
-        basicLabel = 'HEKIREKI ISSEN (READYING)';
+        basicLabel = `${basicName} (READYING)`;
       } else if (f.isDashingThunderclap && f.isBasicDash) {
         basicPct = 100;
-        basicLabel = 'HEKIREKI ISSEN (DASHING)';
+        basicLabel = `${basicName} (DASHING)`;
         isReady = true;
       } else {
         basicPct = Math.max(0, Math.min(100, (1 - (basicTimer / basicMax)) * 100));
@@ -2428,7 +2494,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: ultPct,
         ready: ultPct >= 99,
         color: themeColor,
-        label: 'FLAMING THUNDER GOD',
+        label: cfgSkillName(cfg, ['flamingThunderGodSkillName'], 'FLAMING THUNDER GOD'),
         isUltimate: true
       });
     }
@@ -2443,7 +2509,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: rokurenPct,
         ready: rokurenPct >= 99,
         color: themeColor,
-        label: 'SIXFOLD (ROKUREN)'
+        label: cfgSkillName(cfg, ['rokurenSkillName'], 'SIXFOLD (ROKUREN)')
       });
     }
 
@@ -2462,21 +2528,21 @@ export const HUD_SKILL_PROVIDERS = {
       const ultMax = f.kingOfMountainCooldownMax || cfg.ultimateCooldown || 1440;
       const ultTimer = f.kingOfMountainCooldown !== undefined ? f.kingOfMountainCooldown : 0;
       const ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
-      skills.push({ id: 'king_of_mountain', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: 'KING OF MOUNTAINS' });
+      skills.push({ id: 'king_of_mountain', pct: ultPct, ready: ultPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['kingOfMountainSkillName'], 'KING OF MOUNTAINS') });
     }
 
     if (isSkillEnabled(cfg.enableCrazyCutting, true)) {
       const crazyMax = f.crazyCuttingCooldownMax || cfg.crazyCuttingCooldown || 252;
       const crazyTimer = f.crazyCuttingCooldown !== undefined ? f.crazyCuttingCooldown : 0;
       const crazyPct = Math.max(0, Math.min(100, (1 - (crazyTimer / crazyMax)) * 100));
-      skills.push({ id: 'crazy_cutting', pct: crazyPct, ready: crazyPct >= 99, color: themeColor, label: 'CRAZY CUTTING' });
+      skills.push({ id: 'crazy_cutting', pct: crazyPct, ready: crazyPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['crazyCuttingSkillName'], 'CRAZY CUTTING') });
     }
 
     if (isSkillEnabled(cfg.enableExplosiveRush, true)) {
       const rushMax = f.explosiveRushCooldownMax || cfg.explosiveRushCooldown || 330;
       const rushTimer = f.explosiveRushCooldown !== undefined ? f.explosiveRushCooldown : 0;
       const rushPct = Math.max(0, Math.min(100, (1 - (rushTimer / rushMax)) * 100));
-      skills.push({ id: 'explosive_rush', pct: rushPct, ready: rushPct >= 99, color: themeColor, label: 'EXPLOSIVE RUSH' });
+      skills.push({ id: 'explosive_rush', pct: rushPct, ready: rushPct >= 99, color: themeColor, label: cfgSkillName(cfg, ['explosiveRushSkillName'], 'EXPLOSIVE RUSH') });
     }
 
     return skills;
@@ -2494,16 +2560,17 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableCruelSun, true)) {
       const cruelMax = f.cruelSunCooldownMax || cfg.cruelSunCooldown || 510;
       const cruelTimer = f.cruelSunCooldown !== undefined ? f.cruelSunCooldown : 0;
+      const cruelName = cfgSkillName(cfg, ['cruelSunSkillName'], 'CRUEL SUN');
       let cruelPct;
-      let cruelLabel = 'CRUEL SUN';
+      let cruelLabel = cruelName;
       if (f.isChannelingCruelSun) {
         const windupMax = f.cruelSunMaxChargeTimer || cfg.cruelSunCastWindupFrames || 45;
         const curTimer = f.cruelSunChargeTimer || 0;
         cruelPct = Math.max(0, Math.min(100, (1 - (curTimer / windupMax)) * 100));
-        cruelLabel = 'CRUEL SUN (CHARGING)';
+        cruelLabel = `${cruelName} (CHARGING)`;
       } else if (f.activeCruelSuns && f.activeCruelSuns.length > 0) {
         cruelPct = 0;
-        cruelLabel = 'CRUEL SUN (ACTIVE)';
+        cruelLabel = `${cruelName} (ACTIVE)`;
       } else {
         cruelPct = Math.max(0, Math.min(100, (1 - (cruelTimer / cruelMax)) * 100));
       }
@@ -2525,12 +2592,13 @@ export const HUD_SKILL_PROVIDERS = {
       const theOnePct = f.isTheOneActive
         ? Math.max(0, Math.min(100, (f.theOneTimer / (f.theOneMaxTimer || 480)) * 100))
         : Math.max(0, Math.min(100, (1 - (theOneTimer / theOneMax)) * 100));
+      const theOneName = cfgSkillName(cfg, ['theOneSkillName'], '"THE ONE"');
       skills.push({
         id: 'the_one',
         pct: theOnePct,
         ready: theOnePct >= 99 || f.isTheOneActive,
         color: themeColor,
-        label: f.isTheOneActive ? 'THE ONE (ACTIVE)' : '"THE ONE"',
+        label: f.isTheOneActive ? 'THE ONE (ACTIVE)' : theOneName,
         isUltimate: true
       });
     }
@@ -2540,7 +2608,7 @@ export const HUD_SKILL_PROVIDERS = {
       const prideMax = f.prideFlareCooldownMax || cfg.prideFlareCooldown || 660;
       const prideTimer = f.prideFlareCooldown !== undefined ? f.prideFlareCooldown : 0;
       const pridePct = Math.max(0, Math.min(100, (1 - (prideTimer / prideMax)) * 100));
-      skills.push({ id: 'pride_flare', pct: pridePct, ready: pridePct >= 99, color: themeColor, label: 'PRIDE FLARE' });
+      skills.push({ id: 'pride_flare', pct: pridePct, ready: pridePct >= 99, color: themeColor, label: cfgSkillName(cfg, ['prideFlareSkillName'], 'PRIDE FLARE') });
     }
 
     return skills;
@@ -2559,7 +2627,7 @@ export const HUD_SKILL_PROVIDERS = {
       const meleeMax = cfg.meleeCooldown || 50;
       const meleeTimer = f.meleeCooldown !== undefined ? f.meleeCooldown : 0;
       const meleePct = Math.max(0, Math.min(100, (1 - (meleeTimer / meleeMax)) * 100));
-      skills.push({ id: 'smash', pct: meleePct, ready: meleePct >= 99 && (f.meleeCooldown || 0) <= 0, color: themeColor, label: 'SPIKED SHELL' });
+      skills.push({ id: 'smash', pct: meleePct, ready: meleePct >= 99 && (f.meleeCooldown || 0) <= 0, color: themeColor, label: cfgSkillName(cfg, ['basicAttackSkillName'], 'SPIKED SHELL') });
     }
 
     // 2. Permanent Stacking Speed Boost (SPD)
@@ -2595,7 +2663,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct,
         ready: true,
         color: themeColor,
-        label: `CURSED REBIRTH... (${Math.round(pct)}%)`,
+        label: `${cfgSkillName(cfg, ['curseRebirthSkillName'], 'CURSED REBIRTH')}... (${Math.round(pct)}%)`,
         isUltimate: true,
         isSignature: true,
         signature: true
@@ -2639,7 +2707,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: ramjetPct,
           ready: ramjetPct >= 99 && ramjetTimer <= 0,
           color: themeColor,
-          label: 'MACH 3 RAMJET'
+          label: cfgSkillName(cfg, ['curseRamjetSkillName'], 'MACH 3 RAMJET')
         });
       }
 
@@ -2653,7 +2721,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: cannonPct,
           ready: cannonPct >= 99 && cannonTimer <= 0,
           color: themeColor,
-          label: 'AIR COMPRESSION'
+          label: cfgSkillName(cfg, ['curseTurbineCannonSkillName'], 'AIR COMPRESSION')
         });
       }
 
@@ -2662,12 +2730,13 @@ export const HUD_SKILL_PROVIDERS = {
         const domainMax = f.ultCooldownMax || f.curseDomainCooldownMax || cfg.curseUltCooldown || 1200;
         const domainTimer = f.ultCooldown !== undefined ? f.ultCooldown : (f.curseDomainCooldown || 0);
         let domainPct = Math.max(0, Math.min(100, (1 - (domainTimer / domainMax)) * 100));
-        let label = 'TIME CELL PALACE';
+        const domainName = cfgSkillName(cfg, ['curseDomainSkillName'], 'TIME CELL PALACE');
+        let label = domainName;
         if (f.isDomainActive) {
           const rem = Math.max(0, f.domainTimer || 0);
           const maxDur = f.domainMaxTimer || cfg.curseDomainDurationFrames || cfg.curseDomainDuration || 480;
           domainPct = Math.max(0, Math.min(100, (rem / maxDur) * 100));
-          label = `TIME CELL PALACE (${(rem / 60).toFixed(1)}S)`;
+          label = `${domainName} (${(rem / 60).toFixed(1)}S)`;
         } else if (f.isChannelingDomainExpansion) {
           const chMax = Math.max(1, f.domainChargeMax || cfg.curseDomainChannelFrames || 90);
           domainPct = Math.max(0, Math.min(100, ((f.domainChargeTimer || 0) / chMax) * 100));
@@ -2704,7 +2773,7 @@ export const HUD_SKILL_PROVIDERS = {
       const blitzMax = f.skill1CooldownMax || cfg.skill1Cooldown || 330;
       const blitzTimer = f.skill1Cooldown !== undefined ? f.skill1Cooldown : 0;
       const blitzPct = Math.max(0, Math.min(100, (1 - (blitzTimer / blitzMax)) * 100));
-      skills.push({ id: 'blitz', pct: blitzPct, ready: blitzPct >= 99 && (f.skill1Cooldown || 0) <= 0, color: themeColor, label: 'FRAME BLITZ' });
+      skills.push({ id: 'blitz', pct: blitzPct, ready: blitzPct >= 99 && (f.skill1Cooldown || 0) <= 0, color: themeColor, label: cfgSkillName(cfg, ['frameBlitzSkillName'], 'FRAME BLITZ') });
     }
 
     // 3. Skill 2: Sonic Rebound Kick (Toggle: enableSonicKick)
@@ -2712,7 +2781,7 @@ export const HUD_SKILL_PROVIDERS = {
       const kickMax = f.skill2CooldownMax || cfg.skill2Cooldown || 480;
       const kickTimer = f.skill2Cooldown !== undefined ? f.skill2Cooldown : 0;
       const kickPct = Math.max(0, Math.min(100, (1 - (kickTimer / kickMax)) * 100));
-      skills.push({ id: 'sonic_kick', pct: kickPct, ready: kickPct >= 99 && (f.skill2Cooldown || 0) <= 0, color: themeColor, label: 'SONIC REBOUND' });
+      skills.push({ id: 'sonic_kick', pct: kickPct, ready: kickPct >= 99 && (f.skill2Cooldown || 0) <= 0, color: themeColor, label: cfgSkillName(cfg, ['sonicKickSkillName'], 'SONIC REBOUND') });
     }
 
     // 4. Ultimate / Signature Skill: 24 FPS Mach 3 Runway Breach (Toggle: enableUltimate)
@@ -2724,7 +2793,7 @@ export const HUD_SKILL_PROVIDERS = {
       const ultPct = Math.max(0, Math.min(100, (1 - (ultTimer / ultMax)) * 100));
       const hasStacks = currentStacks >= maxStacks;
       const isReady = ultPct >= 99 && (f.ultCooldown || 0) <= 0 && hasStacks;
-      const label = hasStacks ? 'MACH 3 BREACH' : `MACH 3 (${currentStacks}/${maxStacks})`;
+      const label = hasStacks ? cfgSkillName(cfg, ['ultimateSkillName'], 'MACH 3 BREACH') : `MACH 3 (${currentStacks}/${maxStacks})`;
       skills.push({
         id: 'shutter_exec',
         pct: ultPct,
@@ -2754,25 +2823,26 @@ export const HUD_SKILL_PROVIDERS = {
       const blankCd = f.blankCooldown !== undefined ? f.blankCooldown : 0;
       const blankActive = f.blankActiveTimer || 0;
       const totalActive = f.blankActiveMaxTimer || cfg.blankBuffDuration || 240;
+      const blankName = cfgSkillName(cfg, ['blankSkillName'], '『　　』');
       let blankPct = 0;
       let isReady = false;
-      let label = '『　　』 PREDICTION';
+      let label = `${blankName} PREDICTION`;
 
       if (blankActive > 0) {
         // Active Duration Phase: Bar properly drains from 100% down to 0%
         blankPct = Math.max(0, Math.min(100, (blankActive / totalActive) * 100));
         isReady = false;
-        label = `『　　』 ACTIVE (${(blankActive / 60).toFixed(1)}s)`;
+        label = `${blankName} ACTIVE (${(blankActive / 60).toFixed(1)}s)`;
       } else if (f.blankWindupTimer > 0) {
         // Windup / Voiceline Phase (0:00:02): Bar pulses at 100% ready while Shiro speaks voiceline
         blankPct = 100;
         isReady = true;
-        label = `『　　』 PREDICTING... (${(f.blankWindupTimer / 60).toFixed(1)}s)`;
+        label = `${blankName} PREDICTING... (${(f.blankWindupTimer / 60).toFixed(1)}s)`;
       } else {
         // Cooldown / Charging Phase: Bar fills up from 0% to 100%
         blankPct = Math.max(0, Math.min(100, (1 - (blankCd / blankMax)) * 100));
         isReady = blankPct >= 99 && blankCd <= 0;
-        label = '『　　』 PREDICTION';
+        label = `${blankName} PREDICTION`;
       }
 
       skills.push({
@@ -2800,12 +2870,13 @@ export const HUD_SKILL_PROVIDERS = {
     const javTimer = Math.max(0, f.javelinCooldown !== undefined ? f.javelinCooldown : 0);
     const javPct = Math.max(0, Math.min(100, (1 - (javTimer / javMax)) * 100));
     const isReady = javPct >= 99 && javTimer <= 0 && !f.isThrowingJavelin;
+    const javName = cfgSkillName(cfg, ['javelinSkillName'], 'JAVELIN HURL');
     return [{
       id: 'javelin_throw',
       pct: javPct,
       ready: isReady,
       color: themeColor,
-      label: f.isThrowingJavelin ? 'JAVELIN HURLING...' : (isReady ? 'JAVELIN HURL: READY' : `JAVELIN HURL: ${Math.ceil(javTimer / 60)}s`),
+      label: f.isThrowingJavelin ? 'JAVELIN HURLING...' : (isReady ? `${javName}: READY` : `${javName}: ${Math.ceil(javTimer / 60)}s`),
       isSignature: true,
       signature: true,
       fullWidth: true
@@ -2825,12 +2896,13 @@ export const HUD_SKILL_PROVIDERS = {
       const calamityMax = f.calamityCooldownMax || cfg.skill1CooldownMax || 420;
       const calamityCd = f.calamityCooldown !== undefined ? f.calamityCooldown : 0;
       const isCalamityActive = Boolean(f.calamityActive || (f.calamityHitPauseTimer && f.calamityHitPauseTimer > 0));
+      const s1Name = cfgSkillName(cfg, ['skill1Name'], 'CALAMITY CLEAVE');
       let calamityPct = 0;
-      let label = 'CALAMITY CLEAVE';
+      let label = s1Name;
 
       if (isCalamityActive) {
         calamityPct = 100;
-        label = 'CALAMITY CLEAVE!';
+        label = `${s1Name}!`;
       } else {
         calamityPct = Math.max(0, Math.min(100, (1 - (calamityCd / calamityMax)) * 100));
       }
@@ -2854,7 +2926,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: cannonPct,
         ready: cannonPct >= 99 && cannonCd <= 0,
         color: '#71717a',
-        label: 'WRIST CANNON / BOLTS'
+        label: cfgSkillName(cfg, ['skill2Name'], 'WRIST CANNON / BOLTS')
       });
     }
 
@@ -2865,7 +2937,7 @@ export const HUD_SKILL_PROVIDERS = {
       const cycloneActive = f.cycloneTimer || 0;
       const totalActive = cfg.cycloneDuration || 30;
       let cyclonePct = 0;
-      let label = 'CYCLONE CLEAVE';
+      let label = cfgSkillName(cfg, ['cycloneSkillName'], 'CYCLONE CLEAVE');
 
       if (cycloneActive > 0) {
         cyclonePct = Math.max(0, Math.min(100, (cycloneActive / totalActive) * 100));
@@ -2891,7 +2963,7 @@ export const HUD_SKILL_PROVIDERS = {
       const totalActive = cfg.berserkerDuration || 600;
       let berserkerPct = 0;
       let isReady = false;
-      let label = 'BERSERKER ARMOR';
+      let label = cfgSkillName(cfg, ['berserkerArmorSkillName'], 'BERSERKER ARMOR');
 
       if (berserkerActive > 0) {
         berserkerPct = Math.max(0, Math.min(100, (berserkerActive / totalActive) * 100));
@@ -2934,7 +3006,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: chakramPct,
         ready: chakramPct >= 99 && chakramCd <= 0,
         color: themeColor,
-        label: 'SLICING EXORCIST'
+        label: cfgSkillName(cfg, ['chakramSkillName'], 'SLICING EXORCIST')
       });
     }
 
@@ -2949,7 +3021,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: pbPct,
         ready: isReady,
         color: themeColor,
-        label: 'PIERCING BLOOD'
+        label: cfgSkillName(cfg, ['piercingBloodSkillName'], 'PIERCING BLOOD')
       });
     }
 
@@ -2958,13 +3030,14 @@ export const HUD_SKILL_PROVIDERS = {
       const laserMax = f.ultCooldownMax || f.skill3CooldownMax || cfg.ultCooldown || cfg.skill3Cooldown || 840;
       const laserCd = (f.ultCooldown !== undefined ? f.ultCooldown : f.skill3Cooldown) || 0;
       const overdriveTimer = f.laserTransmutationOverdriveTimer || 0;
+      const convName = cfgSkillName(cfg, ['laserMatrixSkillName'], 'CONVERGENCE');
       let laserPct = 0;
       let isReady = false;
-      let label = 'CONVERGENCE';
+      let label = convName;
 
       if (overdriveTimer > 0) {
         laserPct = Math.max(0, Math.min(100, (overdriveTimer / (cfg.laserTransmutationOverdriveFrames || 300)) * 100));
-        label = `CONVERGENCE OVERDRIVE (${(overdriveTimer / 60).toFixed(1)}s)`;
+        label = `${convName} OVERDRIVE (${(overdriveTimer / 60).toFixed(1)}s)`;
         isReady = true;
       } else {
         laserPct = Math.max(0, Math.min(100, (1 - (laserCd / laserMax)) * 100));
@@ -2973,9 +3046,9 @@ export const HUD_SKILL_PROVIDERS = {
           : (f.bloodNodes ? f.bloodNodes.filter(n => n && !n.isDead && (n.lifespan > 0)).length : 0);
         isReady = laserPct >= 99 && laserCd <= 0 && bloodCount > 0;
         if (laserCd <= 0) {
-          label = bloodCount > 0 ? `CONVERGENCE (${bloodCount} BLOOD)` : 'CONVERGENCE (AWAITING BLOOD)';
+          label = bloodCount > 0 ? `${convName} (${bloodCount} BLOOD)` : `${convName} (AWAITING BLOOD)`;
         } else {
-          label = `CONVERGENCE: ${Math.ceil(laserCd / 60)}s`;
+          label = `${convName}: ${Math.ceil(laserCd / 60)}s`;
         }
       }
 
@@ -3015,12 +3088,13 @@ export const HUD_SKILL_PROVIDERS = {
         const maxActive = cfg.servantMaxActive || 4;
         const isReady = (spawnPct >= 99 || activeServants < maxActive) && spawnTimer <= 0;
 
+        const servantsName = cfgSkillName(cfg, ['servantsSkillName'], 'SERVANTS OF CTHULHU');
         skills.push({
           id: 'servants_of_cthulhu',
           pct: spawnPct,
           ready: isReady,
           color: themeColor,
-          label: activeServants > 0 ? `SERVANTS OF CTHULHU (${activeServants}/${maxActive})` : 'SERVANTS OF CTHULHU',
+          label: activeServants > 0 ? `${servantsName} (${activeServants}/${maxActive})` : servantsName,
           isSignature: true,
           signature: true,
           icon: '👁️'
@@ -3042,7 +3116,8 @@ export const HUD_SKILL_PROVIDERS = {
         }
         const ramReady = ramPct >= 99 || isRamming;
         const ramsLeft = f.ramsRemaining || 0;
-        const ramLabel = isRamming ? `TRIPLE RAM (${ramsLeft > 0 ? ramsLeft : 1}/3)` : 'TRIPLE RAM';
+        const ramName = cfgSkillName(cfg, ['tripleRamSkillName'], 'TRIPLE RAM');
+        const ramLabel = isRamming ? `${ramName} (${ramsLeft > 0 ? ramsLeft : 1}/3)` : ramName;
 
         skills.push({
           id: 'triple_ram',
@@ -3065,7 +3140,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: dashPct,
           ready: dashPct >= 99 && dashTimer <= 0,
           color: '#FB7185',
-          label: 'BERSERK RAM',
+          label: cfgSkillName(cfg, ['berserkRamSkillName'], 'BERSERK RAM'),
           isSignature: true,
           signature: true
         });
@@ -3079,7 +3154,7 @@ export const HUD_SKILL_PROVIDERS = {
           pct: roarPct,
           ready: roarPct >= 99 && roarTimer <= 0,
           color: themeColor,
-          label: 'CRIMSON ROAR'
+          label: cfgSkillName(cfg, ['roarSkillName'], 'CRIMSON ROAR')
         });
       }
     }
@@ -3112,17 +3187,17 @@ export const HUD_SKILL_PROVIDERS = {
         pct: sumPct,
         ready: sumPct >= 99 && sumTimer <= 0,
         color: themeColor,
-        label: 'POKEBALL SUMMON'
+        label: cfgSkillName(cfg, ['honeycombSummonSkillName'], 'POKEBALL SUMMON')
       });
     }
 
     // 2. Active Pokémon Skill Bar: Displayed ONLY when a Pokémon is actively summoned on the field
     if (hasPokemon && isSkillEnabled(cfg.enableTrainerCommand, cfg.enableSkill1, true)) {
       const p = f.activePokemon;
-      const moveLabel = activeSpec?.hudSkillLabel || activeSpec?.specialName?.replace(/!$/, '') || (
+      const moveLabel = activeSpec?.skills?.special?.hudLabel || activeSpec?.hudSkillLabel || activeSpec?.specialName?.replace(/!$/, '') || (
         p.speciesId === 'charizard' ? 'FLAMETHROWER' :
         p.speciesId === 'greninja' ? 'WATER SHURIKEN' :
-        p.speciesId === 'lucario' ? 'AURA SPHERE' : 'THUNDERBOLT'
+        p.speciesId === 'lucario' ? 'AURA SPHERE' : cfgSkillName(cfg, ['trainerCommandSkillName'], 'THUNDERBOLT')
       );
       const isInitial = Boolean(p.isSpecialOnInitialCooldown);
       const pokeSpecMax = isInitial
@@ -3154,7 +3229,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: ultPct,
         ready: ultPct >= 99 && ultTimer <= 0,
         color: themeColor,
-        label: '10,000,000 VOLT',
+        label: cfgSkillName(cfg, ['ultimateSkillName'], '10,000,000 VOLT'),
         isSignature: true,
         signature: true,
         isUltimate: true
@@ -3180,9 +3255,10 @@ export const HUD_SKILL_PROVIDERS = {
       const isBombCapMax = curMaxBombs >= maxBombsCap;
       const bombUpPct = Math.max(0, Math.min(100, (curMaxBombs / maxBombsCap) * 100));
       const cdLeft = f.plantCooldownTimer > 0 ? (f.plantCooldownTimer / 60).toFixed(1) : null;
+      const bombUpName = cfgSkillName(cfg, ['bombUpSkillName'], 'BOMB UP');
       const label = isBombCapMax
-        ? `BOMB UP (${maxBombsCap} MAX)`
-        : (cdLeft ? `BOMB UP (${curMaxBombs}/${maxBombsCap} - ${cdLeft}S)` : `BOMB UP (${curMaxBombs}/${maxBombsCap})`);
+        ? `${bombUpName} (${maxBombsCap} MAX)`
+        : (cdLeft ? `${bombUpName} (${curMaxBombs}/${maxBombsCap} - ${cdLeft}S)` : `${bombUpName} (${curMaxBombs}/${maxBombsCap})`);
       skills.push({
         id: 'bomb_up',
         pct: bombUpPct,
@@ -3201,14 +3277,15 @@ export const HUD_SKILL_PROVIDERS = {
       const fireTimer = f.fireUpTimer || 0;
       const firePct = isFireMax ? 100 : (fireTimer <= 0 ? 100 : Math.max(0, Math.min(100, (1 - fireTimer / fireCd) * 100)));
       const fireSecLeft = (fireTimer / 60).toFixed(1);
+      const fireUpName = cfgSkillName(cfg, ['fireUpSkillName'], 'FIRE UP');
       skills.push({
         id: 'fire_up',
         pct: firePct,
         ready: isFireMax || fireTimer <= 0,
         color: themeColor,
         label: isFireMax
-          ? `FIRE UP (${maxFireCap} MAX)`
-          : (fireTimer > 0 ? `FIRE UP (${fireSecLeft}S)` : `FIRE UP (LV.${curFireLv}/${maxFireCap})`),
+          ? `${fireUpName} (${maxFireCap} MAX)`
+          : (fireTimer > 0 ? `${fireUpName} (${fireSecLeft}S)` : `${fireUpName} (LV.${curFireLv}/${maxFireCap})`),
       });
     }
 
@@ -3219,14 +3296,15 @@ export const HUD_SKILL_PROVIDERS = {
       const kickPct = Math.max(0, Math.min(100, (1 - kickTimer / kickCd) * 100));
       const hasTravelingBomb = Array.isArray(f.activeBombs) && f.activeBombs.some((b) => b && b.isTraveling);
       const kickSecLeft = (kickTimer / 60).toFixed(1);
+      const kickName = cfgSkillName(cfg, ['bombKickSkillName'], 'BOMB KICK');
       skills.push({
         id: 'bomb_kick',
         pct: hasTravelingBomb ? 100 : kickPct,
         ready: hasTravelingBomb || kickTimer <= 0,
         color: themeColor,
         label: hasTravelingBomb
-          ? 'BOMB KICK (TRAVELING)'
-          : (kickTimer > 0 ? `BOMB KICK (${kickSecLeft}S)` : 'BOMB KICK'),
+          ? `${kickName} (TRAVELING)`
+          : (kickTimer > 0 ? `${kickName} (${kickSecLeft}S)` : kickName),
       });
     }
 
@@ -3238,6 +3316,7 @@ export const HUD_SKILL_PROVIDERS = {
       const invSecLeft = Math.ceil((f.invincibleTimer || 0) / 60);
       const cdTimer = f.invincibleCooldownTimer || 0;
       const cdSecLeft = (cdTimer / 60).toFixed(1);
+      const invName = cfgSkillName(cfg, ['invincibleSkillName'], 'INVINCIBLE');
       const invPct = isInvincible
         ? Math.max(0, Math.min(100, (f.invincibleTimer / invDur) * 100))
         : Math.max(0, Math.min(100, (1 - cdTimer / invCd) * 100));
@@ -3247,8 +3326,8 @@ export const HUD_SKILL_PROVIDERS = {
         ready: isInvincible || cdTimer <= 0,
         color: themeColor,
         label: isInvincible
-          ? `INVINCIBLE (${invSecLeft}S)`
-          : (cdTimer > 0 ? `INVINCIBLE (${cdSecLeft}S)` : 'INVINCIBLE'),
+          ? `${invName} (${invSecLeft}S)`
+          : (cdTimer > 0 ? `${invName} (${cdSecLeft}S)` : invName),
         isSignature: true,
         signature: true,
         isUltimate: true,
@@ -3270,7 +3349,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct: 100,
         ready: true,
         color: themeColor,
-        label: 'SILENT STALKER',
+        label: cfgSkillName(cfg, ['silentStalkerSkillName'], 'SILENT STALKER'),
       });
     }
 
@@ -3282,8 +3361,9 @@ export const HUD_SKILL_PROVIDERS = {
       const isPriming = Boolean(f.isPrimingDetonation || curFuse > 0);
       const primeMax = f.maxPrimeTimer || cfg.primeDurationFrames || 50;
 
+      const detName = cfgSkillName(cfg, ['detonationSkillName'], 'DETONATION');
       let pct = 100;
-      let label = 'DETONATION';
+      let label = detName;
       let ready = false;
 
       if (isPriming) {
@@ -3297,11 +3377,11 @@ export const HUD_SKILL_PROVIDERS = {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
         const secLeft = (cdTimer / 60).toFixed(1);
-        label = `DETONATION (${secLeft}S)`;
+        label = `${detName} (${secLeft}S)`;
       } else {
         pct = 100;
         ready = true;
-        label = 'DETONATION';
+        label = detName;
       }
 
       skills.push({
@@ -3321,24 +3401,25 @@ export const HUD_SKILL_PROVIDERS = {
       const chargedCdMax = f.chargedCooldownMax || cfg.chargedCooldown || 1800;
       const cdTimer = f.chargedCooldownTimer || 0;
 
+      const chargedName = cfgSkillName(cfg, ['chargedCreeperSkillName'], 'CHARGED CREEPER');
       let pct = 100;
-      let label = 'CHARGED CREEPER';
+      let label = chargedName;
       let ready = false;
 
       if (isCharged) {
         pct = Math.max(0, Math.min(100, (chargedTimer / chargedDur) * 100));
         ready = true;
         const drainSec = Math.ceil(chargedTimer / 60);
-        label = `CHARGED CREEPER (${drainSec}S)`;
+        label = `${chargedName} (${drainSec}S)`;
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / chargedCdMax) * 100));
         ready = false;
         const secLeft = (cdTimer / 60).toFixed(1);
-        label = `CHARGED CREEPER (${secLeft}S)`;
+        label = `${chargedName} (${secLeft}S)`;
       } else {
         pct = 100;
         ready = true;
-        label = 'CHARGED CREEPER';
+        label = chargedName;
       }
 
       skills.push({
@@ -3367,9 +3448,10 @@ export const HUD_SKILL_PROVIDERS = {
       const dashTimer = f.shadowStepCooldownTimer || 0;
       const dashMax = Math.max(1, cfg.shadowStepCooldown || 135, dashTimer);
       const dashPct = Math.max(0, Math.min(100, (1 - dashTimer / dashMax) * 100));
+      const dashName = cfgSkillName(cfg, ['shadowMantleSkillName'], 'SHADOW MANTLE');
       const dashLabel = dashTimer > 0
-        ? `SHADOW MANTLE (${(dashTimer / 60).toFixed(1)}S)`
-        : 'SHADOW MANTLE';
+        ? `${dashName} (${(dashTimer / 60).toFixed(1)}S)`
+        : dashName;
       skills.push({
         id: 'shadow_mantle',
         pct: dashPct,
@@ -3397,22 +3479,26 @@ export const HUD_SKILL_PROVIDERS = {
       const isTunnelCasting = Boolean(f.isSwordTunnelCasting || f.activeSwordTunnel || (f.activeTunnelSwords && f.activeTunnelSwords.some(s => s.finisherStage && s.finisherStage !== 'idle')));
       const isMatrixCasting = Boolean(f.isSnowflakeMatrixCasting);
       const isCasting = isSwordCasting || isStarCasting || isCorridorCasting || isTunnelCasting || isMatrixCasting;
+      const customTunnelName = (typeof cfg.swordTunnelSkillName === 'string' && cfg.swordTunnelSkillName.trim() && cfg.swordTunnelSkillName !== 'SWORD TUNNEL')
+        ? cfg.swordTunnelSkillName
+        : null;
+      const skill1Default = cfgSkillName(cfg, ['skill1Name'], 'SKILL 1');
       const activeSkillName = isSwordCasting
-        ? 'TRACKING SWORD'
+        ? cfgSkillName(cfg, ['fallingSwordsSkillName'], 'TRACKING SWORD')
         : isStarCasting
-          ? 'STAR BURST'
+          ? cfgSkillName(cfg, ['starBurstSkillName'], 'STAR BURST')
           : isCorridorCasting
-            ? 'BLADE CORRIDOR'
+            ? cfgSkillName(cfg, ['bladeCorridorSkillName'], 'BLADE CORRIDOR')
             : isTunnelCasting
-              ? (f._activeSkill1Label || 'SWORD TUNNEL')
+              ? (customTunnelName || f._activeSkill1Label || cfgSkillName(cfg, ['swordTunnelSkillName'], 'SWORD TUNNEL'))
               : isMatrixCasting
-                ? 'SNOWFLAKE SLASH'
-                : (f._activeSkill1Label || 'SKILL 1');
+                ? cfgSkillName(cfg, ['snowflakeMatrixSkillName'], 'SNOWFLAKE SLASH')
+                : (f._activeSkill1Label || skill1Default);
       const pct = (isCasting && cdTimer <= 0)
         ? 100
         : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
       const secLeft = (cdTimer / 60).toFixed(1);
-      const baseName = isCasting ? activeSkillName : 'SKILL 1';
+      const baseName = isCasting ? activeSkillName : skill1Default;
       const label = cdTimer > 0 ? `${baseName} (${secLeft}S)` : baseName;
 
       skills.push({
@@ -3435,9 +3521,10 @@ export const HUD_SKILL_PROVIDERS = {
       const pct = isChanneling
         ? 100
         : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const swoonName = cfgSkillName(cfg, ['roaringSwoonSkillName'], 'ROTATING SLASH');
       const label = (isChanneling || isReady)
-        ? 'ROTATING SLASH'
-        : `ROTATING SLASH (${curHits}/${hitsReq})`;
+        ? swoonName
+        : `${swoonName} (${curHits}/${hitsReq})`;
 
       skills.push({
         id: 'roaring_swoon',
@@ -3465,7 +3552,8 @@ export const HUD_SKILL_PROVIDERS = {
     const dotsEaten = f.dotsEaten || 0;
     const isCleared = dotsEaten >= totalDots;
     const dotPct = Math.max(0, Math.min(100, (dotsEaten / totalDots) * 100));
-    const dotLabel = isCleared ? `DOTS (${totalDots} CLEARED)` : `DOTS (${dotsEaten}/${totalDots})`;
+    const dotsName = cfgSkillName(cfg, ['dotsSkillName'], 'DOTS');
+    const dotLabel = isCleared ? `${dotsName} (${totalDots} CLEARED)` : `${dotsName} (${dotsEaten}/${totalDots})`;
     skills.push({
       id: 'dots',
       pct: dotPct,
@@ -3483,7 +3571,8 @@ export const HUD_SKILL_PROVIDERS = {
       const chompPct = isChomp
         ? Math.max(0, Math.min(100, (chompTimer / chompDur) * 100))
         : (isCleared ? 100 : 0);
-      const chompLabel = isChomp ? `CHOMP MODE (${secLeft}S)` : 'CHOMP MODE';
+      const chompName = cfgSkillName(cfg, ['chompModeSkillName'], 'CHOMP MODE');
+      const chompLabel = isChomp ? `${chompName} (${secLeft}S)` : chompName;
 
       skills.push({
         id: 'chomp_mode',
@@ -3507,23 +3596,25 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableBasicMelee, true)) {
       const cdMax = cfg.meleeModeSeparationCooldown || cfg.basicAttackResetCooldown || 180;
       const cdTimer = f.basicAttackCooldownTimer || 0;
+      const cqcName = cfgSkillName(cfg, ['basicMeleeSkillName'], 'HYBRID CQC');
+      const kiName = cfgSkillName(cfg, ['kiBarrageSkillName'], 'KI BARRAGE');
       let pct = 100;
       let ready = true;
-      let label = 'HYBRID CQC';
+      let label = cqcName;
 
       if (f.basicComboPhase === 2 && (f.meleeModeDurationTimer || 0) > 0) {
         const durMax = cfg.initialMeleeDuration || 120;
         pct = Math.max(0, Math.min(100, ((f.meleeModeDurationTimer || 0) / durMax) * 100));
         ready = true;
-        label = `HYBRID CQC (${((f.meleeModeDurationTimer || 0) / 60).toFixed(1)}S)`;
+        label = `${cqcName} (${((f.meleeModeDurationTimer || 0) / 60).toFixed(1)}S)`;
       } else if (f.basicComboPhase === 3) {
         pct = 100;
         ready = true;
-        label = 'KI BARRAGE';
+        label = kiName;
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `HYBRID CQC (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${cqcName} (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({ id: 'cqc', pct, ready, color: themeColor, label });
@@ -3534,7 +3625,8 @@ export const HUD_SKILL_PROVIDERS = {
       const cdTimer = f.dragonHammerCooldown || 0;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
       const ready = cdTimer <= 0;
-      const label = cdTimer > 0 ? `DRAGON HAMMER (${(cdTimer / 60).toFixed(1)}S)` : 'DRAGON HAMMER';
+      const dhName = cfgSkillName(cfg, ['dragonHammerSkillName'], 'DRAGON HAMMER');
+      const label = cdTimer > 0 ? `${dhName} (${(cdTimer / 60).toFixed(1)}S)` : dhName;
       skills.push({ id: 'dragon_hammer', pct, ready, color: themeColor, label });
     }
 
@@ -3543,33 +3635,35 @@ export const HUD_SKILL_PROVIDERS = {
       const cdTimer = f.kaiokenCooldown || 0;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
       const ready = cdTimer <= 0;
-      const label = cdTimer > 0 ? `KAIOKEN STRIKE (${(cdTimer / 60).toFixed(1)}S)` : 'KAIOKEN STRIKE';
+      const kkName = cfgSkillName(cfg, ['kaiokenSkillName'], 'KAIOKEN STRIKE');
+      const label = cdTimer > 0 ? `${kkName} (${(cdTimer / 60).toFixed(1)}S)` : kkName;
       skills.push({ id: 'kaioken', pct, ready, color: themeColor, label });
     }
 
     if (isSkillEnabled(cfg.enableKamehameha, true)) {
       const cdMax = cfg.kamehamehaCooldown || 1800;
       const cdTimer = f.kamehamehaCooldown || 0;
+      const kameName = cfgSkillName(cfg, ['kamehamehaSkillName'], 'SUPER KAMEHAMEHA');
       let pct = 100;
-      let label = 'SUPER KAMEHAMEHA';
+      let label = kameName;
       let ready = false;
 
       if (f.isFiringKamehameha) {
         pct = Math.max(0, Math.min(100, ((f.kamehamehaFireTimer || 0) / (cfg.kamehamehaFireFrames || 48)) * 100));
         ready = true;
-        label = `SUPER KAMEHAMEHA (${((f.kamehamehaFireTimer || 0) / 60).toFixed(1)}S)`;
+        label = `${kameName} (${((f.kamehamehaFireTimer || 0) / 60).toFixed(1)}S)`;
       } else if (f.isChargingKamehameha) {
         pct = 100;
         ready = true;
-        label = 'SUPER KAMEHAMEHA';
+        label = kameName;
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `SUPER KAMEHAMEHA (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${kameName} (${(cdTimer / 60).toFixed(1)}S)`;
       } else {
         pct = 100;
         ready = true;
-        label = 'SUPER KAMEHAMEHA';
+        label = kameName;
       }
 
       skills.push({
@@ -3589,7 +3683,8 @@ export const HUD_SKILL_PROVIDERS = {
       const durMax = cfg.superSaiyanDuration || 900;
       const timer = f.superSaiyanTimer || 0;
       const pct = isSSJ ? Math.max(0, Math.min(100, (timer / durMax) * 100)) : (f.hasAwakenedSuperSaiyan ? 0 : 100);
-      const label = isSSJ ? `SUPER SAIYAN (${Math.ceil(timer / 60)}S)` : (f.hasAwakenedSuperSaiyan ? 'SSJ EXHAUSTED' : 'SUPER SAIYAN (ZENKAI)');
+      const ssjName = cfgSkillName(cfg, ['superSaiyanSkillName'], 'SUPER SAIYAN');
+      const label = isSSJ ? `${ssjName} (${Math.ceil(timer / 60)}S)` : (f.hasAwakenedSuperSaiyan ? 'SSJ EXHAUSTED' : `${ssjName} (ZENKAI)`);
       skills.push({
         id: 'super_saiyan',
         pct,
@@ -3610,23 +3705,25 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableBasicMelee, true)) {
       const cdMax = cfg.meleeModeSeparationCooldown || cfg.basicAttackResetCooldown || 180;
       const cdTimer = f.basicAttackCooldownTimer || 0;
+      const beatdownName = cfgSkillName(cfg, ['basicMeleeSkillName'], 'SAIYAN BEATDOWN');
+      const volleyName = cfgSkillName(cfg, ['kiVolleySkillName'], 'KI VOLLEY');
       let pct = 100;
       let ready = true;
-      let label = 'SAIYAN BEATDOWN';
+      let label = beatdownName;
 
       if (f.basicComboPhase === 2 && (f.meleeModeDurationTimer || 0) > 0) {
         const durMax = cfg.initialMeleeDuration || 120;
         pct = Math.max(0, Math.min(100, ((f.meleeModeDurationTimer || 0) / durMax) * 100));
         ready = true;
-        label = `SAIYAN BEATDOWN (${((f.meleeModeDurationTimer || 0) / 60).toFixed(1)}S)`;
+        label = `${beatdownName} (${((f.meleeModeDurationTimer || 0) / 60).toFixed(1)}S)`;
       } else if (f.basicComboPhase === 3) {
         pct = 100;
         ready = true;
-        label = 'KI VOLLEY';
+        label = volleyName;
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `SAIYAN BEATDOWN (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${beatdownName} (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({ id: 'beatdown', pct, ready, color: themeColor, label });
@@ -3637,7 +3734,8 @@ export const HUD_SKILL_PROVIDERS = {
       const cdTimer = f.bigBangCooldown || 0;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
       const ready = cdTimer <= 0;
-      const label = cdTimer > 0 ? `BIG BANG (${(cdTimer / 60).toFixed(1)}S)` : 'BIG BANG';
+      const bbName = cfgSkillName(cfg, ['bigBangSkillName'], 'BIG BANG');
+      const label = cdTimer > 0 ? `${bbName} (${(cdTimer / 60).toFixed(1)}S)` : bbName;
       skills.push({ id: 'big_bang', pct, ready, color: themeColor, label });
     }
 
@@ -3646,33 +3744,35 @@ export const HUD_SKILL_PROVIDERS = {
       const cdTimer = f.galickGunCooldown || 0;
       const pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
       const ready = cdTimer <= 0;
-      const label = cdTimer > 0 ? `GALICK GUN (${(cdTimer / 60).toFixed(1)}S)` : 'GALICK GUN';
+      const ggName = cfgSkillName(cfg, ['galickGunSkillName'], 'GALICK GUN');
+      const label = cdTimer > 0 ? `${ggName} (${(cdTimer / 60).toFixed(1)}S)` : ggName;
       skills.push({ id: 'galick_gun', pct, ready, color: themeColor, label });
     }
 
     if (isSkillEnabled(cfg.enableFinalFlash, true)) {
       const cdMax = cfg.finalFlashCooldown || 1920;
       const cdTimer = f.finalFlashCooldown || 0;
+      const ffName = cfgSkillName(cfg, ['finalFlashSkillName'], 'FINAL FLASH');
       let pct = 100;
-      let label = 'FINAL FLASH';
+      let label = ffName;
       let ready = false;
 
       if (f.isFiringFinalFlash) {
         pct = Math.max(0, Math.min(100, ((f.finalFlashFireTimer || 0) / (cfg.finalFlashFireFrames || 48)) * 100));
         ready = true;
-        label = `FINAL FLASH (${((f.finalFlashFireTimer || 0) / 60).toFixed(1)}S)`;
+        label = `${ffName} (${((f.finalFlashFireTimer || 0) / 60).toFixed(1)}S)`;
       } else if (f.isChargingFinalFlash) {
         pct = 100;
         ready = true;
-        label = 'FINAL FLASH';
+        label = ffName;
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `FINAL FLASH (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${ffName} (${(cdTimer / 60).toFixed(1)}S)`;
       } else {
         pct = 100;
         ready = true;
-        label = 'FINAL FLASH';
+        label = ffName;
       }
 
       skills.push({
@@ -3691,7 +3791,8 @@ export const HUD_SKILL_PROVIDERS = {
       const maxShield = cfg.armorShieldMax || 50;
       const curShield = f.armorShield || 0;
       const pct = Math.max(0, Math.min(100, (curShield / maxShield) * 100));
-      const label = `BATTLE ARMOR (${curShield}/${maxShield})`;
+      const baName = cfgSkillName(cfg, ['battleArmorSkillName'], 'BATTLE ARMOR');
+      const label = `${baName} (${curShield}/${maxShield})`;
       skills.push({
         id: 'battle_armor',
         pct,
@@ -3706,7 +3807,8 @@ export const HUD_SKILL_PROVIDERS = {
       const durMax = cfg.superSaiyanDuration || 900;
       const timer = f.superSaiyanTimer || 0;
       const pct = isSSJ ? Math.max(0, Math.min(100, (timer / durMax) * 100)) : (f.hasAwakenedSuperSaiyan ? 0 : 100);
-      const label = isSSJ ? `SUPER SAIYAN (${Math.ceil(timer / 60)}S)` : (f.hasAwakenedSuperSaiyan ? 'SSJ EXHAUSTED' : 'SUPER SAIYAN (PRIDE)');
+      const ssjName = cfgSkillName(cfg, ['superSaiyanSkillName'], 'SUPER SAIYAN');
+      const label = isSSJ ? `${ssjName} (${Math.ceil(timer / 60)}S)` : (f.hasAwakenedSuperSaiyan ? 'SSJ EXHAUSTED' : `${ssjName} (PRIDE)`);
       skills.push({
         id: 'super_saiyan',
         pct,
@@ -3728,9 +3830,10 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableMetavision, true)) {
       const cdMax = cfg.metavisionCooldown || 480;
       const cdTimer = f.metavisionCooldownTimer || 0;
+      const metaName = cfgSkillName(cfg, ['metavisionSkillName'], 'METAVISION');
       let pct = 100;
       let ready = true;
-      let label = 'METAVISION';
+      let label = metaName;
 
       if (f.isFlowStateActive && (f.flowStateTimer || 0) > 0) {
         pct = Math.max(0, Math.min(100, ((f.flowStateTimer || 0) / (cfg.metavisionFlowDuration || 180)) * 100));
@@ -3739,7 +3842,7 @@ export const HUD_SKILL_PROVIDERS = {
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `METAVISION (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${metaName} (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({
@@ -3756,22 +3859,23 @@ export const HUD_SKILL_PROVIDERS = {
     if (enableStriker) {
       const cdMax = cfg.strikerCooldown || cfg.directVolleyCooldown || 1080;
       const cdTimer = f.strikerCooldownTimer ?? f.directVolleyCooldownTimer ?? 0;
+      const strikerName = cfgSkillName(cfg, ['strikerSkillName'], 'STRIKER!');
       let pct = 100;
       let ready = false;
-      let label = 'STRIKER!';
+      let label = strikerName;
 
       if (f.isDirectVolleyWindingUp || f.isStrikerWindingUp) {
         pct = 100;
         ready = true;
-        label = 'STRIKER!';
+        label = strikerName;
       } else if (cdTimer <= 0) {
         pct = 100;
         ready = true;
-        label = 'STRIKER!';
+        label = strikerName;
       } else {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `STRIKER! (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${strikerName} (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({
@@ -3791,17 +3895,18 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableEgo, true)) {
       const maxEgo = f.maxEgoMeter || cfg.maxEgoMeter || 100;
       const isAwakened = Boolean(f.isEgoActive);
+      const egoName = cfgSkillName(cfg, ['egoSkillName'], 'EGO');
       let pct = 0;
-      let label = 'EGO';
+      let label = egoName;
 
       if (isAwakened) {
         const maxDur = f.egoMaxDuration || cfg.egoDuration || 360;
         const durLeft = f.egoDurationTimer || 0;
         pct = Math.max(0, Math.min(100, (durLeft / maxDur) * 100));
-        label = `EGO AWAKENED (${(durLeft / 60).toFixed(1)}S)`;
+        label = `${egoName} AWAKENED (${(durLeft / 60).toFixed(1)}S)`;
       } else {
         pct = Math.max(0, Math.min(100, ((f.egoMeter || 0) / maxEgo) * 100));
-        label = pct > 0 ? `EGO (${Math.round(pct)}%)` : 'EGO';
+        label = pct > 0 ? `${egoName} (${Math.round(pct)}%)` : egoName;
       }
 
       skills.push({
@@ -3826,9 +3931,10 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enablePantherSprint, true)) {
       const cdMax = cfg.pantherSprintCooldown || 240;
       const cdTimer = f.pantherSprintCooldownTimer || 0;
+      const sprintName = cfgSkillName(cfg, ['pantherSprintSkillName'], 'PANTHER SPRINT');
       let pct = 100;
       let ready = true;
-      let label = 'PANTHER SPRINT';
+      let label = sprintName;
 
       if ((f.pantherSpeedBuffTimer || 0) > 0) {
         pct = Math.max(0, Math.min(100, ((f.pantherSpeedBuffTimer || 0) / (cfg.pantherSprintSpeedBuffDuration || 150)) * 100));
@@ -3838,11 +3944,11 @@ export const HUD_SKILL_PROVIDERS = {
         const dashMax = cfg.pantherSprintDashFrames || 22;
         pct = Math.max(0, Math.min(100, ((f.pantherSprintDashTimer || 0) / dashMax) * 100));
         ready = false;
-        label = 'PANTHER SPRINT';
+        label = sprintName;
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `PANTHER SPRINT (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${sprintName} (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({
@@ -3860,22 +3966,23 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableStriker, true)) {
       const cdMax = cfg.strikerCooldown || 1080;
       const cdTimer = f.strikerCooldownTimer || 0;
+      const strikerName = cfgSkillName(cfg, ['strikerSkillName'], 'STRIKER!');
       let pct = 100;
       let ready = false;
-      let label = 'STRIKER!';
+      let label = strikerName;
 
       if (f.isStrikerWindingUp) {
         pct = 100;
         ready = true;
-        label = 'STRIKER!';
+        label = strikerName;
       } else if (cdTimer <= 0) {
         pct = 100;
         ready = true;
-        label = 'STRIKER!';
+        label = strikerName;
       } else {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `STRIKER! (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${strikerName} (${(cdTimer / 60).toFixed(1)}S)`;
       }
 
       skills.push({
@@ -3894,17 +4001,18 @@ export const HUD_SKILL_PROVIDERS = {
     if (isSkillEnabled(cfg.enableEgo, true)) {
       const maxEgo = f.maxEgoMeter || cfg.maxEgoMeter || 100;
       const isAwakened = Boolean(f.isEgoActive);
+      const egoName = cfgSkillName(cfg, ['egoSkillName'], 'EGO');
       let pct = 0;
-      let label = 'EGO';
+      let label = egoName;
 
       if (isAwakened) {
         const maxDur = f.egoMaxDuration || cfg.egoDuration || 360;
         const durLeft = f.egoDurationTimer || 0;
         pct = Math.max(0, Math.min(100, (durLeft / maxDur) * 100));
-        label = `EGO AWAKENED (${(durLeft / 60).toFixed(1)}S)`;
+        label = `${egoName} AWAKENED (${(durLeft / 60).toFixed(1)}S)`;
       } else {
         pct = Math.max(0, Math.min(100, ((f.egoMeter || 0) / maxEgo) * 100));
-        label = pct > 0 ? `EGO (${Math.round(pct)}%)` : 'EGO';
+        label = pct > 0 ? `${egoName} (${Math.round(pct)}%)` : egoName;
       }
 
       skills.push({
@@ -3931,8 +4039,9 @@ export const HUD_SKILL_PROVIDERS = {
       const maxAnger = f.maxAnger || cfg.maxAnger || 100;
       const isEnraged = Boolean(f.isEnraged || anger >= maxAnger);
       const pct = Math.max(0, Math.min(100, (anger / maxAnger) * 100));
+      const angerName = cfgSkillName(cfg, ['echolocationSkillName'], 'ANGER');
 
-      let label = `ANGER (${Math.round(pct)}%)`;
+      let label = `${angerName} (${Math.round(pct)}%)`;
       if (isEnraged) {
         const secLeft = Math.ceil((f.enragedTimer || 0) / 60);
         label = `ENRAGED (${secLeft}S)`;
@@ -3953,7 +4062,8 @@ export const HUD_SKILL_PROVIDERS = {
       const cdMax = cfg.darknessCooldown || 480;
       const ready = cdTimer <= 0;
       const pct = ready ? 100 : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
-      const label = ready ? 'DARKNESS PULSE' : `DARKNESS (${(cdTimer / 60).toFixed(1)}S)`;
+      const darkName = cfgSkillName(cfg, ['darknessPulseSkillName'], 'DARKNESS PULSE');
+      const label = ready ? darkName : `${darkName} (${(cdTimer / 60).toFixed(1)}S)`;
 
       skills.push({
         id: 'darkness',
@@ -3970,7 +4080,8 @@ export const HUD_SKILL_PROVIDERS = {
       const cdMax = cfg.sniffCooldown || 380;
       const ready = cdTimer <= 0;
       const pct = ready ? 100 : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
-      const label = ready ? 'SCULK SNIFF' : `SCULK SNIFF (${(cdTimer / 60).toFixed(1)}S)`;
+      const sniffName = cfgSkillName(cfg, ['sculkSniffSkillName'], 'SCULK SNIFF');
+      const label = ready ? sniffName : `${sniffName} (${(cdTimer / 60).toFixed(1)}S)`;
 
       skills.push({
         id: 'sniff',
@@ -3987,15 +4098,16 @@ export const HUD_SKILL_PROVIDERS = {
       const isFiring = Boolean(f.isSonicBoomFiring);
       const cdTimer = f.sonicBoomCooldownTimer || 0;
       const cdMax = cfg.sonicBoomCooldown || 720;
+      const boomName = cfgSkillName(cfg, ['sonicBoomSkillName'], 'SONIC BOOM');
 
       let pct = 100;
       let ready = false;
-      let label = 'SONIC BOOM';
+      let label = boomName;
 
       if (isFiring) {
         pct = 100;
         ready = true;
-        label = 'SONIC BOOM!';
+        label = `${boomName}!`;
       } else if (isCharging) {
         const p = 1 - ((f.sonicBoomChargeTimer || 0) / (cfg.sonicBoomChargeFrames || 45));
         pct = Math.max(0, Math.min(100, p * 100));
@@ -4004,11 +4116,11 @@ export const HUD_SKILL_PROVIDERS = {
       } else if (cdTimer > 0) {
         pct = Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
         ready = false;
-        label = `SONIC BOOM (${(cdTimer / 60).toFixed(1)}S)`;
+        label = `${boomName} (${(cdTimer / 60).toFixed(1)}S)`;
       } else {
         pct = 100;
         ready = true;
-        label = 'SONIC BOOM';
+        label = boomName;
       }
 
       skills.push({
@@ -4044,7 +4156,7 @@ export const HUD_SKILL_PROVIDERS = {
         pct,
         ready: pct >= 99,
         color: themeColor,
-        label: 'KINETIC BUMP'
+        label: cfgSkillName(cfg, ['kineticBumpSkillName', 'basicAttackName'], 'KINETIC BUMP')
       });
     }
 
@@ -4053,7 +4165,8 @@ export const HUD_SKILL_PROVIDERS = {
       const cdMax = f.kineticSurgeCooldownMax || cfg.kineticSurgeCooldownMax || 280;
       const cd = f.kineticSurgeCooldown || 0;
       const pct = Math.max(0, Math.min(100, (1 - cd / cdMax) * 100));
-      const label = cd > 0 ? `KINETIC SURGE (${(cd / 60).toFixed(1)}S)` : 'KINETIC SURGE';
+      const surgeName = cfgSkillName(cfg, ['kineticSurgeSkillName'], 'KINETIC SURGE');
+      const label = cd > 0 ? `${surgeName} (${(cd / 60).toFixed(1)}S)` : surgeName;
       skills.push({
         id: 'kinetic_surge',
         pct,
@@ -4068,18 +4181,19 @@ export const HUD_SKILL_PROVIDERS = {
       const hitsReq = cfg.superUnarmedHitsRequired || 5;
       const curHits = Math.min(hitsReq, f.superUnarmedHits || 0);
       const isPrimed = Boolean(f.isSuperBumpPrimed || curHits >= hitsReq || f.isSuperUnarmed);
+      const superName = cfgSkillName(cfg, ['superUnarmedSkillName'], 'SUPER UNARMED');
       let pct = 0;
-      let label = 'SUPER UNARMED';
+      let label = superName;
 
       if (f.isSuperUnarmed && f.superUnarmedTimer > 0) {
         pct = Math.max(0, Math.min(100, (f.superUnarmedTimer / (f.superUnarmedDuration || 240)) * 100));
-        label = `SUPER UNARMED (${(f.superUnarmedTimer / 60).toFixed(1)}S)`;
+        label = `${superName} (${(f.superUnarmedTimer / 60).toFixed(1)}S)`;
       } else if (isPrimed) {
         pct = 100;
-        label = 'SUPER UNARMED';
+        label = superName;
       } else {
         pct = Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
-        label = `SUPER UNARMED (${curHits}/${hitsReq})`;
+        label = `${superName} (${curHits}/${hitsReq})`;
       }
 
       skills.push({

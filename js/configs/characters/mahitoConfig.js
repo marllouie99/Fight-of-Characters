@@ -35,6 +35,7 @@ export const mahitoConfig = {
   
   // Basic Attack: Idle Transfiguration (Melee Morph)
   enableIdleTransfiguration: true, // Master toggle for basic attack
+  idleTransfigurationSkillName: 'IDLE TRANSFIGURATION',
   arcAngle: (135 * Math.PI) / 180, // 135° frontal cone sweep (Rule #7 & #8 compliant)
   basicPunchCooldown: 70,          // Frames between attack attempts
   punchSpeed: 50,                  // Duration in frames of the attack animation
@@ -52,6 +53,7 @@ export const mahitoConfig = {
 
   // ── 2. PASSIVE: PHANTOM SOUL SLIP (Phase-Through Claw Dash) ────────────────
   soulPhaseSlip: {
+    skillName: 'Phantom Soul Slip',
     enableSoulPhaseSlip: true,     // Master toggle for Soul Slip passive
     cooldown: 500,                 // 3 seconds cooldown between passive dashes
     triggerRangeMin: 70,           // Minimum distance to target to trigger dash
@@ -66,6 +68,7 @@ export const mahitoConfig = {
 
   // ── 3. SKILL 2: SUBTERRANEAN FLESH SURGE (Underground Arm Eruption) ────────
   fleshSurge: {
+    skillName: 'Subterranean Flesh Surge',
     enableFleshSurge: true,        // Master toggle for Subterranean Flesh Surge
     cooldown: 300,                 // 5 seconds cooldown
     minDistance: 240,              // Minimum distance to trigger skill (strictly long distance >= 240px)
@@ -86,6 +89,7 @@ export const mahitoConfig = {
 
   // ── 4. SKILL 3: MUTATED MACE CANNON (Spiked Flesh Ball Shrapnel) ───────────
   maceCannon: {
+    skillName: 'Mutated Mace Cannon',
     enableMaceCannon: true,        // Master toggle for Mutated Mace Cannon
     cooldown: 300,                 // 5 seconds cooldown (shares unified cooldown)
     minDistance: 240,              // Minimum distance to trigger skill (strictly long distance >= 240px)
@@ -106,6 +110,7 @@ export const mahitoConfig = {
 
   // ── 5. SKILL 4: DUAL SCYTHE PINCER GUILLOTINE (Twin Blade Ambush) ──────────
   twinScissor: {
+    skillName: 'Dual Scythe Pincer Guillotine',
     enableTwinScissor: true,       // Master toggle for Dual Scythe Pincer Guillotine
     cooldown: 300,                 // 5 seconds cooldown (shares unified cooldown)
     minDistance: 240,              // Minimum distance to trigger skill (strictly long distance >= 240px)
@@ -124,6 +129,7 @@ export const mahitoConfig = {
 
   // ── 6. SKILL 5: SOUL MULTIPLICITY & BODY REPEL ─────────────────────────────
   soulMultiplicity: {
+    skillName: 'SOUL MULTIPLICITY',
     enableSoulMultiplicity: true,  // Master toggle for Soul Multiplicity & Body Repel
     cooldown: 1000,                 // Cooldown in frames (approx. 8.3s)
     minDistanceAlt: 250,           // Below this: summon minions. Above this: fire Body Repel projectile.
@@ -147,6 +153,7 @@ export const mahitoConfig = {
 
   // ── 7. SOUL DISFIGUREMENT & RUPTURE MECHANICS ──────────────────────────────
   soulDisfigurement: {
+    skillName: 'Soul Disfigurement',
     enableSoulDisfigurement: true, // Master toggle for Soul Disfigurement
     maxStacks: 5,                  // Stacks required for violent soul reshape detonation
     duration: 300,                 // Stacks linger for 300 frames (5s) before resetting
@@ -181,6 +188,7 @@ export const mahitoConfig = {
   },
 
   evasion: {
+    skillName: 'SOUL EVASION',
     enableEvasion: true,           // Master toggle for miniature clone evasion state
     threshold: 0.75,               // HP percentage below which Evasion triggers on next dash
     duration: 300,                 // Evasion state duration in frames (5s)
@@ -194,6 +202,7 @@ export const mahitoConfig = {
 
   // ── 9. TRANSFORMATION: INSTANT SPIRIT BODY OF DISTORTED KILLING (ISBoDK) ───
   transformation: {
+    skillName: 'DISTORTED KILLING',
     enabled: false,                // Master toggle to enable or disable Distorted Killing transformation (set to false to disable)
     enableTransformation: false,   // Master toggle alias
     duration: 600,                 // 10 seconds active duration
@@ -228,8 +237,9 @@ export const mahitoConfig = {
   ceCoreColor: '#F5D0FE',          // Luminous lilac-white core highlight
   ceBorderColor: '#3B0764',        // Dark purple ink contour
 
-  // ── 11. ULTIMATE: DOMAIN EXPANSION ──────────────────────────────
+  // ── 11. ULTIMATE: DOMAIN EXPANSION (Self-Embodiment of Perfection) ──
   domainExpansion: {
+    skillName: 'SELF-EMBODIMENT OF PERFECTION',
     enableDomainExpansion: true,   // Master toggle for Domain Expansion
     cooldown: 1500,                // 33 seconds cooldown
     chargeMax: 120,                // 2 seconds channeling duration before domain opens

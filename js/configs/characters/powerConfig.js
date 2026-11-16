@@ -40,6 +40,7 @@ export const powerConfig = {
 
   // Passive 1: Blood Reservoir
   enableBloodReservoir: true,       // Master toggle for Passive 1: Blood Orbs & Reservoir Gauge
+  bloodReservoirSkillName: 'Blood Reservoir',
   maxBloodReservoir: 100,
   damageBonusPer25Blood: 0.05,      // +5% damage per 25 blood
   speedBonusPer25Blood: 0.03,       // +3% speed per 25 blood
@@ -48,11 +49,13 @@ export const powerConfig = {
 
   // Passive 2: Fiend Arrogance
   enableFiendArrogance: true,       // Master toggle for Passive 2: Damage bonus vs bleeding & evasion
+  fiendArroganceSkillName: 'Fiend Arrogance',
   bonusDamageVsBleeding: 0.20,      // 20% bonus dmg vs bleeding targets
   evasionCaltropsDamage: 18,
 
   // Basic Attack: Gigantic Blood Hammer (140° Frontal Arc)
   enableBloodHammer: true,          // Master toggle for Basic Attack: Gigantic Blood Hammer (140° Cleave)
+  bloodHammerSkillName: 'Gigantic Blood Hammer',
   hammerArcAngle: Math.PI * 0.778,  // ~140 degrees
   hammerReach: 85,
   hammerHit1Damage: 24,
@@ -65,6 +68,7 @@ export const powerConfig = {
 
   // Skill 1: Blood Scythe Whirlwind
   enableBloodScythe: true,          // Master toggle for Skill 1: Blood Scythe Whirlwind
+  bloodScytheSkillName: 'Blood Scythe Whirlwind',
   scytheCooldown: 240,              // 4.0s
   scytheReach: 90,
   scytheSpinDamage: 22,             // 2 spins = 44 dmg
@@ -75,6 +79,7 @@ export const powerConfig = {
 
   // Skill 2: Thousand Blood Daggers
   enableBloodDaggers: true,         // Master toggle for Skill 2: Thousand Blood Daggers
+  bloodDaggersSkillName: 'Thousand Blood Daggers',
   daggersCooldown: 380,             // 6.3s
   daggerCount: 6,
   daggerSpeed: 26.0,
@@ -83,6 +88,7 @@ export const powerConfig = {
 
   // Ultimate: Prime Blood Devil Eruption — Blood Rain Cataclysm
   enableBloodRainCataclysm: true,   // Master toggle for Ultimate: Blood Rain Cataclysm
+  bloodRainSkillName: 'Blood Rain Cataclysm',
   ultimateCooldown: 1500,           // 25.0s
   ultimateTimeStopFrames: 35,
   ultimateSpearCount: 6,

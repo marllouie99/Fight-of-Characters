@@ -37,6 +37,7 @@ export const shiroConfig = {
 
   // Passive 1: Center-Board Dominance (Chūō Shihai)
   enableCenterDominance: true,
+  centerDominanceSkillName: 'Center-Board Dominance',
   centerSlideVelocity: 28.0,
   centerZoneRadius: 45,
   centerPoiseReduction: 0.20, // 20% super-armor / knockback reduction in center
@@ -76,10 +77,12 @@ export const shiroConfig = {
 
   // Passive 2: Loaded Dice & Probability Pity System
   enableLoadedDice: true,
+  loadedDiceSkillName: 'Loaded Dice',
   pityThreshold: 4, // Guaranteed Rook or Queen every 4th basic attack throw
 
   // Passive 3: 『　　』 (Blank) Never Loses & Prediction
   enableBlankNeverLoses: true,
+  blankSkillName: '『　　』 PREDICTION',
   blankCooldown: 1000, // Cooldown in frames (~8.0s at 60 FPS) between Blank Never Loses activations
   blankInitialCooldown: 1000, // Initial startup delay (2.0s) so it activates promptly after initial troop throws
   blankBuffDuration: 500, // 4.0s duration of the golden empowered troop buff
@@ -107,6 +110,7 @@ export const shiroConfig = {
 
   // Basic Attack: RNG Chess Troop Gacha Throw (Zero Active Skills)
   enableChessTroops: true,
+  chessTroopsSkillName: 'RNG Chess Troop Gacha',
   throwSpeed: 10.0, // Base piece throw/flick projectile velocity
   throwSpeedMultiplier: 1.0, // Global projectile speed multiplier for all throws
   projectileRadius: 6, // Small compact projectile collision radius during flight (distinct from planted troop size)

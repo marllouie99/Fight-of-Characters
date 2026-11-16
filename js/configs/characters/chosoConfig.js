@@ -46,6 +46,7 @@ export const chosoConfig = {
 
   // Passive 1: Mugen Ketsuryū (Infinite Sanguine Reserves)
   enableInfiniteBlood: 0,
+  infiniteBloodSkillName: 'Mugen Ketsuryū',
   maxBloodNodesInArena: 999, // No artificial 32 limit: converts all currently existing arena blood into beams
   bloodNodeLifespanFrames: 480, // ~8.0 seconds natural expiration lifespan
   bloodNodesPerDamageTakenMin: 2,
@@ -60,6 +61,7 @@ export const chosoConfig = {
 
   // Passive 2: Flowing Red Scale: Stack (Sekirin Ketsurui: Chō)
   enableFlowingRedScale: 0,
+  flowingRedScaleSkillName: 'Flowing Red Scale: Stack',
   redScaleHpThreshold: 0.60,      // Below 60% HP
   redScaleSpeedMultiplier: 1.25,  // +25% movement speed
   redScaleDropMultiplier: 2,      // 2x blood droplet spawning rate
@@ -67,6 +69,7 @@ export const chosoConfig = {
 
   // Basic Attack: Supernova (Chōshinsei)
   enableSupernova: 0,
+  supernovaSkillName: 'Supernova',
   supernovaOrbCount: 8,
   supernovaPelletCount: 12,
   supernovaPelletDamage: 14,
@@ -76,6 +79,7 @@ export const chosoConfig = {
 
   // Skill 1: Slicing Exorcist / Blood Chakram (Karisō)
   enableChakram: 0,
+  chakramSkillName: 'SLICING EXORCIST',
   skill1Cooldown: 360,           // 6.0s (360 frames)
   chakramDamage: 36,
   chakramSpeed: 11,
@@ -86,6 +90,7 @@ export const chosoConfig = {
   // ULTIMATE: Blood Manipulation: Convergence
     // As long as Ultimate is UP, turns all active blood particles currently in the arena into piercing laser beams!
   enableLaserMatrix: 1,
+  laserMatrixSkillName: 'CONVERGENCE',
   ultCooldown: 840,              // 14.0s (840 frames)
   skill3Cooldown: 840,           // Synchronized alias
   laserMatrixCastFrames: 50,     // Convergence Prayer Clasp pose
@@ -105,6 +110,7 @@ export const chosoConfig = {
 
   // Skill 3: Piercing Blood (Teisō / Fuga — Continuous Aim-Locked Beam)
   enablePiercingBlood: 1,
+  piercingBloodSkillName: 'PIERCING BLOOD',
   enableUltimate: true,
   piercingBloodCooldown: 900,    // 15.0s (900 frames)
   ultChargeFrames: 100,           // Clasp compression phase

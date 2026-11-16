@@ -56,6 +56,7 @@ export const escanorConfig = {
   // Passive 1: Grace "Sunshine" & Thermal Updraft
   // ──────────────────────────────────────────
   enableSunshine: 1,            // Master toggle for Passive 1: Grace "Sunshine" heat aura & Thermal Updraft
+  sunshineSkillName: 'Sunshine',
   sunshineHeatRadius: 100,
   sunshineHeatDps: 3,
   thermalUpdraftSlow: 0.15,
@@ -64,6 +65,7 @@ export const escanorConfig = {
   // Passive 2: Solar Pride Escalation
   // ──────────────────────────────────────────
   enableSolarPride: false,          // Master toggle for Passive 2: Solar Pride Escalation
+  solarPrideSkillName: 'Solar Pride',
   prideStackMax: 2,
   prideStackDamageBonus: 0.08,  // +8% damage per stack (max +40%)
   prideChargeIntervalFrames: 150, // 1 stack every 2.5s passively
@@ -72,6 +74,7 @@ export const escanorConfig = {
   // Passive 3: Solar Armor & Holy Knight DEF (Damage Reduction)
   // ──────────────────────────────────────────
   enableSolarArmor: 1,          // Master toggle for Passive 3: Solar Armor & Holy Knight DEF
+  solarArmorSkillName: 'Solar Armor',
   defense: 0.20,                // Base 20% flat damage reduction / armor mitigation
   prideDefBonusPerStack: 0.02,  // +2% DEF per Solar Pride stack (+10% at 5 stacks)
   theOneDefenseBonus: 0.25,     // +25% DEF bonus during "THE ONE" (invincible noon state)
@@ -82,6 +85,7 @@ export const escanorConfig = {
   // Basic Attack: Divine Axe Rhitta — Telegraphed Overhead Chop Strike (Missable)
   // ──────────────────────────────────────────
   enableRhittaChop: true,           // Master toggle for Basic Attack: Divine Axe Rhitta Overhead Chop
+  rhittaSkillName: 'Divine Axe Rhitta',
   enableRhittaSlashArc: false,      // Attack effect on Escanor (slash arc around weapon) hidden per user instruction
   enableRhittaSlashCutImpact: true, // Visceral Holy Solar Slash Cut / Spatial Cleave Scar line appearing on struck enemy upon hit
   rhittaArcAngle: Math.PI * 1.15, // ~207 degrees (matches visual 208° slash sweep)
@@ -122,6 +126,7 @@ export const escanorConfig = {
   // Skill 1: Cruel Sun (無慈悲な太陽)
   // ──────────────────────────────────────────
   enableCruelSun: 1,            // Master toggle for Skill 1: Cruel Sun (無慈悲な太陽)
+  cruelSunSkillName: 'CRUEL SUN',
   cruelSunCooldown: 2000,       // Cooldown in frames (preserved user tuning)
   cruelSunCastWindupFrames: 200, // Two-phase activation windup (Finger Point -> Expanding Sun)
   cruelSunPointFrames: 14,     // Frames to raise arm and extend index finger upward
@@ -151,6 +156,7 @@ export const escanorConfig = {
   // Skill 2: Pride Flare (プライド・フレア)
   // ──────────────────────────────────────────
   enablePrideFlare: false,          // Master toggle for Skill 2: Pride Flare (プライド・フレア)
+  prideFlareSkillName: 'PRIDE FLARE',
   prideFlareCooldown: 660,     // 11.0s
   prideFlareRadius: 110,
   prideFlareDamage: 52,
@@ -161,6 +167,7 @@ export const escanorConfig = {
   // Ultimate: "THE ONE" — Divine Sword Escanor (天地無双)
   // ──────────────────────────────────────────
   enableTheOne: true,               // Master toggle for Ultimate: "THE ONE" — Divine Sword Escanor (天地無双)
+  theOneSkillName: '"THE ONE"',
   theOneDamageThreshold: 140,       // Cumulative damage taken to awaken "THE ONE" (Took enough damage trigger)
   theOneHpThreshold: 0.50,          // Emergency trigger when HP drops below 50%
   theOneCooldown: 1560,             // 26.0s (cooldown between "THE ONE" activations)

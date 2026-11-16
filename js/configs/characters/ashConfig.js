@@ -41,6 +41,7 @@ export const ashConfig = {
   // Core Mechanic: Poké Ball Deployment & Honeycomb Barrier
   // ──────────────────────────────────────────
   initialSummonDelayFrames: 30, // 0.5s at match start before throwing first Poké Ball
+  honeycombSummonSkillName: 'POKEBALL SUMMON',
   summonCooldownFrames: 500,    // 3.5s mobile evasion window after active Pokémon faints
   pokeballThrowFrames: 18,      // Flight duration of thrown Poké Ball before popping open
   pokeballThrowDistance: 95,    // Distance in front of Ash where Poké Ball lands
@@ -57,6 +58,7 @@ export const ashConfig = {
   // Skill 1: Trainer Command — Signature Elemental Move (Thunderbolt / Flamethrower / Water Shuriken / Aura Sphere)
   // ──────────────────────────────────────────
   enableTrainerCommand: true,
+  trainerCommandSkillName: 'TRAINER COMMAND',
   commandCooldownFrames: 150,        // 2.5s cooldown between special move commands
   initialCommandCooldownFrames: 180, // Initial delay before first trainer command (~3.0s at 60 FPS)
   commandDamageBonus: 1.25,          // +25% damage on commanded signature attacks
@@ -65,6 +67,7 @@ export const ashConfig = {
   // Ultimate: 10,000,000 Volt Thunderbolt Barrage
   // ──────────────────────────────────────────
   enableUltimate: false,
+  ultimateSkillName: '10,000,000 VOLT',
   ultimateCooldownFrames: 780,        // 13.0s cooldown
   initialUltimateCooldownFrames: 240, // 4.0s initial cooldown at match start
   ultimateDurationFrames: 420,        // 7.0s duration
@@ -110,7 +113,7 @@ export const ashConfig = {
       megaCryKey: 'cryPikachuStarter',
       get megaHudSkillLabel() { return null; },
 
-      // ── Dedicated Skills Configuration (Fighter-Standard Schema) ──
+      // ── Pikachu Skills: Quick Attack & Iron Tail (Basic) + Thunderbolt! (Special) ──
       skills: {
         melee: {
           id: 'quickAttack_ironTail',
@@ -192,7 +195,7 @@ export const ashConfig = {
       scale: 3.65,
       cryKey: 'cryCharizard',
 
-      // ── Dedicated Skills Configuration ──
+      // ── Charizard Skills: Dragon Claw (Basic) + Flamethrower! (Special) ──
       skills: {
         melee: {
           id: 'dragonClaw',
@@ -285,7 +288,7 @@ export const ashConfig = {
       scale: 3.00,
       cryKey: 'cryGreninja',
 
-      // ── Dedicated Skills Configuration ──
+      // ── Ash-Greninja Skills: Night Slash (Basic) + Water Shuriken! (Special) ──
       skills: {
         melee: {
           id: 'nightSlash',
@@ -344,7 +347,7 @@ export const ashConfig = {
       scale: 3.00,
       cryKey: 'cryLucario',
 
-      // ── Dedicated Skills Configuration ──
+      // ── Lucario Skills: Close Combat (Basic) + Aura Sphere! (Special) ──
       skills: {
         melee: {
           id: 'closeCombat',

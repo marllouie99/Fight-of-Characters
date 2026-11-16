@@ -26,20 +26,23 @@ export const laylaConfig = {
     ability: 'Ascending Power',
     desc: 'Scaling marksman who gains damage and range with each hit. Uses Malefic Bomb, Void Dash, and Destruction Barrage ultimate.',
 
-    // Ascending Power Passive
+    // ── Passive: Ascending Power (Damage & Range Scaling) ──
     enableAscendingPower: true,  // Master toggle for Ascending Power passive
+    ascendingPowerSkillName: 'Ascending Power',
     maxStacks: 10,
     damagePerStack: 1.5,
     stackResetTime: 300, // 5 seconds at 60fps
 
-    // Basic Attack
+    // ── Basic Attack: Malefic Gun ──
     enableBasicAttack: true,     // Master toggle for basic ranged attack
+    basicAttackSkillName: 'Malefic Gun',
     attackCooldown: 70,
     aimThreshold: 0.12,
     baseRange: 300,
 
-    // Malefic Bomb (Skill 1)
+    // ── Skill 1: Malefic Bomb ──
     enableMaleficBomb: true,     // Master toggle for Malefic Bomb
+    maleficBombSkillName: 'MALEFIC BOMB',
     maleficBombCooldown: 200, // 3 seconds at 60fps
     bombDamage: 20,
     bombSpeed: 12,
@@ -49,8 +52,9 @@ export const laylaConfig = {
     bombHitSpeedBoostDuration: 90, // 1.5s duration for Layla's speed boost on hit
     bombHitSpeedBoostMultiplier: 2.0, // 60% speed increase
 
-    // Void Projectile (Skill 2)
+    // ── Skill 2: Void Projectile ──
     enableVoidProjectile: true,  // Master toggle for Void Projectile
+    voidProjectileSkillName: 'VOID PROJECTILE',
     voidDashCooldown: 120, // Keep variable name for HUD/cooldown slot mapping, 2 seconds at 60fps
     voidProjectileDamage: 15,
     voidProjectileSpeed: 8,
@@ -61,8 +65,9 @@ export const laylaConfig = {
     voidMarkBonusDamage: 12, // Extra damage when detonating the mark
     voidMarkStunDuration: 15, // 0.25 second stun (15 frames)
 
-    // Destruction Rush (Ultimate)
+    // ── Ultimate: Destruction Rush ──
     enableDestructionRush: true, // Master toggle for Destruction Rush ultimate
+    destructionRushSkillName: 'DESTRUCTION RUSH',
     ultimateCooldown: 600, // 10 seconds at 60fps
     ultimateLaserDamage: 80, // Massive burst damage
     ultimateLaserRange: 700, // Very long range

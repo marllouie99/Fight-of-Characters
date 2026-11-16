@@ -45,7 +45,8 @@ export const zombieConfig = {
   ability: 'PvZ Wave Survival ("THE ZOMBIES ARE COMING!")',
   desc: 'Authentic Plants vs. Zombies survival onslaught. Every 20 seconds, a new massive wave of zombies erupts across the lawn with new varieties (Screen Door, Newspaper, Buckethead, Pole Vaulter). When the match timer reaches 1 minute, the FINAL WAVE arrives! The only way to win is to survive the full onslaught.',
 
-  // 5-Phase Melee Combat Tuning (Rule 30 compliant)
+  // ── Basic Attack: Undead Bite & Lifesteal Chomp (5-Phase Melee) ──
+  biteSkillName: 'Undead Bite & Lifesteal Chomp',
   hitLiftFrames: 8,
   hitHoldFrames: 3,
   hitStrikeFrames: 7,
@@ -55,7 +56,7 @@ export const zombieConfig = {
   chompArc: Math.PI * 0.65, // ~117° frontal cleave
   biteLifesteal: 12,        // Heals 12 HP per chomp (Rule 27 compliant: healthbar only)
 
-  // PvZ Wave Survival Timeline (60 FPS: 20s = 1200f, 40s = 2400f, 60s = 3600f)
+  // ── Passive / Mode: PvZ Wave Survival Timeline ("THE ZOMBIES ARE COMING!") ──
   waveIntervalFrames: 1200,   // 20.0 seconds per wave
   finalWaveFrames: 3600,       // 1 minute (60.0s) Final Wave trigger
   finalWaveSurvivalFrames: 900,// 15 seconds to survive / clear final wave after 1:00
@@ -73,12 +74,14 @@ export const zombieConfig = {
   },
 
   // Skill 1: Armor Upgrade (Conehead / Buckethead)
+  armorSkillName: 'Armor Upgrade',
   armorCooldownFrames: 450, // 7.5s cooldown
   coneArmorShield: 90,
   bucketArmorShield: 170,
   armorDamageReduction: 0.30,
 
   // Skill 2: Grave Awakening (Summon Zombie Minion)
+  summonSkillName: 'Grave Awakening',
   summonCooldownFrames: 360, // 6.0s cooldown
   maxMinions: 8,
   minionHp: 120,
@@ -87,6 +90,7 @@ export const zombieConfig = {
   minionDurationFrames: 1800, // 30 seconds
 
   // Ultimate: "A Huge Wave of Zombies is Approaching!"
+  ultimateSkillName: 'A Huge Wave of Zombies!',
   ultimateCost: 100,
   ultimateDurationFrames: 360, // 6 seconds
   ultimateSpeedBuff: 1.35,

@@ -35,6 +35,7 @@ export const ulquiorraConfig = {
 
   // ── Basic Attacks & Zanpakutō Murciélago ──
   enableSwordAttack: true,         // Master toggle for basic Zanpakutō sword attacks
+  swordSkillName: 'Zanpakutō Murciélago',
   swordRange: 72,                // Frontal melee blade reach
   swordArc: 130,                 // Frontal arc degrees (Rule 7)
   swordDamage: 22,               // Base sword slash damage
@@ -43,6 +44,7 @@ export const ulquiorraConfig = {
 
   // ── Mid-Range Poke: Bala (Hollow Bullets) ──
   enableBala: true,                // Master toggle for Bala hollow bullets
+  balaSkillName: 'Bala',
   balaSpeed: 24,                 // Bullet projectile velocity
   balaDamage: 10,                // Damage per bala hit
   balaRadius: 4.5,               // Bullet collision radius
@@ -52,6 +54,7 @@ export const ulquiorraConfig = {
 
   // ── Skill 1: Sonído: Aceleración ──
   enableSonido: true,              // Master toggle for Sonído teleport strike
+  sonidoSkillName: 'SONÍDO',
   sonidoCooldown: 300,           // ~5s cooldown
   sonidoDistance: 220,           // Teleport distance
   sonidoDashFrames: 5,           // Evasion i-frames
@@ -59,6 +62,7 @@ export const ulquiorraConfig = {
 
   // ── Skill 2: Cero & Cero Oscuras ──
   enableCero: true,                // Master toggle for Cero beam
+  ceroSkillName: 'CERO',
   ceroDamage: 65,                // Base emerald cero damage
   ceroChargeFrames: 22,          // Beam charge windup
   ceroCooldown: 420,             // ~7s cooldown
@@ -66,6 +70,7 @@ export const ulquiorraConfig = {
 
   // ── Transformations: Resurrección & Segunda Etapa ──
   enableResurreccion: true,        // Master toggle for Resurrección transformations
+  resurreccionSkillName: 'RESURRECCIÓN GAUGE',
   stage1HpThreshold: 0.60,       // Stage 1 trigger threshold (60% HP or full ult)
   stage2HpThreshold: 0.30,       // Segunda Etapa trigger threshold (30% HP)
   stage1SpeedMultiplier: 1.35,   // +35% speed in Murciélago
@@ -77,11 +82,13 @@ export const ulquiorraConfig = {
 
   // ── Passive 1: Hierro (Steel Skin) ──
   enableHierro: true,              // Master toggle for Hierro passive defense
+  hierroSkillName: 'Hierro',
   hierroDamageReduction: 0.15,   // 15% flat incoming damage mitigation
   hierroStunDecayBonus: 0.25,    // 25% faster CC recovery
 
   // ── Passive 2: High-Speed Regeneration ──
   enableHighSpeedRegen: true,      // Master toggle for High-Speed Regeneration
+  highSpeedRegenSkillName: 'High-Speed Regeneration',
   regenInterval: 60,             // 1 second (60 frames)
   regenAmount: 6,                // ~2.5% max HP per tick
   regenThreshold: 0.50,          // Triggers below 50% HP or out of combat

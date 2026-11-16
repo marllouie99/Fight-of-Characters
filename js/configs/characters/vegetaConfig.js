@@ -41,6 +41,7 @@ export const vegetaConfig = {
 
   // ─── Basic Attack: Hybrid Martial Arts & Follow-Up Ki Volley Engine ───
   enableBasicMelee: true,             // Master toggle for Melee Mode Basic Attack
+  basicMeleeSkillName: 'SAIYAN BEATDOWN',
   initialMeleeDuration: 120,          // Duration of continuous CQC Melee Mode brawling in frames (2.0s at 60fps)
   meleeReach: 66,                     // Frontal arc strike reach in pixels (73 in Super Saiyan)
   meleeGapCloseRange: 150,            // Distance within which basic attack executes Z-Vanish step-in
@@ -54,6 +55,7 @@ export const vegetaConfig = {
   meleeBackstepDistance: 120,         // Distance vaulted backward after finisher (pixels)
   meleeModeSeparationCooldown: 180,   // Separation delay in frames before initiating next melee mode (3.0s at 60fps)
   enableFollowUpKiVolley: true,       // Master toggle for follow-up Rapid Ki Volley
+  kiVolleySkillName: 'KI VOLLEY',
   followUpKiCount: 8,                 // Number of Ki blasts fired in follow-up volley
   followUpKiDamage: 7,                // Damage per Ki blast in follow-up volley (10 in Super Saiyan)
   followUpKiSpeed: 17,                // Projectile speed of follow-up Ki blasts (px/frame)
@@ -62,6 +64,7 @@ export const vegetaConfig = {
 
   // ─── Skill 1: Big Bang Attack ───
   enableBigBang: true,                // Master toggle for Skill 1
+  bigBangSkillName: 'BIG BANG',
   bigBangCooldown: 450,               // 7.5s cooldown at 60fps
   bigBangChargeFrames: 24,            // 0.4s open palm windup
   bigBangSpeed: 18,                   // Supersonic missile travel speed
@@ -72,6 +75,7 @@ export const vegetaConfig = {
 
   // ─── Skill 2: Galick Gun ───
   enableGalickGun: true,              // Master toggle for Skill 2
+  galickGunSkillName: 'GALICK GUN',
   galickGunCooldown: 420,             // 7.0s cooldown at 60fps
   galickGunChargeFrames: 30,          // 0.5s chest charge
   galickGunDamage: 55,                // Burst beam damage (74 in Super Saiyan)
@@ -79,6 +83,7 @@ export const vegetaConfig = {
 
   // ─── Ultimate: Final Flash ───
   enableFinalFlash: true,             // Master toggle for Ultimate
+  finalFlashSkillName: 'FINAL FLASH',
   finalFlashCooldown: 1920,           // 32.0s cooldown at 60fps
   finalFlashChargeFrames: 75,         // 1.25s wide-arm stance charge
   finalFlashFireFrames: 48,           // Active laser cannon duration
@@ -91,18 +96,21 @@ export const vegetaConfig = {
 
   // ─── Passive 1: Royal Saiyan Pride ───
   enableRoyalPride: true,             // Master toggle for Royal Saiyan Pride
+  royalPrideSkillName: 'Royal Saiyan Pride',
   prideDamageScalePer10Hp: 0.05,      // +5% bonus damage per 10% missing HP below 70%
   maxPrideDamageBonus: 0.35,          // +35% bonus cap (+70% in Super Saiyan)
   prideKnockbackReduction: 0.20,      // 20% reduced knockback below 50% HP
 
   // ─── Passive 2: Royal Battle Armor Carapace ───
   enableBattleArmor: true,            // Master toggle for Battle Armor
+  battleArmorSkillName: 'BATTLE ARMOR',
   armorShieldMax: 50,                 // Shield capacity (absorbed first)
   armorMitigationPct: 0.20,           // 20% flat damage absorption into shield
   armorRechargeDelayFrames: 360,      // 6.0s out-of-combat recharge delay
 
   // ─── Super Saiyan Transformation (Stats Multiplier Buff) ───
   enableSuperSaiyan: true,            // Master toggle for Super Saiyan Transformation
+  superSaiyanSkillName: 'SUPER SAIYAN',
   superSaiyanHpThreshold: 0.40,       // Health threshold to trigger transformation (40% HP)
   superSaiyanDuration: 900,           // Duration of transformation in frames (15.0s at 60fps)
   superSaiyanDmgMultiplier: 1.35,     // Damage multiplier (+35% attack power)
@@ -112,6 +120,7 @@ export const vegetaConfig = {
 
   // ─── Z-Vanish Afterimage Dodge System (Saitama & Sans Standard) ───
   enableDodge: true,                  // Master toggle for autonomous Z-Vanish evasion
+  zVanishSkillName: 'Z-Vanish Afterimage',
   dodgeChance: 0.85,                  // Base evasion probability against incoming attacks (85%)
   domainDodgeChance: 0.80,            // Evasion probability against Domain spatial slices (80%)
   beamDodgeChance: 0.90,              // Evasion probability against lethal super-beams (90%)

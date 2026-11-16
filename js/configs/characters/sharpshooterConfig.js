@@ -20,14 +20,16 @@ export const sharpshooterConfig = {
   ability: 'Straight Fire',
   desc: 'Fires heavy projectiles straight ahead. High damage, slow reload rate.',
 
-  // Basic Rifle Tuning (CONFIG.normal)
+  // ── Basic Attack: Straight Fire Heavy Rifle ──
+  rifleSkillName: 'Straight Fire Rifle',
   aimThreshold: 0.12, // radians; lower = must face enemy more precisely before firing
   shotCooldown: 10,   // frames between consecutive shots (independent of base cooldown)
   knockbackStrength: 20, // velocity impulse applied to target on each hit
   magazineSize: 7,    // number of bullets before needing to reload
   reloadTime: 130,    // frames to reload (2 seconds at 60 fps)
 
-  // Execution Bullet Tuning (CONFIG.sharpshooter)
+  // ── Passive Finisher: Final Execution Bullet (7th Round) ──
+  executionBulletSkillName: 'Final Execution Bullet',
   enhancedDamageMultiplier: 2.5, // Damage multiplier for the final execution bullet
   enhancedSpeedMultiplier: 1.5,  // Projectile speed multiplier for the execution bullet
   electrifiedDuration: 45,       // Frames the crackling lightning effect lasts on target (45 = 0.75s)

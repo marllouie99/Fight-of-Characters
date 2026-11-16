@@ -45,15 +45,18 @@ export const meguminConfig = {
 
   // Passive 1: The One True Path (Single-Spell Constraint)
   enableOneTruePath: 1,             // Master toggle for Single Offensive Spell Constraint
+  oneTruePathSkillName: 'The One True Path',
 
   // Passive 2: Incantation Resonance (Chant Scaling)
   enableIncantationResonance: 0,    // Master toggle for Chant Power & Radius Scaling
+  incantationSkillName: 'Incantation Resonance',
   chantMaxFrames: 240,              // 4.0s full chanting duration
   chantMinFrames: 120,              // 2.0s minimum threshold for partial detonation
   chantAimLock: 1,                  // Commits 360° omnidirectional aim lock upon initiation
 
   // Passive 3: Total Mana Burnout (The Faceplant)
   enableFaceplantBurnout: 0,        // Master toggle for Post-Explosion Exhaustion Collapse
+  burnoutSkillName: 'Total Mana Burnout',
   faceplantDurationFrames: 360,     // 6.0s helpless prone duration
 
   // Passive 4: Chuunibyou Dramatic Posturing
@@ -61,6 +64,7 @@ export const meguminConfig = {
 
   // Basic Action: Staff Twirl Parry & Panic Hop (Non-Damaging Defense)
   enableStaffTwirlParry: 0,         // Master toggle for Staff Spinning Projectile Deflection
+  staffParrySkillName: 'Staff Twirl Parry',
   enablePanicHop: 0,                // Master toggle for Evasive Backward Hop
   staffParryDuration: 18,           // 18-frame active spinning deflection window
   staffParryCooldown: 45,           // 0.75s parry cooldown
@@ -68,6 +72,7 @@ export const meguminConfig = {
 
   // Skill 1: Chuunibyou Focus & Arcane Barrier
   enableChuunibyouFocus: 0,         // Master toggle for Skill 1: Chanting Acceleration Barrier
+  chuunibyouFocusSkillName: 'Chuunibyou Focus',
   focusCooldown: 300,               // 5.0s cooldown
   focusMaxFrames: 120,              // 2.0s channeled focus duration
   focusShieldHp: 90,                // Barrier absorption health
@@ -75,6 +80,7 @@ export const meguminConfig = {
 
   // Skill 2: Eyepatch Seal Release: Crimson Gleam
   enableCrimsonGleam: 0,            // Master toggle for Skill 2: Blinding Flash Crowd Control
+  crimsonGleamSkillName: 'Crimson Gleam',
   gleamCooldown: 420,               // 7.0s cooldown
   gleamRadius: 140,                 // 140px flash cone reach
   gleamBlindDuration: 35,           // 35-frame attack interrupt & blind
@@ -82,12 +88,14 @@ export const meguminConfig = {
 
   // Mobility: Archmage Cape Flutter Dash
   enableCapeDash: 0,                // Master toggle for Mobility: Cape Flutter Dash
+  capeDashSkillName: 'Archmage Cape Dash',
   capeDashCooldown: 160,            // 2.6s cooldown
   capeDashDistance: 110,            // 110px dash travel distance
   capeDashInvulnFrames: 12,         // 12 i-frames during dash
 
   // THE SOLE OFFENSIVE SPELL / ULTIMATE: "EXPLOSION!"
   enableExplosion: 1,               // Master toggle for Ultimate: Apocalyptic Explosion
+  explosionSkillName: 'EXPLOSION!',
   enableUltimate: 0,                // Master ultimate registration flag
   explosionCooldown: 2400,          // 40.0s cooldown
   explosionWindupFrames: 240,       // 4.0s chant windup

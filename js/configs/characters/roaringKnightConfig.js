@@ -55,6 +55,7 @@ export const roaringKnightConfig = {
 
   // ── Passive: Shadow Mantle Dash ──
   enableShadowMantle: 0,
+  shadowMantleSkillName: 'SHADOW MANTLE',
   afterImageMinSpeed: 4.4,
   afterImageInterval: 4,
   afterImageLife: 18,
@@ -64,6 +65,7 @@ export const roaringKnightConfig = {
 
   // ── Passive: Black Knife Parry (Deltarune Ch.3 Guard & Riposte) ──
   enableParry: true,
+  parrySkillName: 'Black Knife Parry',
   parryPassiveChance: 0.40, // Base deflect chance when idle or maneuvering
   parryActiveChance: 0.70, // Boosted deflect chance while holding Black Knife guard stance
   parryGuardDuration: 75, // 1.25s defensive guard pose hold after parry
@@ -75,6 +77,7 @@ export const roaringKnightConfig = {
 
   // ── Basic Attack: Rotating Slash Phase 1 (1 -> 2 -> 2 -> 3 -> 3 -> 4 Cycle) ──
   enableBlackKnife: true,
+  basicAttackSkillName: 'Rotating Slash Phase 1',
   basicAttackDamage: 24,
   damage: 24,
   basicAttackCooldown: 78,
@@ -98,11 +101,13 @@ export const roaringKnightConfig = {
 
   // ── Unified Skill 1 Slot (Randomly chooses an enabled active skill when CD is up) ──
   enableSkill1: true,
+  skill1Name: 'SKILL 1',
   skill1Cooldown: 500, // 7.0s shared Skill 1 cooldown
   skill1InitialCooldown: 500, // 3.0s initial round-start cooldown
 
   // ── Skill 1: Tracking Sword Phase 1 (8-Dir SOUL Track -> Red Freeze -> White Flash -> Board Slash x10) ──
-  enableFallingSwords: 0,
+  enableFallingSwords: 1,
+  fallingSwordsSkillName: 'TRACKING SWORD',
   fallingSwordsCooldown: 520, // 7.0s
   fallingSwordsInitialCooldown: 180, // 3.0s initial cooldown
   fallingSwordsChargeFrames: 16,
@@ -121,7 +126,8 @@ export const roaringKnightConfig = {
   trackingSwordScale: 1.2, // Renders 72x27 native FallingSword pixel sprite at ~86x32px
 
   // ── Skill 2: STARS Phase 1 (B&W Line Intro -> Purple Cone -> Reverse -> Red Flicker Flare -> 6 Shards) ──
-  enableStarBurst: 0,
+  enableStarBurst: 1,
+  starBurstSkillName: 'STAR BURST',
   starBurstCooldown: 700, // 7.0s
   starBurstInitialCooldown: 300, // 5.0s initial cooldown
   starIntroFrames: 12, // B&W pointing hairline beam before cone unfolds
@@ -156,6 +162,7 @@ export const roaringKnightConfig = {
 
   // ── Skill 3: Blade Corridor (Sweeping Sword Wall Barrage) ──
   enableBladeCorridor: 0,
+  bladeCorridorSkillName: 'BLADE CORRIDOR',
   bladeCorridorCooldown: 390, // 6.5s
   bladeCorridorInitialCooldown: 240, // 4.0s initial cooldown
   bladeCorridorChargeFrames: 18,
@@ -167,6 +174,7 @@ export const roaringKnightConfig = {
 
   // ── Skill 3B: Sword Tunnel (Phase 1 Tunnel, Phase 2 Rotating Spiral Tunnel & Phase 2 Finisher) ──
   enableSwordTunnel: 1, // Phase 1 weaving sword tunnel corridor
+  swordTunnelSkillName: 'SWORD TUNNEL',
   enableSwordTunnelPhase2: 1, // Phase 2 rotating 360-degree spiral tunnel + Phase 2 Finisher
   enableSwordTunnelFinisher: 1, // Climax crimson-laser lock -> recoil -> AfterimageGrow -> Mach cut beams
   swordTunnelPhase1Finisher: true, // Also trigger closing Finisher on Phase 1 Tunnel climax
@@ -194,6 +202,7 @@ export const roaringKnightConfig = {
 
   // ── Skill 4: Snowflake Matrix (Red Lock-In + Full-Arena + / X Beam Matrix) ──
   enableSnowflakeMatrix: 0,
+  snowflakeMatrixSkillName: 'SNOWFLAKE SLASH',
   snowflakeMatrixCooldown: 480, // 8.0s
   snowflakeMatrixInitialCooldown: 360, // 6.0s initial cooldown
   snowflakeMatrixChargeFrames: 18,
@@ -206,6 +215,7 @@ export const roaringKnightConfig = {
 
   // ── Ultimate: Non-Rotating Multi-Angle Front Slash Barrage (Activated at N Basic Attack Hits) ──
   enableRoaringSwoon: 1,
+  roaringSwoonSkillName: 'ROTATING SLASH',
   swoonHitsRequired: 5, // Successful Black Knife hits needed to activate Ultimate
   swoonCooldown: 0,
   swoonInitialCooldown: 0,
@@ -217,7 +227,7 @@ export const roaringKnightConfig = {
   swoonStunReach: 95, // Impact stun radius ahead of Knight at end of Ultimate dash
   swoonReach: 560,
   rotatingSlashWindupFrames: 18, // Crisp 0.3s multi-angle crimson telegraph flash (non-rotating)
-  rotatingSlashFinaleCount: 10, // 9 rapid dual-angle front bursts + 1 heavy 3-way Void Cross finisher (21 total slashes)
+  rotatingSlashFinaleCount: 20, // 9 rapid dual-angle front bursts + 1 heavy 3-way Void Cross finisher (21 total slashes)
   rotatingSlashFinaleInterval: 4, // Fast 4-frame burst cadence (~67ms) for intense shred
   rotatingSlashFinaleHalfWidth: 30,
   rotatingSlashHalfLength: 145, // Crisp 290px finite slash blades in front of Knight
@@ -243,6 +253,7 @@ export const roaringKnightConfig = {
 
   // ── Final Phase: Full-Screen Roaring Desperation Barrage (<= 35% HP, once per match) ──
   enableDesperationRoaring: 0,
+  desperationRoaringSkillName: 'Final Roaring Desperation',
   desperationHpThreshold: 0.35,
 
   // ── Audio SFX Paths & Normalized Volumes ──
@@ -272,6 +283,10 @@ export const roaringKnightConfig = {
     rotatingSlashLine: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav',
     cutExplosion: 'Assets/Sound Effects/Attacks/explosion.mp3',
     parry: 'Assets/Sound Effects/Skills/parry.mp3',
+    attackVoice1: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurt.wav',
+    attackVoice2: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav',
+    attackGrowl: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav',
+    ultRoar: 'Assets/Sound Effects/RoaringKnightSFX/snd_knightroar.wav',
   },
   soundVolumes: {
     cut1: 0.90,
@@ -299,5 +314,9 @@ export const roaringKnightConfig = {
     rotatingSlashLine: 0.82,
     cutExplosion: 0.28,
     parry: 0.85,
+    attackVoice1: 0.42,
+    attackVoice2: 0.42,
+    attackGrowl: 0.50,
+    ultRoar: 0.92,
   },
 };

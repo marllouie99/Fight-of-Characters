@@ -48,6 +48,7 @@ export const crazyDaveConfig = {
   desc: 'Crazy Dave has no direct basic attack! He navigates the arena collecting falling Sun drops to deploy sturdy Wall-nut barriers, rapid-fire Peashooters, and chilling Snow Peas that fight on his behalf.',
 
   // Sun Economy System
+  sunEconomySkillName: 'Sun Economy',
   initialSun: 50,
   maxSun: 500,
   sunRadius: 30,             // Sized large and prominent for the 8x8 grass grid
@@ -60,6 +61,7 @@ export const crazyDaveConfig = {
 
   // Skill 1: Plant Wall-nut (Barrier Shield Defense Mechanism — Solid Immovable Obstacle)
   enableWallnut: true,
+  wallnutSkillName: 'WALL-NUT',
   wallnutCost: 100,           // Costs 50 Sun (PvZ authentic cost)
   wallnutColor: '#CA8A04',   // Nut Amber / Gold
   wallnutHp: 200,            // Massive barrier HP to absorb attacks and block melee charges
@@ -70,6 +72,7 @@ export const crazyDaveConfig = {
 
   // Skill 2: Plant Peashooter (Regular Damage)
   enablePeashooter: true,
+  peashooterSkillName: 'PEASHOOTER',
   peashooterCost: 100,       // Costs 100 Sun
   peashooterColor: '#4ADE80',
   peashooterHp: 100,
@@ -88,6 +91,7 @@ export const crazyDaveConfig = {
 
   // Skill 3: Plant Snow Pea (Ice Damage + Enemy Slow & Freeze Chance)
   enableSnowPea: true,
+  snowPeaSkillName: 'SNOW PEA',
   snowPeaCost: 100,          // Costs 175 Sun
   snowPeaColor: '#38BDF8',
   snowPeaHp: 100,
@@ -109,6 +113,7 @@ export const crazyDaveConfig = {
 
   // Skill 4: Plant Torchwood (Ignites passing peas / melts ice peas)
   enableTorchwood: true,
+  torchwoodSkillName: 'TORCHWOOD',
   torchwoodCost: 100,         // Costs 175 Sun (PvZ authentic cost)
   torchwoodColor: '#F97316',  // Blazing Orange
   torchwoodHp: 100,           // Moderate barrier HP for the burning stump
@@ -126,6 +131,7 @@ export const crazyDaveConfig = {
 
   // Skill 5: Plant Potato Mine (Proximity Explosive Trap — PvZ Classic Area Denial)
   enablePotatoMine: true,
+  potatoMineSkillName: 'POTATO MINE',
   potatoMineCost: 75,              // Costs 75 Sun (balanced mid-range)
   potatoMineColor: '#A16207',      // Earthy Ochre Brown
   potatoMineHp: 80,                // Low HP — fragile
@@ -141,6 +147,7 @@ export const crazyDaveConfig = {
 
   // Lawnmower Baseline Defense System (PvZ Signature Final Defense)
   enableLawnmower: true,
+  lawnmowerSkillName: 'LAWN MOWER',
   lawnmowerDamage: 100,        // Devastating steamroller damage (PvZ 1800 damage equivalent)
   lawnmowerSpeed: 11.5,        // Fast horizontal charging speed across the lawn
   lawnmowerRadius: 18,         // Collision hitbox radius

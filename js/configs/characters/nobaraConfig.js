@@ -34,6 +34,7 @@ export const nobaraConfig = {
 
   // Passive: Unflinching Ecstasy (Kōyō no Shinshō)
   enableEcstasy: true,            // Master toggle for Unflinching Ecstasy passive
+  ecstasySkillName: 'BATTLE FOCUS',
   ecstasyHpThreshold: 0.50,         // Triggers under 50% HP
   ecstasySpeedMultiplier: 1.20,     // +20% movement speed
   ecstasyProjectileSpeedMultiplier: 1.25, // +25% nail flight velocity
@@ -42,12 +43,14 @@ export const nobaraConfig = {
 
   // Passive: Straw Doll Technique (Embedded Nails)
   enableStrawDollNails: true,     // Master toggle for embedded nail mechanic
+  strawDollNailsSkillName: 'Straw Doll Nails',
   maxEmbeddedNails: 5,              // Max nails per target
   nailDurationFrames: 480,          // 8.0s nail lifetime (refreshed on hit)
   maxTerrainNails: 8,               // Max persistent terrain landmines
 
   // Primary Ranged: Nail Snipe (Kugi Uchi)
   enableNailSnipe: true,          // Master toggle for ranged nail snipe
+  nailSnipeSkillName: 'Nail Snipe',
   nailDamage: 18,                   // Base nail projectile damage
   nailSpeed: 14.5,                  // Projectile velocity
   nailRadius: 4.5,                  // Collision radius
@@ -55,6 +58,7 @@ export const nobaraConfig = {
 
   // Primary Melee: Steel Hammer Cleave (Frontal Arc — Rule 7)
   enableHammerCleave: true,       // Master toggle for Steel Hammer melee
+  hammerCleaveSkillName: 'Steel Hammer Cleave',
   hammerRange: 65,                  // 65px reach
   hammerArc: (120 * Math.PI) / 180, // 120° frontal arc
   hammerDamage: 24,                 // Blunt physical damage
@@ -64,6 +68,7 @@ export const nobaraConfig = {
 
   // Skill 1: Hairpin (Kanzashi)
   enableHairpin: true,            // Master toggle for Hairpin nail detonation
+  hairpinSkillName: 'KANZASHI (HAIRPIN)',
   hairpinCooldown: 330,             // 5.5s (330 frames)
   hairpinDamagePerNail: 28,         // 28 damage per embedded nail (up to 140 at 5 stacks)
   hairpinTerrainDamage: 35,         // AOE damage for terrain landmine explosions
@@ -73,6 +78,7 @@ export const nobaraConfig = {
 
   // Skill 2: Straw Doll Technique: Resonance (Tomonari)
   enableResonance: true,          // Master toggle for Resonance
+  resonanceSkillName: 'RESONANCE',
   resonanceCooldown: 600,           // 10.0s (600 frames)
   resonanceBaseDamage: 60,          // 60 base True Damage
   resonanceDamagePerNail: 11,       // +11 damage per nail on target (up to 115)
@@ -83,6 +89,7 @@ export const nobaraConfig = {
 
   // Ultimate: Black Flash & Supreme Resonance (Kokusen: Dai Tomonari)
   enableUltimate: true,           // Master toggle for Black Flash & Supreme Resonance ultimate
+  ultimateSkillName: 'BLACK FLASH',
   ultimateCooldown: 1920,           // 32.0s (1920 frames)
   ultimateBlitzDamage: 65,          // Black Flash hammer blitz damage
   ultimateResonanceDamage: 130,     // Giant Straw Doll explosion True Damage

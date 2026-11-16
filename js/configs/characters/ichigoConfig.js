@@ -48,6 +48,7 @@ export const ichigoConfig = {
 
   // ── Basic Attack: Zangetsu Melee Cleave (Rule 30: 3-Hit 5-Phase Melee Combo) ──
   enableMeleeCleave: true,       // Master toggle for Basic Attack: Zangetsu Melee Cleave
+  meleeCleaveSkillName: 'Zangetsu 3-Hit Cleave',
   enableMeleeCombo: true,        // Toggle for 3-hit 5-phase melee combo chain
   swordDamage: 12,               // Base damage fallback per melee slash
   swordCooldown: 22,             // Cooldown in frames after completing combo chain (~0.37s at 60fps)
@@ -102,6 +103,7 @@ export const ichigoConfig = {
 
   // ── Skill Combo: Shunpo Blitz (Flash Step Flurry -> Disengage Back-Step -> Getsuga) ──
   enableShunpo: true,            // Toggle Flash Step teleport skill
+  shunpoSkillName: 'Shunpo Blitz',
   enableFlurry: true,            // Toggle multi-strike flurry slashes (if false, executes single strike -> backstep -> Getsuga)
   initialShunpoCooldown: 100,    // Initial cooldown in frames after round start / countdown ends before first Shunpo Blitz (~3.0s at 60fps)
   shunpoCooldown: 200,           // Cooldown in frames between combo activations (~7.5s in Shikai)
@@ -126,6 +128,7 @@ export const ichigoConfig = {
 
   // ── Special Attack: Getsuga Tensho Wave ──
   enableGetsuga: true,           // Master toggle for Getsuga Tensho Wave
+  getsugaSkillName: 'Getsuga Tensho',
   getsugaDamage: 12,              // Base damage / tick damage for Getsuga wave
   getsugaTickDamage: 12,          // Multi-tick shredding damage per hit in Shikai
   getsugaSpeed: 11,              // Base projectile travel speed (px/frame)
@@ -159,6 +162,7 @@ export const ichigoConfig = {
 
   // ── Passive: Hollow Mask Awakening ──
   enableHollowMask: true,        // Master toggle for Hollow Mask Awakening
+  hollowMaskSkillName: 'HOLLOW MASK',
   hollowMaskThreshold: 0.60,     // Automatically activates when HP <= 60%
   hollowRechargeHpRatio: 0.20,   // Damage required to reactivate Hollow Mask after mask shatters (20% of max HP)
   hollowHpRecovery: 0.25,        // 50% HP recovery upon Hollow Mask transformation
@@ -185,6 +189,7 @@ export const ichigoConfig = {
 
   // ── Passive: Zanjutsu Blade Parry & Defense ──
   enableParry: true,             // Master toggle for Zanjutsu Blade Parry
+  parrySkillName: 'Zanjutsu Blade Parry',
   parryChance: 0.15,             // Base parry chance in Shikai (15%)
   bankaiParryChance: 0.25,       // Parry chance during Bankai (25%)
   hollowParryChance: 0.30,       // Parry chance during Hollow Mask (30%)
@@ -194,6 +199,7 @@ export const ichigoConfig = {
 
   // ── Ultimate: Bankai Awakening (Tensa Zangetsu) ──
   enableBankai: true,            // Master toggle for Ultimate: Bankai Awakening
+  bankaiSkillName: 'BANKAI',
   ultimateThreshold: 0.80,       // Automatically activates when HP <= 90%
   bankaiCooldown: 600,           // Cooldown in frames between Bankai activations after expiration (~10.0s at 60fps)
   bankaiRechargeHpRatio: 0.20,   // Damage required to reactivate Bankai after it expires (20% of max HP)
@@ -236,6 +242,7 @@ export const ichigoConfig = {
 
   // ── Grand Finisher: Final Massive Kuroi Getsuga ──
   enableFinalGetsuga: true,      // Master toggle for Grand Finisher: Final Massive Kuroi Getsuga
+  finalGetsugaSkillName: 'Final Massive Kuroi Getsuga',
   bankaiFinalGetsugaTriggerTimer: 108,  // Bankai duration threshold frames when Grand Finisher triggers (80 frames charge + 28 frames slash wave release -> seamlessly awakens Hollow Mask)
   bankaiFinalGetsugaChargeFrames: 80,  // Gathering charge frames matching voiceline (~1.33s)
   bankaiFinalGetsugaRecoveryFrames: 24, // Post-release slash follow-through frames

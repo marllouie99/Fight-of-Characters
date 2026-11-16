@@ -19,7 +19,8 @@ export const hyperionConfig = {
   ability: 'Sustained Laser',
   desc: 'Fires a continuous laser beam.',
 
-  // Skill Tuning (CONFIG.laser)
+  // ── Skill 1 / Basic Attack: Sustained Laser Beam (LASER BEAM) ──
+  laserBeamSkillName: 'LASER BEAM',
   aimThreshold: 0.12,  // radians; must face enemy this precisely to start the beam
   beamDuration: 100,   // frames the beam fires for (180 = 3 s at 60 fps)
   windupDuration: 150, // frames of beam charge before firing (240 = 4 s at 60 fps)

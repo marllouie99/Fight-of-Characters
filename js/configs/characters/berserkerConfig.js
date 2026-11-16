@@ -20,7 +20,8 @@ export const berserkerConfig = {
   ability: 'Rage',
   desc: 'Gains rage when taking damage. During rage: increased damage, attack speed, movement speed, and lifesteal.',
 
-  // Rage mechanic (CONFIG.berserker)
+  // ── Passive / Skill: Bloodlust Rage (Damage-Fed Fury, Speed & Lifesteal) ──
+  rageSkillName: 'Bloodlust Rage',
   maxRage: 100,               // maximum rage meter
   ragePerDamage: 0,           // legacy (disabled)
   rageFromDamageScale: 2.5,
@@ -29,6 +30,9 @@ export const berserkerConfig = {
   rageAttackSpeedMultiplier: 1.1, // attack speed multiplier during rage (lower cooldown)
   rageMoveSpeedMultiplier: 2.0,   // movement speed multiplier during rage
   lifestealPercent: 0.5,      // HP recovered as percentage of damage dealt during rage
+
+  // ── Basic Attack: Twin Battle Axes (Cleave & Rage Dual-Axe Bonus) ──
+  axeSkillName: 'Twin Battle Axes',
   axeRange: 35,               // pixels from edge for axe swing attack
   axeCooldown: 25,            // frames between axe swings
   axeDamage: 15,              // base damage per axe swing

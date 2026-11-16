@@ -40,6 +40,7 @@ export const avatarOfEmptinessConfig = {
   // Basic Attack: Antimatter Void Blasts
   // ──────────────────────────────────────────
   enableVoidBlasts: 1,
+  voidBlastsSkillName: 'Antimatter Void Blasts',
   blastDamage: 15,
   blastSpeed: 11.0,
   blastHomingStrength: 0.065,
@@ -53,6 +54,7 @@ export const avatarOfEmptinessConfig = {
   // Skill 1: Cryonic Absolute Zero (Frost Pulse & Columns)
   // ──────────────────────────────────────────
   enableCryonicZero: 1,
+  cryonicZeroSkillName: 'CRYONIC ZERO',
   cryonicCost: 0,
   cryonicCooldown: 360,
   cryonicDuration: 150,
@@ -65,6 +67,7 @@ export const avatarOfEmptinessConfig = {
   // Skill 2: Visceral Blood Torrent (Vortex Whirlpool)
   // ──────────────────────────────────────────
   enableVisceralTorrent: 1,
+  visceralTorrentSkillName: 'VISCERAL TORRENT',
   visceralCost: 0,
   visceralCooldown: 390,
   visceralDuration: 90,
@@ -77,6 +80,7 @@ export const avatarOfEmptinessConfig = {
   // Skill 3: Dark Dimension Portal Strikes (Arm Jut Out)
   // ──────────────────────────────────────────
   enablePortalStrikes: 1,
+  portalStrikesSkillName: 'PORTAL STRIKES',
   portalCost: 0,
   portalCooldown: 480,
   portalStrikesCount: 4,
@@ -88,6 +92,7 @@ export const avatarOfEmptinessConfig = {
   // Ultimate: Universal Annihilation (Apocalyptic Reality Shatter)
   // ──────────────────────────────────────────
   enableUniversalAnnihilation: 1,
+  universalAnnihilationSkillName: 'UNIVERSAL ANNIHILATION',
   annihilationCost: 0,
   annihilationCooldown: 880,
   annihilationWindupFrames: 50,

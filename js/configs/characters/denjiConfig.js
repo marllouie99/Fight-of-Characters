@@ -37,6 +37,7 @@ export const denjiConfig = {
 
   // Passive 1: Pochita Heart Ripcord Revive
   enablePochitaRevive: 0,        // Master toggle for Passive 1: Pochita Heart Revive
+  pochitaReviveSkillName: 'Pochita Heart Ripcord Revive',
   maxReviveStocks: 1,               // 1 ripcord revive per round
   reviveHpPercent: 0.50,            // Restores 50% Max HP (180 HP)
   reviveShockwaveRadius: 150,       // Radial blood blast radius on trigger
@@ -46,11 +47,13 @@ export const denjiConfig = {
 
   // Passive 2: Blood Lust Siphon
   enableBloodSiphon: true,          // Master toggle for Passive 2: Blood Lust Siphon (Lifesteal)
+  bloodSiphonSkillName: 'Blood Lust Siphon',
   lifestealRatio: 0.01,             // 25% base chainsaw lifesteal
   bleedingTargetLifestealRatio: 0.01,// 35% lifesteal vs bleeding enemies
 
   // Passive 3: Chainsaw Shred Count & Bleed Debuff
   enableShredBleed: true,           // Master toggle for Passive 3: Shred Count -> Bleed debuff mechanic
+  shredBleedSkillName: 'Chainsaw Bleed Shred',
   enableHemorrhage: true,           // Compatibility toggle
   shredBleedThreshold: 10,          // Shred count required on enemy to trigger Bleed debuff
   shredBleedDuration: 180,          // Bleed debuff duration in frames (3.0s @ 60fps)
@@ -64,6 +67,7 @@ export const denjiConfig = {
 
   // Human Form: Street Brawler Combo
   enablePunches: 0,              // Master toggle for Human Form: Street Brawler 3-Hit Combo
+  punchesSkillName: 'Street Brawler Combo',
   punch1Damage: 2,
   punch2Damage: 2,
   punch3Damage: 2,
@@ -72,6 +76,7 @@ export const denjiConfig = {
 
   // Hybrid Form: Continuous 3-Blade Chainsaw Collision Shred
   enableChainsawShred: true,        // Master toggle for Continuous 3-Blade Chainsaw Collision Shred
+  chainsawShredSkillName: '3-Blade Chainsaw Shred',
   shredDamagePerTooth: 1,           // Rapid shred damage per chain tooth collision tick
   shredTickInterval: 6,             // Interval in frames between chain teeth hits (matches animation RPM)
   shredHitPauseFrames: 2,           // Micro hit-pause frames applied to enemy on each tooth strike
@@ -107,6 +112,7 @@ export const denjiConfig = {
 
   // Skill 1: Ripcord Engine Rev Lunge
   enableEngineLunge: 1,          // Master toggle for Skill 1: Ripcord Engine Rev Lunge
+  engineLungeSkillName: 'Ripcord Engine Rev Lunge',
   lungeCooldown: 1000,               // 4.0s
   lungeWindupFrames: 30,            // Wind-up / engine rev preparation pause before launching forward (~0.23s)
   lungeHitRecoveryFrames: 100,       // Post-hit impact pause frames where Denji stops moving on impact (~0.26s)
@@ -121,6 +127,7 @@ export const denjiConfig = {
 
   // Skill 2: Blood Intoxication Cleave
   enableBloodCleave: 0,          // Master toggle for Skill 2: Blood Intoxication Cleave
+  bloodCleaveSkillName: 'Blood Intoxication Cleave',
   cleaveCooldown: 360,              // 6.0s
   cleaveRange: 160,
   cleaveDamage: 28,
@@ -129,6 +136,7 @@ export const denjiConfig = {
 
   // Ultimate: Chainsaw Devil Awakening — Massacre Engine
   enableMassacreEngine: 0,       // Master toggle for Ultimate: Massacre Engine
+  massacreEngineSkillName: 'Massacre Engine',
   ultimateCooldown: 1500,           // 25.0s
   ultimateTimeStopFrames: 35,
   ultimateCycloneRadius: 120,

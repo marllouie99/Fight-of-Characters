@@ -751,6 +751,14 @@ body:not(.arena-dark-mode) .horizontal-viewport-mode .health-hud-side .health-ca
   white-space: nowrap !important;
 }
 
+.horizontal-viewport-mode .hud-top-name.hud-roaring-knight-name {
+  color: #050609 !important;
+  -webkit-text-fill-color: #050609 !important;
+  -webkit-text-stroke: 3px #FFFFFF !important;
+  paint-order: stroke fill !important;
+  text-shadow: 1.5px 1.5px 0px rgba(5, 6, 9, 0.72), 0 1px 2px rgba(0, 0, 0, 0.55) !important;
+}
+
 .horizontal-viewport-mode .hud-top-skills {
   display: flex !important;
   align-items: center !important;
@@ -844,6 +852,13 @@ body:not(.arena-dark-mode) .horizontal-viewport-mode .health-hud-side .health-ca
 .horizontal-viewport-mode .hud-top-team-card .hud-top-name {
   font-size: 11.5px !important;
   line-height: 14px !important;
+}
+
+.horizontal-viewport-mode .hud-top-team-card .hud-top-name.hud-roaring-knight-name {
+  color: #050609 !important;
+  -webkit-text-fill-color: #050609 !important;
+  -webkit-text-stroke: 2.5px #FFFFFF !important;
+  paint-order: stroke fill !important;
 }
 
 .horizontal-viewport-mode .hud-top-team-card .hud-top-profile {
@@ -2268,6 +2283,25 @@ canvas {
   text-align: right;
 }
 
+/* Roaring Knight Signature Top HUD Typography (Void Black Fill + Crisp White Outline) */
+.hud-top-name.hud-roaring-knight-name,
+.hud-dimmed .hud-top-name.hud-roaring-knight-name,
+#hudTopContainer .hud-top-name.hud-roaring-knight-name,
+#hudTopContainer.hud-dimmed .hud-top-name.hud-roaring-knight-name,
+.hud-top-team-card .hud-top-name.hud-roaring-knight-name,
+.hud-dimmed .hud-top-team-card .hud-top-name.hud-roaring-knight-name {
+  color: #050609 !important;
+  -webkit-text-fill-color: #050609 !important;
+  -webkit-text-stroke: 4px #FFFFFF !important;
+  paint-order: stroke fill !important;
+  text-shadow: 2px 2px 0px rgba(5, 6, 9, 0.72), 0 1px 3px rgba(0, 0, 0, 0.55) !important;
+}
+
+.hud-top-team-card .hud-top-name.hud-roaring-knight-name,
+.hud-dimmed .hud-top-team-card .hud-top-name.hud-roaring-knight-name {
+  -webkit-text-stroke: 3.5px #FFFFFF !important;
+}
+
 /* Hide Winner Bullets on Top HUD */
 .hud-top-wins {
   display: none !important;
@@ -3157,13 +3191,33 @@ body.hud-layout-classic .health-card__info > div {
 .game-box.arena-dark-mode,
 html.arena-dark-mode,
 body.arena-dark-mode,
-.arena-dark-mode,
 body.arena-dark-mode .game-container,
 body.arena-dark-mode .game-box,
 html.arena-dark-mode .game-container,
 html.arena-dark-mode .game-box {
   background: #000000 !important;
   background-color: #000000 !important;
+}
+
+/* Never paint an opaque black rectangle behind floating HUD overlay containers or cards */
+#healthHud.arena-dark-mode,
+#healthHudLeft.arena-dark-mode,
+#healthHudRight.arena-dark-mode,
+#hudTopContainer.arena-dark-mode,
+#hudBottomContainer.arena-dark-mode,
+#hudTopLeft.arena-dark-mode,
+#hudTopRight.arena-dark-mode,
+#hudBottomLeft.arena-dark-mode,
+#hudBottomRight.arena-dark-mode,
+.health-hud.arena-dark-mode,
+.health-hud-side.arena-dark-mode,
+.hud-top-container.arena-dark-mode,
+.hud-bottom-container.arena-dark-mode,
+.hud-name-box.arena-dark-mode,
+.hud-skill-group.arena-dark-mode,
+.health-card.arena-dark-mode {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 /* Hide fighter names in HUD in Dark Mode since they are prominently displayed above the top arena wall */
@@ -3238,6 +3292,21 @@ html.arena-dark-mode .game-box {
   text-transform: lowercase !important;
   letter-spacing: 0.5px !important;
   font-weight: bold !important;
+}
+
+/* Roaring Knight Monochrome Black-with-White-Outline Identity across Boss, Team, Side & Dimmed HUDs */
+.boss-card__name.hud-roaring-knight-name,
+.challenger-name.hud-roaring-knight-name,
+.health-card__member-name.hud-roaring-knight-name,
+.hud-dimmed .boss-card__name.hud-roaring-knight-name,
+.hud-dimmed .challenger-name.hud-roaring-knight-name,
+.hud-dimmed .health-card__member-name.hud-roaring-knight-name,
+#hudTopContainer.hud-dimmed .boss-card__name.hud-roaring-knight-name {
+  color: #050609 !important;
+  -webkit-text-fill-color: #050609 !important;
+  -webkit-text-stroke: 3px #FFFFFF !important;
+  paint-order: stroke fill !important;
+  text-shadow: 1.5px 1.5px 0px rgba(5, 6, 9, 0.72), 0 1px 2px rgba(0, 0, 0, 0.55) !important;
 }
 
 .arena-dark-mode .health-card__info,
@@ -3353,7 +3422,7 @@ html.arena-dark-mode .game-box {
 .hud-dimmed #hudBottomContainer,
 .hud-dimmed #hudBottomContainer *,
 .hud-dimmed #hudTopContainer,
-.hud-dimmed #hudTopContainer *:not(.hud-top-timer):not(.hud-top-timer *),
+.hud-dimmed #hudTopContainer *:not(.hud-top-timer):not(.hud-top-timer *):not(.hud-roaring-knight-name),
 .hud-dimmed #hudTopLeft,
 .hud-dimmed #hudTopLeft *,
 .hud-dimmed #hudTopRight,

@@ -36,12 +36,14 @@ export const pekkaConfig = {
 
   // Passive 1: Heavy Titanium Plating (Defense & Poise)
   enableArmorPlating: true,          // Master toggle for passive armor
+  armorPlatingSkillName: 'Heavy Titanium Plating',
   armorDamageReduction: 0.25,        // 25% flat damage deflection
   knockbackResistance: 0.90,         // 90% resistance to incoming knockback impulses
   ignoreBasicAttackKnockback: true,  // Stands completely firm against light basic attacks
 
   // Basic Attack: Colossal Cleave & Kinetic Momentum
   enableCleave: true,                // Master toggle for basic attack cleave
+  cleaveSkillName: 'Colossal Cleave',
   cleaveReach: 82,                   // Reach in pixels for greatsword arc
   cleaveArcAngle: Math.PI * 0.778,   // ~140° frontal arc
   cleaveWindupDuration: 20,          // Frame duration of pre-attack wind-up telegraph (~0.33s, movement frozen!)
@@ -73,6 +75,7 @@ export const pekkaConfig = {
 
   // Skill 1: Butterfly Chase ("BUTTERFLY!")
   enableButterflyChase: true,        // Master toggle for Skill 1
+  butterflyChaseSkillName: 'Butterfly Chase',
   butterflyCooldown: 360,            // 6.0s skill cooldown (frames at 60fps)
   butterflyDuration: 110,            // Max chase duration in frames (~1.8s)
   butterflySpeedMultiplier: 1.85,    // +85% speed burst while chasing
@@ -84,6 +87,7 @@ export const pekkaConfig = {
 
   // Skill 2: Electric Overload (Super P.E.K.K.A EMP)
   enableElectricOverload: true,      // Master toggle for Skill 2
+  electricOverloadSkillName: 'Electric Overload EMP',
   overloadCooldown: 720,             // 12.0s skill cooldown
   overloadChargeFrames: 38,          // Internal Tesla coil charge-up time (~0.63s)
   overloadRadius: 210,               // EMP blast wave radius in pixels

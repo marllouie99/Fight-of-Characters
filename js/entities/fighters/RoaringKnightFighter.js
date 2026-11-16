@@ -191,6 +191,7 @@ export class RoaringKnightFighter extends Fighter {
     this.parryShakeTimer = 0;
     this.parryCooldownTimer = 0;
     this._domainParryGraceTimer = 0;
+    this._parrySfxCooldownTimer = 0;
     this.parryStanceIndex = 0;
     this.parryCount = 0;
     this.activeParryBlockVfx = [];
@@ -267,37 +268,39 @@ export class RoaringKnightFighter extends Fighter {
   }
 
   _isUnblockableAttack(attacker, opts = {}) {
-    if (opts.isRiposte) return true;
-    const isHardUnblockable = Boolean(
-      opts.isRatioCrit || opts.isNanamiPause || opts.isSureKill ||
-      opts.isSaitamaCounter || opts.isSaitamaPunch || opts.isSeriousPunch ||
-      opts.isDivineFlame || opts.isFuga ||
-      (attacker && (attacker.characterId === 'saitama' || attacker.type === 'saitama'))
-    );
-    if (isHardUnblockable) return true;
+    // Only internal parry ripostes are excluded to prevent infinite mirror-match recursion.
+    // Every enemy skill, ultimate, beam, Purple, Fuga, domain, explosion, and melee/ranged attack can be parried.
+    return Boolean(opts && opts.isRiposte);
+  }
 
-    const isSukunaShrineSlash = Boolean(
-      opts.isDomainSlash || opts.isSukunaDomainSliceLine || opts.isSukunaSlash ||
-      opts.projectile?.isSukunaSlash ||
-      (opts.isDomain && attacker && (attacker.characterId === 'sukuna' || attacker.type === 'sukuna') && !opts.isDivineFlame && !opts.isFuga)
-    );
-    if (isSukunaShrineSlash) return false;
-
-    const isGuaranteed = Boolean(
-      opts.undodgeable || opts.isGuaranteedHit || opts.bypassShield ||
-      opts.isAmbushThrust || opts.isAmbushKatana || opts.isAmbushFlurry ||
-      opts.isTojiUltimateAssault || opts.isTojiUltimateFinalBlow
-    );
-    if (isGuaranteed) return true;
+  _isContinuousParryAttack(opts = {}) {
+    const p = opts?.projectile;
     return Boolean(
-      opts.isDomain || opts.isGojoDomain || opts.isPoison || opts.isBurn ||
-      opts.isFlame || opts.isExplosion || opts.fromBlackHole || opts.isRed ||
-      opts.isPurpleDPS ||
-      (opts.projectile && (opts.projectile.type === 'purple' || opts.projectile.isGojoPurple))
+      opts.isDomainSlash || opts.isSukunaDomainSliceLine || opts.isDomain || opts.isDomainDPS || opts.isGojoDomain ||
+      opts.isPureLoveBeam || opts.isYutaBeam || opts.isBeam || opts.isBeamDPS ||
+      opts.isGenosBeam || opts.isLaser || opts.isLaserBeam || opts.isNamelessBeam || opts.isNamelessDeityBeam ||
+      opts.isPurpleDPS || opts.isPurple || opts.isBlueDPS || opts.fromBlackHole || opts.isGetsuga ||
+      opts.isFlame || opts.isBurn || opts.isPoison || opts.isBleed || opts.isElectrified ||
+      opts.isGenosFlurry || opts.isMachineGunBlow || opts.isSaitamaFlurry || opts.isAmbushFlurry ||
+      (p && (
+        p.isGojoPurple || p.isGojoPurpleOrb || p.behaviorType === 'gojo_purple' || p.type === 'purple' ||
+        p.isPureLoveBeam || p.behaviorType === 'yuta_pure_love_beam' ||
+        p.isGojoBlue || p.behaviorType === 'gojo_blue' ||
+        p.isBlackHole || p.behaviorType === 'black_hole' ||
+        p.isGetsuga || p.behaviorType === 'getsuga_tensho' ||
+        p.isBeam || p.isFlame || p.isSukunaSlash
+      ))
     );
   }
 
-  _spawnParryBlockEffects(attacker, opts = {}) {
+  /**
+   * Allows non-damage CC ultimates (Unlimited Void, Chains, Nameless Beam, Saitama Flurry) to trigger Black Knife Parry.
+   */
+  tryParryExternalCC(attacker, opts = {}) {
+    return this._tryParryIncomingHit(1, attacker, { ...opts, isExternalCC: true });
+  }
+
+  _spawnParryBlockEffects(attacker, opts = {}, { lightweight = false } = {}) {
     const cfg = this._cfg();
     const angle = opts.isSukunaDomainSliceLine && Number.isFinite(opts.angle)
       ? opts.angle + Math.PI
@@ -336,19 +339,28 @@ export class RoaringKnightFighter extends Fighter {
       maxLife: 11,
     });
 
-    spawnParrySparksEffect(contactX, contactY, 16);
-    for (let i = 0; i < 8; i++) {
+    spawnParrySparksEffect(contactX, contactY, lightweight ? 8 : 16);
+    for (let i = 0; i < (lightweight ? 4 : 8); i++) {
       spawnSparks(contactX, contactY, 1, 'silver', { color: '#FFFFFF', blendMode: 0 });
     }
-    triggerGlobalScreenShake(3.5, 8);
-    this._playAudio('parry', cfg.sounds?.parry || 'Assets/Sound Effects/Skills/parry.mp3', 0.85);
-    this._playAudio('hitStrong', 'Assets/Sound Effects/RoaringKnightSFX/snd_metal_hit_strong.wav', 0.48, 1.38);
-    spawnFloatingText(this.x, this.y - (this.r || 25) - 16, 'PARRIED!', '#FFFFFF');
+    if (!lightweight && (this._parrySfxCooldownTimer || 0) <= 0) {
+      this._parrySfxCooldownTimer = 14;
+      triggerGlobalScreenShake(3.5, 8);
+      this._playAudio('parry', cfg.sounds?.parry || 'Assets/Sound Effects/Skills/parry.mp3', 0.85);
+      this._playAudio('hitStrong', 'Assets/Sound Effects/RoaringKnightSFX/snd_metal_hit_strong.wav', 0.48, 1.38);
+      spawnFloatingText(this.x, this.y - (this.r || 25) - 16, 'PARRIED!', '#FFFFFF');
+    }
   }
 
   _applyParryRiposte(attacker, opts = {}) {
     if (!attacker || attacker === this || attacker.hp <= 0 || attacker.isDead) return;
-    if (opts.isProjectile || opts.isAOE || opts.isSukunaDomainSliceLine) return;
+    if (
+      opts.isProjectile || opts.isAOE || opts.isSukunaDomainSliceLine ||
+      opts.isPureLoveBeam || opts.isYutaBeam || opts.isBeam || opts.isBeamDPS ||
+      opts.isPurpleDPS || opts.isPurple || opts.isDomain || opts.isDomainDPS || opts.isExternalCC
+    ) {
+      return;
+    }
     const cfg = this._cfg();
     const dist = Math.hypot(attacker.x - this.x, attacker.y - this.y);
     const maxReach = (this.r || 25) + (attacker.r || attacker.radius || 25) + 95;
@@ -375,6 +387,7 @@ export class RoaringKnightFighter extends Fighter {
   }
 
   _tryParryIncomingHit(amount, attacker, opts = {}) {
+    if ((typeof amount === 'number' && amount <= 0) || opts?.isHeal) return false;
     if (this.isTargetOfAmbush || this.isChainedByMakima) return false;
     const isStunned =
       (this.timeStopTimer || 0) > 0 ||
@@ -388,7 +401,8 @@ export class RoaringKnightFighter extends Fighter {
     const cfg = this._cfg();
     const parryEnabled = cfg.enableParry !== false && cfg.enableParry !== 0;
     const isDomainSlashHit = Boolean(opts.isDomainSlash || opts.isSukunaDomainSliceLine);
-    // Multi-line Sukuna shrine waves spawn 3 slice lines in the same frame; deflect follow-up lines cleanly
+    const isContinuousHit = this._isContinuousParryAttack(opts);
+    // Multi-line Sukuna shrine waves spawn 3 slice lines in the exact same wave tick; deflect follow-up lines of that same wave cleanly
     if (parryEnabled && isDomainSlashHit && this._domainParryGraceTimer > 0) {
       return true;
     }
@@ -409,6 +423,9 @@ export class RoaringKnightFighter extends Fighter {
     if (isDomainSlashHit) {
       this._domainParryGraceTimer = 3;
       this.parryCooldownTimer = Math.min(10, baseCooldown);
+    } else if (isContinuousHit) {
+      // Short same-frame lockout (3f) so rapid beam/Purple ticks (5-10f) still roll real parry RNG every tick (not 100% auto-parry!)
+      this.parryCooldownTimer = Math.min(3, baseCooldown);
     } else {
       this.parryCooldownTimer = baseCooldown;
     }
@@ -420,7 +437,7 @@ export class RoaringKnightFighter extends Fighter {
     this.vx = (this.vx || 0) + Math.cos(awayA) * 2.4;
     this.vy = (this.vy || 0) + Math.sin(awayA) * 2.4;
 
-    this._spawnParryBlockEffects(attacker, opts);
+    this._spawnParryBlockEffects(attacker, opts, { lightweight: isContinuousHit && (this._parrySfxCooldownTimer || 0) > 0 });
     this._applyParryRiposte(attacker, opts);
     return true;
   }
@@ -532,6 +549,7 @@ export class RoaringKnightFighter extends Fighter {
       this.parryWhiteFlashTimer = 0;
       this.parryShakeTimer = 0;
       this._domainParryGraceTimer = 0;
+      this._parrySfxCooldownTimer = 0;
     }
   }
 
@@ -544,6 +562,7 @@ export class RoaringKnightFighter extends Fighter {
     if (this.parryWhiteFlashTimer > 0) this.parryWhiteFlashTimer--;
     if (this.parryShakeTimer > 0) this.parryShakeTimer--;
     if (this._domainParryGraceTimer > 0) this._domainParryGraceTimer--;
+    if (this._parrySfxCooldownTimer > 0) this._parrySfxCooldownTimer--;
 
     for (let i = this.activeParryBlockVfx.length - 1; i >= 0; i--) {
       const fx = this.activeParryBlockVfx[i];
@@ -1010,6 +1029,9 @@ export class RoaringKnightFighter extends Fighter {
     this.vx = Math.cos(dashAngle) * dashSpeed;
     this.vy = Math.sin(dashAngle) * dashSpeed;
     this.basicAttackCooldownTimer = cfg.basicAttackCooldown ?? 78;
+    // Subtle cape flutter + low Knight vocal breath on lunge
+    this._playAudio('cape', 'Assets/Sound Effects/RoaringKnightSFX/snd_cape_1.wav', 0.42, 1.15);
+    this._playAudio('attackGrowl', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav', 0.36, 0.55);
   }
 
   _updateBlackKnifeMelee(opponent, arena = null) {
@@ -1094,6 +1116,11 @@ export class RoaringKnightFighter extends Fighter {
       seq.swingMaxTimer = seq.strikeFrames;
       const cutKey = this.meleeComboFlip ? 'cut2' : 'cut1';
       this._playAudio(cutKey, `Assets/Sound Effects/RoaringKnightSFX/snd_knight_${cutKey}.wav`, 0.85, 1.06);
+      // Deltarune Knight metallic vocal effort cry (alternating pitch like knight.rs)
+      const voiceKey = this.meleeComboFlip ? 'attackVoice2' : 'attackVoice1';
+      const voiceFile = this.meleeComboFlip ? 'snd_knight_hurtb.wav' : 'snd_knight_hurt.wav';
+      const voicePitch = 0.88 + (this._basicSlashStep % 3) * 0.14;
+      this._playAudio(voiceKey, `Assets/Sound Effects/RoaringKnightSFX/${voiceFile}`, 0.42, voicePitch);
     } else if (seq.swingPhase === 3) {
       seq.swingPhase = 4;
       seq.swingTimer = seq.swingRecoverFrames;
@@ -1143,6 +1170,7 @@ export class RoaringKnightFighter extends Fighter {
     this._stopAudio('rotatingSlashLine', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav');
     this._playAudio('cut1', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_cut.wav', 0.88, 1.0);
     this._playAudio('cutExplosion', 'Assets/Sound Effects/Attacks/explosion.mp3', 0.62, 1.08);
+    this._playAudio('attackGrowl', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav', 0.46, 0.35);
 
     const n = Math.max(1, seq.lineCount || 1);
     const angles = [];
@@ -1252,6 +1280,7 @@ export class RoaringKnightFighter extends Fighter {
     this.fallingSwordsCooldownTimer = cfg.fallingSwordsCooldown ?? 420;
     this._armUnifiedSkill1Cooldown('falling_swords', 'TRACKING SWORD');
     this._playAudio('drawPower', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_drawpower.wav', 0.78);
+    this._playAudio('powerupWhite', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_powerup_white.wav', 0.55, 1.18);
   }
 
   _updateFallingSwordsChannel(opponent, arena) {
@@ -1666,6 +1695,7 @@ export class RoaringKnightFighter extends Fighter {
     };
 
     this._playAudio('drawPower', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_drawpower.wav', 0.48, 1.30);
+    this._playAudio('stretch', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_stretch.wav', 0.56, 0.92);
     if (variant === 'phase3') {
       this._playAudio('pulse2', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_pulse2.wav', 0.82);
     } else {
@@ -1703,6 +1733,7 @@ export class RoaringKnightFighter extends Fighter {
         if (!cone._openSfxPlayed) {
           cone._openSfxPlayed = true;
           this._playAudio('puff', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav', 0.78);
+          this._playAudio('attackGrowl', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav', 0.50, 0.25);
           this._playAudio('beam', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_beam.wav', 0.48, 0.62);
         }
       } else {
@@ -2190,6 +2221,7 @@ export class RoaringKnightFighter extends Fighter {
     this.bladeCorridorCooldownTimer = cfg.bladeCorridorCooldown ?? 390;
     this._armUnifiedSkill1Cooldown('blade_corridor', 'BLADE CORRIDOR');
     this._playAudio('drawPower', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_drawpower.wav', 0.78);
+    this._playAudio('stretch', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_stretch.wav', 0.55, 1.08);
   }
 
   _updateBladeCorridorChannel(opponent, arena) {
@@ -2340,6 +2372,8 @@ export class RoaringKnightFighter extends Fighter {
     // Closest available proxies on disk for KnightSwordtunnelAnim (snd_leaf_dodge / snd_shinka_ambience not in Assets/)
     this._playAudio('cape', 'Assets/Sound Effects/RoaringKnightSFX/snd_cape_1.wav', 0.65, 1.15);
     this._playAudio('teleport', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_teleport.wav', 0.55, 0.90);
+    this._playAudio('powerupWhite', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_powerup_white.wav', 0.65, 1.04);
+    this._playAudio('attackVoice2', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav', 0.42, 0.85);
   }
 
   _startPhase2FinisherCast(opponent = null, arena = null) {
@@ -2867,6 +2901,8 @@ export class RoaringKnightFighter extends Fighter {
       beams: this._buildSnowflakeBeams(cx, cy, bounds),
     };
     this._playAudio('rotatingSlashLine', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav', 0.80);
+    this._playAudio('powerupWhite', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_powerup_white.wav', 0.72, 1.0);
+    this._playAudio('stretch', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_stretch.wav', 0.52, 0.86);
   }
 
   _updateSnowflakeMatrix(opponent, arena) {
@@ -2961,6 +2997,8 @@ export class RoaringKnightFighter extends Fighter {
 
     this._playAudio('beam', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_beam.wav', 0.85);
     this._playAudio('laser', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_laser.wav', 0.80);
+    this._playAudio('attackVoice1', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurt.wav', 0.50, 0.72);
+    this._playAudio('attackGrowl', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav', 0.55, 0.35);
     triggerGlobalScreenShake?.(6.0, 10);
 
     this._applySnowflakeMatrixSweepHits(opponent, cfg);
@@ -3253,6 +3291,7 @@ export class RoaringKnightFighter extends Fighter {
 
     // High-speed lunge SFX before stunning and unleashing the front slash barrage
     this._playAudio('puff', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav', 0.80, 1.0);
+    this._playAudio('stretch', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_stretch.wav', 0.62, 0.75);
     this._playAudio('teleport', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_teleport.wav', 0.85, 0.55);
     this._playAudio('cape', 'Assets/Sound Effects/RoaringKnightSFX/snd_cape_1.wav', 0.70, 1.05);
     spawnFloatingText?.(this.x, this.y - (this.r || 25) - 18, 'VOID BARRAGE!', '#FFFFFF');
@@ -3519,6 +3558,7 @@ export class RoaringKnightFighter extends Fighter {
 
       this._playAudio('drawPower', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_drawpower.wav', 0.78, 1.12);
       this._playAudio('rotatingSlashLine', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav', 0.85, 1.05);
+      this._playAudio('ultRoar', 'Assets/Sound Effects/RoaringKnightSFX/snd_knightroar.wav', 0.92, 1.0);
       seq.stage = 'finale_windup';
     }
   }
@@ -3632,6 +3672,7 @@ export class RoaringKnightFighter extends Fighter {
     if (isFinal) {
       this._playAudio('boxBreak', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_boxbreak.wav', 0.90, 1.02);
       this._playAudio('wideSlash', 'Assets/Sound Effects/RoaringKnightSFX/snd_wideslash_low.wav', 0.92, 0.98);
+      this._playAudio('attackVoice2', 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav', 0.55, 0.75);
       triggerGlobalScreenShake?.(8.5, 11);
     } else {
       triggerGlobalScreenShake?.(3.8, 3);

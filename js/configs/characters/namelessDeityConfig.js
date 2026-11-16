@@ -39,6 +39,7 @@ export const namelessDeityConfig = {
   // Basic Attack: Prismatic Light Darts (Homing Starlight Needles)
   // ──────────────────────────────────────────
   enableStarDarts: 1,
+  starDartsSkillName: 'Prismatic Light Darts',
   dartCooldown: 45,                        // Cooldown frames between Prismatic Light Dart volleys (~0.75s @ 60fps)
   dartDamage: 3,
   dartSpeed: 10.5,
@@ -53,6 +54,7 @@ export const namelessDeityConfig = {
   // Skill 1: Supercluster Star Mandala (Orbiting Stars & Burst)
   // ──────────────────────────────────────────
   enableSuperclusterStars: 1,
+  superclusterSkillName: 'STAR MANDALA',
   superclusterCost: 0,
   superclusterCooldown: 300,
   superclusterStarCount: 6,
@@ -66,6 +68,7 @@ export const namelessDeityConfig = {
   // Skill 2: Dimension Cleave (Prismatic 180° Sweep Wave)
   // ──────────────────────────────────────────
   enableDimensionCleave: 0,
+  dimensionCleaveSkillName: 'Dimension Cleave',
   dimensionCleaveCooldown: 340,
   dimensionCleaveDamage: 32,
   dimensionCleaveReach: 140,
@@ -77,6 +80,7 @@ export const namelessDeityConfig = {
   // Skill 3: Cosmic Singularity (Gravitational Black Hole Vortex)
   // ──────────────────────────────────────────
   enableCosmicSingularity: 0,
+  cosmicSingularitySkillName: 'Cosmic Singularity',
   singularityCooldown: 520,
   singularityRadius: 130,
   singularityPullForce: 0.28,
@@ -89,6 +93,7 @@ export const namelessDeityConfig = {
   // Ultimate: Nameless Destroyer (Transcendent Cosmic Super-Beam)
   // ──────────────────────────────────────────
   enableNamelessDestroyer: true,
+  namelessDestroyerSkillName: 'NAMELESS DESTROYER',
   destroyerCooldown: 1000,
   destroyerInitialCooldown: 700, // Initial cooldown at round start (~6.67s @ 60fps) before first super-beam
 

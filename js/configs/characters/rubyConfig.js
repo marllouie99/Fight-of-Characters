@@ -25,25 +25,29 @@ export const rubyConfig = {
   ability: 'Scythe Dance',
   desc: 'Casting abilities triggers a short dash. Swings and pulls scythe to lifesteal.',
 
-  // Basic Attack
+  // ── Basic Attack: Crimson Scythe Swing & Lifesteal ──
+  scytheSkillName: 'Crimson Scythe Swing',
   scytheDamage: 10,
   scytheRange: 45, // pixels from edge
   scytheCooldown: 40,
   lifestealPercent: 0.25, // 25% of damage dealt
 
-  // Active Skill (Pull)
+  // ── Skill 1: Scythe Hook Pull ──
+  pullSkillName: 'Scythe Hook Pull',
   activePullRange: 200,
   activePullCooldown: 240, // 4 seconds at 60fps
   activePullForce: 12.0,
   activeSlowDuration: 20,
 
-  // Passive Skill (360 Spin)
+  // ── Passive: 360° Scythe Whirlwind Spin ──
+  spinSkillName: '360° Scythe Whirlwind',
   passiveSpinRadius: 80,
   passiveSpinCooldown: 300, // 5 seconds at 60fps
   passiveSpinDamage: 15,
   passiveLifestealPercent: 1.00,
 
-  // Core Mechanic (Dash)
+  // ── Passive: Scythe Dance Dash ──
+  dashSkillName: 'Scythe Dance Dash',
   dashSpeedMultiplier: 3.0,
   dashDuration: 12,
 };

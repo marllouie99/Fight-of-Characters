@@ -20,27 +20,31 @@ export const shinobiConfig = {
   ability: 'Shadow Arts',
   desc: 'Fighter with stealthy moves. Passively dodges projectiles. After 3 dodges, becomes invisible with speed boost and deals 2x backstab damage.',
 
-  // Basic attack settings
+  // ── Basic Attack: Shadow Shuriken Toss ──
+  shurikenSkillName: 'Shadow Shuriken Toss',
   shurikenDamage: 5,           // damage per shuriken
   shurikenSpeed: 7.0,          // speed of shuriken projectiles
   shurikenCooldown: 25,        // frames between shuriken throws (normal fire rate)
 
-  // Dodge mechanics
+  // ── Passive: Shadow Evasion & Flash Step Dodge ──
+  dodgeSkillName: 'Shadow Evasion & Flash Step',
   dodgeChance: 0.50,           // probability (0-1) of dodging incoming projectiles
   dodgeFlashDuration: 100,     // frames the flash step visual effect lasts (increased for visibility)
   dodgeCooldown: 15,           // frames minimum between dodge attempts
 
-  // Flame-contact stealth build
+  // ── Passive: Flame-Contact Stealth Trigger ──
   flameContactStealthBuildFrames: 72, // frames of sustained flame contact before attempting stealth (≈1.2s at 60fps)
   flameContactStealthChance: 0.45,     // chance to trigger stealth when build completes (per attempt)
   flameContactStealthCooldown: 150,    // min frames between stealth triggers from flame contact (≈2.5s at 60fps)
 
-  // Invincibility skill activation
+  // ── Skill 1: Shadow Cloak (3-Dodge Invisibility & Speed Boost) ──
+  shadowCloakSkillName: 'Shadow Cloak',
   dodgesToActivate: 3,         // number of successful dodges needed to activate skill
   invincibilityDuration: 300,  // frames the invincibility lasts (5 seconds at 60 fps)
   speedBoostMultiplier: 2.5,   // movement speed multiplier during invincibility
 
-  // Backstab mechanics
+  // ── Skill 2 / Melee: Stealth Backstab & Tantō Strike ──
+  backstabSkillName: 'Stealth Backstab',
   backstabDamageMultiplier: 2.0, // damage multiplier when backstabbing during invincibility
   backstabAngle: 120,          // angle in degrees considered "behind" enemy (±60° from back)
   backstabRange: 75,           // pixels from enemy edge to trigger backstab

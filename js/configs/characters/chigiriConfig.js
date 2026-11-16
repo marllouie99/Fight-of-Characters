@@ -43,6 +43,7 @@ export const chigiriConfig = {
 
   // ─── Basic Attack: Panther Shot (Soccer Ball Kinetic Drive) ───
   enablePantherShot: true, // Master toggle for basic attack
+  pantherShotSkillName: 'Panther Shot',
   enableEgoShot: true, // Alias for soccerBallSystem compatibility
   pantherShotDamage: 22, // Direct hit damage
   pantherShotReboundDamage: 28, // Rebound bank shot damage
@@ -59,6 +60,7 @@ export const chigiriConfig = {
 
   // ─── Dribble & Ball Control Profile ───
   enableDribble: true, // Master toggle for dribble mechanic
+  dribbleSkillName: 'Velocity Dribble',
   dribbleControl: 0.90, // 90% base breakaway speed dribble (surges to 98% during Speed Surge, 100% during EGO)
   dribbleTightness: 0.65, // Ball led forward to match high-speed stride
   dribbleLeadDistance: 6, // Pushes ball forward ahead of sprint vector
@@ -70,6 +72,7 @@ export const chigiriConfig = {
 
   // ─── Ball Kick Steal & Tackle Mechanics ───
   enableBallSteal: true, // Master toggle for ball kick steal mechanic
+  ballStealSkillName: 'Speed Intercept Tackle',
   ballStealChance: 0.50, // 50% base chance to kick/steal ball when bumping dribbler
   ballStealKickSpeed: 12.0, // Explosive breakaway pace when dislodging/stealing ball
   ballStealStaggerDuration: 16, // Frames of hitstun applied to dispossessed dribbler (~0.27s)
@@ -77,6 +80,7 @@ export const chigiriConfig = {
 
   // ─── Skill 1: Panther Sprint (Mach Breakaway Dash & Lingering Speed Surge) ───
   enablePantherSprint: true, // Master toggle for Skill 1
+  pantherSprintSkillName: 'PANTHER SPRINT',
   pantherSprintCooldown: 240, // 4.0s cooldown — rapid mobility cadence
   pantherSprintDashDistance: 240, // Long-distance breakaway surge
   pantherSprintDashFrames: 22, // Rapid dash execution
@@ -88,6 +92,7 @@ export const chigiriConfig = {
 
   // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Signature Finisher) ───
   enableStriker: true, // Universal Blue Lock Skill 2 Master toggle
+  strikerSkillName: 'STRIKER!',
   strikerCooldown: 720, // 12.0s cooldown
   strikerWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
   strikerDamage: 72, // Heavy finishing strike damage
@@ -102,6 +107,7 @@ export const chigiriConfig = {
 
   // ─── Universal Blue Lock Trait: EGO Awakening & Potential Unlocked ───
   enableEgo: true, // Master toggle for Ego mechanic
+  egoSkillName: 'EGO',
   egoTitle: '44-Panther Mach Pace', // Custom Ego Awakening Title
   maxEgoMeter: 100, // Maximum Ego capacity
   egoGainPerHit: 25, // Ego gained per standard soccer ball hit (+25% = 4 hits to fill)

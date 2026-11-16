@@ -28,20 +28,22 @@ export const pacmanConfig = {
   suppressFaahDeathSound: true, // Retro Pac-Man uses dedicated pac-man-death-sound.mp3 instead of generic faah announcer audio
   suppressFaahOnDeath: true,
 
-  // ── Core Dot-Eating & Arena Tile Mechanic ──
+  // ── Passive: Pac-Dot & Power Pellet Economy ──
   dotRadius: 4,
   dotEatRadius: 28, // Proximity threshold for Pac-Man to gobble a dot
   powerPelletRadius: 8, // Larger energizer dots at corner tiles
   dotColor: '#FFE082', // Retro pellet cream-yellow
   powerPelletColor: '#F2F000',
+  dotsSkillName: 'DOTS',
   enableDotHeal: true, // Every consumed dot/pellet heals Pac-Man
   dotHealAmount: 4, // HP healed per small Pac-Dot consumed
   powerPelletHealAmount: 12, // HP healed per Power Pellet (big dot) consumed
   canEatSmallDotsDuringChompMode: true, // During Chomp Mode, Pac-Man can eat small dots
   canEatPowerPelletsDuringChompMode: false, // Big dots are preserved during Chomp Mode so they aren't wasted
 
-  // ── Chomp Mode (Empowered 30% Attack State) ──
+  // ── Skill 1 / State: Chomp Mode (Empowered 30% Bite Attack) ──
   enableChompMode: true,
+  chompModeSkillName: 'CHOMP MODE',
   chompModeDuration: 250, // Standard Chomp Mode duration from Power Pellet (~6.0s at 60 FPS)
   allFruitsChompModeDuration: 600, // Empowered longer Chomp Mode duration when clearing ALL fruits/dots (~10.0s at 60 FPS)
   chompModeDurationAllDots: 600, // Alias for backward compatibility
@@ -53,13 +55,15 @@ export const pacmanConfig = {
   chompKnockback: 14, // Outward knockback impulse delivered to bitten enemies
   chompHitStun: 24, // Hit stun frames on target bitten by Pac-Man
 
-  // ── Ghost Transformation Debuff (Enemy Frightened State) ──
+  // ── Passive Debuff: Blue Ghost Transformation (Enemy Frightened State) ──
   enableGhostTransformation: true,
+  ghostTransformSkillName: 'Blue Ghost Transformation',
   ghostDuration: 360, // Standard duration enemy remains in ghost state (matching Chomp Mode)
   allFruitsGhostDuration: 600, // Extended duration when all fruits are cleared (matching allFruitsChompModeDuration)
 
-  // ── Swallowed Enemy Digestion (Damage Per Second) ──
+  // ── Passive: Swallowed Enemy Digestion (Damage Per Second) ──
   enableSwallowedDps: true,
+  swallowedDpsSkillName: 'Swallowed Digestion',
   swallowedDpsInterval: 60, // Damage tick interval in frames (60 frames = 1.0 second)
   swallowedDamagePercentPerSecond: 0.05, // Deals 5% max HP damage every second while swallowed
   swallowedDpsFlatDamage: 25, // Fallback flat damage if maxHp is unavailable

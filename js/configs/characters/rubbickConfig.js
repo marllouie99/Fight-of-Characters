@@ -29,6 +29,7 @@ export const rubbickConfig = {
 
   // ── Basic Attack: Arcane Bolt ──
   enableArcaneBolt: true,    // Master toggle for Arcane Bolt basic attack
+  arcaneBoltSkillName: 'Arcane Bolt',
   boltDamage: 12,
   boltSpeed: 8,
   bounceCount: 4,
@@ -38,6 +39,7 @@ export const rubbickConfig = {
 
   // ── Skill 1: Telekinesis ──
   enableTelekinesis: true,   // Master toggle for Telekinesis
+  telekinesisSkillName: 'TELEKINESIS',
   telekinesisCooldown: 1000,
   telekinesisDuration: 200, // Frames target is held in air
   telekinesisStunRadius: 100, // AoE stun on landing
@@ -47,6 +49,7 @@ export const rubbickConfig = {
 
   // ── Ultimate: Spell Steal ──
   enableSpellSteal: true,    // Master toggle for Spell Steal ultimate
+  spellStealSkillName: 'SPELL STEAL',
   spellStealCooldown: 700,
   spellStealDuration: 1000, // Duration stolen skill remains active (frames)
   spellStealRange: 350,

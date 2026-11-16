@@ -29,7 +29,8 @@ export const knightConfig = {
     goldSword: 'Assets/model/knight/Knight_goldsword.png',
   },
 
-  // Shield Defense & Deflection Hit-Pause
+  // ── Passive: Tower Shield Defense & Deflection Hit-Pause ──
+  towerShieldSkillName: 'TOWER SHIELD',
   shieldBlockChance: 1.0,         // 100% block chance: tower shield passively blocks every incoming attack while active
   blockAllSkills: true,           // Passively blocks all skills, beams, lasers, spells, and explosions while shield is active
   blockFlashFrames: 18,
@@ -38,29 +39,32 @@ export const knightConfig = {
   blockMeleeDetectionRadius: 130,
   blockProjectileDetectionRadius: 200,
 
-  // Shield HP, Defense Buff & Broken State Mechanics
+  // ── Passive: Shield HP, Defense Buff & Broken State Mechanics ──
   shieldHp: 200,                   // Starting shield HP
   shieldMaxHp: 200,                // Maximum shield HP
   shieldPassiveDefBuff: 0.40,     // 40% passive damage reduction applied while shield is active
   shieldBrokenDefPenalty: 0.50,   // Loses 50% of passive DEF buff when shield breaks (40% drops to 20%)
 
-  // Shield Break Parry
+  // ── Passive: Shield Break Counter-Parry ──
   enableShieldBreakParry: true,
+  shieldBreakParrySkillName: 'Shield Break Counter-Parry',
   parryHitStunFrames: 28,         // Attacker stun duration on shield break parry
   parryTimeStopFrames: 16,        // Attacker hit-pause duration on shield break parry
   parryKnockback: 11.0,           // Attacker knockback impulse on shield break parry
   parryAnimationFrames: 24,       // Visual parry animation duration
 
-  // Forward Dash Ability (Every 5 seconds)
+  // ── Skill 1: Forward Dash Charge (Every 5 seconds) ──
   enableDash: true,
+  dashSkillName: 'FORWARD DASH',
   dashCooldown: 300,              // 5 seconds at 60 FPS
   dashDuration: 10,               // 10 frames active dash burst (~0.16s)
   dashSpeed: 15.5,                // Forward burst speed
   dashMaxRange: 420,              // Max range to initiate dash
   dashMinRange: 55,               // Won't waste dash if already in close melee contact
 
-  // Broadsword 2-Hit Cleave & Hit-Pause
+  // ── Basic Attack: Broadsword 2-Hit Cleave & Gold Sword Fury ──
   enableMeleeCombo: true,
+  broadswordSkillName: 'Broadsword 2-Hit Cleave',
   swordRange: 75,
   swordCooldown: 38,
   swipeCooldown: 38,

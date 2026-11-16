@@ -45,6 +45,7 @@ export const cjConfig = {
 
   // ── 1.1 STAMINA & FATIGUE SYSTEM ──
   enableStaminaSystem: true,   // Master toggle for stamina & fatigue mechanics
+  staminaSkillName: 'Stamina & Sprint',
   maxStamina: 100,             // 100 max stamina
   staminaDrainRate: 0.38,      // Stamina drained per frame when sprinting/punching (~4.4s full sprint)
   staminaRegenRate: 0.42,      // Stamina regenerated per frame when resting/exhausted (~4.0s full recharge)
@@ -52,6 +53,7 @@ export const cjConfig = {
 
   // ── 2. PASSIVE: RESPECT+ & CHEAT DIALER ──
   enableRespectSystem: true,   // Master toggle for Respect meter and cheat dialing
+  respectSkillName: 'RESPECT+',
   respectGainPerPunch: 2,     // Respect meter gain per brass knuckle hit
   respectGainOnHit: 2,         // Respect gain when taking/blocking hits
   respectCooldownRefund: 90,   // Cooldown refund (1.5s / 90 frames) on active skills when reaching 100% OG
@@ -66,6 +68,7 @@ export const cjConfig = {
 
   // ── 3. BASIC ATTACK: BRASS KNUCKLES STREET BOXING ──
   enableBrassKnuckles: true,   // Master toggle for Brass Knuckles street boxing
+  brassKnucklesSkillName: 'Brass Knuckles CQC',
   meleePunchReach: 30,         // 50px punch reach
   meleePunchArc: (120 * Math.PI) / 180, // 120° wide multi-target frontal arc (Rule 8)
   meleePunchDamage: 3,        // Punch damage
@@ -76,6 +79,7 @@ export const cjConfig = {
 
   // ── 4. SKILL 1: HESOYAM (Health, Armor & $250k Shockwave) ──
   enableHesoyam: true,         // Master toggle for HESOYAM cheat skill
+  hesoyamSkillName: 'HESOYAM',
   hesoyamHpThreshold: 0.50,    // Triggers strictly when CJ loses 50% HP (HP drops to <= 50%)
   hesoyamHealPercent: 0.50,    // Instantly restores 50% of Max HP (permanent)
   hesoyamShieldAmount: 75,     // Equips 75 HP Bulletproof Kevlar Shield (permanent until broken by damage)
@@ -86,6 +90,7 @@ export const cjConfig = {
 
   // ── 5. SKILL 2: ROCKETMAN / YECGAA (DARPA Jetpack & Dual Micro-Uzi Strafe) ──
   enableJetpack: true,         // Master toggle for Jetpack & Dual Uzis
+  jetpackSkillName: 'ROCKETMAN',
   jetpackCooldown: 800,        // 13.3s (800 frames)
   jetpackDuration: 600,        // 10.0s flight duration (600 frames)
   jetpackSpeedMultiplier: 0.70,// Agile jetpack flight speed
@@ -105,6 +110,7 @@ export const cjConfig = {
 
   // ── 6. SKILL 3: GROVESTREET4LIFE (Drive-By Backup) ──
   enableDriveBy: true,         // Master toggle for Greenwood Drive-By
+  driveBySkillName: 'GROVE ST.',
   driveByCooldown: 1000,        // 10.0s (600 frames)
   driveByStayDuration: 300,    // 5.0s (300 frames) staying & drifting in arena per pass
   driveByCarHp: 100,           // Max HP minion health bar (can be targeted and damaged by enemies)
@@ -126,6 +132,7 @@ export const cjConfig = {
 
   // ── 7. ULTIMATE: BAGUVIX (God Mode & Minigun Riot Overdrive) ──
   enableBaguvix: true,         // Master toggle for BAGUVIX God Mode & Minigun
+  baguvixSkillName: 'BAGUVIX - GODMODE',
   baguvixCooldown: 1500,        // 12.0s (720 frames at 60fps) cooldown
   baguvixDuration: 800,        // 5.0s (300 frames) invulnerability
   baguvixSpeedMultiplier: 0.28,// Significantly reduced slow walking speed (~1.54 px/frame) while wielding heavy minigun

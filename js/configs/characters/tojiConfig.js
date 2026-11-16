@@ -36,6 +36,7 @@ export const tojiConfig = {
 
   // Passive: Heavenly Restriction (Tenyo Jubaku)
   enableHeavenlyRestriction: true,   // Master toggle for Heavenly Restriction
+  heavenlyRestrictionSkillName: 'Heavenly Restriction',
   stealthDodgeChance: 0.10,          // Base chance (25%) to physically dodge incoming melee attacks, strikes & projectiles outside domains (displays "MISS!")
   domainDodgeChance: 0.50,           // Increased chance (100%) to physically dodge when inside an enemy Domain Expansion (Heavenly Restriction 0 Cursed Energy stealth!)
   domainDodgeBonus: 0.50,           // Bonus dodge rate added when inside an enemy domain
@@ -57,6 +58,7 @@ export const tojiConfig = {
 
   // Primary Weapon: Tactical Pistol (Basic Attack)
   enablePistol: true,                // Master toggle for Primary Weapon: Tactical Handgun / Pistol (Basic Attack)
+  pistolSkillName: 'Tactical Pistol',
   pistolDamage: 14,                  // Base ballistic true damage per pistol bullet
   pistolCooldown: 22,                // Crisp semi-automatic cadence (~2.7 shots/sec at 60fps)
   pistolRange: 460,                  // Tactical shooting engagement range (px)
@@ -67,6 +69,7 @@ export const tojiConfig = {
 
   // Secondary Cursed Tool: Inverted Spear of Heaven (Amanosakahoko — Ambush Thrust & Skills)
   enableSpear: true,                 // Master toggle for Inverted Spear of Heaven
+  spearSkillName: 'Inverted Spear of Heaven',
   spearRange: 50,                    // Distance required to land melee hit (50px reach)
   spearReach: 50,                    // Alias for reach
   spearCooldown: 32,                 // Crisp assassin attack cooldown (~0.53s swing cadence)
@@ -117,6 +120,7 @@ export const tojiConfig = {
 
   // Secondary Weapon: Split Soul Katana (Shikon Shinjitsu)
   enableKatana: true,                // Master toggle for Secondary Weapon: Split Soul Katana
+  katanaSkillName: 'Split Soul Katana',
   katanaRange: 75,                   // Wide sweep reach (75px)
   katanaCooldown: 300,               // Cooldown between Soul Slashes (5.0 seconds at 60fps)
   katanaDamage: 35,                  // Massive True Damage per slash
@@ -126,6 +130,7 @@ export const tojiConfig = {
 
   // Skill: 3-Stage Ambush Move Sequence (Fukushū no Shinsoku)
   enableAmbush: true,                // Master toggle for 3-Stage Ambush Sequence
+  ambushSkillName: 'STEALTH AMBUSH',
   ambushVoiceChance: 0.50,           // 50% chance to play Toji voiceline during 3-Stage Ambush Move Sequence
   ambushTriggerFrames: 55,           // Frames before stealth cooldown ends when ambush triggers
   ambushFirstTeleportFrames: 25,     // 1st Sequence: 1st teleport duration (frames) in front of target before backstab
@@ -147,6 +152,7 @@ export const tojiConfig = {
 
   // Ultimate: Curse Inventory - Full Arsenal Unleashed (Kinkō Sōkō)
   enableUltimate: true,              // Master toggle for Ultimate: Full Arsenal Unleashed
+  ultimateSkillName: 'CURSE INVENTORY',
   ultimateCooldown: 1500,            // 25.0s cooldown (1500 frames)
   ultimateChargeTime: 90,            // 1.5s channeling windup duration before vanishing (90 frames)
   ultimateSwarmDuration: 500,        // Total ultimate duration (frames)

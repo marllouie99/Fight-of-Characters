@@ -39,6 +39,7 @@ export const johnWickConfig = {
 
   // ── 2. PASSIVE 1: BALLISTIC TAILORED SUIT & FOCUS ──
   enableBallisticSuit: true,         // Master toggle for Ballistic Tailored Suit passive
+  ballisticSuitSkillName: 'Ballistic Tailored Suit',
   ballisticSuitDamageReduction: 0.10, // 10% flat damage mitigation against all incoming attacks
   ballisticSuitDeflectSparks: true,   // Triggers Kevlar deflection sparks & audio on absorbing incoming hits
   ballisticSuitShimmerDuration: 14,   // Duration (frames) of hexagonal carbon-weave shimmer overlay on suit
@@ -49,6 +50,7 @@ export const johnWickConfig = {
 
   // ── 3. PRIMARY WEAPON: TTI PIT VIPER 9mm (PISTOL) ──
   enablePistol: true,                 // Master toggle for TTI Pit Viper 9mm pistol
+  pistolSkillName: 'TTI PIT VIPER',
   magazineSize: 12,                   // Rounds per magazine
   fireCooldown: 26,                   // ~0.43s between shots (26 frames at 60fps)
   bulletDamage: 6,                    // Base damage per 9mm projectile (72 total per mag)
@@ -70,6 +72,7 @@ export const johnWickConfig = {
 
   // ── 3.5. SECONDARY WEAPON: BENELLI M4 TACTICAL SHOTGUN ──
   enableShotgun: true,                // Master toggle for Benelli M4 shotgun
+  shotgunSkillName: 'BENELLI M4',
   shotgunMagazineSize: 6,             // 6 12-gauge shells per tube
   shotgunFireCooldown: 52,            // ~0.86s between shotgun blasts (52 frames)
   shotgunPelletCount: 6,              // 6 heavy buckshot pellets per blast
@@ -97,6 +100,7 @@ export const johnWickConfig = {
 
   // ── 3.6. TERTIARY WEAPON: TTI M4 / BCM CARBINE (M4 RIFLE) ──
   enableRifle: true,                  // Master toggle for M4 Rifle
+  rifleSkillName: 'M4 CARBINE',
   rifleMagazineSize: 20,              // 20 rounds 5.56x45mm NATO per PMAG
   rifleFireCooldown: 11,              // Machine gun auto-fire cadence (~5.5 shots/s, 11 frames per shot)
   rifleBulletDamage: 4,               // Base damage per 5.56 rifle round (80 total per mag)
@@ -119,6 +123,7 @@ export const johnWickConfig = {
 
   // ── 4. CLOSE-QUARTERS COMBAT (CQC) MARTIAL ARTS ──
   enableCQC: true,                    // Master toggle for CQC martial arts
+  cqcSkillName: 'Close-Quarters Combat',
   meleePunchReach: 85,                // 85px punch reach
   meleePunchArc: (130 * Math.PI) / 180, // 130° wide frontal arc
   meleePunchDamage: 5,                // Base CQC strike damage
@@ -130,6 +135,7 @@ export const johnWickConfig = {
 
   // ── 5. SKILL 1: TACTICAL COMBAT ROLL & EVADE INTANGIBILITY ──
   enableTacticalRoll: true,           // Master toggle for Tactical Combat Roll & Evade
+  tacticalRollSkillName: 'Tactical Combat Roll',
   rollCooldown: 240,                  // 4.0s cooldown between tactical rolls (240 frames)
   rollDistance: 150,                  // Roll dash travel distance in pixels
   rollDuration: 18,                   // 18 frames roll animation
@@ -145,6 +151,7 @@ export const johnWickConfig = {
 
   // ── 6. SKILL 2: THE INFAMOUS NO. 2 PENCIL (ASSASSINATION) ──
   enablePencil: true,                 // Master toggle for No. 2 Pencil assassination
+  pencilSkillName: 'No. 2 Pencil Assassination',
   pencilCooldown: 500,                // ~8.3s cooldown (500 frames)
   pencilReach: 60,                    // 60px strike reach
   pencilDamage: 30,                   // True Damage (ignores defense/armor)
@@ -187,6 +194,7 @@ export const johnWickConfig = {
 
   // ── 9. ULTIMATE SKILL: EXCOMMUNICADO / CONTINENTAL EXECUTION (M4 RIFLE ASCENSION) ──
   enableExcommunicado: true,               // Master toggle for Excommunicado ultimate
+  excommunicadoSkillName: 'EXCOMMUNICADO',
   excommunicadoDefMultiplier: 1.30,        // 1.3x DEF multiplier while wielding M4 Rifle
   excommunicadoEvadeMultiplier: 1.25,      // Evade boost multiplier
   excommunicadoEvadeChance: 0.10,          // 10% Evade dodge chance in Excommunicado state

@@ -977,7 +977,11 @@ export class GokuFighter extends Fighter {
       const d = Math.hypot(opponent.x - this.x, opponent.y - this.y);
       if (d <= this.r + (opponent.r || 25) + 15) {
         const dmg = Math.round((cfg.kaiokenDamage || 45) * dmgMult);
-        opponent.takeDamage(dmg, this, { isPhysical: true, bypassBlock: true, bypassShield: true });
+        const kaiokenApplied = opponent.takeDamage(dmg, this, { isPhysical: true, bypassBlock: true, bypassShield: true });
+        if (kaiokenApplied === false && opponent.characterId === 'roaring_knight') {
+          this.isKaiokenActive = false;
+          return;
+        }
         if (typeof opponent.applyHitStun === 'function') {
           opponent.applyHitStun(cfg.kaiokenStunFrames || 60);
         }

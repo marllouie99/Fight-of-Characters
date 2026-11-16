@@ -1482,6 +1482,8 @@ export function drawDecoratedFighterName(ctx, name, x, y, options = {}) {
   if (options.stroke) {
     ctx.strokeStyle = options.strokeColor || '#000000';
     ctx.lineWidth = (typeof options.strokeWidth === 'number') ? options.strokeWidth : 1.5;
+    if (options.lineJoin) ctx.lineJoin = options.lineJoin;
+    if (options.miterLimit !== undefined) ctx.miterLimit = options.miterLimit;
   }
 
   if (!match) {
@@ -1724,7 +1726,32 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
     return color;
   };
 
+  const isRoaringKnight = (f) => {
+    if (!f) return false;
+    const charId = String(f.characterId || f.type || (f._def && (f._def.id || f._def.type)) || '').toLowerCase();
+    return charId === 'roaring_knight' || charId === 'roaringknight';
+  };
+
+  const getKnightAwareNameOpts = (entry, normalStrokeWidth, knightStrokeWidth) => {
+    if (entry && entry.isKnight) {
+      return {
+        color: '#050609',
+        stroke: true,
+        strokeColor: '#FFFFFF',
+        strokeWidth: knightStrokeWidth,
+        lineJoin: 'miter',
+        miterLimit: 2
+      };
+    }
+    return {
+      color: entry.color,
+      stroke: !isDark,
+      strokeWidth: normalStrokeWidth
+    };
+  };
+
   const getHudNameColor = (f, fallbackColor) => {
+    if (isRoaringKnight(f)) return '#050609';
     let color = getFighterThemeColor(f, fallbackColor);
     if (typeof color === 'string' && /^[0-9a-fA-F]{3,8}$/.test(color)) {
       color = '#' + color;
@@ -1783,13 +1810,15 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   const team0Data = team0.map(f => ({
     name: getFighterDisplayName(f, true),
     color: getHudNameColor(f, '#38BDF8'),
-    fighter: f
+    fighter: f,
+    isKnight: isRoaringKnight(f)
   }));
 
   const team1Data = team1.map(f => ({
     name: getFighterDisplayName(f, true),
     color: getHudNameColor(f, '#F87171'),
-    fighter: f
+    fighter: f,
+    isKnight: isRoaringKnight(f)
   }));
 
   const isGrandBattleMode = Boolean(
@@ -1829,11 +1858,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
         ctx.translate(-x, -baseY);
       }
       ctx.fillStyle = td.color;
-      drawDecoratedFighterName(ctx, td.name, x, baseY, {
-        color: td.color,
-        stroke: !isDark,
-        strokeWidth: 0.5
-      });
+      drawDecoratedFighterName(ctx, td.name, x, baseY, getKnightAwareNameOpts(td, 0.5, 3.0));
       ctx.restore();
     };
 
@@ -2001,12 +2026,14 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       const leftData = leftFighters.map(f => ({
         name: getFighterDisplayName(f, true),
         color: getHudNameColor(f, '#38BDF8'),
-        fighter: f
+        fighter: f,
+        isKnight: isRoaringKnight(f)
       }));
       const rightData = rightFighters.map(f => ({
         name: getFighterDisplayName(f, true),
         color: getHudNameColor(f, '#F87171'),
-        fighter: f
+        fighter: f,
+        isKnight: isRoaringKnight(f)
       }));
       drawHorizontalTopWallHud(leftFighters, rightFighters, leftData, rightData);
     }
@@ -2074,11 +2101,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       ctx.font = customFighterFont;
       if ('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
       ctx.fillStyle = td.color;
-      drawDecoratedFighterName(ctx, td.name, x, y, {
-        color: td.color,
-        stroke: !isDark,
-        strokeWidth: 0.5
-      });
+      drawDecoratedFighterName(ctx, td.name, x, y, getKnightAwareNameOpts(td, 0.5, 6.0));
     };
 
     // Render Team 0 (Left Side)
@@ -2112,7 +2135,8 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
   } else {
     const fighterData = mainFighters.map(f => ({
       name: getFighterDisplayName(f, true),
-      color: getHudNameColor(f, '#F8FAFC')
+      color: getHudNameColor(f, '#F8FAFC'),
+      isKnight: isRoaringKnight(f)
     }));
 
     if (fighterData.length === 3) {
@@ -2136,11 +2160,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       // 1. Top Centered Fighter (Player 1) - Uniform Fixed Font Size
       ctx.save();
       ctx.textAlign = 'center';
-      drawDecoratedFighterName(ctx, fighterData[0].name, centerX, topY, {
-        color: fighterData[0].color,
-        stroke: !isDark,
-        strokeWidth: 1.5
-      });
+      drawDecoratedFighterName(ctx, fighterData[0].name, centerX, topY, getKnightAwareNameOpts(fighterData[0], 1.5, 4.5));
       ctx.restore();
 
       // 2. Center "VS" Emblem
@@ -2165,21 +2185,13 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
       // Player 2 (Left - aligned to left)
       ctx.save();
       ctx.textAlign = 'left';
-      drawDecoratedFighterName(ctx, fighterData[1].name, leftX, bottomY, {
-        color: fighterData[1].color,
-        stroke: !isDark,
-        strokeWidth: 1.5
-      });
+      drawDecoratedFighterName(ctx, fighterData[1].name, leftX, bottomY, getKnightAwareNameOpts(fighterData[1], 1.5, 4.5));
       ctx.restore();
 
       // Player 3 (Right - aligned to right)
       ctx.save();
       ctx.textAlign = 'right';
-      drawDecoratedFighterName(ctx, fighterData[2].name, rightX, bottomY, {
-        color: fighterData[2].color,
-        stroke: !isDark,
-        strokeWidth: 1.5
-      });
+      drawDecoratedFighterName(ctx, fighterData[2].name, rightX, bottomY, getKnightAwareNameOpts(fighterData[2], 1.5, 4.5));
       ctx.restore();
 
       ctx.restore();
@@ -2215,11 +2227,7 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
         ctx.font = nameFont;
         if ('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
         ctx.fillStyle = fd.color;
-        drawDecoratedFighterName(ctx, fd.name, startX, textY, {
-          color: fd.color,
-          stroke: !isDark,
-          strokeWidth: 1.5
-        });
+        drawDecoratedFighterName(ctx, fd.name, startX, textY, getKnightAwareNameOpts(fd, 1.5, 5.5));
         startX += measureDecoratedFighterName(ctx, fd.name);
 
         if (i < fighterData.length - 1) {

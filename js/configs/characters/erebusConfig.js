@@ -20,7 +20,8 @@ export const erebusConfig = {
   ability: 'Black Hole',
   desc: 'Summons a black hole near the opponent, dragging them in and dealing damage over time.',
 
-  // Skill Tuning (CONFIG.black)
+  // ── Basic Attack & Skill 1: Shadow Bolts & Abyssal Black Hole ──
+  blackHoleSkillName: 'Abyssal Black Hole',
   shotCooldown: 35,   // frames between shots (normal fire rate)
   blackHoleChance: 0.00, // 100% chance for projectile to become black hole
   blackHoleRadius: 95,   // radius of black hole effect

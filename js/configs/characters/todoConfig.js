@@ -33,6 +33,7 @@ export const todoConfig = {
 
     // Basic Combat & Stats
     enableBasicPunch: true,       // Master toggle for basic melee punch
+    basicPunchSkillName: 'Heavy Martial Fist',
     baseDamageReduction: 0.05,    // 5% passive damage reduction (Grade 1 Cursed Energy brawler physique)
     zoneDamageReduction: 0.20,    // 20% damage reduction while in the Zone / Black Flash window
     counterStanceDamageReduction: 0.25, // 25% damage reduction during Rock Proximity Counter-Attack sequence
@@ -50,6 +51,7 @@ export const todoConfig = {
 
     // Skill 1: Boogie Woogie (Clap Teleport & Teammate Rescue)
     enableBoogieWoogie: true,     // Master toggle for Boogie Woogie clap swap
+    boogieWoogieSkillName: 'BOOGIE WOOGIE',
     clapCooldown: 200,            // Cooldown in frames between Boogie Woogie claps (2.0 seconds at 60fps)
     blackFlashWindow: 45,         // Window in frames after swapping where next punch triggers Black Flash (0.75 seconds)
     vanishDurationFrames: 3,      // Duration in frames (at 60fps) where Todo vanishes during swap (~0.05s)
@@ -67,6 +69,7 @@ export const todoConfig = {
 
     // Skill 2: Cursed Rock & Sequence Tuning
     enableCursedRock: true,       // Master toggle for Cursed Rock throws & counter sequences
+    cursedRockSkillName: 'CURSED ROCK',
     maxRocks: 1,                  // Maximum active rocks allowed in arena at any time
     rockCooldown: 180,            // Base cooldown in frames between rock sequence attempts (3.0 seconds at 60fps)
     sequenceCooldown: 180,        // Cooldown in frames after completing a combo disengage before starting next sequence (3.0s)
@@ -91,6 +94,7 @@ export const todoConfig = {
 
     // Ultimate Skill: Takada-chan Idol Imagination (530,000 IQ Idol Multiplier)
     enableTakadaUltimate: true,   // Master toggle for Takada-chan ultimate
+    takadaSkillName: 'IDOL MOTIVATION',
     ultCooldown: 1200,            // Ultimate cooldown in frames (20.0 seconds at 60fps)
     ultDuration: 1000,             // Ultimate active duration in frames (8.0 seconds at 60fps)
     channelDuration: 180,         // Channeling windup duration in frames (3.0 seconds at 60fps)

@@ -1118,7 +1118,11 @@ export class NamelessDeityFighter extends Fighter {
               }
             }
 
-            const isVictimImmune = interactionManager.isBeamImmune(f, this, 'nameless_destroyer');
+            const isVictimImmune = interactionManager.isBeamImmune(f, this, 'nameless_destroyer') ||
+              (typeof f.tryParryExternalCC === 'function' && f.tryParryExternalCC(this, { isBeam: true, isBeamDPS: true, isNamelessBeam: true, isNamelessDeityBeam: true }));
+            if (f.characterId === 'roaring_knight' && isVictimImmune) {
+              continue;
+            }
 
             // 1. Cosmic Gravitational Suction: Pull target directly into the beam's central axis
             const lineX = startX + Math.cos(this.destroyerCastAngle) * projLen;

@@ -61,6 +61,7 @@ export const unarmedConfig = {
 
   // ── 1. Official Earclacks Gimmick: Permanent Momentum & Speed Scaling ──
   enableMomentumScaling: true,      // Master toggle for Permanent Momentum & Speed Scaling
+  momentumScalingSkillName: 'Permanent Momentum Scaling',
   enableBallSteering: false,        // Pure natural physical ricochets without artificial steering towards opponent
   maxMomentumStacks: null,          // Uncapped: Momentum stacks scale infinitely with every hit connected (zero cap)
   speedPerHit: 0.50,                // +1.00 permanent max speed per enemy hit
@@ -77,6 +78,7 @@ export const unarmedConfig = {
   // ── 2. Basic Attack: Kinetic Bump (Deals damage & gains speed on bumps) ──
   enableKineticBump: true,          // Master toggle for Basic Attack: Kinetic Bump
   basicAttackName: 'Kinetic Bump',
+  kineticBumpSkillName: 'KINETIC BUMP',
   basicAttackDesc: 'Bumps into the enemy to deal kinetic damage, permanently scaling speed and damage.',
   collisionCooldownMax: 18,         // Recovery frames between consecutive bumps (~0.30s)
 
@@ -96,6 +98,7 @@ export const unarmedConfig = {
 
   // ── 4. Skill 1: Kinetic Surge (Rapid directional rocket propulsion) ──
   enableKineticSurge: true,         // Master toggle for Skill: Kinetic Surge burst dash
+  kineticSurgeSkillName: 'KINETIC SURGE',
   kineticSurgeCooldownMax: 280,     // ~4.6s cooldown
   kineticSurgeSpeed: 16.0,          // Burst speed
   kineticSurgeDuration: 18,         // Surge active frames (~0.30s)
@@ -104,6 +107,7 @@ export const unarmedConfig = {
 
   // ── 5. Skill 2 / Ultimate: Super Unarmed (Official Earclacks Super Form & Empowered Stun) ──
   enableSuperUnarmed: true,         // Master toggle for Ultimate: Super Unarmed Overdrive
+  superUnarmedSkillName: 'SUPER UNARMED',
   superUnarmedHitsRequired: 10,      // Hits required on enemies to activate Super Unarmed
   enableSuperBumpStun: true,        // Master toggle for 2X damage and long stun on next bump when Super Unarmed is primed
   superBumpDamageMultiplier: 2.0,   // 2X multiplier applied to current damage on the empowered Super Bump
@@ -116,6 +120,7 @@ export const unarmedConfig = {
 
   // ── 6. Evade Mechanic: Kinetic Evasion (Gains evade chance for each hit) ──
   enableEvade: 0,                // Master toggle for Evade mechanic
+  evadeSkillName: 'Kinetic Evasion',
   baseEvadeChance: 0.00,            // 5% baseline evade chance
   evadeBonusPerHit: 0.00,           // +3% evade chance gained per hit
   maxEvadeChance: 0.0,             // 65% max evade cap

@@ -38,6 +38,7 @@ export const nanamiConfig = {
 
   // Passive: Overtime (Jigai)
   enableOvertime: true,             // Master toggle for Overtime (Jigai)
+  overtimeSkillName: 'OVERTIME',
   overtimeThresholdSeconds: 25,     // Activates after 25s elapsed in the round
   overtimeHpThreshold: 0.40,        // Or when HP drops below 40%
   overtimeDamageMultiplier: 2.20,   // Balanced +20% damage boost
@@ -55,6 +56,7 @@ export const nanamiConfig = {
 
   // Passive: Ratio Technique (7:3 — Shichisan no Jutsu)
   enableRatioTechnique: true,       // Master toggle for Ratio Technique
+  ratioSkillName: 'Ratio Technique (7:3)',
   ratioCritMultiplier: 2.0,         // 2.0x True Damage in Standard shift
   overtimeRatioCritMultiplier: 1.80,// 1.8x True Damage in Overtime (prevents multiplicative one-shots)
   ratioBaseCritChance: 0.15,        // 15% base ratio critical rate in standard shift (balanced from 30%)
@@ -83,6 +85,7 @@ export const nanamiConfig = {
 
   // Primary Melee: Blunt Cleaver Chop (Frontal Arc — Rule 7)
   enableCleaver: true,              // Master toggle for Primary Melee: Blunt Cleaver Chop
+  cleaverSkillName: 'Blunt Cleaver Chop',
   cleaverRange: 55,                 // 65px melee reach
   cleaverArc: (130 * Math.PI) / 180,// 130° frontal arc
   cleaverDamage: 30,                 // Base chop damage
@@ -96,6 +99,7 @@ export const nanamiConfig = {
 
   // Skill 1: Decisive Strike / Ratio Lunge (Shichisan Issen)
   enableLunge: true,                // Master toggle for Skill 1: Ratio Lunge
+  lungeSkillName: 'DECISIVE STRIKE',
   lungeCooldown: 500,               // 7.0s (420 frames)
   lungeDamage: 14,                  // Base path cleave damage
   lungeCritDamage: 50,              // 36 True Damage on 7:3 Critical primary hit
@@ -111,6 +115,7 @@ export const nanamiConfig = {
 
   // Skill 2: Collapse (Tōka / Falling Rubble)
   enableCollapse: false,             // Master toggle for Skill 2: Collapse
+  collapseSkillName: 'COLLAPSE',
   collapseCooldown: 600,            // 10.0s (600 frames)
   collapseRadius: 200,              // 200px AOE shockwave
   collapseDamage: 24,               // 24 AOE Damage
@@ -127,6 +132,7 @@ export const nanamiConfig = {
 
   // Ultimate: 4-Fold Black Flash Blitz (Kokusen Renpatsu)
   enableBlackFlash: 0,           // Master toggle for Ultimate: 4-Fold Black Flash Blitz
+  blackFlashSkillName: '4-FOLD BLACK FLASH',
   ultimateCooldown: 1800,           // 25.0s (1500 frames)
   ultimateVoicelineChannelDuration: 75, // Voiceline channeling/windup duration (frames) before voiceline ends
   ultimatePostVoicelineDelay: 15,   // Delay frames after voiceline finishes before triggering the 1st Black Flash strike

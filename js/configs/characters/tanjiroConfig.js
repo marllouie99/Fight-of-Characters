@@ -39,17 +39,20 @@ export const tanjiroConfig = {
 
   // Passive 1: Scent of the Opening Thread
   enableOpeningThread: true,        // Master toggle for Passive 1: Scent of the Opening Thread
+  openingThreadSkillName: 'Opening Thread',
   threadHpThreshold: 0.40,     // Triggers below 40% enemy HP
   threadCritChance: 0.25,      // +25% crit chance
   threadArmorPen: 0.35,        // 35% armor penetration
 
   // Passive 2: Total Concentration: Constant
   enableTotalConcentration: true,   // Master toggle for Passive 2: Total Concentration
+  totalConcentrationSkillName: 'Total Concentration: Constant',
   concentrationSpeedBonus: 0.12,
   concentrationCdrBonus: 0.15,
 
   // Basic Attack: Water Breathing 3-Hit Flow (140° Frontal Arc)
   enableWaterBreathing: true,       // Master toggle for Basic Attack: Water Breathing
+  waterBreathingSkillName: 'Water Breathing 3-Hit Flow',
   katanaArcAngle: Math.PI * 0.778, // ~140 degrees
   katanaReach: 80,
   hit1Damage: 18,
@@ -61,6 +64,7 @@ export const tanjiroConfig = {
 
   // Skill 1: Water Tenth Form: Constant Flux
   enableConstantFlux: true,         // Master toggle for Skill 1: Constant Flux
+  constantFluxSkillName: 'CONSTANT FLUX',
   fluxCooldown: 270,           // 4.5s
   fluxReach: 90,
   fluxHit1Damage: 16,
@@ -69,6 +73,7 @@ export const tanjiroConfig = {
 
   // Skill 2: Sun Breathing: Clear Blue Sky
   enableClearBlueSky: true,         // Master toggle for Skill 2: Clear Blue Sky
+  clearBlueSkySkillName: 'CLEAR BLUE SKY',
   sunCooldown: 360,            // 6.0s
   sunRadius: 75,
   sunDamage: 35,
@@ -77,6 +82,7 @@ export const tanjiroConfig = {
 
   // Ultimate: Hinokami Kagura: Dragon Sun Halo Head Dance
   enableDragonSunDance: true,       // Master toggle for Ultimate: Dragon Sun Halo Head Dance
+  dragonSunDanceSkillName: 'DRAGON SUN DANCE',
   ultimateCooldown: 1440,      // 24.0s
   ultimateStrikes: 4,
   ultimateStrikeDamage: 20,

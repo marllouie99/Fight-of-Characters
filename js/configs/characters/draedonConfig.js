@@ -52,6 +52,7 @@ export const draedonConfig = {
   // Basic Attack: Twin Exo-Pulse Blaster
   // ──────────────────────────────────────────
   enableExoPulse: true,
+  exoPulseSkillName: 'Twin Exo-Pulse Blaster',
   pulseDamage: 12,
   pulseSpeed: 12.0,
   pulseCount: 2,
@@ -61,6 +62,7 @@ export const draedonConfig = {
   // Skill 1: Ares Gauss Artillery (Homing Missile Volley)
   // ──────────────────────────────────────────
   enableAresArtillery: true,
+  aresArtillerySkillName: 'Ares Gauss Artillery',
   artilleryCooldown: 380,
   artilleryRocketCount: 4,
   artilleryDamagePerRocket: 9,
@@ -73,6 +75,7 @@ export const draedonConfig = {
   // Skill 2: Thanatos Energy Matrix (Refractive Armor & Shockwave)
   // ──────────────────────────────────────────
   enableThanatosMatrix: true,
+  thanatosMatrixSkillName: 'Thanatos Energy Matrix',
   matrixCooldown: 440,
   matrixDuration: 120,
   matrixDamageReduction: 0.35,  // 35% incoming damage mitigation while active
@@ -84,6 +87,7 @@ export const draedonConfig = {
   // Skill 3: Artemis & Apollo Cross-Lasers (Precision Strafe)
   // ──────────────────────────────────────────
   enableArtemisApolloLasers: true,
+  artemisApolloSkillName: 'Artemis & Apollo Cross-Lasers',
   crossLaserCooldown: 480,
   crossLaserDamage: 36,
   crossLaserRange: 450,
@@ -94,6 +98,7 @@ export const draedonConfig = {
   // Ultimate: Exo Electric Disintegrator (Multi-Stream Plasma Melting Beam)
   // ──────────────────────────────────────────
   enableExoDisintegrator: true,
+  exoDisintegratorSkillName: 'Exo Electric Disintegrator',
   disintegratorCooldown: 820,
   disintegratorWindupFrames: 40,   // High-voltage coil charging & arcs
   disintegratorFireFrames: 95,     // Searing continuous disintegration beam

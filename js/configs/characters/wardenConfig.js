@@ -48,6 +48,7 @@ export const wardenConfig = {
 
   // ── Passive: Sculk Echolocation & The Anger Engine ──
   enableEcholocation: true,
+  echolocationSkillName: 'ANGER',
   maxAnger: 100,
   angerDecayCadence: 30, // Ticks before anger decays by 1 point if no vibrations detected
   angerPerFootstep: 3, // Anger gained per enemy high-speed dash or step
@@ -60,6 +61,7 @@ export const wardenConfig = {
 
   // ── Basic Attack: Heavy Sculk Pulverize (Rule 30 Melee Combat) ──
   enableSculkPunch: true,
+  sculkPunchSkillName: 'Heavy Sculk Pulverize',
   basicAttackDamage: 42,
   enragedAttackDamage: 62,
   basicAttackCooldown: 48,
@@ -73,6 +75,7 @@ export const wardenConfig = {
 
   // ── Skill 1: Darkness Pulse (Deep Dark Blindness Stasis) ──
   enableDarknessPulse: true,
+  darknessPulseSkillName: 'DARKNESS PULSE',
   darknessCooldown: 480, // 8.0s cooldown
   darknessRadius: 240,
   darknessDuration: 150, // 2.5s duration
@@ -80,6 +83,7 @@ export const wardenConfig = {
 
   // ── Skill 2: Sculk Tendril Sniff (Stealth Tracking & Ground Trap) ──
   enableSculkSniff: true,
+  sculkSniffSkillName: 'SCULK SNIFF',
   sniffCooldown: 380, // ~6.3s cooldown
   sniffDuration: 40,
   trapDuration: 45, // 0.75s root/snare duration
@@ -87,6 +91,7 @@ export const wardenConfig = {
 
   // ── Ultimate: SCULK SONIC BOOM (Rule 1.4 & Rule 26 Piercing Supersonic Blast) ──
   enableSonicBoom: true,
+  sonicBoomSkillName: 'SONIC BOOM',
   sonicBoomCooldown: 720, // 12.0s cooldown
   sonicBoomChargeFrames: 45, // 0.75s telegraphed chest charging
   sonicBoomBeamFrames: 24, // 0.40s active beam duration

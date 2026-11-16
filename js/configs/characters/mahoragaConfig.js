@@ -36,6 +36,7 @@ export const mahoragaConfig = {
 
     // ── Neutral Close-Quarters Attack-Teleport Stance ──
     enableCloseQuartersTeleport: true, // Toggle on/off close-quarters teleporting
+    blitzStanceSkillName: 'CQC Attack-Teleport Stance',
     neutralAttacksPerTeleport: 2,
     neutralAttackInterval: 20,
     neutralTeleportDelay: 12,
@@ -43,6 +44,7 @@ export const mahoragaConfig = {
 
     // ── Throw Barrage & Blitz Finishing ──
     enableThrowBarrage: 1,        // Master toggle for debris throw barrage
+    throwSkillName: 'THROW',
     throwCooldown: 2000,
     throwMinDistance: 180,
     throwSpreadAngle: 0.28,
@@ -57,8 +59,9 @@ export const mahoragaConfig = {
     blitzFinisherDamage: 35,
     blitzFinisherKnockback: 35.0,
 
-    // ── Adaptation & RCT Mechanics ──
+    // ── Passive: Eight-Handled Dharma Wheel Adaptation & RCT ──
     enableAdaptation: true,          // Master toggle for Eight-Handled Wheel adaptation
+    wheelSkillName: 'WOA',
     maxAdaptationStages: 8,         // Total adaptation stages (8 clicks = full 360° rotation of Eight-Handled Wheel)
     wheelAdaptationSpeedMultiplier: 0.05, // Movement speed multiplier gained per wheel rotation / adaptation stage (+15% per stage)
     adaptationSpeedBoostPerStage: 0.05, // +15% movement speed multiplier per gold adaptation stage
@@ -102,8 +105,9 @@ export const mahoragaConfig = {
     adaptationDashSpeedFrames: 10,   // Supersonic flash-dash travel frame duration (smaller = faster)
     postDashPauseFrames: 20,         // Duration (frames) Mahoraga pauses in place after dashing forward to enemy before moving naturally (~1.0s @ 60fps)
 
-    // ── Sword of Extermination & Basic Melee Attacks ──
+    // ── Basic Attack: Sword of Extermination ──
     enableSwordOfExtermination: true, // Master toggle for Sword of Extermination basic attacks
+    swordSkillName: 'Sword of Extermination',
     swordRange: 50,               // Melee reach (110px frontal arc) for Sword of Extermination
     swordCooldown: 30,              // Frames between sword strikes (0.5s at 60fps)
     swordDamage: 6,                // True damage dealt by Sword of Extermination
@@ -132,6 +136,7 @@ export const mahoragaConfig = {
 
     // ── Blade Parry & Guard Mechanics (Disabled) ──
     enableParryAndGuard: false,      // Master toggle for blade parry and block guard
+    parrySkillName: 'Blade Parry & Guard',
     parryChancePerStage: 0.0,        // Parry mechanic removed
     parryMaxChance: 0.0,             // Parry mechanic removed
     parryDurationFrames: 25,         // Duration (frames) of snappy blade parry pose
@@ -141,15 +146,17 @@ export const mahoragaConfig = {
     parryDeflectionRecoilForce: 0.0, // Recoil force applied to Mahoraga upon blade parry
     guardDeflectionRecoilForce: 0.0, // Recoil force applied to Mahoraga upon guard block
 
-    // ── Active AoE Cleave Skill ──
+    // ── Skill: Active AoE Cleave (Sweep) ──
     enableCleave: true,              // Master toggle for AoE Cleave
+    cleaveSkillName: 'Active AoE Cleave',
     cleaveCooldown: 600,             // 10 seconds cooldown for Active AoE Cleave
     cleaveRadius: 150,               // Range radius of the AoE Cleave
     cleaveDamage: 40,                // True damage dealt by AoE Cleave
     cleaveWindupFrames: 0,           // Windup frames before Cleave (0 = instant release on the move)
 
-    // ── Divine Shout (AoE Shockwave Roar) ──
+    // ── Skill 1: Divine Shout (AoE Shockwave Roar) ──
     enableDivineShout: true,         // Master toggle for Divine Shout shockwave
+    shoutSkillName: 'DIVINE SHOUT',
     shoutCooldown: 1000,             // Cooldown (frames) between divine shouts (~16.6s)
     shoutRange: 500,                 // Long-range directional sonic boom reach (350px forward reach)
     shoutRadius: 180,                // Backward compatibility alias
@@ -163,7 +170,7 @@ export const mahoragaConfig = {
     shoutSlowDurationFrames: 120,    // Slow duration in frames applied to caught enemies (120 = 2.0s)
     shoutSlowMultiplier: 0.30,       // Slow speed multiplier (0.50 = 50% slow movement)
 
-    // ── Cursed Energy Debris Throw (Rapid Barrage Ranged Skill) ──
+    // ── Skill 2: Cursed Energy Debris Throw (Rapid Barrage Ranged Skill) ──
     throwCooldown: 1600,             // Cooldown between rapid throw barrages
     throwMinDistance: 240,           // Minimum distance required to trigger rapid throw skill
     throwBarrageCount: 10,           // Number of rapid projectiles hurled in a single barrage
@@ -175,6 +182,7 @@ export const mahoragaConfig = {
 
     // ── Hand-to-Hand Blitz Sequence (Melee Flurry + Teleport Chase) ──
     enableH2HBlitz: true,            // Master toggle for Hand-to-Hand Blitz
+    h2hBlitzSkillName: 'Hand-to-Hand Blitz',
     blitzWindupFrames: 14,           // Windup transition frames before starting H2H flurry (~0.23s)
     blitzTotalDurationFrames: 150,   // Total max duration for the entire H2H blitz state (~2.5s)
     blitzMinStayFrames: 20,          // Minimum duration (frames) Mahoraga stays at location before teleporting again
@@ -198,6 +206,7 @@ export const mahoragaConfig = {
 
     // ── Level 8 Wall Slam & Supersonic Execution Combo ──
     enableWallSlam: true,             // Master toggle for Level 8 Wall Slam combo
+    wallSlamSkillName: 'WALL SLAM THROW',
     wallSlamImpaleLiftHeight: 45,     // Visual height (z-axis) when opponent is hoisted on sword
     wallSlamImpaleHoldFrames: 50,     // Duration (frames) opponent is held in the air on the sword
     wallSlamPunchHitpause: 16,        // Frames of freeze/hitpause when the punch lands before wall launch
@@ -212,6 +221,7 @@ export const mahoragaConfig = {
 
     // ── Level 8 Max Adaptation: Speed-Blitz Mode ──
     enableSpeedBlitz: true,            // Master toggle for Level 8 Speed-Blitz stance
+    speedBlitzSkillName: 'Level 8 Speed-Blitz Mode',
     infinityBlitzDurationFrames: 300,  // Active duration (frames) for Level 8 Speed-Blitz stance (5 seconds at 60fps)
     infinityBlitzInterval: 20,         // Frame interval between continuous strikes
     infinityBlitzAttacksPerTeleport: 5,// Number of attacks executed before teleporting to a new angle

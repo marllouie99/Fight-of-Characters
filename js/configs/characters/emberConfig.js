@@ -20,7 +20,8 @@ export const emberConfig = {
   ability: 'Auto-Lock Flamethrower',
   desc: 'Burns enemies with burning effect.',
 
-  // Flamethrower Tuning (CONFIG.orange)
+  // ── Basic Attack & Passive: Auto-Lock Flamethrower & Scorching Burn ──
+  flamethrowerSkillName: 'Auto-Lock Flamethrower',
   flameCount: 5,                  // number of flame particles per burst
   flameSpread: 0.30,              // radians; half-angle of the flame cone (matches V-shape)
   flameSpeed: 0.5,                // speed of each flame particle

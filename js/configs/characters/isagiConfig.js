@@ -43,6 +43,7 @@ export const isagiConfig = {
 
   // ─── Basic Attack: Ego Shot (Soccer Ball Kinetic Drive) ───
   enableEgoShot: true, // Master toggle for basic attack
+  egoShotSkillName: 'Ego Shot',
   egoShotDamage: 24, // Direct hit damage
   egoShotReboundDamage: 32, // Rebound / Bank Volley damage (+33% bonus)
   egoShotSpeed: 14.5, // Fast travel velocity
@@ -58,6 +59,7 @@ export const isagiConfig = {
 
   // ─── Dribble & Ball Control Profile ───
   enableDribble: true, // Master toggle for dribble mechanic
+  dribbleSkillName: 'Kinetic Dribble',
   dribbleControl: 0.96, // 96% spatial pocket ball control (high precision, tight shielding)
   dribbleTightness: 0.85, // Ball stays close to feet in personal spatial pocket
   dribbleLeadDistance: 2, // Minimal forward offset to keep ball sheltered
@@ -69,6 +71,7 @@ export const isagiConfig = {
 
   // ─── Ball Kick Steal & Tackle Mechanics ───
   enableBallSteal: true, // Master toggle for ball kick steal mechanic
+  ballStealSkillName: 'Intercept Tackle',
   ballStealChance: 0.50, // 50% base chance to kick/steal ball when bumping dribbler
   ballStealKickSpeed: 11.0, // Kinetic velocity of the dislodged/stolen ball
   ballStealStaggerDuration: 16, // Frames of hitstun applied to dispossessed dribbler (~0.27s)
@@ -76,6 +79,7 @@ export const isagiConfig = {
 
   // ─── Skill 1: Metavision Slip (Tactical Dodge & Ball Interception Dash) ───
   enableMetavision: true, // Master toggle for Skill 1
+  metavisionSkillName: 'METAVISION',
   metavisionCooldown: 200, // 8.0s cooldown
   metavisionDashDistance: 210, // Tactical reposition distance
   metavisionDashFrames: 30, // Dash duration in frames
@@ -86,6 +90,7 @@ export const isagiConfig = {
 
   // ─── Skill 2: "STRIKER!" (Universal Blue Lock Ultimate / Direct Volley Finisher) ───
   enableStriker: 0, // Master toggle for Skill 2 (Direct Volley Finisher)
+  strikerSkillName: 'STRIKER!',
   strikerCooldown: 1080, // 18.0s cooldown
   strikerWindup: 0, // Zero pause / windup delay (instant volley strike in stride)
   strikerDamage: 75, // Massive finishing blast damage
@@ -107,6 +112,7 @@ export const isagiConfig = {
 
   // ─── Universal Blue Lock Trait: EGO Awakening & Potential Unlocked ───
   enableEgo: 0, // Master toggle for Ego mechanic
+  egoSkillName: 'EGO',
   egoTitle: 'Metavision Flow', // Custom Ego Awakening Title
   maxEgoMeter: 100, // Maximum Ego capacity
   egoGainPerHit: 25, // Ego gained per standard soccer ball hit (+25% = 4 hits to fill)

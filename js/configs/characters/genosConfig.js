@@ -33,6 +33,7 @@ export const genosConfig = {
 
   // Basic Attack: Incineration Palms (Ranged Fire Blasts)
   enableBlast: true,         // Master toggle for Basic Attack: Incineration Palms
+  blastSkillName: 'Incineration Palms',
   blastDamage: 6,
   blastRange: 350,
   blastSpeed: 15,
@@ -41,6 +42,7 @@ export const genosConfig = {
 
   // Basic Attack Ammo & Stance System (Ranged Incineration Fireballs -> Melee Punches)
   enableMeleeStance: true,   // Master toggle for Melee Stance
+  meleeStanceSkillName: 'HEAT AMMO',
   maxHeatAmmo: 20,          // Maximum ranged fireball capacity before switching to melee mode
   ammoReloadFrames: 500,    // Reload cooldown duration (300 frames = 5.0 seconds at 60fps)
   maxMeleeDashes: 10,        // Maximum thruster dashes allowed during Melee Mode
@@ -50,6 +52,7 @@ export const genosConfig = {
 
   // Skill 1: Machine Gun Blows (Flurry)
   enableFlurry: true,        // Master toggle for Skill 1: Machine Gun Blows
+  flurrySkillName: 'MACHINE GUN BLOWS',
   initialFlurryCooldown: 1200,  // Starts on cooldown at match start (~8.0s at 60fps)
   flurryDamage: 7,
   flurryHitCount: 15,
@@ -67,6 +70,7 @@ export const genosConfig = {
   dashes: {
     // Skill 2: Rocket Stomp & Dash
     rocketDash: {
+      skillName: 'Rocket Stomp & Dash',
       enableRocketDash: true, // Master toggle for Skill 2: Rocket Stomp & Dash
       cooldown: 360,     // 6 seconds at 60fps
       distance: 200,     // Distance of the dash (px)
@@ -79,6 +83,7 @@ export const genosConfig = {
     },
     // Melee Stance Thruster Dash
     meleeThrusterDash: {
+      skillName: 'Thruster Stance Dash',
       speedMultiplier: 3.4, // Speed multiplier boost during melee wall dash
       durationFrames: 18,   // Duration of thruster boost (frames)
     },
@@ -102,6 +107,7 @@ export const genosConfig = {
 
   // Ultimate: Spiral Incineration Cannon
   enableUltimate: true,      // Master toggle for Ultimate: Spiral Incineration Cannon
+  ultimateSkillName: 'INCINERATION CANNON',
   initialUltCooldown: 1000, // Initial cooldown at match start (28s at 60fps)
   ultCooldown: 1000, // 28 seconds at 60fps
   ultSlideFrames: 22, // Pre-ultimate cybernetic thruster friction-brake slide duration in frames (~0.36s)
@@ -149,6 +155,7 @@ export const genosConfig = {
 
   // Passive: Core Overdrive (Self-Destruct)
   enableSelfDestruct: true,  // Master toggle for Passive: Core Overdrive (Self-Destruct)
+  selfDestructSkillName: 'SELF DESTRUCT',
   selfDestructHpThreshold: 0.10,    // HP percentage threshold (0.10 = 10% HP) below which Genos initiates Core Overdrive Self-Destruct
   selfDestructCountdownFrames: 150, // 2.5 seconds
   selfDestructDamageReduction: 0.50, // 75% Damage Reduction (DEF) while charging core overload self-destruct

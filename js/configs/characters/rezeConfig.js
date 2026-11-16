@@ -46,6 +46,7 @@ export const rezeConfig = {
 
   // Passive 1: Collar Pin Hybrid Physiology (Explosive Revive)
   enableCollarPinRevive: 1,         // Master toggle for Passive 1: Hybrid Physiology Collar Pin Revive
+  collarPinSkillName: 'Collar Pin Hybrid Revive',
   maxReviveStocks: 1,               // 1 pin-pull revive per round
   reviveHpPercent: 0.50,            // Restores 50% Max HP (170 HP)
   reviveShockwaveRadius: 140,       // Radial explosion blast radius on trigger
@@ -56,6 +57,7 @@ export const rezeConfig = {
 
   // Passive 2: Blast Propulsion
   enableBlastPropulsion: 0,         // Master toggle for Passive 2: Rocket Jet Blast Dash
+  blastPropulsionSkillName: 'Blast Propulsion',
   propulsionBurnDamage: 6,          // Scorch flame damage to enemies caught in jet trail
   propulsionTrailDecay: 0.04,
 
@@ -64,6 +66,7 @@ export const rezeConfig = {
 
   // Human Form — Basic Attack: Tactical Knife Attack
   enableHiddenKnifeCombo: 1,        // Master toggle for Basic Attack: Knife (Human)
+  knifeComboSkillName: 'Tactical Knife Combo',
   knifeDamage: 4,                  // Tactical knife slash damage
   knifeReach: 50,                   // Tactical knife slash reach
   knifeCooldown: 14,                // Clean 14-frame cadence
@@ -73,6 +76,7 @@ export const rezeConfig = {
 
   // Human Form — Aerial Attack: Dive Bomb (Shoulder Vault Stun)
   enableDiveBomb: 0,                // Master toggle for Aerial Attack: Dive Bomb (Human)
+  diveBombSkillName: 'Dive Bomb Vault',
   diveBombCooldown: 220,            // ~3.6s cooldown
   diveBombDamage: 22,               // Knife dive impact damage
   diveBombSpeed: 22.0,              // High-speed aerial descent velocity
@@ -82,6 +86,7 @@ export const rezeConfig = {
 
   // Hybrid Form — Basic Attack: Explosive Martial Arts (120° Frontal Arc & AOE Punch Detonations)
   enableMeleeCombo: 1,              // Master toggle for Basic Attack: Explosive Martial Arts (Hybrid)
+  meleeComboSkillName: 'Explosive Martial Arts',
   punchReach: 75,                   // Punch reach in Bomb Form (65px human fallback)
   punchArcAngle: (120 * Math.PI) / 180, // 120° frontal arc
   punchDamage: 10,                  // Hits 1 & 2 damage
@@ -94,6 +99,7 @@ export const rezeConfig = {
 
   // Primary Skill: Spark Flechette Barrage (Finger Grenades)
   enableSparkFlechette: 0,          // Master toggle for Primary Skill: Spark Flechette Barrage
+  sparkFlechetteSkillName: 'SPARK FLECHETTE',
   sparkCooldown: 180,               // 3.0s cooldown
   sparkCount: 3,                    // 3-projectile spread
   sparkSpeed: 18.0,                 // High-velocity flight speed
@@ -105,6 +111,7 @@ export const rezeConfig = {
 
   // Secondary Skill: 3-Ball Cluster Bomb Spread (Throws 3 small bombs in spread that explode 1 by 1)
   enableClusterBomb: 1,             // Master toggle for Secondary Skill: 3-Ball Cluster Bomb Spread
+  clusterBombSkillName: 'CLUSTER BOMBS',
   enableDecoyBomb: 1,               // Backward compatibility alias for Skill 2 toggle
   clusterBombCooldown: 1000,         // ~5.3s cooldown
   decoyCooldown: 320,               // Backward compatibility alias
@@ -122,6 +129,7 @@ export const rezeConfig = {
 
   // Mobility Skill: Supersonic Rocket Lunge
   enableRocketLunge: 1,             // Master toggle for Mobility Skill: Supersonic Rocket Lunge
+  rocketLungeSkillName: 'ROCKET LUNGE',
   rocketCooldown: 300,              // 5.0s cooldown
   rocketLungeSpeed: 28.0,           // Rocket dash velocity (34.0 in Bomb Form)
   rocketDurationFrames: 24,         // Max dash frame duration
@@ -139,6 +147,7 @@ export const rezeConfig = {
 
   // Ultimate: Bomb Devil Unleashed — Megaton Tsar Nuke
   enableMegatonNuke: 1,             // Master toggle for Ultimate: Megaton Tsar Nuke
+  megatonNukeSkillName: 'MEGATON NUKE',
   enableUltimateFullHeal: 1,        // Master toggle: Fully heal Reze to 100% Max HP when activating Ultimate
   enableHybridLifesteal: 1,         // Master toggle: Vampiric lifesteal during Bomb Devil Form
   hybridLifestealPercent: 0.15,     // 35% of damage dealt recovered as HP during Bomb Devil Form

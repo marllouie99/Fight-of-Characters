@@ -24430,7 +24430,19 @@ async function runInteractionTests() {
         knight.interruptAttacks(true);
       }
 
-      // 8. Verify Black Knife Parry Mechanic (Deltarune Guard Stance, Block VFX, Riposte & Toggle Gate)
+      // 8. Verify Roaring Knight attack voice/noise SFX keys & normalized volumes
+      for (const sfxKey of ['attackVoice1', 'attackVoice2', 'attackGrowl', 'ultRoar', 'stretch', 'powerupWhite', 'puff', 'roar']) {
+        assert(
+          typeof rkCfg.sounds?.[sfxKey] === 'string' && rkCfg.sounds[sfxKey].length > 0,
+          `Roaring Knight sounds.${sfxKey} must be defined`
+        );
+        assert(
+          typeof rkCfg.soundVolumes?.[sfxKey] === 'number' && rkCfg.soundVolumes[sfxKey] > 0,
+          `Roaring Knight soundVolumes.${sfxKey} must be defined > 0`
+        );
+      }
+
+      // 8b. Verify Black Knife Parry Mechanic (Deltarune Guard Stance, Block VFX, Riposte & Toggle Gate)
       const origRand = Math.random;
       const origEnableParry = rkCfg.enableParry;
       try {
@@ -24512,17 +24524,102 @@ async function runInteractionTests() {
         const shrineRes2 = knight.takeDamage(12, distantSukuna, { ...shrineLine1Opts, angle: -Math.PI / 4 });
         assert(shrineRes2 === false && knight.hp === preShrineHp, 'Sukuna shrine wave follow-up slice line must be deflected during wave parry grace');
         assert(distantSukuna.hp === preSukunaHp, 'Spatial domain slice line parry must not deal cross-arena melee riposte to distant Sukuna');
-        // Fuga remains unblockable
+        // Fuga, Gojo Hollow Purple, Yuta Pure Love Beam, Saitama, Toji, Nanami Ratio & Unlimited Void must ALL be parryable,
+        // while strictly honoring real parry percentage (never 100% auto-parry!)
         Math.random = () => 0.0;
         knight.parryCooldownTimer = 0;
         knight._domainParryGraceTimer = 0;
-        const fugaLanded = knight.takeDamage(25, distantSukuna, {
+        const fugaParried = knight.takeDamage(25, distantSukuna, {
           isDomain: true,
           isDivineFlame: true,
           isFuga: true,
           undodgeable: true,
         });
-        assert(fugaLanded !== false && knight.hp < preShrineHp, 'Sukuna Divine Flame (Fuga) must remain unblockable by Roaring Knight parry');
+        assert(fugaParried === false && knight.hp === preShrineHp, 'Sukuna Divine Flame (Fuga) must be parryable by Roaring Knight');
+
+        // Gojo Hollow Purple DPS ticks & end explosion (RNG-based, never 100%)
+        knight.parryCooldownTimer = 0;
+        const mockPurpleProj = { isGojoPurple: true, isGojoPurpleOrb: true, behaviorType: 'gojo_purple', type: 'purple' };
+        const purpleRes1 = knight.takeDamage(25, distantSukuna, {
+          isPurpleDPS: true,
+          isProjectile: true,
+          projectile: mockPurpleProj,
+          bypassShield: true,
+          isGuaranteedHit: true,
+          undodgeable: true,
+        });
+        assert(purpleRes1 === false && knight.hp === preShrineHp, 'Gojo Hollow Purple DPS must be parryable when roll passes');
+        // Failed RNG roll (0.99 >= parryActiveChance 0.70) after cooldown must deal full damage!
+        knight.parryCooldownTimer = 0;
+        Math.random = () => 0.99;
+        const preMissPurpleHp = knight.hp;
+        const purpleMiss = knight.takeDamage(25, distantSukuna, {
+          isPurpleDPS: true,
+          isProjectile: true,
+          projectile: mockPurpleProj,
+          bypassShield: true,
+          isGuaranteedHit: true,
+          undodgeable: true,
+        });
+        assert(purpleMiss !== false && knight.hp < preMissPurpleHp, 'Hollow Purple must land normally when parry RNG roll fails (not 100% parry!)');
+        knight.hp = preShrineHp;
+
+        Math.random = () => 0.0;
+        knight.parryCooldownTimer = 0;
+        const purpleExpRes = knight.takeDamage(80, distantSukuna, {
+          isExplosion: true,
+          isPurpleExplosion: true,
+          isProjectile: true,
+          projectile: mockPurpleProj,
+          bypassShield: true,
+          isGuaranteedHit: true,
+          undodgeable: true,
+        });
+        assert(purpleExpRes === false && knight.hp === preShrineHp, 'Gojo Hollow Purple end detonation must be parryable');
+
+        // Yuta Pure Love Beam (can parry when RNG passes, takes damage when RNG fails!)
+        knight.parryCooldownTimer = 0;
+        const loveBeamRes1 = knight.takeDamage(18, distantSukuna, {
+          isPureLoveBeam: true,
+          bypassShield: true,
+          bypassEvade: true,
+          undodgeable: true,
+          isGuaranteedHit: true,
+        });
+        assert(loveBeamRes1 === false && knight.hp === preShrineHp, 'Yuta Pure Love Beam must be parryable when roll passes');
+        knight.parryCooldownTimer = 0;
+        Math.random = () => 0.99;
+        const loveBeamMiss = knight.takeDamage(18, distantSukuna, {
+          isPureLoveBeam: true,
+          bypassShield: true,
+          bypassEvade: true,
+          undodgeable: true,
+          isGuaranteedHit: true,
+        });
+        assert(loveBeamMiss !== false && knight.hp < preShrineHp, 'Yuta Pure Love Beam must deal damage when parry RNG roll fails (not 100% parry!)');
+        knight.hp = preShrineHp;
+
+        // Saitama Serious Punch, Gojo Red, Nanami Ratio, Toji Ambush, and Unlimited Void CC
+        Math.random = () => 0.0;
+        knight.parryCooldownTimer = 0;
+        assert(knight.takeDamage(60, distantSukuna, { isSeriousPunch: true, isSaitamaPunch: true, isGuaranteedHit: true }) === false, 'Saitama Serious Punch must be parryable');
+        knight.parryCooldownTimer = 0;
+        assert(knight.takeDamage(35, distantSukuna, { isRed: true, bypassEvade: true, isGuaranteedHit: true }) === false, 'Gojo Reversal Red must be parryable');
+        knight.parryCooldownTimer = 0;
+        assert(knight.takeDamage(36, distantSukuna, { isRatioCrit: true, isNanamiPause: true, bypassShield: true }) === false, 'Nanami Ratio Critical must be parryable');
+        knight.parryCooldownTimer = 0;
+        assert(knight.takeDamage(30, distantSukuna, { isAmbushThrust: true, bypassShield: true, undodgeable: true }) === false, 'Toji Ambush must be parryable');
+        knight.parryCooldownTimer = 0;
+        assert(knight.tryParryExternalCC(distantSukuna, { isDomain: true, isGojoDomain: true }) === true, 'Gojo Unlimited Void external CC must be parryable');
+        assert(knight.hp === preShrineHp, 'All parried attacks must leave Roaring Knight HP untouched');
+
+        // Verify parry chance stays strictly below 1.0 (not 100% guarantee)
+        assert(rkCfg.parryPassiveChance < 1 && rkCfg.parryActiveChance < 1, 'Roaring Knight parry chances must remain probabilistic (< 100%)');
+
+        // Internal riposte remains excluded to prevent infinite recursion
+        knight.parryCooldownTimer = 0;
+        const riposteRes = knight.takeDamage(12, dummy, { isMelee: true, isParry: true, isRiposte: true });
+        assert(riposteRes !== false && knight.hp < preShrineHp, 'Internal parry riposte must bypass parry to prevent infinite recursion');
 
         // Verify enableParry toggle disables parry cleanly
         knight.interruptAttacks(true);
@@ -24536,6 +24633,48 @@ async function runInteractionTests() {
         rkCfg.enableParry = origEnableParry;
         knight.timeStopTimer = 0;
         knight.interruptAttacks(true);
+      }
+
+      // 9. Verify Roaring Knight HUD Top Name applies monochrome black-with-white-outline class & Canvas Top Arena Match Name stroke
+      const { buildTopDuelHUD } = await import('../js/graphics/hudManager.js');
+      const { drawArenaMatchNames } = await import('../js/graphics/renderers/arenaRenderer.js');
+      const rkTopHtml = buildTopDuelHUD(knight, dummy, false);
+      assert(
+        rkTopHtml.includes('hud-top-name hud-roaring-knight-name'),
+        'Roaring Knight Top HUD Name must apply hud-roaring-knight-name class for black fill + white outline'
+      );
+      const origHudLayoutStyle = CONFIG.hudLayoutStyle;
+      const origTheme = state.arenaTheme;
+      try {
+        CONFIG.hudLayoutStyle = 'classic';
+        state.arenaTheme = 'dark';
+        const nameCalls = [];
+        const topNameProbeCtx = createMockCtx();
+        const origStrokeText = topNameProbeCtx.strokeText;
+        const origFillText = topNameProbeCtx.fillText;
+        topNameProbeCtx.strokeText = (text, ...rest) => {
+          nameCalls.push({ op: 'stroke', text: String(text), strokeStyle: topNameProbeCtx.strokeStyle, lineWidth: topNameProbeCtx.lineWidth });
+          return origStrokeText(text, ...rest);
+        };
+        topNameProbeCtx.fillText = (text, ...rest) => {
+          nameCalls.push({ op: 'fill', text: String(text), fillStyle: topNameProbeCtx.fillStyle });
+          return origFillText(text, ...rest);
+        };
+        drawArenaMatchNames(topNameProbeCtx, true);
+        assert(topNameProbeCtx.getStackDepth() === 0, 'drawArenaMatchNames must preserve Canvas 2D stack depth 0');
+        const rkStroke = nameCalls.find(c => c.op === 'stroke' && c.text.includes('ROARING KNIGHT'));
+        const rkFill = nameCalls.find(c => c.op === 'fill' && c.text.includes('ROARING KNIGHT'));
+        assert(
+          rkStroke && String(rkStroke.strokeStyle).toUpperCase() === '#FFFFFF' && rkStroke.lineWidth >= 4,
+          `Canvas top arena match name for Roaring Knight must stroke white outline (#FFFFFF), got ${JSON.stringify(rkStroke)}`
+        );
+        assert(
+          rkFill && String(rkFill.fillStyle).toUpperCase() === '#050609',
+          `Canvas top arena match name for Roaring Knight must fill #050609, got ${JSON.stringify(rkFill)}`
+        );
+      } finally {
+        CONFIG.hudLayoutStyle = origHudLayoutStyle;
+        state.arenaTheme = origTheme;
       }
 
       console.log('      ✅ Roaring Knight (Deltarune Ch.3) kit, rules & stack depth 0 verified.');
@@ -25164,6 +25303,179 @@ async function runInteractionTests() {
       state.getFighterTeam = prevGetTeam;
       state.gameState = prevState;
       state.bloodEffects = prevBlood;
+    }
+  }
+
+  {
+    console.log('\n[TEST 179] Config Skill Name Properties -> HUD Skill Label Override Verification...');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const prevEnableMantle = CONFIG.roaring_knight.enableShadowMantle;
+    const prevKnightMantle = CONFIG.roaring_knight.shadowMantleSkillName;
+    const prevKnightSkill1 = CONFIG.roaring_knight.skill1Name;
+    const prevGojoRed = CONFIG.gojo.redSkillName;
+    const prevMahitoMult = CONFIG.mahito.soulMultiplicity.skillName;
+    const prevGutsS1 = CONFIG.guts.skill1Name;
+    const prevUnarmedBump = CONFIG.unarmed.kineticBumpSkillName;
+    try {
+      CONFIG.roaring_knight.enableShadowMantle = true;
+      const knightMock = { type: 'roaring_knight', shadowStepCooldownTimer: 0, skill1CooldownTimer: 0, swoonBasicHits: 0, swoonCooldownTimer: 0 };
+      const gojoMock = { type: 'gojo', redCooldown: 0, domainCooldown: 0, purpleCooldown: 0, reverseCursedTechniqueCooldown: 0 };
+      const mahitoMock = { type: 'mahito', sharedSkillCooldown: 0, soulMultiplicityCooldown: 0, domainCooldown: 0, hp: 100, maxHp: 100 };
+      const gutsMock = { type: 'guts', calamityCooldown: 0, cycloneCooldown: 0, berserkerCooldown: 0 };
+      const unarmedMock = { type: 'unarmed', collisionCooldown: 0, kineticSurgeCooldown: 0, superUnarmedHits: 0 };
+
+      assert(getSkillDataForFighter(knightMock).find(s => s.id === 'shadow_mantle')?.label === 'SHADOW MANTLE', 'Default Roaring Knight shadow_mantle label');
+      assert(getSkillDataForFighter(knightMock).find(s => s.id === 'roaring_skill1')?.label === 'SKILL 1', 'Default Roaring Knight skill1 label');
+      assert(getSkillDataForFighter(gojoMock).find(s => s.id === 'red')?.label === 'REVERSAL RED', 'Default Gojo red label');
+      assert(getSkillDataForFighter(mahitoMock).find(s => s.id === 'soul_multiplicity')?.label === 'SOUL MULTIPLICITY', 'Default Mahito soul_multiplicity label');
+      assert(getSkillDataForFighter(gutsMock).find(s => s.id === 'calamityCleave')?.label === 'CALAMITY CLEAVE', 'Default Guts calamityCleave label');
+      assert(getSkillDataForFighter(unarmedMock).find(s => s.id === 'kinetic_bump')?.label === 'KINETIC BUMP', 'Default Unarmed kinetic_bump label');
+
+      CONFIG.roaring_knight.shadowMantleSkillName = 'UMBRA DASH';
+      CONFIG.roaring_knight.skill1Name = 'SHADOW VOLLEY';
+      CONFIG.gojo.redSkillName = 'CRIMSON REPULSION';
+      CONFIG.mahito.soulMultiplicity.skillName = 'SOUL SWARM';
+      CONFIG.guts.skill1Name = 'DRAGONSLAYER ARC';
+      CONFIG.unarmed.kineticBumpSkillName = 'IRON SHOULDER';
+
+      const renamedKnight = getSkillDataForFighter(knightMock);
+      assert(renamedKnight.find(s => s.id === 'shadow_mantle')?.label === 'UMBRA DASH', 'Renamed Roaring Knight shadowMantleSkillName must reflect in HUD');
+      assert(renamedKnight.find(s => s.id === 'roaring_skill1')?.label === 'SHADOW VOLLEY', 'Renamed Roaring Knight skill1Name must reflect in HUD');
+      assert(getSkillDataForFighter(gojoMock).find(s => s.id === 'red')?.label === 'CRIMSON REPULSION', 'Renamed Gojo redSkillName must reflect in HUD');
+      assert(getSkillDataForFighter(mahitoMock).find(s => s.id === 'soul_multiplicity')?.label === 'SOUL SWARM', 'Renamed Mahito nested soulMultiplicity.skillName must reflect in HUD');
+      assert(getSkillDataForFighter(gutsMock).find(s => s.id === 'calamityCleave')?.label === 'DRAGONSLAYER ARC', 'Renamed Guts skill1Name must reflect in HUD');
+      assert(getSkillDataForFighter(unarmedMock).find(s => s.id === 'kinetic_bump')?.label === 'IRON SHOULDER', 'Renamed Unarmed kineticBumpSkillName must reflect in HUD');
+      console.log('      ✅ Editable config skillName overrides verified across top-level and nested character configs.');
+    } finally {
+      CONFIG.roaring_knight.enableShadowMantle = prevEnableMantle;
+      CONFIG.roaring_knight.shadowMantleSkillName = prevKnightMantle;
+      CONFIG.roaring_knight.skill1Name = prevKnightSkill1;
+      CONFIG.gojo.redSkillName = prevGojoRed;
+      CONFIG.mahito.soulMultiplicity.skillName = prevMahitoMult;
+      CONFIG.guts.skill1Name = prevGutsS1;
+      CONFIG.unarmed.kineticBumpSkillName = prevUnarmedBump;
+    }
+  }
+
+  {
+    console.log('\n[TEST 180] Dark Mode Bottom HUD Overlay Card Transparency Check...');
+    const fs = await import('fs');
+    const css = fs.readFileSync('css/style.css', 'utf8');
+    assert(
+      !/^\s*\.arena-dark-mode\s*,?\s*$/m.test(css),
+      'css/style.css must NOT apply bare unscoped .arena-dark-mode { background: #000000 } to HUD overlays'
+    );
+    assert(
+      /#healthHud\.arena-dark-mode[\s\S]*?\.health-card\.arena-dark-mode\s*\{[\s\S]*?background:\s*transparent\s*!important/.test(css),
+      'css/style.css must keep #healthHud.arena-dark-mode and .health-card.arena-dark-mode backgrounds transparent'
+    );
+    console.log('      ✅ Bottom HUD overlay containers & cards confirmed free of #000000 dark-mode card fill.');
+  }
+
+  {
+    console.log('\n[TEST 181] Yuta Basic Katana Attack Does Not Cancel Simultaneous Enemy Attacks...');
+    const { FIGHTER_DEFS } = await import('../js/core/config.js');
+    const { YutaFighter } = await import('../js/entities/fighters/YutaFighter.js');
+    const { modExecuteKatanaMelee, modUpdateKatanaSwing } = await import('../js/entities/fighters/yuta/yutaKatana.js');
+    const KnightClass = FIGHTER_CLASS_MAP['roaring_knight'];
+    const rkDef = FIGHTER_DEFS.find(d => d.type === 'roaring_knight');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevState = state.gameState;
+    const prevParry = CONFIG.roaring_knight.enableParry;
+    const prevParryChance = CONFIG.roaring_knight.parryChance;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      CONFIG.roaring_knight.enableParry = false;
+      CONFIG.roaring_knight.parryChance = 0;
+
+      const yuta = new YutaFighter({ id: 'yuta', x: 210, y: 450, radius: 25, hp: 400 });
+      const knight = new KnightClass({ ...rkDef, x: 245, y: 450, radius: 25, hp: 400 });
+      yuta.x = 210; yuta.y = 450; yuta.team = 0;
+      knight.x = 245; knight.y = 450; knight.team = 1;
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.fighters = [yuta, knight];
+      state.getFighterTeam = (idx) => (state.fighters[idx] === yuta ? 0 : 1);
+
+      // 1. Both attack simultaneously (Roaring Knight in Black Knife basic swing, Yuta swings katana)
+      knight.isMeleeSwinging = true;
+      knight.meleePhase = 1;
+      knight.meleePhaseTimer = 10;
+      knight.meleePhaseMaxTimer = 10;
+      knight.swordSwingTimer = 12;
+      knight._basicRotatingSlash = {
+        stage: 'basic_swing',
+        dashTimer: 0, dashMaxTimer: 1, dashAngle: Math.PI, dashSpeed: 0,
+        swingPhase: 1, swingTimer: 10, swingMaxTimer: 10,
+        holdFrames: 2, strikeFrames: 7, swingRecoverFrames: 5,
+        boardCx: 210, boardCy: 450, needsTargetLock: false,
+        aimTimer: 18, maxAimFrames: 18, windupAngle: Math.PI, spin: 1,
+        lineCount: 2, slashAngles: [], fireIndex: 0, prevCutAngle: null,
+        recoverTimer: 0, maxRecoverFrames: 6, damagedTargets: new Set(),
+        span: 650, arenaBounds: { ...testArena },
+      };
+      const startHp1 = knight.hp;
+
+      modExecuteKatanaMelee(yuta, 0);
+      for (let f = 0; f < 25 && !yuta.swordHitDelivered; f++) {
+        yuta.x = 210; yuta.y = 450;
+        knight.x = 245; knight.y = 450;
+        modUpdateKatanaSwing(yuta, knight, testArena);
+      }
+      assert(yuta.swordHitDelivered === true, 'Yuta basic katana must deliver hit');
+      assert(knight.hp < startHp1, 'Yuta katana hit must still deal damage to attacking enemy');
+      assert((knight.timeStopTimer || 0) === 0, `Yuta basic attack must NOT apply timeStop onto attacking enemy (got ${knight.timeStopTimer})`);
+      assert((knight.hitStunTimer || 0) === 0, `Yuta basic attack must NOT apply hitStun onto attacking enemy (got ${knight.hitStunTimer})`);
+
+      // Step enemy update: simultaneous attack must NOT be interrupted
+      knight.update(yuta, 1, testArena);
+      assert(knight.isMeleeSwinging === true, 'Enemy basic melee swing must remain active after Yuta basic hit');
+
+      // 2. Enemy actively casting a skill (Falling Swords): Yuta basic hit must NOT cancel the cast
+      knight.isMeleeSwinging = false;
+      knight.swordSwingTimer = 0;
+      knight._basicRotatingSlash = null;
+      knight.isFallingSwordsCasting = true;
+      knight.fallingSwordsCastTimer = 12;
+      const startHp2 = knight.hp;
+      yuta.swordSwingTimer = 0;
+      yuta.swipeActive = false;
+      modExecuteKatanaMelee(yuta, 0);
+      for (let f = 0; f < 25 && !yuta.swordHitDelivered; f++) {
+        yuta.x = 210; yuta.y = 450;
+        knight.x = 245; knight.y = 450;
+        modUpdateKatanaSwing(yuta, knight, testArena);
+      }
+      assert(knight.hp < startHp2, 'Yuta basic attack must still deal damage while enemy casts skill');
+      assert((knight.timeStopTimer || 0) === 0, 'Yuta basic attack must NOT freeze skill-casting enemy');
+      knight.update(yuta, 1, testArena);
+      assert(knight.isFallingSwordsCasting === true, 'Enemy skill cast must NOT be canceled by Yuta basic attack');
+
+      // 3. Idle enemy (not attacking): hit-pause and hit-stun still apply normally
+      knight.isFallingSwordsCasting = false;
+      knight.fallingSwordsCastTimer = 0;
+      knight.meleePhase = 0;
+      knight.meleePhaseTimer = 0;
+      yuta.swordSwingTimer = 0;
+      yuta.swipeActive = false;
+      modExecuteKatanaMelee(yuta, 0);
+      for (let f = 0; f < 25 && !yuta.swordHitDelivered; f++) {
+        yuta.x = 210; yuta.y = 450;
+        knight.x = 245; knight.y = 450;
+        modUpdateKatanaSwing(yuta, knight, testArena);
+      }
+      assert((knight.timeStopTimer || 0) > 0, 'Idle non-attacking enemy should still receive katana hit-pause');
+      assert((knight.hitStunTimer || 0) > 0, 'Idle non-attacking enemy should still receive katana hit-stun');
+      console.log('      ✅ Yuta basic katana simultaneous-attack protection verified cleanly.');
+    } finally {
+      CONFIG.roaring_knight.enableParry = prevParry;
+      CONFIG.roaring_knight.parryChance = prevParryChance;
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.gameState = prevState;
     }
   }
 

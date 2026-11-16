@@ -31,22 +31,25 @@ export const spikeConfig = {
   ability: 'Spiked Shell',
   desc: 'Deals damage on collision, freezes enemy on impact, and stacks massive movement speed with every hit.',
 
-  // ── Melee Collision & Contact Damage ──
+  // ── Basic Attack: Spiked Shell Contact Smash ──
   enableBasicAttack: true,       // Master toggle for contact melee collision attack
+  basicAttackSkillName: 'SPIKED SHELL',
   contactDamage: 25,             // Base collision smash damage
   meleeCooldown: 50,             // Frames between consecutive melee strikes (~0.83s at 60fps)
   floatingText: 'SMASH!',        // Floating combat text on contact hit
   floatingTextColor: '#ffd700',  // Gold text color
 
-  // ── Stacking Speed Mechanic (Permanent Acceleration on Hits) ──
+  // ── Passive: Spiked Shell Kinetic Acceleration (Stacking Speed) ──
   enableStackingSpeed: true,     // Master toggle for stacking speed boost on hit
+  stackingSpeedSkillName: 'Kinetic Acceleration',
   speedStackPerHit: 0.85,        // Extra movement speed gained per successful hit
   maxSpeedStacks: 12,            // Maximum speed stacks (up to +10.2 extra speed!)
   permanentStacks: true,         // Speed stacks are permanent throughout the match and do not reset/decay over time
   speedBoostMultiplier: 1.25,    // Base velocity multiplier applied during active stacks
 
-  // ── Hit-Pause / Impact Freeze Mechanic ──
+  // ── Passive: Impact Stasis Hit-Pause ──
   enableHitPause: true,          // Master toggle for hit-pause / time-stop on collision
+  hitPauseSkillName: 'Impact Stasis Hit-Pause',
   hitPauseDuration: 14,          // Frames the enemy is frozen upon impact (~0.23s at 60fps)
   selfHitPauseDuration: 14,      // Frames Spike is paused upon collision (~0.23s at 60fps)
   hitShakeIntensity: 3.5,        // Global screen shake intensity on contact smash

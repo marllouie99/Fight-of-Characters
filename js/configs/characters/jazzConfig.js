@@ -19,7 +19,8 @@ export const jazzConfig = {
   ability: 'Aimbot Laser',
   desc: 'Wields a dubstep gun that fires musical notes and triggers an instant follow-up projectile on hit.',
 
-  // Skill Tuning (CONFIG.aimbot)
+  // ── Basic Attack & Passive: Aimbot Dubstep Laser & Electric Follow-Up ──
+  aimbotLaserSkillName: 'Aimbot Dubstep Laser',
   followUpMinCooldown: 10, // minimum frames of cooldown forced after a follow-up shot
   electricStunDuration: 8, // frames the target is stunned after being hit (10 frames = ~0.16s)
   electricStunChance: 0.40,  // 0.0 to 1.0 chance of triggering the stun on hit (0.5 = 50%)

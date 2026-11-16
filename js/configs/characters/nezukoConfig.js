@@ -38,16 +38,19 @@ export const nezukoConfig = {
 
   // Passive 1: Demonic Regeneration & Slumber Vitality
   enableDemonRegeneration: true,    // Master toggle for Passive 1: Demonic Regeneration
+  demonRegenSkillName: 'Demonic Regeneration',
   regenIntervalFrames: 120,    // 2.0s
   regenAmount: 10,
   lowHpRegenMultiplier: 2.0,
 
   // Passive 2: Blood Demon Art Empowerment
   enableBakketsuEmpower: true,      // Master toggle for Passive 2: Blood Demon Art Empowerment
+  bakketsuEmpowerSkillName: 'Blood Demon Empowerment',
   empoweredDamageBonus: 0.20,
 
   // Basic Attack: Demonic Axe Kick & Claw Flurry (120° Frontal Arc)
   enableAxeKicks: true,             // Master toggle for Basic Attack: Demonic Axe Kick
+  axeKicksSkillName: 'Demonic Axe Kick & Claws',
   clawArcAngle: Math.PI * 0.667, // ~120 degrees
   clawReach: 70,
   hit1Damage: 16,
@@ -59,6 +62,7 @@ export const nezukoConfig = {
 
   // Skill 1: Awakened Demon Flying Dropkick
   enableFlyingDropkick: true,       // Master toggle for Skill 1: Flying Dropkick
+  flyingDropkickSkillName: 'FLYING DROPKICK',
   dropkickCooldown: 240,       // 4.0s
   dropkickSpeed: 28.0,
   dropkickDamage: 32,
@@ -67,6 +71,7 @@ export const nezukoConfig = {
 
   // Skill 2: Blood Demon Art: Exploding Blood (Bakketsu)
   enableExplodingBlood: true,       // Master toggle for Skill 2: Exploding Blood (Bakketsu)
+  explodingBloodSkillName: 'EXPLODING BLOOD',
   bakketsuCooldown: 330,       // 5.5s
   bakketsuRadius: 160,
   bakketsuDamage: 40,
@@ -75,6 +80,7 @@ export const nezukoConfig = {
 
   // Ultimate: Full Demon Awakening: Crimson Lotus Frenzy
   enableFullAwakening: true,        // Master toggle for Ultimate: Full Demon Awakening
+  fullAwakeningSkillName: 'DEMON AWAKENING',
   ultimateCooldown: 1500,      // 25.0s
   ultimateStrikes: 4,
   ultimateStrikeDamage: 18,

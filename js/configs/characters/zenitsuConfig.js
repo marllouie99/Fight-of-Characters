@@ -56,6 +56,7 @@ export const zenitsuConfig = {
 
   // Passive 1: Slumbering Thunderclap & Battle Trance
   enableBattleTrance: true,         // Master toggle for Passive 1: Battle Trance
+  battleTranceSkillName: 'Slumbering Battle Trance',
   tranceHpThreshold: 0.35,
   tranceDamageReduction: 0.25,
   tranceCritChance: 1.0,            // Guaranteed 100% Critical Strike Chance during Battle Trance
@@ -63,12 +64,14 @@ export const zenitsuConfig = {
 
   // Passive 2: Hyper-Sonic Static Charge
   enableStaticCharge: true,         // Master toggle for Passive 2: Hyper-Sonic Static Charge
+  staticChargeSkillName: 'Hyper-Sonic Static Charge',
   maxStaticCharge: 100,
   staticBurstDamage: 20,
   staticStunFrames: 18,
 
   // Basic Attack: 1 Single Thunderclap Dash (Hekireki Issen: Single Dash)
   enableBasicAttack: true,          // Master toggle for Basic Attack: 1 Thunderclap Dash
+  basicAttackSkillName: 'HEKIREKI ISSEN',
   basicAttackCooldown: 100,          // Cooldown in frames between basic dashes (60 frames = 1.0s at 60fps)
   basicDashWindupFrames: 50,         // Stance & charge windup frames before dashing (~130ms)
   basicDashRange: 450,              // Range within which Zenitsu initiates basic dash
@@ -86,6 +89,7 @@ export const zenitsuConfig = {
 
   // Skill 1: Thunder Breathing First Form: Thunderclap and Flash (Hekireki Issen)
   enableThunderclap: 1,          // Master toggle for Skill 1: Thunderclap and Flash
+  thunderclapSkillName: 'THUNDERCLAP & FLASH',
   enableThunderclapAimLock: true,   // Master toggle for aim lock commitment before firing
   thunderclapCommitFrames: 18,      // Lock-in commit frames before unleashing dash (~300ms where aim is strictly locked)
   thunderclapCooldown: 500,    // 3.8s
@@ -121,6 +125,7 @@ export const zenitsuConfig = {
 
   // Skill 2: Thunderclap and Flash: Sixfold (Rokuren)
   enableRokuren: false,             // Master toggle for Skill 2: Sixfold (Rokuren)
+  rokurenSkillName: 'SIXFOLD (ROKUREN)',
   rokurenCooldown: 420,        // 7.0s
   rokurenBounces: 6,
   rokurenDamagePerHit: 8,
@@ -128,6 +133,7 @@ export const zenitsuConfig = {
 
   // Ultimate: Thunder Seventh Form: Flaming Thunder God (Honoikazuchi no Kami)
   enableFlamingThunderGod: false,   // Master toggle for Ultimate: Flaming Thunder God
+  flamingThunderGodSkillName: 'FLAMING THUNDER GOD',
   ultimateCooldown: 1440,      // 24.0s
   ultimateDamage: 85,
   ultimateKnockback: 48,

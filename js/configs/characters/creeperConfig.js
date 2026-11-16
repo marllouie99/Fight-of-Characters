@@ -35,6 +35,7 @@ export const creeperConfig = {
 
   // ── Passive: Silent Stalker & Gunpowder Core ──
   enableSilentStalker: true,
+  silentStalkerSkillName: 'SILENT STALKER',
   backStalkSpeedMultiplier: 1.15, // +15% speed when closing in from behind enemy
   enableDeathDetonation: true,
   deathDetonationFrames: 45, // 0.75s hyper-flashing death sequence before final retaliatory nuke
@@ -43,6 +44,7 @@ export const creeperConfig = {
 
   // ── Skill 1: Proximity Fuse Detonation ("Tssssss...!") ──
   enablePrimedDetonation: true,
+  detonationSkillName: 'DETONATION',
   fuseTriggerDistance: 88, // Distance in px to initiate fuse hiss (~3.5 blocks)
   fuseCancelDistance: 120, // Distance in px where fuse cancels/defuses (~4.8 blocks)
   primeDurationFrames: 50, // ~0.83s fuse time (30 Minecraft ticks equivalent)
@@ -58,6 +60,7 @@ export const creeperConfig = {
 
   // ── Ultimate: Charged Creeper (Lightning Awakening) ──
   enableChargedCreeper: true,
+  chargedCreeperSkillName: 'CHARGED CREEPER',
   chargedDuration: 1200, // 20.0s charged state at 60 FPS
   chargedCooldown: 1800, // 30.0s cooldown after activation
   chargedInitialCooldown: 1080, // 18.0s initial charge at round start

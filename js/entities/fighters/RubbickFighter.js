@@ -674,8 +674,6 @@ export class RubbickFighter extends Fighter {
   applyBeamEffectsToTarget(target, ownerIndex) {
     if (!target || target === this) return;
 
-    target.caughtInLaserBeamTimer = 10;
-
     let hitState = this.beamHitState.get(target);
     if (!hitState) {
       hitState = { initialHitDone: false, continuousDamageTimer: 0 };
@@ -692,6 +690,7 @@ export class RubbickFighter extends Fighter {
     if (!hitState.initialHitDone) {
       const applied = target.takeDamage(this.damage * dmgMulti, this, { isProjectile: true, isLaser: true });
       if (applied) {
+        target.caughtInLaserBeamTimer = 10;
         const slowChance = Number(CONFIG.laser.slowChance || 1);
         if (slowChance >= 1 || Math.random() <= slowChance) {
           // Default beam slow duration and multiplier if rubbick doesn't define it
@@ -719,6 +718,7 @@ export class RubbickFighter extends Fighter {
     if (hitState.continuousDamageTimer >= CONFIG.laser.tickInterval) {
       const applied = target.takeDamage(CONFIG.laser.tickDamage * dmgMulti, this, { isProjectile: true, isLaser: true });
       if (applied) {
+        target.caughtInLaserBeamTimer = 10;
         const pushStrength = Number(CONFIG.laser.initialKnockback) || 0;
         if (pushStrength !== 0 && !target.immuneToPush && !target.immuneToKnockback && target.characterId !== 'escanor') {
           target.vx += (dx / dist) * pushStrength;

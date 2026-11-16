@@ -39,6 +39,7 @@ export const sansConfig = {
 
   // Passive 1: Karmic Retribution (KR)
   enableKarma: 1,
+  karmaSkillName: 'Karmic Retribution (KR)',
   karmaTickDamage: 1,
   karmaTickInterval: 20,       // Frames between poison ticks (~0.23s)
   karmaMaxStacks: 12,          // Up to 12 stacks for sustained pressure
@@ -47,6 +48,7 @@ export const sansConfig = {
 
   // Passive 2: Teleport Dodge & Stamina
   enableTeleportDodge: true,
+  teleportDodgeSkillName: 'Teleport Dodge',
   dodgeChance: 1.0,           // Probability (0-1) of dodging incoming attacks (100%)
   domainDodgeChance: 1.00,     // Probability (0-1) of dodging spatial slice lines inside enemy Domain Expansions (100%)
   dodgeStaminaMax: 100,       // Max dodge stamina pool (replaces HP bar in HUD)
@@ -69,6 +71,7 @@ export const sansConfig = {
 
   // Basic Attack: Bone Toss (Disabled)
   enableBasicBone: 1,
+  basicBoneSkillName: 'Bone Toss',
   basicBoneDamage: 8,          // Balanced poke damage (8 + KR)
   basicBoneSpeed: 8.5,
   basicBoneReach: 420,
@@ -76,6 +79,7 @@ export const sansConfig = {
 
   // Skill 1: Gaster Blaster Arsenal (3 Authentic Undertale Patterns)
   enableGasterBlaster: true,
+  gasterBlasterSkillName: 'GASTER BLASTER',
   blasterCooldown: 300,        // ~5.3s cooldown
   initialBlasterCooldown: 320, // Initial cooldown at round start (~3.0s at 60fps) before first Gaster Blaster barrage
   blasterInitialCooldown: 180, // Alias for initialBlasterCooldown
@@ -136,6 +140,7 @@ export const sansConfig = {
 
   // Skill 2: Bone Zone & Rising Spears
   enableBoneZone: true,
+  boneZoneSkillName: 'BONE ZONE',
   boneZoneCooldown: 240,       // ~4.0s cooldown
   initialBoneZoneCooldown: 240,// Initial cooldown at round start (~3.0s at 60fps) before first Bone Zone wave
   boneZoneInitialCooldown: 180,// Alias for initialBoneZoneCooldown
@@ -151,6 +156,7 @@ export const sansConfig = {
 
   // Ultimate / Skill 3: Blue Soul Gravity Slam ("Bad Time")
   enableGravitySlam: true,
+  gravitySlamSkillName: 'BAD TIME',
   gravitySlamCooldown: 800,    // ~9.6s cooldown
   initialGravitySlamCooldown: 800, // Initial cooldown at round start (~8.0s at 60fps) before Bad Time / Gravity Slam
   gravitySlamInitialCooldown: 480, // Alias for initialGravitySlamCooldown

@@ -1589,7 +1589,7 @@ export class NanamiFighter extends Fighter {
 
           // Primary Target: Guaranteed 7:3 Critical Damage (36 True Damage) & 0.5s hit-stun (30 frames)
           const critDamage = cfg.lungeCritDamage || 36;
-          applyDamageToTarget(ent, critDamage, this, {
+          const lungeApplied = applyDamageToTarget(ent, critDamage, this, {
             isSkill: true,
             isMelee: true,
             isTrueDamage: true,
@@ -1604,6 +1604,9 @@ export class NanamiFighter extends Fighter {
             knockback: cfg.lungeKnockback || 16,
             knockbackAngle: this.lungeAngle
           });
+          if (lungeApplied === false && ent.characterId === 'roaring_knight') {
+            return;
+          }
 
           // Apply 0.5s hit-stun (30 frames)
           if (typeof ent.applyHitStun === 'function') {
@@ -1907,6 +1910,26 @@ export class NanamiFighter extends Fighter {
       this.ratioHitPauseTimer = pauseFrames;
       this.ratioHitPauseMax = pauseFrames;
       this.ratioHitPauseTarget = target;
+      // Apply Damage (True Damage on 7:3 Critical) — blood is suppressed here and burst upon unpause
+      const chopCritApplied = applyDamageToTarget(target, finalDmg, this, {
+        isMelee: true,
+        isTrueDamage: true,
+        isRatioCrit: true,
+        isNanamiPause: true,
+        skipInterrupt: true,
+        bypassShield: true,
+        undodgeable: true,
+        bypassEvade: true,
+        noBlood: true,
+        suppressBlood: true,
+        knockback: 0, // Applied on unpause release
+        knockbackAngle: chopAngle
+      });
+
+      if (chopCritApplied === false && target.characterId === 'roaring_knight') {
+        return;
+      }
+
       this._ratioPauseElapsedFrames = 0;
       this._ratioRulerSpinPlayed = false;
       this._ratioBloodSplashPlayed = false;
@@ -1939,22 +1962,6 @@ export class NanamiFighter extends Fighter {
         spawnFloatingText(target.x, target.y - target.r - 18, '7:3 CRITICAL!', '#D4AF37');
       }
 
-      // Apply Damage (True Damage on 7:3 Critical) — blood is suppressed here and burst upon unpause
-      applyDamageToTarget(target, finalDmg, this, {
-        isMelee: true,
-        isTrueDamage: true,
-        isRatioCrit: true,
-        isNanamiPause: true,
-        skipInterrupt: true,
-        bypassShield: true,
-        undodgeable: true,
-        bypassEvade: true,
-        noBlood: true,
-        suppressBlood: true,
-        knockback: 0, // Applied on unpause release
-        knockbackAngle: chopAngle
-      });
-
       // Inflict Armor Fracture Debuff for subsequent hits
       if (target && !target.isDead && target.hp > 0) {
         target.nanamiArmorFractureTimer = cfg.armorFractureDuration || 180;
@@ -1962,22 +1969,24 @@ export class NanamiFighter extends Fighter {
       }
     } else {
       // Non-critical chop hit
-      const basicStun = cfg.basicHitStunFrames || 12;
-      if (typeof target.applyHitStun === 'function') {
-        target.applyHitStun(basicStun);
-      } else {
-        target.hitStunTimer = Math.max(target.hitStunTimer || 0, basicStun);
-      }
-
       triggerGlobalScreenShake(cfg.basicImpactShake || 2.5, 8);
 
-      applyDamageToTarget(target, baseDmg, this, {
+      const chopBasicApplied = applyDamageToTarget(target, baseDmg, this, {
         isMelee: true,
         isTrueDamage: isTargetMahito,
         isRatioCrit: false,
         knockback: (cfg.cleaverKnockback || 14) * (isOvertime ? 1.2 : 1.0),
         knockbackAngle: chopAngle
       });
+
+      if (!(chopBasicApplied === false && target.characterId === 'roaring_knight')) {
+        const basicStun = cfg.basicHitStunFrames || 12;
+        if (typeof target.applyHitStun === 'function') {
+          target.applyHitStun(basicStun);
+        } else {
+          target.hitStunTimer = Math.max(target.hitStunTimer || 0, basicStun);
+        }
+      }
     }
   }
 

@@ -121,6 +121,7 @@ export const enderDragonConfig = {
 
   // ── Skill 1: Dragon's Breath / 360° Void Acid Sweep (dragonsBreath) ──
   enableFireball: true, // Master toggle for Dragon's Breath / Fireball
+  dragonsBreathSkillName: "DRAGON'S BREATH",
   enableDragonsBreath: true, // Alias for Skill 1
   fireballCooldown: 480, // 8.0s
   fireballInitialCooldown: 480, // Initial cooldown at round start (8.0s at 60 FPS)
@@ -144,6 +145,7 @@ export const enderDragonConfig = {
 
   // ── Skill 2: Wing Buffet / Kinetic Swoop (wingBuffet) ──
   enableSwoop: 0, // Master toggle for Wing Buffet / Kinetic Swoop
+  wingBuffetSkillName: 'WING BUFFET',
   enableWingBuffet: 0, // Alias for Skill 2
   swoopCooldown: 540, // 9.0s
   swoopInitialCooldown: 540, // Initial cooldown at round start (9.0s at 60 FPS)
@@ -158,6 +160,7 @@ export const enderDragonConfig = {
 
   // ── Skill 3 / Ultimate: Void Cataclysm & Perch (voidCataclysm) ──
   enableCataclysm: 0, // Master toggle for Ultimate: Void Cataclysm
+  voidCataclysmSkillName: 'VOID CATACLYSM',
   enableVoidCataclysm: 0, // Alias for Ultimate
   cataclysmCooldown: 1100, // ~18.3s
   cataclysmInitialCooldown: 1100, // Initial cooldown at round start (~18.3s at 60 FPS)
@@ -173,6 +176,7 @@ export const enderDragonConfig = {
 
   // ── Skill 4: Off-Screen Telegraphed Divebomb Strafe (divebombStrafe) ──
   enableDivebomb: true, // Master toggle for Off-Screen Telegraphed Divebomb Strafe
+  divebombSkillName: 'VOID DIVEBOMB',
   enableVoidDivebomb: true, // Alias for Skill 4
   divebombCooldown: 600, // 10.0s
   divebombInitialCooldown: 600, // Initial cooldown at round start (10.0s at 60 FPS)
@@ -196,6 +200,7 @@ export const enderDragonConfig = {
 
   // ── End Crystal Healing Mechanics (4 Corners) ──
   enableCornerCrystals: true, // Spawns 4 End Crystals in the 4 corners of the arena
+  cornerCrystalsSkillName: 'End Crystal Regeneration',
   cornerCrystalCount: 4,
   crystalTetherReach: 340, // Max distance (px) between dragon and crystal for tether healing
   crystalHealAmount: 6, // HP restored per heal tick

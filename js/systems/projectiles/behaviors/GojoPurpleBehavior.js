@@ -171,7 +171,12 @@ export class GojoPurpleBehavior extends ProjectileBehavior {
       
       if (!projectile.pulledTargets) projectile.pulledTargets = new Set();
 
-      if (!isEntityImmuneToGravitationalPull(ent, 'purple')) {
+      const isActivelyParryingPurple = Boolean(
+        ent.characterId === 'roaring_knight' &&
+        (ent.parryWhiteFlashTimer || 0) > 0
+      );
+
+      if (!isActivelyParryingPurple && !isEntityImmuneToGravitationalPull(ent, 'purple')) {
         const dx = projectile.x - ent.x;
         const dy = projectile.y - ent.y;
         const dist = Math.hypot(dx, dy);
@@ -509,8 +514,9 @@ export class GojoPurpleBehavior extends ProjectileBehavior {
         const isChanneling = (typeof ent.isChannelingSkill === 'function' && ent.isChannelingSkill()) || (typeof ent.isStationarySkillActive === 'function' && ent.isStationarySkillActive());
         const isFugaChanneling = Boolean(ent.isChannelingDivineFlame || ent.isChannelingFuga || (ent.fugaChargeTimer && ent.fugaChargeTimer > 0));
 
+        let purpleExpApplied = true;
         if (typeof ent.takeDamage === 'function') {
-          ent.takeDamage(finalDamage, ownerFighter, { 
+          purpleExpApplied = ent.takeDamage(finalDamage, ownerFighter, { 
             isExplosion: true, 
             isPurpleExplosion: true, 
             isProjectile: true, 
@@ -523,12 +529,15 @@ export class GojoPurpleBehavior extends ProjectileBehavior {
             skipKnockback: isChanneling
           });
         }
+        const parriedExplosion = purpleExpApplied === false && ent.characterId === 'roaring_knight';
 
         // Outward explosive knockback push
         const isMakimaShatter = Boolean(ent && (ent.isRevivingFromContract || ent.isShatterReviving || (ent.shatteredPieces && ent.shatteredPieces.length > 0) || (ent.characterId === 'makima' && (ent.isDead || ent.dead || ent.hp <= 0))));
         const isEscanor = Boolean(ent && (ent.characterId === 'escanor' || ent.type === 'escanor' || (ent.immuneToPull && !ent.isPlant)));
         const isKnockbackImmune = Boolean(ent && (ent.immuneToKnockback || ent.immuneToPush || ent.cannotBeKnockbacked || ent.cannotBePushed));
-        if (isMakimaShatter) {
+        if (parriedExplosion) {
+          // Parried Hollow Purple detonation: deflect without massive knockback slam
+        } else if (isMakimaShatter) {
           ent.vx = 0; ent.vy = 0; ent.knockbackVx = 0; ent.knockbackVy = 0;
           if (typeof ent._shatterLockedX === 'number' && typeof ent._shatterLockedY === 'number') {
             ent.x = ent._shatterLockedX; ent.y = ent._shatterLockedY;

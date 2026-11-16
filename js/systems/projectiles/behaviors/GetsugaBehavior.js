@@ -494,7 +494,15 @@ export class GetsugaBehavior extends ProjectileBehavior {
         const tickDamage = (typeof projectile.damage === 'number' && projectile.damage > 0)
           ? Math.max(projectile.damage, baseTickDamage)
           : baseTickDamage;
-        applyDamageToTarget(f, tickDamage, attacker, { isSkill: true, isGetsuga: true, getsugaForm: form, isFinalGetsugaTick: isFinal, isFinalMassiveGetsuga: isFinal, projectile });
+        const getsugaApplied = applyDamageToTarget(f, tickDamage, attacker, { isSkill: true, isGetsuga: true, getsugaForm: form, isFinalGetsugaTick: isFinal, isFinalMassiveGetsuga: isFinal, projectile });
+
+        if (getsugaApplied === false && f.characterId === 'roaring_knight') {
+          f.isDraggedByGetsuga = false;
+          if (projectile.draggedTargets && projectile.draggedTargets.has(f)) {
+            projectile.draggedTargets.delete(f);
+          }
+          continue;
+        }
 
         // If the projectile became frozen by Gojo's Infinity during damage application, immediately halt and return
         if (projectile.isFrozenByInfinity || projectile.damage === 0 || projectile.isVisual) {

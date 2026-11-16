@@ -193,6 +193,82 @@ export function modUpdateKatanaSwing(fighter, opponent, arena) {
 }
 
 /**
+ * Returns true when an enemy is actively executing a basic attack, melee swing, or skill/channel,
+ * so Yuta's basic katana hit-pause/hit-stun never cancels an overlapping enemy attack.
+ */
+function _isEnemyActivelyAttacking(enemy) {
+  if (!enemy) return false;
+  if (typeof enemy.isPerformingSkill === 'function' && enemy.isPerformingSkill()) return true;
+  if (typeof enemy.isChannelingSkill === 'function' && enemy.isChannelingSkill()) return true;
+  if (typeof enemy.isStationarySkillActive === 'function' && enemy.isStationarySkillActive()) return true;
+  if (typeof enemy.hasActiveFinishingAbility === 'function' && enemy.hasActiveFinishingAbility()) return true;
+
+  return Boolean(
+    enemy.swipeActive ||
+    enemy.swordSwingActive ||
+    enemy.meleeSwingActive ||
+    enemy.axeSwingActive ||
+    enemy.scytheSwingActive ||
+    enemy.isMeleeSwinging ||
+    enemy._basicRotatingSlash ||
+    enemy._rotatingSlashSeq ||
+    enemy._trackingSwordSeq ||
+    enemy.isAttacking ||
+    enemy.isBasicAttacking ||
+    enemy.isPunching ||
+    enemy.isSwinging ||
+    enemy.isSlashing ||
+    enemy.isCleaveSwinging ||
+    enemy.isCleaveWindingUp ||
+    enemy.isStabbingKnife ||
+    enemy.isBasicDashPreparing ||
+    enemy.isDashingThunderclap ||
+    enemy.isExecutingThunderclapDashes ||
+    enemy.isFlurrying ||
+    enemy.isExecutingFlurry ||
+    enemy.isLunging ||
+    enemy.isThrowing ||
+    enemy.isShouting ||
+    enemy.isRamming ||
+    enemy.isAmbushing ||
+    enemy.isChanneling ||
+    enemy.isCasting ||
+    enemy.isCharging ||
+    enemy.skillActive ||
+    enemy.beamActive ||
+    enemy.shunpoComboActive ||
+    enemy.isFallingSwordsCasting ||
+    enemy.isStarBurstCasting ||
+    enemy.isBladeCorridorCasting ||
+    enemy.isSwordTunnelCasting ||
+    enemy.isSnowflakeMatrixCasting ||
+    enemy.isSwoonChanneling ||
+    (enemy.swordSwingTimer || 0) > 0 ||
+    (enemy.slashSwingTimer || 0) > 0 ||
+    (enemy.katanaSlashTimer || 0) > 0 ||
+    (enemy.cleaveSwingTimer || 0) > 0 ||
+    (enemy.spearSwingTimer || 0) > 0 ||
+    (enemy.meleeSwingTimer || 0) > 0 ||
+    (enemy.attackSwingTimer || 0) > 0 ||
+    (enemy.axeSwingTimer || 0) > 0 ||
+    (enemy.scytheSwingTimer || 0) > 0 ||
+    (enemy.shovelSwingTimer || 0) > 0 ||
+    (enemy.knifeStabTimer || 0) > 0 ||
+    (enemy.pencilAttackTimer || 0) > 0 ||
+    (enemy.punchAnimTimer || 0) > 0 ||
+    (enemy.leftPunchTimer || 0) > 0 ||
+    (enemy.basicAttackAnimTimer || 0) > 0 ||
+    (enemy.basicPunchChargeTimer || 0) > 0 ||
+    (enemy.chopHitPauseTimer || 0) > 0 ||
+    (enemy.flurryHitsLeft || 0) > 0 ||
+    (enemy.flurrySlashTimer || 0) > 0 ||
+    (enemy.rapidSlashHitsLeft || 0) > 0 ||
+    (enemy.cqcComboPhase || 0) > 0 ||
+    (enemy.basicComboPhase || 0) > 0
+  );
+}
+
+/**
  * Delivers damage, layered slap SFX, screenshake, knockback, and hitstun on melee impact.
  */
 function _deliverKatanaImpact(fighter) {
@@ -265,11 +341,13 @@ function _deliverKatanaImpact(fighter) {
       }
     } catch (e) {}
 
-    // Hit Pause & Hit Stun
-    const hitPause = fighter.swordSwingHitPause || 3;
-    const hitStun = fighter.swordSwingHitStun || 14;
-    if (typeof enemy.applyTimeStop === 'function') enemy.applyTimeStop(hitPause);
-    if (typeof enemy.applyHitStun === 'function') enemy.applyHitStun(hitStun);
+    // Hit Pause & Hit Stun (skip when enemy is mid-attack/mid-skill so simultaneous clashes aren't canceled)
+    if (!_isEnemyActivelyAttacking(enemy)) {
+      const hitPause = fighter.swordSwingHitPause || 3;
+      const hitStun = fighter.swordSwingHitStun || 14;
+      if (typeof enemy.applyTimeStop === 'function') enemy.applyTimeStop(hitPause);
+      if (typeof enemy.applyHitStun === 'function') enemy.applyHitStun(hitStun);
+    }
 
     // Screen Shake
     const shake = fighter.swordSwingImpactShake || (step === 3 ? 8 : (step === 2 ? 5.5 : 4.0));

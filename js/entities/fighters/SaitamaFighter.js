@@ -1847,7 +1847,7 @@ export class SaitamaFighter extends Fighter {
           const basePunchDamage = this.getBasePunchDamage();
           const damageMult = CONFIG.saitama?.counterPunchDamageMultiplier ?? 5.0;
           const massiveDamage = Math.round(basePunchDamage * damageMult);
-          applyDamageToTarget(target, massiveDamage, this, { 
+          const counterApplied = applyDamageToTarget(target, massiveDamage, this, { 
             isSkill: true, 
             isCounter: true, 
             isCritical: true, 
@@ -1859,28 +1859,30 @@ export class SaitamaFighter extends Fighter {
             isTrueDamage: true
           });
 
-          // Heavy directional knockback push toward Saitama's facing angle
-          const kx = Math.cos(pushAngle) * knockbackForce;
-          const ky = Math.sin(pushAngle) * knockbackForce;
-          
-          const isTargetImmune = Boolean(target && (target.characterId === 'escanor' || target.type === 'escanor' || target.immuneToKnockback || target.immuneToPush));
-          if (!isTargetImmune) {
-            this._applyWallPinTargetFlags(target, 'seriousCounter');
-            target.vx = kx;
-            target.vy = ky;
-          }
-          if (typeof target.applyKnockback === 'function') {
-            target.applyKnockback(kx, ky);
-          }
+          if (!(counterApplied === false && target.characterId === 'roaring_knight')) {
+            // Heavy directional knockback push toward Saitama's facing angle
+            const kx = Math.cos(pushAngle) * knockbackForce;
+            const ky = Math.sin(pushAngle) * knockbackForce;
+            
+            const isTargetImmune = Boolean(target && (target.characterId === 'escanor' || target.type === 'escanor' || target.immuneToKnockback || target.immuneToPush));
+            if (!isTargetImmune) {
+              this._applyWallPinTargetFlags(target, 'seriousCounter');
+              target.vx = kx;
+              target.vy = ky;
+            }
+            if (typeof target.applyKnockback === 'function') {
+              target.applyKnockback(kx, ky);
+            }
 
-          // Slow movement debuff — the enemy staggers after taking the massive punch
-          target.saitamaCounterDebuffTimer = slowFrames;
-          target.saitamaCounterAttacker = this;
-          if (target.statusEffects && typeof target.statusEffects.applySlow === 'function') {
-            target.statusEffects.applySlow(slowFrames, slowMult);
-          } else {
-            target.slowTimer = Math.max(target.slowTimer || 0, slowFrames);
-            target.slowMultiplier = slowMult;
+            // Slow movement debuff — the enemy staggers after taking the massive punch
+            target.saitamaCounterDebuffTimer = slowFrames;
+            target.saitamaCounterAttacker = this;
+            if (target.statusEffects && typeof target.statusEffects.applySlow === 'function') {
+              target.statusEffects.applySlow(slowFrames, slowMult);
+            } else {
+              target.slowTimer = Math.max(target.slowTimer || 0, slowFrames);
+              target.slowMultiplier = slowMult;
+            }
           }
         }
       }
@@ -2127,6 +2129,9 @@ export class SaitamaFighter extends Fighter {
 
     // Immediately stop enemy movement and apply initial hit-pause (Rule #5: ONLY target, never attacker)
     if (opponent && opponent.hp > 0) {
+      if (typeof opponent.tryParryExternalCC === 'function' && opponent.tryParryExternalCC(this, { isMelee: true, isSaitamaFlurry: true })) {
+        return false;
+      }
       opponent.vx = 0;
       opponent.vy = 0;
       opponent.caughtInSaitamaFlurry = true;

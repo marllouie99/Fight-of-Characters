@@ -20,20 +20,23 @@ export const cronusConfig = {
   ability: 'Time Stop',
   desc: 'Deploys a time stop sphere that freezes enemies. Gain movement speed and attack speed.',
 
-  // Time Stop Sphere mechanics (CONFIG.cronos)
+  // ── Skill 1 / Ultimate: Time Sphere (Time Stop Sphere Barrier) ──
+  sphereSkillName: 'TIME SPHERE',
   sphereRadius: 200,         // radius of the time stop sphere
   sphereDuration: 300,       // frames the sphere lasts (3 seconds at 60 fps)
   sphereCooldown: 800,       // frames between sphere deployments (5 seconds at 60 fps)
   sphereSpeedMultiplier: 7.0, // movement speed multiplier inside sphere
   sphereActivationDistance: 120, // max distance to opponent to trigger sphere activation
 
-  // Passive skills
+  // ── Passive: Temporal Stasis & Counter-Stop ──
+  passiveStopSkillName: 'Temporal Stasis',
   passiveStopChance: 0.05,   // chance to stop enemy movement on hit
   passiveStopDuration: 20,   // frames enemy movement is stopped
   counterStopChance: 0.05,   // chance to stop enemy when Cronos gets attacked
   counterStopDuration: 25,   // frames enemy movement is stopped on counter
 
-  // Melee attack
+  // ── Basic Attack: Crescent Scythe Double Strike ──
+  meleeSkillName: 'Crescent Scythe Double Strike',
   meleeRange: 50,            // pixels from edge for crescent blade attack
   meleeCooldown: 90,         // frames between melee attacks
   meleeDamage: 10,           // damage per crescent blade swing
@@ -42,7 +45,7 @@ export const cronusConfig = {
   sphereMeleeCooldown: 10,   // separate melee cooldown when inside own sphere
   doubleStrikeWindow: 10,    // frames window to execute the second strike
 
-  // Bounce mechanics inside sphere
+  // ── Passive: Time Sphere Ricochet & Projectile Freeze ──
   sphereBounceForce: 0.5,    // velocity multiplier when bouncing inside sphere
   spherePreActivateFrames: 120, // frames before cooldown ends that the barrier starts glowing
   maxFrozenProjectiles: 25,  // max projectiles frozen in time sphere

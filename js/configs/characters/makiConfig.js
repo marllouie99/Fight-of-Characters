@@ -36,6 +36,7 @@ export const makiConfig = {
 
   // Passive: Heavenly Restriction Complete & Domain Invisibility
   enableHeavenlyRestriction: true,
+  heavenlyRestrictionSkillName: 'Heavenly Restriction',
   domainImmunity: true,
   homingImmunity: true,
   dodgeChance: 0.15,
@@ -50,6 +51,7 @@ export const makiConfig = {
   // Structured with explicit phase frame timings (similar to Escanor)
   // ──────────────────────────────────────────
   enableSplitSoulKatana: true,          // Master toggle for Split Soul Katana basic attack combo
+  splitSoulKatanaSkillName: 'Split Soul Katana Combo',
   swordRange: 75,                       // Baseline reach in pixels (matches katana blade model & slash arc)
   swordReach: 75,                       // Alias for reach
   swordBladeRadius: 18,                 // Collision half-width radius
@@ -136,6 +138,7 @@ export const makiConfig = {
 
   // Skill 1: Dragon-Bone (Ryūhoku) Kinetic Jet Skewer & Brutal Punch
   enableDragonBone: true,
+  dragonBoneSkillName: 'Dragon-Bone',
   dragonBoneCooldown: 420, // 7.0s
   maxKineticCharges: 3,
   dragonBoneBaseDamage: 60,
@@ -166,6 +169,7 @@ export const makiConfig = {
 
   // Skill 2: Zen'in Annihilation Riposte
   enableRiposte: true,
+  riposteSkillName: "Zen'in Annihilation Riposte",
   riposteCooldown: 540, // 9.0s
   riposteStanceFrames: 22, // 0.36s parry window
   riposteDamage: 70,
@@ -174,6 +178,7 @@ export const makiConfig = {
 
   // Ultimate: Sakurajima Awakening ("Everything is Visible")
   enableUltimate: true,
+  ultimateSkillName: 'Sakurajima Awakening',
   ultimateCooldown: 2100, // 35.0s
   ultimateRange: 380,
   flurryHitDamage: 35,

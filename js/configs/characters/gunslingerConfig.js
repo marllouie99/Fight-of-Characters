@@ -49,6 +49,7 @@ export const gunslingerConfig = {
 
   // ── Magazine & Tactical Reload System (Casull & Jackal) ──
   enableMagazine: true,         // Master toggle for magazine system
+  magazineSkillName: 'Casull & Jackal Reload',
   magazineSize: 12,             // 12 rounds total (6 Casull silver rounds, 6 Jackal explosive rounds)
   reloadTime: 70,               // Quick vampire reload (1.16s at 60 fps)
   magazineRegenRate: 0,         // Manual/tactical reload only
@@ -56,6 +57,7 @@ export const gunslingerConfig = {
 
   // ── Basic Attacks & Heavy Anti-Regeneration (.454 Casull & 13mm Jackal) ──
   enableBasicAttack: true,      // Master toggle for basic attack
+  basicAttackSkillName: 'Casull & Jackal Barrage',
   leftGunDelay: 8,              // Delay between alternating shots
   shotCooldown: 14,             // Frames between alternating fire (~4.3 shots/sec)
   bulletDamage: 7,              // .454 Casull sacred silver bullet damage
@@ -66,6 +68,7 @@ export const gunslingerConfig = {
 
   // ── Passive: Aggressive Regeneration ──
   enablePassive: true,          // Master toggle for vampire passive
+  passiveSkillName: 'Aggressive Regeneration',
   lifestealPercent: 0.35,       // Aggressive Regeneration: 35% base damage dealt converted to HP
   lowHpLifestealPercent: 0.50,  // Aggressive Regeneration: 50% lifesteal when HP <= 50% maxHp
   critChance: 0.15,             // Base critical hit chance (15%)
@@ -77,12 +80,14 @@ export const gunslingerConfig = {
 
   // ── Skill 1: Baskerville Feast ──
   enableSkill1: true,           // Master toggle for Baskerville Feast
+  skill1Name: 'BASKERVILLE',
   skill1Cooldown: 240,          // Hound surge cooldown (4.0s at 60 fps)
   houndDamage: 22.0,            // Baskerville Shadow Hound bite damage
   houndSpeed: 18.0,             // Screen-crossing charge speed
 
   // ── Skill 2: Shadow Phase ──
   enableSkill2: true,           // Master toggle for Shadow Phase
+  skill2Name: 'SHADOW PHASE',
   skill2Cooldown: 320,          // Shadow Phase cooldown (5.33s at 60 fps)
   shadowPhaseDuration: 22,      // Dash duration (frames)
   shadowPhaseSpeed: 18.0,       // High-speed phase velocity
@@ -90,6 +95,7 @@ export const gunslingerConfig = {
 
   // ── Skill 3: Illusion Counter ──
   enableSkill3: true,           // Master toggle for Illusion Counter
+  skill3Name: 'ILLUSION COUNTER',
   skill3Cooldown: 420,          // Illusion Counter cooldown (7.0s at 60 fps)
   counterStanceDuration: 60,    // Mockery stance parry window (1.0s at 60 fps)
   counterDamage: 26.0,          // Point-blank dual execution counter-strike damage

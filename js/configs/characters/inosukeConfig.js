@@ -38,16 +38,19 @@ export const inosukeConfig = {
 
   // Passive 1: Beast Spatial Awareness
   enableSpatialAwareness: true,     // Master toggle for Passive 1: Spatial Awareness
+  spatialAwarenessSkillName: 'Beast Spatial Awareness',
   wallRicochetSpeedMultiplier: 1.25,
   antiBackstabImmunity: true,
 
   // Passive 2: Dislocated Joint Reach & Evasion
   enableDislocatedJoints: true,     // Master toggle for Passive 2: Dislocated Joint Reach & Evasion
+  dislocatedJointsSkillName: 'Dislocated Joint Reach',
   projectileEvasionRate: 0.15,
   extendedReachBonus: 20,
 
   // Basic Attack: Beast Breathing Dual Serrated Hack (160° Frontal Arc)
   enableBasicAttack: true,          // Master toggle for Basic Attack: Dual Serrated Hack
+  basicAttackSkillName: 'Beast Breathing Dual Hack',
   dualKatanaArcAngle: Math.PI * 0.889, // ~160 degrees
   dualKatanaReach: 85,
   hit1Damage: 16,
@@ -59,6 +62,7 @@ export const inosukeConfig = {
 
   // Skill 1: Beast Breathing Fifth Fang: Crazy Cutting (Kuruizaki)
   enableCrazyCutting: true,         // Master toggle for Skill 1: Crazy Cutting
+  crazyCuttingSkillName: 'CRAZY CUTTING',
   crazyCuttingCooldown: 252,   // 4.2s
   crazyCuttingRadius: 100,
   crazyCuttingTicks: 3,
@@ -66,6 +70,7 @@ export const inosukeConfig = {
 
   // Skill 2: Beast Breathing Eighth Fang: Explosive Rush (Bakuretsu Mōshin)
   enableExplosiveRush: true,        // Master toggle for Skill 2: Explosive Rush
+  explosiveRushSkillName: 'EXPLOSIVE RUSH',
   explosiveRushCooldown: 330,  // 5.5s
   explosiveRushSpeed: 30.0,
   explosiveRushDamage: 36,
@@ -73,6 +78,7 @@ export const inosukeConfig = {
 
   // Ultimate: Beast Breathing Ultimate: King of the Mountain Cataclysm
   enableKingOfMountain: true,       // Master toggle for Ultimate: King of the Mountain Cataclysm
+  kingOfMountainSkillName: 'KING OF MOUNTAINS',
   ultimateCooldown: 1440,      // 24.0s
   ultimateComboHits: 8,
   ultimateHitDamage: 8,

@@ -7,6 +7,7 @@ import { getSkillDataForFighter, shouldShowFighterSkill } from './hudSkillProvid
 import {
   getFighterDisplayName,
   getFighterThemeColor,
+  isRoaringKnightFighter,
   drawComboCounter,
   drawCheatNotification,
   drawTagMatchRosterHUD
@@ -325,9 +326,17 @@ function _drawFighterCanvasCard(ctx, x, y, w, h, f, fighterIndex, wins, isRightA
   ctx.font = '900 13px "Outfit", "Segoe UI", sans-serif';
   ctx.textAlign = isRightAlign ? 'right' : 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = themeColor;
   const displayName = getFighterDisplayName(f, true);
   const nameX = isRightAlign ? (x + w - 10) : (x + 10);
+  if (isRoaringKnightFighter(f)) {
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2.6;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(displayName, nameX, nameY);
+    ctx.fillStyle = '#050609';
+  } else {
+    ctx.fillStyle = themeColor;
+  }
   ctx.fillText(displayName, nameX, nameY);
 
   // Win Bullets (2 dots)
@@ -477,8 +486,17 @@ function _drawMultiFighterCanvasGrid(ctx, fighters, scores) {
     ctx.font = 'bold 11px "Outfit", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = themeColor;
-    ctx.fillText(getFighterDisplayName(f, true), px + 8, py + 6);
+    const multiName = getFighterDisplayName(f, true);
+    if (isRoaringKnightFighter(f)) {
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2.4;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(multiName, px + 8, py + 6);
+      ctx.fillStyle = '#050609';
+    } else {
+      ctx.fillStyle = themeColor;
+    }
+    ctx.fillText(multiName, px + 8, py + 6);
 
     // HP Bar
     const bw = podW - 16;

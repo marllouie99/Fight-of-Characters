@@ -20,18 +20,20 @@ export const musashiConfig = {
   ability: 'Dual Stances',
   desc: 'Switches between five stances (Earth, Water, Fire, Wind, Void) giving passive effects and unique skills.',
 
-  // General
+  // ── Passive: Five Rings Stance Cycle ──
+  stanceCycleSkillName: 'Five Rings Stances',
   stanceDurationFrames: 300, // 5 seconds per stance
   baseMoveSpeed: 4.8,
 
-  // Core Attack (Dual Wielding)
+  // ── Basic Attack: Dual Wielding (Katana & Wakizashi) ──
+  dualWieldSkillName: 'Katana & Wakizashi',
   swordRange: 40,
   attackCooldown: 80, // frames between dual sword strikes
   katanaDamage: 10,
   wakizashiDamage: 8,
   strikeDurationFrames: 10,
 
-  // Stances
+  // ── Passives: Five Element Stances (Earth, Water, Fire, Wind, Void) ──
   earthArmorMultiplier: 1.1,
   earthSpeedMultiplier: 1.1,
   waterSpeedMultiplier: 1.3,
@@ -42,12 +44,15 @@ export const musashiConfig = {
   voidDodgeChance: 1.0,
   voidLethalDamage: 10,
 
-  // Active Abilities
+  // ── Active Skills: Niten Strike, Niten Ichi-ryu Flurry & Preemptive Counter ──
+  nitenStrikeSkillName: 'Niten Strike',
   nitenStrikeCooldown: 300,
   nitenStrikeKnockback: 15,
   nitenStrikeDamage: 7,
+  flurrySkillName: 'NITEN ICHIRYU FLURRY',
   flurryCooldown: 700,
   flurryDamage: 5,
+  preemptiveSkillName: 'Preemptive Counter',
   preemptiveStrikeCooldown: 360,
   preemptiveStrikeDuration: 60,
   preemptiveCounterDamage: 7,

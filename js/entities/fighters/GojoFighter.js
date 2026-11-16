@@ -2956,6 +2956,11 @@ export class GojoFighter extends Fighter {
         // No-Verse-Equalization mode: Non-JJK fighters are heavily slowed in applyMovementPhysics instead of paralyzed
         if (shouldGojoDomainSlowInsteadOfFreeze(f)) return;
 
+        // Black Knife Parry (Roaring Knight): Can parry Unlimited Void overload cleanly
+        if (typeof f.tryParryExternalCC === 'function' && f.tryParryExternalCC(this, { isDomain: true, isGojoDomain: true })) {
+          return;
+        }
+
         const isEnemy = myTeam === null || state.getFighterTeam(idx) !== myTeam;
         if (true) { // Freeze EVERYONE (including teammates)
           // If the target is channeling any skill, Pure Love Beam, or active counter, force cancel it immediately!
