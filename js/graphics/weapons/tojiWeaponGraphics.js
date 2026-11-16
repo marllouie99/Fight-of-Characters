@@ -88,6 +88,76 @@ function _getTojiGripCanvas(radius, handColor = '#E8BD9B') {
   return offCanvas;
 }
 
+const _TOJI_CUSTOM_NEUTRAL = { offsetX: 0, offsetY: 0, scale: 1.0, widthScale: 1.0, lengthScale: 1.0, angleOffset: 0 };
+
+function _getTojiWeaponCustom(partKey) {
+  const root = (typeof state !== 'undefined' && state.weaponCustomizations && state.weaponCustomizations.toji)
+    ? state.weaponCustomizations.toji
+    : null;
+  if (!root) return null;
+  const part = root.parts && root.parts[partKey] ? root.parts[partKey] : _TOJI_CUSTOM_NEUTRAL;
+  return {
+    offsetX: (root.offsetX || 0) + (part.offsetX || 0),
+    offsetY: (root.offsetY || 0) + (part.offsetY || 0),
+    scale: (root.scale ?? 1.0) * (part.scale ?? 1.0),
+    widthScale: (root.widthScale ?? 1.0) * (part.widthScale ?? 1.0),
+    lengthScale: (root.lengthScale ?? 1.0) * (part.lengthScale ?? 1.0),
+    angleOffset: (root.angleOffset || 0) + (part.angleOffset || 0)
+  };
+}
+
+// ─── 16-Bit Sprite Loaders for Toji's Melee Weapons ───
+let _invertedSpearImage = null;
+let _invertedSpearLoading = false;
+
+export function _getInvertedSpearImage() {
+  if (_invertedSpearImage && _invertedSpearImage.complete && (_invertedSpearImage.naturalWidth > 0 || _invertedSpearImage.width > 0)) {
+    return _invertedSpearImage;
+  }
+  if (!_invertedSpearLoading && typeof Image !== 'undefined') {
+    _invertedSpearLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _invertedSpearImage = img;
+      _invertedSpearLoading = false;
+    };
+    img.onerror = () => {
+      _invertedSpearLoading = false;
+    };
+    img.src = 'Assets/model/toji/inverted_spear_of_heaven.png?v=1';
+    _invertedSpearImage = img;
+  }
+  return _invertedSpearImage;
+}
+
+let _splitSoulKatanaImage = null;
+let _splitSoulKatanaLoading = false;
+
+export function _getSplitSoulKatanaImage() {
+  if (_splitSoulKatanaImage && _splitSoulKatanaImage.complete && (_splitSoulKatanaImage.naturalWidth > 0 || _splitSoulKatanaImage.width > 0)) {
+    return _splitSoulKatanaImage;
+  }
+  if (!_splitSoulKatanaLoading && typeof Image !== 'undefined') {
+    _splitSoulKatanaLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      _splitSoulKatanaImage = img;
+      _splitSoulKatanaLoading = false;
+    };
+    img.onerror = () => {
+      _splitSoulKatanaLoading = false;
+    };
+    img.src = 'Assets/model/toji/split_soul_katana.png?v=1';
+    _splitSoulKatanaImage = img;
+  }
+  return _splitSoulKatanaImage;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getInvertedSpearImage();
+  _getSplitSoulKatanaImage();
+}
+
 /**
  * Draws Toji's hand/grip in authentic stepped pixel art style.
  * Uses cached offscreen canvas blitting (Rule 35 compliant).
@@ -195,7 +265,7 @@ export function drawInvertedSpear(ctx, cx, cy, angle, r = 25, chainNodes = null,
   const scale = 0.75;
   ctx.scale(scale, scale);
 
-  const custom = (typeof state !== 'undefined' && state.weaponCustomizations && state.weaponCustomizations.toji) ? state.weaponCustomizations.toji : null;
+  const custom = _getTojiWeaponCustom('inverted_spear');
   if (custom) {
     const lSc = custom.lengthScale ?? 1.0;
     const wSc = custom.widthScale ?? 1.0;
@@ -222,7 +292,25 @@ export function drawInvertedSpear(ctx, cx, cy, angle, r = 25, chainNodes = null,
     drawPhysicsChain(ctx, staticNodes);
   }
 
-  // 2. Stepped Pixel-Art Solid Gold Ring Butt (X=0, Y=0)
+  // 2. Render 16-bit Inverted Spear of Heaven PNG Sprite (with procedural fallback)
+  const spearImg = _getInvertedSpearImage();
+  if (spearImg && spearImg.complete && (spearImg.naturalWidth > 0 || spearImg.width > 0)) {
+    const targetW = 128;
+    const imgW = spearImg.naturalWidth || spearImg.width || 1354;
+    const imgH = spearImg.naturalHeight || spearImg.height || 306;
+    const targetH = Math.round(targetW * (imgH / imgW));
+    const dx = -targetW * 0.049; // Pommel ring center at (0, 0)
+    const dy = -targetH * 0.489; // Handle centerline at y = 0
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spearImg, dx, dy, targetW, targetH);
+    ctx.restore();
+    if (drawHand) drawTojiPixelWeaponGrip(ctx, 22, 1, getHandSize(6.0), handColor || '#E8BD9B');
+    ctx.restore();
+    return;
+  }
+
+  // Fallback Procedural Stepped Pixel-Art Solid Gold Ring Butt (X=0, Y=0)
   // Outer black border
   ctx.fillStyle = '#0E0F14';
   ctx.fillRect(-8, -8, 16, 16);
@@ -584,7 +672,7 @@ export function drawSplitSoulKatana(ctx, cx, cy, angle, r = 25, handColor = '#24
     ctx.scale(1, -1);
   }
 
-  const custom = (typeof state !== 'undefined' && state.weaponCustomizations && state.weaponCustomizations.toji) ? state.weaponCustomizations.toji : null;
+  const custom = _getTojiWeaponCustom('split_soul_katana');
   const customOffX = custom ? (custom.offsetX || 0) : 0;
   const customOffY = custom ? (custom.offsetY || 0) : 0;
   const customScale = custom ? (custom.scale ?? 1.0) : 1.0;
@@ -601,7 +689,22 @@ export function drawSplitSoulKatana(ctx, cx, cy, angle, r = 25, handColor = '#24
   const scale = 0.95 * customScale;
   ctx.scale(scale * customLen, scale * customWid);
 
-  drawSplitSoulKatanaBladeMesh(ctx, handColor, true);
+  const katanaImg = _getSplitSoulKatanaImage();
+  if (katanaImg && katanaImg.complete && (katanaImg.naturalWidth > 0 || katanaImg.width > 0)) {
+    const targetW = 166;
+    const imgW = katanaImg.naturalWidth || katanaImg.width || 1292;
+    const imgH = katanaImg.naturalHeight || katanaImg.height || 271;
+    const targetH = Math.max(36, Math.round(targetW * (imgH / imgW)));
+    const dx = -targetW * 0.165; // Tsuka grip midpoint anchored at (0, 0)
+    const dy = -targetH * 0.467;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(katanaImg, dx, dy, targetW, targetH);
+    drawTojiPixelWeaponGrip(ctx, 0, 0, getHandSize(5.8), handColor || '#E8BD9B');
+    ctx.restore();
+  } else {
+    drawSplitSoulKatanaBladeMesh(ctx, handColor, true);
+  }
 
   ctx.restore();
 }
@@ -783,7 +886,7 @@ export function drawTojiPistol(ctx, cx, cy, angle, r = 25, handColor = '#E8BD9B'
   const handAnchorY = r * 0.38;
   ctx.translate(handAnchorX, handAnchorY);
 
-  const custom = (typeof state !== 'undefined' && state.weaponCustomizations && state.weaponCustomizations.toji) ? state.weaponCustomizations.toji : null;
+  const custom = _getTojiWeaponCustom('pistol');
   const customScale = custom ? (custom.scale ?? 1.0) : 1.0;
   const customLen = custom ? (custom.lengthScale ?? 1.0) : 1.0;
   const customWid = custom ? (custom.widthScale ?? 1.0) : 1.0;

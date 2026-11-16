@@ -9,6 +9,8 @@ export const tojiConfig = {
     ultimateOverlay: 'Assets/Overlays/toji-ultimate-overlay.png',
     pistol: 'Assets/model/toji/toji_pistol.png',
     pistolJpg: 'Assets/model/toji/toji_pistol.jpg',
+    invertedSpear: 'Assets/model/toji/inverted_spear_of_heaven.png',
+    splitSoulKatana: 'Assets/model/toji/split_soul_katana.png',
   },
 
   name: 'Toji',

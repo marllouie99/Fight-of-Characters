@@ -323,51 +323,107 @@ export const HUD_SKILL_PROVIDERS = {
   // ─────────────────────────────────────────────
   avatarofemptiness(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.avatarofemptiness) ? CONFIG.avatarofemptiness : {};
-    const themeColor = f.themeColor || cfg.themeColor || '#9D4EDD';
+    const themeColor = f.themeColor || f.color || cfg.themeColor || '#9D4EDD';
     const skills = [];
 
     // 1. Cryonic Zero
     if (isSkillEnabled(cfg.enableCryonicZero, true)) {
       const cryoMax = cfg.cryonicCooldown || 360;
-      const cryoTimer = f.cryonicCooldown !== undefined ? f.cryonicCooldown : 0;
+      const cryoTimer = Math.max(0, f.cryonicCooldown !== undefined ? f.cryonicCooldown : 0);
       const cryoPct = Math.max(0, Math.min(100, (1 - (cryoTimer / cryoMax)) * 100));
-      skills.push({ id: 'cryonic', pct: cryoPct, ready: cryoPct >= 99 && cryoTimer <= 0, color: '#00F5D4', label: cfgSkillName(cfg, ['cryonicZeroSkillName'], 'CRYONIC ZERO') });
+      const baseName = cfgSkillName(cfg, ['cryonicZeroSkillName'], 'CRYONIC ZERO');
+      const label = cryoTimer > 0 ? `${baseName} (${(cryoTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'cryonic',
+        pct: cryoPct,
+        ready: cryoPct >= 99 && cryoTimer <= 0,
+        color: themeColor,
+        label,
+        cooldown: cryoTimer
+      });
     }
 
     // 2. Visceral Torrent
     if (isSkillEnabled(cfg.enableVisceralTorrent, true)) {
       const viscMax = cfg.visceralCooldown || 390;
-      const viscTimer = f.visceralCooldown !== undefined ? f.visceralCooldown : 0;
-      const viscPct = Math.max(0, Math.min(100, (1 - (viscTimer / viscMax)) * 100));
-      skills.push({ id: 'visceral', pct: viscPct, ready: viscPct >= 99 && viscTimer <= 0, color: '#FF0055', label: cfgSkillName(cfg, ['visceralTorrentSkillName'], 'VISCERAL TORRENT') });
+      const viscTimer = Math.max(0, f.visceralCooldown !== undefined ? f.visceralCooldown : 0);
+      const viscActive = Math.max(0, f.visceralActiveTimer || 0);
+      const viscMaxDur = cfg.visceralDuration || 90;
+      const viscPct = viscActive > 0
+        ? Math.max(0, Math.min(100, (viscActive / viscMaxDur) * 100))
+        : Math.max(0, Math.min(100, (1 - (viscTimer / viscMax)) * 100));
+      const baseName = cfgSkillName(cfg, ['visceralTorrentSkillName'], 'VISCERAL TORRENT');
+      const label = viscActive > 0
+        ? `${baseName} (${(viscActive / 60).toFixed(1)}S)`
+        : (viscTimer > 0 ? `${baseName} (${(viscTimer / 60).toFixed(1)}S)` : baseName);
+      skills.push({
+        id: 'visceral',
+        pct: viscPct,
+        ready: viscPct >= 99 && viscTimer <= 0 && viscActive <= 0,
+        active: viscActive > 0,
+        color: themeColor,
+        label,
+        cooldown: viscTimer
+      });
     }
 
     // 3. Dark Portal Strikes
     if (isSkillEnabled(cfg.enablePortalStrikes, true)) {
       const portMax = cfg.portalCooldown || 480;
-      const portTimer = f.portalCooldown !== undefined ? f.portalCooldown : 0;
+      const portTimer = Math.max(0, f.portalCooldown !== undefined ? f.portalCooldown : 0);
       const portPct = Math.max(0, Math.min(100, (1 - (portTimer / portMax)) * 100));
-      skills.push({ id: 'portal', pct: portPct, ready: portPct >= 99 && portTimer <= 0, color: themeColor, label: cfgSkillName(cfg, ['portalStrikesSkillName'], 'PORTAL STRIKES') });
+      const baseName = cfgSkillName(cfg, ['portalStrikesSkillName'], 'PORTAL STRIKES');
+      const label = portTimer > 0 ? `${baseName} (${(portTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'portal',
+        pct: portPct,
+        ready: portPct >= 99 && portTimer <= 0,
+        color: themeColor,
+        label,
+        cooldown: portTimer
+      });
     }
 
     // 4. Universal Annihilation (Ultimate)
     if (isSkillEnabled(cfg.enableUniversalAnnihilation, true)) {
       const annMax = cfg.annihilationCooldown || 880;
-      const annTimer = f.annihilationCooldown !== undefined ? f.annihilationCooldown : 0;
+      const annTimer = Math.max(0, f.annihilationCooldown !== undefined ? f.annihilationCooldown : 0);
+      const windup = Math.max(0, f.annihilationWindupTimer || 0);
+      const fire = Math.max(0, f.annihilationFireTimer || 0);
+      const recovery = Math.max(0, f.annihilationRecoveryTimer || 0);
+      const isChanneling = windup > 0 || fire > 0 || recovery > 0;
       let annPct = 0;
       let annReady = false;
+      const baseName = cfgSkillName(cfg, ['universalAnnihilationSkillName'], 'UNIVERSAL ANNIHILATION');
+      let label = baseName;
 
-      if ((f.annihilationWindupTimer || 0) > 0) {
-        annPct = Math.max(0, Math.min(100, (1 - (f.annihilationWindupTimer / (f.annihilationWindupMax || 50))) * 100));
-        annReady = true;
-      } else if ((f.annihilationFireTimer || 0) > 0) {
-        annPct = 100;
-        annReady = true;
+      if (windup > 0) {
+        annPct = Math.max(0, Math.min(100, (1 - (windup / (f.annihilationWindupMax || 50))) * 100));
+        label = `${baseName} (${(windup / 60).toFixed(1)}S)`;
+      } else if (fire > 0) {
+        annPct = Math.max(0, Math.min(100, (fire / (f.annihilationFireMax || 95)) * 100));
+        label = `${baseName} (${(fire / 60).toFixed(1)}S)`;
+      } else if (recovery > 0) {
+        annPct = 0;
       } else {
         annPct = Math.max(0, Math.min(100, (1 - (annTimer / annMax)) * 100));
         annReady = (annPct >= 99 && annTimer <= 0);
+        if (annTimer > 0) {
+          label = `${baseName} (${(annTimer / 60).toFixed(1)}S)`;
+        }
       }
-      skills.push({ id: 'annihilation', pct: annPct, ready: annReady, color: '#00F5D4', label: cfgSkillName(cfg, ['universalAnnihilationSkillName'], 'UNIVERSAL ANNIHILATION') });
+      skills.push({
+        id: 'annihilation',
+        pct: annPct,
+        ready: annReady,
+        active: isChanneling,
+        color: themeColor,
+        label,
+        cooldown: annTimer,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
     }
 
     return skills;

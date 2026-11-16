@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE — MASTER WEAPON CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Weapon Studio on 2026-11-15T14:27:30.180Z
+ * Generated from Weapon Studio on 2026-11-16T13:08:30.486Z
  * =============================================================================
  */
 
@@ -58,7 +58,7 @@ export const WEAPON_CUSTOMIZATIONS_DATABASE = {
       "weaponScale": 1
   },
   yuta: { offsetX: 0, offsetY: 14, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
-  toji: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
+  toji: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0, parts: {"pistol":{"offsetX":0,"offsetY":0,"scale":1,"widthScale":1,"lengthScale":1,"angleOffset":0},"inverted_spear":{"offsetX":0,"offsetY":0,"scale":1,"widthScale":1.2500000000000002,"lengthScale":1.2500000000000002,"angleOffset":0},"split_soul_katana":{"offsetX":0,"offsetY":0,"scale":1,"widthScale":1.1500000000000001,"lengthScale":1.1,"angleOffset":0}} },
   cronos: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
   ruby: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
   rubbick: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },

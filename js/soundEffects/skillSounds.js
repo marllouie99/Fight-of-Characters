@@ -1020,7 +1020,7 @@ export const SKILL_SOUNDS = {
   avatarofemptiness: {
     annihilation_charge: {
       src: 'Assets/Sound Effects/Avatar/UniversalAnnihilationCharge.ogg',
-      volume: 0.9,
+      volume: 0.95,
       delay: 0
     },
     annihilation_blast: {
@@ -1033,24 +1033,32 @@ export const SKILL_SOUNDS = {
       volume: 0.85,
       delay: 0
     },
-    reality_shatter: {
-      src: 'Assets/Sound Effects/Avatar/RealityShatter1.ogg',
-      volume: 0.95,
-      delay: 0
-    },
+    reality_shatter: [
+      { src: 'Assets/Sound Effects/Avatar/RealityShatter1.ogg', volume: 0.95, delay: 0 },
+      { src: 'Assets/Sound Effects/Avatar/RealityShatter2.ogg', volume: 0.95, delay: 0 }
+    ],
+    cryonic_zero: [
+      { src: 'Assets/Sound Effects/Avatar/AbsoluteZeroWave.ogg', volume: 0.88, delay: 0 },
+      { src: 'Assets/Sound Effects/Avatar/FrostColumnBurst.ogg', volume: 0.85, delay: 0 }
+    ],
     frost_column: {
       src: 'Assets/Sound Effects/Avatar/FrostColumnBurst.ogg',
-      volume: 0.8,
-      delay: 0
-    },
-    visceral_torrent: {
-      src: 'Assets/Sound Effects/Avatar/RealityImpact.ogg',
       volume: 0.85,
       delay: 0
     },
-    portal_strike: {
-      src: 'Assets/Sound Effects/Avatar/PortalPierce1.ogg',
-      volume: 0.8,
+    visceral_torrent: [
+      { src: 'Assets/Sound Effects/Avatar/BloodFountainErupt.ogg', volume: 0.88, delay: 0 },
+      { src: 'Assets/Sound Effects/Avatar/RealityImpact.ogg', volume: 0.85, delay: 0 }
+    ],
+    portal_strike: [
+      { src: 'Assets/Sound Effects/Avatar/PortalPierce1.ogg', volume: 0.82, delay: 0 },
+      { src: 'Assets/Sound Effects/Avatar/PortalPierce2.ogg', volume: 0.82, delay: 0 },
+      { src: 'Assets/Sound Effects/Avatar/PortalPierce3.ogg', volume: 0.82, delay: 0 },
+      { src: 'Assets/Sound Effects/Avatar/PortalPierce4.ogg', volume: 0.82, delay: 0 }
+    ],
+    phase2_awakening: {
+      src: 'Assets/Sound Effects/Avatar/Phase2IntroFaceManifest.ogg',
+      volume: 0.9,
       delay: 0
     }
   }

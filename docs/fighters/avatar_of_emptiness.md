@@ -103,9 +103,8 @@ In the Ramball Fight Simulator arena, the Avatar of Emptiness is an oppressive, 
 
 ## 🎨 Aesthetic & Engine Standards Compliance
 
-- **Rule 19 (Upright Front POV):** Shadow horns and rift mantle on `-Y`, faceless obsidian mask with vertical rift glow at `Y ~ 0` (strictly NO eyes, pupils, mouth, or nose), flowing antishadow robe tendrils on `+Y`.
-- **Rule 20 (Symmetrical Lower-Flank Hands):** Front layer shadowy claw hands at `(x: ±r * 0.82, y: +r * 0.38)` with radius `r * 0.30`.
-- **Rule 3.5 (Offscreen Discrete Rasterization):** Discrete $P = 2.0\text{px}$ pixel grid rendered once into `_cachedAvatarCanvas` to prevent sub-pixel seam artifacts during rotation.
-- **Rule 2.2 (Prohibition of `shadowBlur`):** Zero canvas blur filters; all ethereal glows created with concentric stepped gradient bands.
-- **Rule 2.4 (Canvas Stack Balance):** 100% strictly matched `ctx.save()` / `ctx.restore()` transform depths across all dimension portals and ultimate animations.
-- **Rule 1.1 (Freeze & TimeStop Early Exits):** Universal `_handleTimeStop()` evaluation prevents state leakage when frozen.
+- **Rule 18 (Unified HUD Theme & Signature Registration):** All HUD skill bars strictly use the character `themeColor` (`#9D4EDD`) gated by `isSkillEnabled` toggles, with `Universal Annihilation` registered in `signatureMap`.
+- **Rule 11 & Rule 35 (Pre-Baked Offscreen Core & Radial Glows, Zero `shadowBlur`):** Discrete $P = 2.0\text{px}$ obsidian core baked once into `_coreCanvasCache`, ambient auras/flares blitted from `glowSpriteCache`, zero per-frame `createRadialGradient` or `shadowBlur` calls.
+- **Rule 15 & Rule 26 (Tapered Crescents & Sequential Shockwaves):** Visceral Blood Torrent uses double-tapered crescent arcs; Cryonic Zero, Phase 2 Awakening, and Annihilation Collapse use sequential water-ripple wavefronts with zero radial spoke cobwebbing.
+- **Rule 21 & Rule 24 (Overhead HP/Freeze & Stack Integrity):** `draw()` explicitly invokes `this.drawHealth(ctx)` and `this.drawFreezeTimer(ctx)` with strictly balanced `ctx.save()` / `ctx.restore()` transform depths (`0`).
+- **Rule 1.1 & Rule 25 (Freeze Guard & Non-Freezing VFX Decay):** `_updateVisualDecay()` runs before the `_handleTimeStop()` freeze exit so active shockwaves, Void Blots, Cryonic zones, and Dark Portals decay cleanly even when immobilized.

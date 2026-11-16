@@ -9621,6 +9621,57 @@ async function main() {
     mockCtx.resetStackDepth();
     drawTojiSkin(mockCtx, toji);
     assertCanvasStackBalance('drawTojiSkin(mockCtx, toji)');
+
+    const { _getInvertedSpearImage, _getSplitSoulKatanaImage, drawInvertedSpear, drawSplitSoulKatana, drawSplitSoulKatanaBladeMesh } = await import('../js/graphics/weapons/tojiWeaponGraphics.js');
+    const spearImg = _getInvertedSpearImage();
+    const katanaImg = _getSplitSoulKatanaImage();
+    if (!spearImg) throw new Error('_getInvertedSpearImage() returned null or undefined');
+    if (!katanaImg) throw new Error('_getSplitSoulKatanaImage() returned null or undefined');
+
+    // Verify 16-bit loaded-sprite fast path + Canvas 2D stack balance
+    spearImg.complete = true;
+    spearImg.naturalWidth = 1354;
+    spearImg.naturalHeight = 306;
+    katanaImg.complete = true;
+    katanaImg.naturalWidth = 1292;
+    katanaImg.naturalHeight = 271;
+
+    mockCtx.resetStackDepth();
+    drawInvertedSpear(mockCtx, 300, 300, 0.3, 25, null, '#E8BD9B', 0.3, true);
+    assertCanvasStackBalance('drawInvertedSpear (16-bit PNG sprite)');
+
+    mockCtx.resetStackDepth();
+    drawSplitSoulKatana(mockCtx, 300, 300, -0.4, 25, '#E8BD9B', -0.4);
+    assertCanvasStackBalance('drawSplitSoulKatana (16-bit PNG sprite)');
+
+    mockCtx.resetStackDepth();
+    drawSplitSoulKatanaBladeMesh(mockCtx, '#E8BD9B', false);
+    assertCanvasStackBalance('drawSplitSoulKatanaBladeMesh (16-bit PNG sprite)');
+
+    // Verify Toji Arsenal (Pistol, Inverted Spear, Split Soul Katana) inside Weapon Studio
+    const { drawWeaponStudioScreen } = await import('../js/graphics/ui/WeaponStudioScreen.js');
+    const prevStudioWeapon = state.studioSelectedWeapon;
+    const prevStudioDetail = state.studioSelectedDetail;
+    const prevTojiWeaponIdx = state.tojiWeaponIndex;
+    try {
+      state.studioSelectedWeapon = 'toji';
+      for (const wIdx of [0, 1, 2]) {
+        state.tojiWeaponIndex = wIdx;
+        for (const mode of ['position', 'scale_angle', 'proportions']) {
+          state.studioSelectedDetail = mode;
+          mockCtx.resetStackDepth();
+          drawWeaponStudioScreen();
+          assertCanvasStackBalance(`drawWeaponStudioScreen(toji idx=${wIdx}, mode=${mode})`);
+        }
+      }
+      if (!state.weaponCustomizations?.toji?.parts?.inverted_spear || !state.weaponCustomizations?.toji?.parts?.split_soul_katana) {
+        throw new Error('Weapon Studio must initialize Toji per-weapon parts for inverted_spear and split_soul_katana');
+      }
+    } finally {
+      state.studioSelectedWeapon = prevStudioWeapon;
+      state.studioSelectedDetail = prevStudioDetail;
+      state.tojiWeaponIndex = prevTojiWeaponIdx;
+    }
   } catch (err) {
     console.error('❌ [TOJI MODEL HAIR & PIXEL BODY TEST ERROR]:', err);
     errors++;

@@ -54,6 +54,12 @@ export class TojiFighter extends Fighter {
     this.pistolRecoilTimer = 0;
     this.pistolFlashTimer = 0;
 
+    // Cursed Tool Persistence: NEVER snap-switch to the default pistol on a kill.
+    // When the opponent dies while Toji is holding the Split Soul Katana or Inverted Spear,
+    // that weapon stays in hand (and finishes its swing) until he starts a brand-new action
+    // or the round resets.
+    this._deathWeaponHold = null; // 'katana' | 'spear'
+
     // Inverted Spear of Heaven (Ambush Thrust & Secondary Cursed Tool)
     this.spearCooldown = 0;
     this.spearCooldownMax = CONFIG.toji?.spearCooldown || 32;
@@ -264,6 +270,7 @@ export class TojiFighter extends Fighter {
     this.pistolCooldown = 0;
     this.pistolRecoilTimer = 0;
     this.pistolFlashTimer = 0;
+    this._deathWeaponHold = null;
     this.spearCooldown = 0;
     this.spearSwingTimer = 0;
     this.katanaActiveTimer = 0;
@@ -685,6 +692,7 @@ export class TojiFighter extends Fighter {
     
     if (!closest) return;
     
+    this._deathWeaponHold = null;
     this.ultimateActive = true;
     this.ultimateCooldown = this.ultimateCooldownMax || CONFIG.toji?.ultimateCooldown || 2500;
     this.ultimatePhase = 'CHANNELING';
@@ -753,6 +761,18 @@ export class TojiFighter extends Fighter {
       if (nextTarget) {
         this.ultimateTarget = nextTarget;
       } else {
+        // Last target died mid-ultimate: keep the Split Soul Katana in hand instead of
+        // snap-switching to the default pistol, and let its current swing settle naturally.
+        const wasWieldingKatana = this.ultimatePhase === 'STRIKING' || this.ultimatePhase === 'CRATER' ||
+          this.ultimatePhase === 'CRATER_FADEIN' || this.ultimatePhase === 'CRATER_DIVE' ||
+          this.ambushPhase === 'KATANA_CHARGE' || this.ambushPhase === 'KATANA_SLASH' ||
+          (this.katanaSlashTimer || 0) > 0 || (this.katanaSlashFadeTimer || 0) > 0;
+        if (wasWieldingKatana) {
+          this._deathWeaponHold = 'katana';
+          if ((this.katanaSlashTimer || 0) <= 0 && (this.katanaSlashFadeTimer || 0) <= 0) {
+            this.katanaSlashFadeTimer = 12;
+          }
+        }
         this.ultimateActive = false;
         this.ultimateCooldown = this.ultimateCooldownMax || CONFIG.toji?.ultimateCooldown || 2500;
         this.ultimateChargeTimer = 0;
@@ -1434,6 +1454,12 @@ export class TojiFighter extends Fighter {
         this.spearSwingTimer = 0;
         this.aimTurnRate = undefined;
         
+        // Final blow landed a kill: keep the Split Soul Katana held through the finish
+        // instead of snapping back to the default pistol once the follow-through fades.
+        if (Array.isArray(finalTargets) && finalTargets.some(t => t && (t.hp <= 0 || t.isDead || t.dead))) {
+          this._deathWeaponHold = 'katana';
+        }
+
         // PRESERVE FINAL BLOW ANIMATION & SLASH FOLLOW-THROUGH (Do NOT abruptly cut off!):
         const fadeFrames = CONFIG.toji?.ultimateCraterSlashFadeFrames ?? 28;
         this.katanaSlashTimer = 0;
@@ -1913,6 +1939,7 @@ export class TojiFighter extends Fighter {
    */
   startAmbushSequence(opponent, isInterrupt = false) {
     if ((this.postUltimateRecoveryTimer || 0) > 0) return;
+    this._deathWeaponHold = null;
     modStartAmbushSequence(this, opponent, isInterrupt);
   }
 
@@ -1980,6 +2007,9 @@ export class TojiFighter extends Fighter {
     if (this.ultimateActive || this.isAmbushing) return false;
     if (this.isCaughtInBeam()) return false;
     if (this.hp <= 0 || this.isDead) return false;
+
+    // Drawing the handgun is a new action: release any post-kill cursed tool hold
+    this._deathWeaponHold = null;
 
     if (target) {
       this.lastTarget = target;
@@ -2623,7 +2653,9 @@ export class TojiFighter extends Fighter {
 
     // 1.8. Draw Rested Weapon on BACK LAYER (Behind Toji's body circle)
     const isKatanaDrawn = (this.ambushPhase === 'KATANA_DRAW' || this.ambushPhase === 'KATANA_CHASE' || this.ambushPhase === 'KATANA_CHARGE' || this.ambushPhase === 'KATANA_SLASH' || this.ambushPhase === 'KATANA_RECOVERY') && !this.ultimateActive;
-    const isKatanaActiveInHand = isKatanaDrawn || (this.ambushPhase === 'PHANTOM_FLURRY' && !this.ultimateActive) || Boolean(this._wasFinalBlowSpin && ((this.katanaSlashFadeTimer && this.katanaSlashFadeTimer > 0) || ((this.postUltimateRecoveryTimer || 0) > 0)));
+    const isDeathWeaponHoldKatana = this._deathWeaponHold === 'katana';
+    const isDeathWeaponHoldSpear = this._deathWeaponHold === 'spear';
+    const isKatanaActiveInHand = isKatanaDrawn || isDeathWeaponHoldKatana || (this.ambushPhase === 'PHANTOM_FLURRY' && !this.ultimateActive) || Boolean(this._wasFinalBlowSpin && ((this.katanaSlashFadeTimer && this.katanaSlashFadeTimer > 0) || ((this.postUltimateRecoveryTimer || 0) > 0)));
     const isUltimateFinal = this.ultimateActive && (this.ultimatePhase === 'CRATER_FADEIN' || this.ultimatePhase === 'CRATER' || this.ultimatePhase === 'CRATER_DIVE');
     const isShowoffOrPreview = this._isFaceOff || this._isWinnerReveal || (typeof state !== 'undefined' && (state.gameState === 'countdown' || state._isFaceOffScreenActive));
     const shouldHideWeapons = (typeof state !== 'undefined' && state.showSkinOnly) || this.hideWeapon;
@@ -3081,7 +3113,7 @@ export class TojiFighter extends Fighter {
       // Disable scale flipping during spinning final blow (baseAngle = 0) so the blade cutting edge naturally leads the clockwise rotation
       const finalBaseAngle = isSpinningFinalBlow ? 0 : baseAngle;
       drawSplitSoulKatana(ctx, this.x, this.y, renderAngle, this.r + thrustDistance, '#E8BD9B', finalBaseAngle);
-    } else if (this.isAmbushing && (this.ambushPhase === 'BACK_CHARGE' || this.ambushPhase === 'FRONT_LAUNCH' || this.isAmbushThrust || this.ambushPhase === 'FRONT_PAUSE')) {
+    } else if ((this.isAmbushing && (this.ambushPhase === 'BACK_CHARGE' || this.ambushPhase === 'FRONT_LAUNCH' || this.isAmbushThrust || this.ambushPhase === 'FRONT_PAUSE')) || isDeathWeaponHoldSpear) {
       // Sequence 1 Ambush: Inverted Spear piercing backstab thrust
       drawInvertedSpear(ctx, this.x, this.y, renderAngle, this.r + thrustDistance, this.chainNodes, '#E8BD9B', baseAngle);
     } else {

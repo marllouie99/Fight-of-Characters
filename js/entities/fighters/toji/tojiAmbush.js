@@ -205,6 +205,26 @@ export function modUpdateAmbushSequence(fighter, opponent, ownerIndex) {
   }
 
   if (tojiIsTargetDeadOrRemoved(fighter, opponent) || !fighter.isAmbushing) {
+    // ── CURSED TOOL FINISH HOLD (No Snap-Switch to Default Pistol) ──
+    // If the opponent dies while Toji is holding a cursed tool, keep that exact weapon in hand
+    // and let its current swing finish instead of instantly reverting to the handgun.
+    const combatPhase = fighter.ambushPhase;
+    let heldWeapon = null;
+    if (combatPhase === 'PHANTOM_FLURRY') {
+      heldWeapon = ((fighter.phantomStrikeCount || 0) % 2 === 0) ? 'katana' : 'spear';
+    } else if (combatPhase === 'BACK_STAB' || combatPhase === 'BACK_CHARGE' || combatPhase === 'FRONT_LAUNCH' || combatPhase === 'FRONT_PAUSE') {
+      heldWeapon = 'spear';
+    } else if (combatPhase === 'KATANA_DRAW' || combatPhase === 'KATANA_CHASE' || combatPhase === 'KATANA_CHARGE' || combatPhase === 'KATANA_SLASH' || combatPhase === 'KATANA_RECOVERY') {
+      heldWeapon = 'katana';
+    } else if ((fighter.katanaSlashTimer || 0) > 0 || (fighter.katanaSlashFadeTimer || 0) > 0) {
+      heldWeapon = 'katana';
+    } else if ((fighter.spearSwingTimer || 0) > 0) {
+      heldWeapon = 'spear';
+    }
+    if (heldWeapon) {
+      fighter._deathWeaponHold = heldWeapon;
+    }
+
     if (typeof state !== 'undefined') {
       if (state.fighters) state.fighters.forEach(f => {
         if (f) {
@@ -264,9 +284,13 @@ export function modUpdateAmbushSequence(fighter, opponent, ownerIndex) {
     fighter.stealthCooldown = fighter.stealthMaxCooldown || (CONFIG.toji?.stealthCooldownFrames || 600);
     fighter.isStealthed = false;
     fighter.stealthActive = false;
-    fighter.katanaSlashTimer = 0;
-    fighter.katanaSlashFadeTimer = 0;
-    fighter._lastKatanaTimer = 0;
+    // Preserve the in-flight swing timers when a cursed tool stays in hand so the
+    // strike completes its animation instead of cutting off mid-swing.
+    if (!heldWeapon) {
+      fighter.katanaSlashTimer = 0;
+      fighter.katanaSlashFadeTimer = 0;
+      fighter._lastKatanaTimer = 0;
+    }
     fighter.slashSwingTimer = 0;
     if (fighter.swordTrail) fighter.swordTrail.length = 0;
     const angle = Math.random() * Math.PI * 2;

@@ -26584,6 +26584,146 @@ async function runInteractionTests() {
     }
   }
 
+  // ── Test 84: Avatar of Emptiness Complete Kit, Three Universes, VFX/SFX & Rules 18/21/25/35 ──
+  {
+    console.log('   84. Testing Avatar of Emptiness full kit, Three Universes, Rule 18 HUD, Rule 21 HP/Freeze & Rule 25 non-freezing VFX decay...');
+    const { AvatarOfEmptinessFighter } = await import('../js/entities/fighters/AvatarOfEmptinessFighter.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const { getFighterSkillSoundPaths } = await import('../js/soundEffects/skillSounds.js');
+    const { drawAvatarOfEmptinessSkin } = await import('../js/graphics/fighters/avatarOfEmptinessSkin.js');
+    const {
+      drawUniversalAnnihilationCharge,
+      drawUniversalAnnihilationBeam,
+      drawCryonicZeroEffects,
+      drawVisceralTorrentEffects,
+      drawDarkPortalStrikes,
+      drawAvatarShockwaves,
+      drawAvatarVoidBlots
+    } = await import('../js/graphics/weapons/avatarOfEmptinessWeaponGraphics.js');
+
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+
+      const avatar = new AvatarOfEmptinessFighter({ x: 220, y: 450 });
+      avatar.team = 0;
+      const target = {
+        x: 300, y: 450, vx: 0, vy: 0, hp: 500, maxHp: 500, radius: 28, dead: false, team: 1,
+        isTeammate: () => false,
+        takeDamage(amt) { this.hp = Math.max(0, this.hp - amt); return true; },
+        applySlow() {},
+        applyHitStun() {},
+        applyKnockback(vx, vy) { this.vx += vx; this.vy += vy; }
+      };
+      state.fighters = [avatar, target];
+
+      // 1. Verify basic attack Antimatter Void Blasts
+      assert(avatar.shoot(target, 0) === true, 'Avatar of Emptiness shoot() must fire Antimatter Void Blasts');
+      assert(avatar.shootCooldown > 0, 'shootCooldown must be set after firing');
+
+      // 2. Verify Cryonic Absolute Zero shifts universe & spawns frost zone + shockwave
+      avatar.cryonicCooldown = 0;
+      assert(avatar.castCryonicZero(target) === true, 'castCryonicZero must activate cleanly');
+      assert(avatar.currentUniverse === 'cryonic', 'castCryonicZero must shift currentUniverse to cryonic');
+      assert(avatar.activeCryonicZones.length === 1, 'castCryonicZero must spawn active Cryonic Zone');
+      assert(target.hp < 500, 'castCryonicZero must deal AOE damage to nearby enemy');
+
+      // 3. Verify Visceral Blood Torrent commits aim & blasts cone
+      const hpBeforeVisc = target.hp;
+      avatar.visceralCooldown = 0;
+      assert(avatar.castVisceralTorrent(target) === true, 'castVisceralTorrent must activate cleanly');
+      assert(avatar.currentUniverse === 'visceral', 'castVisceralTorrent must shift currentUniverse to visceral');
+      assert(avatar.canAim() === false, 'Avatar must lock committed cast angle during Visceral Torrent (Rule 1.4)');
+      assert(target.hp < hpBeforeVisc, 'castVisceralTorrent must damage enemy within frontal cone');
+      avatar.visceralActiveTimer = 0;
+
+      // 4. Verify Dark Dimension Portal Strikes
+      avatar.portalCooldown = 0;
+      assert(avatar.castPortalStrikes(target) === true, 'castPortalStrikes must activate cleanly');
+      assert(avatar.currentUniverse === 'dark', 'castPortalStrikes must shift currentUniverse to dark');
+      assert(avatar.activePortalStrikes.length >= 4, 'castPortalStrikes must open >= 4 dark portals');
+
+      // 5. Verify Universal Annihilation windup -> fire -> recovery & non-ticking CD
+      avatar.annihilationCooldown = 0;
+      assert(avatar.castUniversalAnnihilation(target) === true, 'castUniversalAnnihilation must cast cleanly');
+      assert(avatar.annihilationWindupTimer > 0, 'Windup must activate upon casting Universal Annihilation');
+      const fullCd = avatar.annihilationCooldown;
+      avatar.annihilationWindupTimer = 1;
+      avatar.update(target, 0, testArena);
+      assert(avatar.annihilationFireTimer > 0, 'Universal Annihilation must transition from windup to active beam fire');
+      assert(avatar.annihilationCooldown === fullCd, 'Ultimate cooldown must NOT tick down while firing');
+
+      // 6. Verify Phase 2 Awakening below 55% HP
+      avatar.hp = Math.round(avatar.maxHp * 0.50);
+      avatar.takeDamage(1, target);
+      assert(avatar.isPhase2 === true, 'Avatar must awaken Phase 2 below 55% HP threshold');
+
+      // 7. Verify Rule 25 non-freezing VFX decay when time-stopped
+      avatar.timeStopTimer = 10;
+      const shockCountBefore = avatar.activeShockwaves.length;
+      assert(shockCountBefore > 0, 'Expected active shockwaves prior to time-stop decay test');
+      const firstShockLife = avatar.activeShockwaves[0].life;
+      avatar.update(target, 0, testArena);
+      assert(avatar.activeShockwaves[0].life === firstShockLife - 1, 'Rule 25: Active shockwaves must continue decaying even when Avatar is time-stopped');
+      avatar.timeStopTimer = 0;
+
+      // 8. Verify Rule 18 unified themeColor HUD bars
+      const hudSkills = getSkillDataForFighter(avatar, () => []);
+      assert(hudSkills.length === 4, `Expected 4 Avatar HUD skill bars, got ${hudSkills.length}`);
+      assert(hudSkills.every(s => s.color === avatar.themeColor), 'Rule 18: All Avatar HUD skill bars must use unified themeColor');
+      assert(hudSkills.some(s => s.id === 'annihilation' && s.isSignature && s.isUltimate), 'Annihilation HUD bar must declare signature & ultimate flags');
+
+      // 9. Verify Audio Registry Completeness
+      const avatarSkillSounds = getFighterSkillSoundPaths('avatarofemptiness');
+      assert(avatarSkillSounds.length >= 8, `Expected >= 8 registered Avatar skill sound paths, got ${avatarSkillSounds.length}`);
+
+      // 10. Verify Rule 21 drawHealth + drawFreezeTimer & Canvas 2D stack depth == 0
+      let stack = 0;
+      let healthTextDrawn = false;
+      avatar.freezeTimer = 15;
+      avatar.visceralActiveTimer = 20;
+      avatar.annihilationFireTimer = 20;
+      const traceCtx = {
+        canvas: { width: 540, height: 960 },
+        save() { stack++; },
+        restore() { stack--; },
+        translate() {}, rotate() {}, scale() {},
+        beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
+        arc() {}, ellipse() {}, fill() {}, stroke() {}, rect() {}, clip() {},
+        fillRect() {}, strokeRect() {}, clearRect() {}, setLineDash() {}, drawImage() {},
+        fillText() { healthTextDrawn = true; },
+        strokeText() { healthTextDrawn = true; },
+        createLinearGradient() { return { addColorStop() {} }; },
+        createRadialGradient() { return { addColorStop() {} }; }
+      };
+      avatar.draw(traceCtx, target);
+      avatar.drawTopLayerBeams(traceCtx);
+      drawAvatarOfEmptinessSkin(traceCtx, avatar);
+      drawUniversalAnnihilationCharge(traceCtx, avatar, 0);
+      drawUniversalAnnihilationBeam(traceCtx, avatar, 0);
+      drawCryonicZeroEffects(traceCtx, avatar.activeCryonicZones);
+      drawVisceralTorrentEffects(traceCtx, avatar);
+      drawDarkPortalStrikes(traceCtx, avatar.activePortalStrikes);
+      drawAvatarShockwaves(traceCtx, avatar.activeShockwaves);
+      drawAvatarVoidBlots(traceCtx, avatar.activeVoidBlots);
+      assert(stack === 0, `Canvas 2D stack must remain 0 after all Avatar draw routines (got ${stack})`);
+      assert(healthTextDrawn, 'Rule 21: AvatarOfEmptinessFighter.draw() must invoke drawHealth/drawFreezeTimer');
+
+      console.log('      ✅ Avatar of Emptiness full kit, WOTG VFX/SFX, Rules 18/21/25/35 & stack balance verified cleanly.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+    }
+  }
+
   if (CONFIG.gojo) CONFIG.gojo.enableInfinity = originalGojoEnableInfinity;
 
   console.log('🎉 ALL MULTI-FIGHTER INTERACTION TESTS PASSED SUCCESSFULLY!\n');
