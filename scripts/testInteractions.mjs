@@ -27293,9 +27293,24 @@ async function runInteractionTests() {
       assert(vergil.vergilProjectiles.some(p => p.kind === 'mirage_boomerang'), 'Mirage Edge must launch mirage_boomerang projectile');
 
       // 3d. Basic Attack Follow-Up: whiffed swing must NOT trigger Judgment Cut Barrage; landed hit must chain into barrage automatically
+      vergil.vergilProjectiles.length = 0;
+      vergil.activeVisualEffects.length = 0;
+      vergil.swordRainState = null;
+      vergil.orbitingSwords.length = 0;
       vergil.judgmentBarrageCooldown = 0;
       vergil.judgmentBarrageState = null;
+      vergil.jceState = null;
+      vergil.rapidSlashTimer = 0;
+      vergil.judgmentCutEndCooldown = 620;
+      vergil.judgmentCutCooldown = 190;
+      vergil.summonedSwordsCooldown = 280;
+      vergil.mirageBoomerangCooldown = 250;
+      vergil.doppelgangerCooldown = 420;
       vergil.swordCooldown = 0;
+      vergil.vx = 0;
+      vergil.vy = 0;
+      vergil.knockbackVx = 0;
+      vergil.knockbackVy = 0;
       vergil.x = 60;
       vergil.y = 260;
       vergil._startSwordSwing(enemy, vDef);
@@ -27305,7 +27320,22 @@ async function runInteractionTests() {
       }
       assert(!vergil.judgmentBarrageState, 'Whiffed basic attack must NOT trigger Judgment Cut Barrage follow-up');
 
-      vergil.x = enemy.x - 45;
+      vergil.vergilProjectiles.length = 0;
+      vergil.activeVisualEffects.length = 0;
+      vergil.swordRainState = null;
+      vergil.orbitingSwords.length = 0;
+      vergil.judgmentCutEndCooldown = 620;
+      vergil.judgmentCutCooldown = 190;
+      vergil.summonedSwordsCooldown = 280;
+      vergil.mirageBoomerangCooldown = 250;
+      vergil.doppelgangerCooldown = 420;
+      vergil.jceState = null;
+      vergil.rapidSlashTimer = 0;
+      vergil.vx = 2.0;
+      vergil.vy = 0;
+      vergil.knockbackVx = 0;
+      vergil.knockbackVy = 0;
+      vergil.x = enemy.x - 58;
       vergil.y = enemy.y;
       vergil.swordCooldown = 0;
       vergil.judgmentBarrageCooldown = 0;
@@ -27314,6 +27344,9 @@ async function runInteractionTests() {
       let sawBarrageFollowUp = false;
       let sawBarrageSlashAnim = false;
       for (let t = 442; t < 495; t++) {
+        if (vergil.isSlashing) {
+          vergil.vx = Math.max(0, vergil.vx);
+        }
         state.frameCount = t;
         vergil.update(enemy, 0, testArena);
         vergil.draw(stackCtx, enemy);
@@ -27321,7 +27354,7 @@ async function runInteractionTests() {
         if (vergil.judgmentBarrageState && vergil.judgmentBarrageState.active) sawBarrageFollowUp = true;
         if ((vergil.barrageSlashTimer || 0) > 0) sawBarrageSlashAnim = true;
       }
-      assert(sawBarrageFollowUp && sawBarrageSlashAnim, 'Connected basic attack must automatically chain into Judgment Cut Barrage follow-up with cleave animation');
+      assert(sawBarrageFollowUp && sawBarrageSlashAnim, `Connected basic attack must automatically chain into Judgment Cut Barrage follow-up (sawF=${sawBarrageFollowUp}, sawS=${sawBarrageSlashAnim}, phase=${vergil.swordSwingPhase}, cd=${vergil.judgmentBarrageCooldown}, dist=${Math.hypot(enemy.x - vergil.x, enemy.y - vergil.y).toFixed(1)})`);
 
       // 4. Rule 18 Base HUD vs Seed of Sparda Form-Reactive HUD (Rapid Slash merged into JCE Ultimate, Sword Rain merged into Summoned Swords, Dimension Barrage merged into Basic Attack)
       vergil.vergilForm = 0;

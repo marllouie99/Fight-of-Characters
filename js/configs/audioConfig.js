@@ -472,7 +472,18 @@ export const AUDIO_CONFIG = {
   'vergil_glass_shatter': 'Assets/Sound Effects/VergilSFX/vergil-glass-shatter.ogg',
   'vergil_dimension_boom': 'Assets/Sound Effects/VergilSFX/vergil-dimension-boom.ogg',
   'vergil_sparda_awaken': 'Assets/Sound Effects/VergilSFX/vergil-sparda-awaken.ogg',
-  'vergil_devil_roar': 'Assets/Sound Effects/VergilSFX/vergil-devil-roar.ogg'
+  'vergil_devil_roar': 'Assets/Sound Effects/VergilSFX/vergil-devil-roar.ogg',
+  'vergil_slash_voiceline1': 'Assets/Sound Effects/VergilSFX/vergil-slash-voiceline1.ogg',
+  'vergil_slash_voiceline2': 'Assets/Sound Effects/VergilSFX/vergil-slash-voiceline2.ogg',
+  'vergil_slash_voiceline3': 'Assets/Sound Effects/VergilSFX/vergil-slash-voiceline3.ogg',
+  'vergil_judgment_cut_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut-voiceline.ogg',
+  'vergil_mirage_edge_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-mirage-edge-voiceline.ogg',
+  'vergil_barrage_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-barrage-voiceline.ogg',
+  'vergil_summon_swords_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-summon-swords-voiceline.ogg',
+  'vergil_doppelganger_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-doppelganger-voiceline.ogg',
+  'vergil_rapid_slash_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-rapid-slash-voiceline.ogg',
+  'vergil_sparda_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-sparda-voiceline.ogg',
+  'vergil_jce_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-jce-voiceline.ogg'
 };
 
 

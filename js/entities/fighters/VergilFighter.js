@@ -194,10 +194,12 @@ export class VergilFighter extends Fighter {
 
   _playSound(key, defaultVol = 0.8) {
     if (!this._soundPlayTimestamps) this._soundPlayTimestamps = {};
+    const cfg = this._cfg();
+    const chance = cfg.soundChances?.[key];
+    if (chance !== undefined && chance < 1 && Math.random() >= chance) return;
     const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
     if (now - (this._soundPlayTimestamps[key] || 0) < 85) return;
     this._soundPlayTimestamps[key] = now;
-    const cfg = this._cfg();
     const sfx = cfg.sounds?.[key];
     const vol = cfg.soundVolumes?.[key] ?? defaultVol;
     if (sfx && typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
@@ -345,6 +347,7 @@ export class VergilFighter extends Fighter {
       triggerGlobalScreenShake(9, 14);
       this._playSound('spardaAwaken', 0.90);
       this._playSound('devilRoar', 0.88);
+      this._playSound('voSparda', 0.90);
     }
   }
 
@@ -842,6 +845,8 @@ export class VergilFighter extends Fighter {
     this._pendingBarrageFollowUpTarget = null;
     this._swordTarget = opponent || null;
     this._playSound('yamatoSlash', 0.72);
+    const voSlashKey = ['voSlash1', 'voSlash2', 'voSlash3'][this.swordComboStep % 3];
+    this._playSound(voSlashKey, 0.78);
     if (opponent) this.aim(opponent);
   }
 
@@ -1078,6 +1083,7 @@ export class VergilFighter extends Fighter {
     }
     this._playSound('judgmentCut', 0.86);
     this._playSound('sheathSnap', 0.78);
+    this._playSound('voJudgmentCut', 0.88);
     if (landed) this._gainConcentration(14);
     triggerGlobalScreenShake(5, 8);
   }
@@ -1148,6 +1154,7 @@ export class VergilFighter extends Fighter {
     this._pendingSwordRainFollowUp = true;
     this._pendingSwordRainTarget = target || null;
     this._playSound('summonSword', 0.78);
+    this._playSound('voSummonSwords', 0.86);
     this._gainConcentration(8);
   }
 
@@ -1229,6 +1236,7 @@ export class VergilFighter extends Fighter {
       hitCooldowns: new Map(),
     });
     this._playSound('mirageBoomerang', 0.80);
+    this._playSound('voMirageEdge', 0.86);
     this._gainConcentration(6);
   }
 
@@ -1247,6 +1255,7 @@ export class VergilFighter extends Fighter {
     });
     spawnFloatingText(this.x, this.y - (this.r || 30) - 22, 'DOPPELGANGER!', '#38BDF8', 16);
     this._playSound('doppelganger', 0.85);
+    this._playSound('voDoppelganger', 0.88);
     return true;
   }
 
@@ -1278,6 +1287,7 @@ export class VergilFighter extends Fighter {
     this.trickAngle = Math.atan2(target.y - this.y, target.x - this.x);
     this.shunpoVfxTimer = 14;
     this._playSound('judgmentCut', 0.88);
+    this._playSound('voBarrage', 0.90);
   }
 
   _updateJudgmentBarrageState(cfg) {
@@ -1386,6 +1396,7 @@ export class VergilFighter extends Fighter {
     };
 
     this._playSound('sheathSnap', 0.80);
+    this._playSound('voRapidSlash', 0.92);
   }
 
   _enterJceChargePhase(jce, cfg) {
@@ -1608,6 +1619,7 @@ export class VergilFighter extends Fighter {
     });
     this._playSound('glassShatter', 0.94);
     this._playSound('dimensionBoom', 0.90);
+    this._playSound('voJce', 0.94);
     triggerGlobalScreenShake(13, 18);
   }
 
