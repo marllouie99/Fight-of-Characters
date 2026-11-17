@@ -102,7 +102,7 @@ export const vergilConfig = {
   enableTrickTeleport: 1,
   trickTeleportSkillName: 'TRICK',
   trickTeleportCooldown: 170,
-  trickDodgeChance: 1.0,
+  trickDodgeChance: 0.80,
   trickDodgeDistance: 100,
   trickSlowFrames: 24,
   trickSlowMultiplier: 0.35,

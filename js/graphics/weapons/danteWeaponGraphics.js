@@ -33,6 +33,7 @@ export function _getDanteWeaponImage(key) {
 const DANTE_VFX_SPECS = {
   slashArc: { src: 'Assets/effects/dante/dante-slash-arc.png', frames: 4, cw: 206, ch: 130 },
   roundTrip: { src: 'Assets/effects/dante/dante-round-trip.png', frames: 1, cw: 110, ch: 45 },
+  roundTripWhirl: { src: 'Assets/effects/dante/dante-round-trip-whirl.png', frames: 8, cw: 128, ch: 128 },
   driveWave: { src: 'Assets/effects/dante/dante-drive-wave.png', frames: 6, cw: 158, ch: 180 },
   jackpotBeam: { src: 'Assets/effects/dante/dante-jackpot-beam.png', frames: 2, cw: 197, ch: 71 },
   rocket: { src: 'Assets/effects/dante/dante-rocket.png', frames: 1, cw: 87, ch: 31 },
@@ -167,6 +168,48 @@ function _drawRebellionShape(ctx, r, scale, isDT = false) {
 }
 
 function _computeDanteMeleeKinematics(fighter, r) {
+  const rt = fighter._roundTripEntity;
+  if (rt && rt.phase === 'charge') {
+    const p = 1 - Math.max(0, Math.min(1, (rt.chargeTimer || 0) / Math.max(1, rt.chargeMax || 16)));
+    // FORWARDTHROW.gif F03-F39: coil across torso -> raise glowing blade behind shoulder
+    const ease = Math.sin(p * (Math.PI / 2));
+    return {
+      active: false, moveType: 'side_special_charge', p, phase: 1,
+      chargeLevel: p,
+      swingAngle: -0.32 - 1.98 * ease,
+      lungeX: -r * 0.28 * ease,
+      offY: -r * (0.04 + 0.14 * ease),
+      tremorX: (Math.random() - 0.5) * 1.6 * p,
+      tremorY: (Math.random() - 0.5) * 1.6 * p,
+      scaleX: 1.0, scaleY: 1.0,
+      arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0,
+    };
+  }
+  if ((fighter._roundTripThrowTimer || 0) > 0) {
+    const tp = Math.max(0, Math.min(1, fighter._roundTripThrowTimer / 12));
+    // FORWARDTHROW.gif F40-F43: extended throwing follow-through arm whip
+    return {
+      active: false, moveType: 'side_special_throw', p: 1 - tp, phase: 3,
+      swingAngle: 0.45 * tp,
+      lungeX: r * 0.36 * tp,
+      offY: r * 0.08 * tp,
+      tremorX: 0, tremorY: 0, scaleX: 1, scaleY: 1,
+      arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0,
+    };
+  }
+  if ((fighter._roundTripCatchTimer || 0) > 0) {
+    const cp = Math.max(0, Math.min(1, fighter._roundTripCatchTimer / 10));
+    return {
+      active: false, moveType: 'side_special_catch', p: 1 - cp, phase: 5,
+      catchFlash: cp,
+      swingAngle: -0.32 - 0.52 * cp,
+      lungeX: -r * 0.20 * cp,
+      offY: r * 0.06 * cp,
+      tremorX: 0, tremorY: 0, scaleX: 1 + 0.14 * cp, scaleY: 1 + 0.14 * cp,
+      arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0,
+    };
+  }
+
   const swingT = fighter.slashSwingTimer || 0;
   const maxT = Math.max(1, fighter.slashSwingMaxTimer || 36);
   const moveType = fighter.slashMoveType || 'cleave_right';
@@ -568,10 +611,227 @@ function _stepDanteHandPhysics(fighter, r, targetMainX, targetMainY, targetOffX,
   return p;
 }
 
+function _computeDanteGunKinematics(fighter, r, firingGuns) {
+  if (!firingGuns) {
+    return {
+      mainOffX: 0, mainOffY: 0, mainRot: 0,
+      offOffX: 0, offOffY: 0, offRot: -0.10,
+      ebonyT: 0, ivoryT: 0, directDrive: false,
+    };
+  }
+  const t = ((typeof state !== 'undefined' && state.frameCount) || 0) * 0.24;
+  const ebonyT = fighter._ebonyRecoilTimer || 0;
+  const ivoryT = fighter._ivoryRecoilTimer || 0;
+  const jackpotActive = (fighter._jackpotTimer || 0) > 0 || (fighter._jackpotFireTimer || 0) > 0;
+  const jackpotTremor = (fighter._jackpotFireTimer || 0) > 0 ? (Math.random() - 0.5) * 2.2 : 0;
+
+  // Alternating Gunslinger punch-out / draw-back cadence & snappy recoil kick + barrel climb
+  const eRec = Math.max(0, Math.min(1, ebonyT / 10));
+  const iRec = Math.max(0, Math.min(1, ivoryT / 10));
+  const eClimb = eRec > 0 ? Math.sin(Math.pow(eRec, 0.72) * Math.PI * 0.85) : 0;
+  const iClimb = iRec > 0 ? Math.sin(Math.pow(iRec, 0.72) * Math.PI * 0.85) : 0;
+
+  const isEbonyLead = ((fighter._gunShotIndex || 0) % 2) === 1;
+  const altLead = (ebonyT > 0 || ivoryT > 0) ? (isEbonyLead ? 1 : -1) : Math.sin(t * 0.65);
+
+  const swayY = Math.sin(t) * (r * 0.06);
+  const swayRot = Math.sin(t * 0.85) * 0.11;
+
+  const mainForward = jackpotActive ? r * 0.24 : r * (0.12 + 0.10 * altLead);
+  const mainKick = -r * 0.34 * eRec * eRec;
+  const mainOffX = mainForward + mainKick + jackpotTremor;
+  const mainOffY = swayY - r * 0.10 * eClimb + (jackpotActive ? -r * 0.06 : 0);
+  const mainRot = (jackpotActive ? 0 : swayRot) - 0.48 * eClimb;
+
+  const offForward = jackpotActive ? r * 0.38 : r * (0.28 - 0.10 * altLead);
+  const offKick = -r * 0.34 * iRec * iRec;
+  const offOffX = offForward + offKick + jackpotTremor;
+  const offOffY = -swayY - r * 0.10 * iClimb + (jackpotActive ? -r * 0.06 : 0);
+  const offRot = (jackpotActive ? -0.02 : -0.10 - swayRot) - 0.48 * iClimb;
+
+  return {
+    mainOffX, mainOffY, mainRot,
+    offOffX, offOffY, offRot,
+    ebonyT, ivoryT,
+    directDrive: ebonyT > 0 || ivoryT > 0 || jackpotActive,
+  };
+}
+
+function _drawDanteGunMuzzleFlash(ctx, r, timer, scale = 1.0, isDT = false) {
+  if (!timer || timer < 2) return;
+  const muzzleX = r * 1.02 * scale;
+  const muzzleY = -r * 0.14 * scale;
+  ctx.save();
+  ctx.translate(muzzleX, muzzleY);
+  if (timer >= 6) {
+    const p = (timer - 5) / 5;
+    const len = r * (0.36 + 0.28 * p) * scale;
+    const rad = r * (0.16 + 0.10 * p) * scale;
+    // 16-bit crimson/gold 4-point muzzle blast (Rule 35 zero shadowBlur)
+    ctx.fillStyle = '#0E0F14';
+    ctx.fillRect(-2, -rad - 1.5, len + 4, rad * 2 + 3);
+    ctx.fillRect(len * 0.18 - 1.5, -rad * 1.45 - 1.5, rad * 1.2 + 3, rad * 2.9 + 3);
+    ctx.fillStyle = isDT ? '#EF4444' : '#F97316';
+    ctx.fillRect(0, -rad, len, rad * 2);
+    ctx.fillRect(len * 0.22, -rad * 1.35, rad * 1.1, rad * 2.7);
+    ctx.fillStyle = '#FBBF24';
+    ctx.fillRect(1, -rad * 0.65, len * 0.72, rad * 1.3);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(1, -rad * 0.35, len * 0.42, rad * 0.7);
+  } else {
+    // Rising 16-bit post-shot gunsmoke pixel wisps
+    const sp = 1 - timer / 6;
+    const sy = -r * 0.22 * sp;
+    ctx.globalAlpha = Math.max(0.15, (1 - sp) * 0.85);
+    ctx.fillStyle = '#0E0F14';
+    ctx.fillRect(2 + sp * 6, sy - 2, 6, 5);
+    ctx.fillStyle = '#E2E8F0';
+    ctx.fillRect(3 + sp * 6, sy - 1, 4, 3);
+  }
+  ctx.restore();
+}
+
 /**
  * Draws Dante's Rebellion greatsword + Ebony & Ivory anchored strictly at canonical
  * lower-torso flanks with weighty hand spring-inertia physics (zero stretched hands, Rule 20 compliant).
  */
+function _computeWeaponSwitchEnvelope(fighter) {
+  const switchTimer = fighter._weaponSwitchTimer || 0;
+  const switchMax = Math.max(1, fighter._weaponSwitchMaxTimer || 14);
+  const isSwitchingIn = switchTimer > 0;
+  const swP = isSwitchingIn ? Math.max(0, Math.min(1, 1 - switchTimer / switchMax)) : 1;
+  const swEase = 1 - Math.pow(1 - swP, 3);
+  const swPop = !isSwitchingIn
+    ? 1
+    : (swP < 0.72 ? 0.56 + 0.50 * (swP / 0.72) : 1.06 - 0.06 * ((swP - 0.72) / 0.28));
+  const swAlpha = isSwitchingIn ? (0.25 + 0.75 * swEase) : 1.0;
+  return { isSwitchingIn, swEase, swPop, swAlpha };
+}
+
+function _computeDanteHandTargets(fighter, r, custom, kin, gunKin, firingGuns) {
+  const idleT = ((typeof state !== 'undefined' && state.frameCount) || 0) * 0.10;
+  const idleBob = (kin.active || firingGuns) ? 0 : Math.sin(idleT) * (r * 0.04);
+
+  const anchorMainX = r * 0.82 + (custom.offsetX || 0);
+  const anchorMainY = r * 0.38 + (custom.offsetY || 0);
+  const anchorOffX = -r * 0.82;
+  const anchorOffY = r * 0.38;
+
+  const rawMainX = anchorMainX + (firingGuns ? gunKin.mainOffX : (kin.lungeX + kin.tremorX));
+  const rawMainY = Math.max(r * 0.24, anchorMainY + (firingGuns ? gunKin.mainOffY : (kin.offY + kin.tremorY + idleBob)));
+
+  const offRecoilX = kin.active && !firingGuns ? (kin.isFinisher ? -r * 0.26 : -kin.lungeX * 0.45) : 0;
+  const offCounterY = kin.active && !firingGuns ? -kin.offY * 0.40 : -idleBob * 0.7;
+  const rawOffX = anchorOffX + (firingGuns ? gunKin.offOffX : offRecoilX);
+  const rawOffY = Math.max(r * 0.24, anchorOffY + (firingGuns ? gunKin.offOffY : offCounterY));
+
+  const phys = _stepDanteHandPhysics(fighter, r, rawMainX, rawMainY, rawOffX, rawOffY, kin.swingAngle);
+  const isMillionJab = kin.active && kin.moveType === 'million_stab';
+  const useDirect = isMillionJab || gunKin.directDrive;
+
+  return {
+    phys,
+    isMillionJab,
+    mainPos: _clampHandOrbit(useDirect ? rawMainX : phys.mx, useDirect ? rawMainY : phys.my, anchorMainX, anchorMainY, r * 0.44, r * 0.24),
+    offPos: _clampHandOrbit(gunKin.directDrive ? rawOffX : phys.ox, gunKin.directDrive ? rawOffY : phys.oy, anchorOffX, anchorOffY, r * 0.48, r * 0.24),
+  };
+}
+
+function _drawDanteOffHandWeapon(ctx, fighter, r, scale, skinTone, handRadius, offPos, gunKin, swEnv, firingGuns) {
+  ctx.save();
+  ctx.translate(offPos.x, offPos.y);
+  if (firingGuns) {
+    ctx.save();
+    if (swEnv.isSwitchingIn) {
+      ctx.translate(r * 0.24 * (1 - swEnv.swEase), r * 0.14 * (1 - swEnv.swEase));
+      ctx.rotate(gunKin.offRot + 1.25 * (1 - swEnv.swEase));
+      ctx.scale(swEnv.swPop, swEnv.swPop);
+      ctx.globalAlpha = swEnv.swAlpha;
+    } else {
+      ctx.rotate(gunKin.offRot);
+    }
+    _drawPistolShape(ctx, r, scale * 0.88, true);
+    _drawDanteGunMuzzleFlash(ctx, r, gunKin.ivoryT, scale * 0.88, Boolean(fighter.isDevilTrigger));
+    ctx.restore();
+  }
+  if (!fighter.hideHands) {
+    drawPixelHand(ctx, 0, 0, handRadius, skinTone, '#0E0F14');
+  }
+  ctx.restore();
+}
+
+function _drawRebellionChargeGlow(ctx, r, scale, chargeLevel) {
+  if (!chargeLevel || chargeLevel <= 0.02) return;
+  const bladeLen = r * 2.25 * scale;
+  const pulse = 0.72 + 0.28 * Math.sin(chargeLevel * Math.PI * 6);
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.92, chargeLevel * 0.88 * pulse);
+  ctx.fillStyle = '#EF4444';
+  ctx.beginPath();
+  ctx.ellipse(bladeLen * 0.56, 0, bladeLen * 0.46, r * 0.24 * scale * pulse, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FEF08A';
+  ctx.beginPath();
+  ctx.ellipse(bladeLen * 0.65, 0, bladeLen * 0.34, r * 0.09 * scale * pulse, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, handRadius, targets, kin, gunKin, swEnv, firingGuns) {
+  const isDT = Boolean(fighter.isDevilTrigger);
+  const isBladeThrown = Boolean(fighter._roundTripEntity && fighter._roundTripEntity.phase !== 'charge');
+
+  ctx.save();
+  ctx.translate(targets.mainPos.x, targets.mainPos.y);
+  if (firingGuns) {
+    ctx.save();
+    if (swEnv.isSwitchingIn) {
+      ctx.translate(-r * 0.24 * (1 - swEnv.swEase), r * 0.14 * (1 - swEnv.swEase));
+      ctx.rotate(gunKin.mainRot - 1.35 * (1 - swEnv.swEase));
+      ctx.scale(swEnv.swPop, swEnv.swPop);
+      ctx.globalAlpha = swEnv.swAlpha;
+    } else {
+      ctx.rotate(gunKin.mainRot);
+    }
+    _drawPistolShape(ctx, r, scale * 0.92, false);
+    _drawDanteGunMuzzleFlash(ctx, r, gunKin.ebonyT, scale * 0.92, isDT);
+    ctx.restore();
+  } else if (!isBladeThrown) {
+    ctx.save();
+    if (swEnv.isSwitchingIn) {
+      ctx.translate(-r * 0.26 * (1 - swEnv.swEase), -r * 0.16 * (1 - swEnv.swEase));
+      ctx.rotate(-1.10 * (1 - swEnv.swEase));
+      ctx.scale(swEnv.swPop, swEnv.swPop);
+      ctx.globalAlpha = swEnv.swAlpha;
+    }
+    ctx.rotate(kin.swingAngle + (targets.isMillionJab ? 0 : targets.phys.angLag) + (custom.angleOffset || 0));
+    ctx.scale(kin.scaleX || 1, kin.scaleY || 1);
+    if (kin.bladeThrust) {
+      ctx.save();
+      ctx.translate(kin.bladeThrust, 0);
+      _drawRebellionShape(ctx, r, scale, isDT);
+      ctx.restore();
+    } else {
+      _drawRebellionShape(ctx, r, scale, isDT);
+      if (kin.chargeLevel > 0) _drawRebellionChargeGlow(ctx, r, scale, kin.chargeLevel);
+    }
+    ctx.restore();
+  }
+  if ((kin.catchFlash || 0) > 0.05) {
+    ctx.save();
+    ctx.globalAlpha = kin.catchFlash * 0.85;
+    ctx.fillStyle = '#FEF08A';
+    ctx.beginPath();
+    ctx.arc(0, 0, handRadius * (1.2 + kin.catchFlash * 0.8), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  if (!fighter.hideHands && !fighter.hideFrontHand) {
+    drawPixelHand(ctx, 0, 0, handRadius, skinTone, '#0E0F14');
+  }
+  ctx.restore();
+}
+
 export function drawDanteWeaponsAndSlashVFX(ctx, fighter, r, facingLeft = false) {
   if (!ctx || !fighter) return;
   const custom = (typeof state !== 'undefined' && state.weaponCustomizations?.dante) || {};
@@ -583,70 +843,18 @@ export function drawDanteWeaponsAndSlashVFX(ctx, fighter, r, facingLeft = false)
   const kin = _computeDanteMeleeKinematics(fighter, r);
   const firingGuns =
     (fighter._gunVisualTimer || 0) > 0 ||
-    Boolean(fighter._roundTripEntity) ||
+    Boolean(fighter._roundTripEntity && (fighter._roundTripEntity.phase === 'spin' || fighter._roundTripEntity.phase === 'return')) ||
     (fighter._jackpotTimer || 0) > 0 ||
     (fighter._jackpotFireTimer || 0) > 0;
+  const gunKin = _computeDanteGunKinematics(fighter, r, firingGuns);
+  const swEnv = _computeWeaponSwitchEnvelope(fighter);
+  const targets = _computeDanteHandTargets(fighter, r, custom, kin, gunKin, firingGuns);
 
-  // Smooth weapon draw-in interpolation state (rebellion <-> guns)
-  const switchTimer = fighter._weaponSwitchTimer || 0;
-  const switchMax = Math.max(1, fighter._weaponSwitchMaxTimer || 14);
-  const isSwitchingIn = switchTimer > 0;
-  const swP = isSwitchingIn ? Math.max(0, Math.min(1, 1 - switchTimer / switchMax)) : 1;
-  const swEase = 1 - Math.pow(1 - swP, 3);
-  const swPop = !isSwitchingIn
-    ? 1
-    : (swP < 0.72 ? 0.56 + 0.50 * (swP / 0.72) : 1.06 - 0.06 * ((swP - 0.72) / 0.28));
-  const swAlpha = isSwitchingIn ? (0.25 + 0.75 * swEase) : 1.0;
+  _drawDanteOffHandWeapon(ctx, fighter, r, scale, skinTone, handRadius, targets.offPos, gunKin, swEnv, firingGuns);
 
-  // Subtle idle breathing sway + melee targets clamped to natural lower-torso bounds (Rule 20)
-  const idleT = ((typeof state !== 'undefined' && state.frameCount) || 0) * 0.10;
-  const idleBob = kin.active ? 0 : Math.sin(idleT) * (r * 0.04);
-
-  const anchorMainX = r * 0.82 + (custom.offsetX || 0);
-  const anchorMainY = r * 0.38 + (custom.offsetY || 0);
-  const anchorOffX = -r * 0.82;
-  const anchorOffY = r * 0.38;
-
-  const rawMainX = anchorMainX + kin.lungeX + kin.tremorX;
-  const rawMainY = Math.max(r * 0.24, anchorMainY + kin.offY + kin.tremorY + idleBob);
-
-  const offRecoilX = kin.active && !firingGuns ? (kin.isFinisher ? -r * 0.26 : -kin.lungeX * 0.45) : 0;
-  const offCounterY = kin.active && !firingGuns ? -kin.offY * 0.40 : -idleBob * 0.7;
-  const rawOffX = anchorOffX + offRecoilX;
-  const rawOffY = Math.max(r * 0.24, anchorOffY + offCounterY);
-
-  // Step spring-inertia hand physics & clamp tightly to lower-torso orbit (zero stretch!)
-  const phys = _stepDanteHandPhysics(fighter, r, rawMainX, rawMainY, rawOffX, rawOffY, kin.swingAngle);
-  // During Million Stab rapid jabs, drive hand position directly so spring smoothing doesn't blur out the thrusts
-  const isMillionJab = kin.active && kin.moveType === 'million_stab';
-  const mainPos = _clampHandOrbit(isMillionJab ? rawMainX : phys.mx, isMillionJab ? rawMainY : phys.my, anchorMainX, anchorMainY, r * 0.44, r * 0.24);
-  const offPos = _clampHandOrbit(phys.ox, phys.oy, anchorOffX, anchorOffY, r * 0.30, r * 0.24);
-
-  // Off-hand Ivory / Counter-Balance fist (left flank lower torso, canonical Rule 20)
-  ctx.save();
-  ctx.translate(offPos.x, offPos.y);
-  if (firingGuns) {
-    ctx.save();
-    if (isSwitchingIn) {
-      ctx.translate(r * 0.24 * (1 - swEase), r * 0.14 * (1 - swEase));
-      ctx.rotate(-0.10 + 1.25 * (1 - swEase));
-      ctx.scale(swPop, swPop);
-      ctx.globalAlpha = swAlpha;
-    } else {
-      ctx.rotate(-0.10);
-    }
-    _drawPistolShape(ctx, r, scale * 0.88, true);
-    ctx.restore();
-  }
-  if (!fighter.hideHands) {
-    drawPixelHand(ctx, 0, 0, handRadius, skinTone, '#0E0F14');
-  }
-  ctx.restore();
-
-  // Slash Crescent Ribbon or Million Stab Needle Flurry anchored directly at main hand pivot
   if (kin.active && !firingGuns) {
     ctx.save();
-    ctx.translate(mainPos.x, mainPos.y);
+    ctx.translate(targets.mainPos.x, targets.mainPos.y);
     if (kin.moveType === 'million_stab') {
       _drawMillionStabFlurryVFX(ctx, r, kin, scale, isDT);
     } else {
@@ -655,43 +863,7 @@ export function drawDanteWeaponsAndSlashVFX(ctx, fighter, r, facingLeft = false)
     ctx.restore();
   }
 
-  // Main-hand Rebellion or Ebony fist (right flank lower torso, canonical Rule 20)
-  ctx.save();
-  ctx.translate(mainPos.x, mainPos.y);
-  if (firingGuns) {
-    ctx.save();
-    if (isSwitchingIn) {
-      ctx.translate(-r * 0.24 * (1 - swEase), r * 0.14 * (1 - swEase));
-      ctx.rotate(-1.35 * (1 - swEase));
-      ctx.scale(swPop, swPop);
-      ctx.globalAlpha = swAlpha;
-    }
-    _drawPistolShape(ctx, r, scale * 0.92, false);
-    ctx.restore();
-  } else {
-    ctx.save();
-    if (isSwitchingIn) {
-      ctx.translate(-r * 0.26 * (1 - swEase), -r * 0.16 * (1 - swEase));
-      ctx.rotate(-1.10 * (1 - swEase));
-      ctx.scale(swPop, swPop);
-      ctx.globalAlpha = swAlpha;
-    }
-    ctx.rotate(kin.swingAngle + (isMillionJab ? 0 : phys.angLag) + (custom.angleOffset || 0));
-    ctx.scale(kin.scaleX || 1, kin.scaleY || 1);
-    if (kin.bladeThrust) {
-      ctx.save();
-      ctx.translate(kin.bladeThrust, 0);
-      _drawRebellionShape(ctx, r, scale, isDT);
-      ctx.restore();
-    } else {
-      _drawRebellionShape(ctx, r, scale, isDT);
-    }
-    ctx.restore();
-  }
-  if (!fighter.hideHands && !fighter.hideFrontHand) {
-    drawPixelHand(ctx, 0, 0, handRadius, skinTone, '#0E0F14');
-  }
-  ctx.restore();
+  _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, handRadius, targets, kin, gunKin, swEnv, firingGuns);
 }
 
 export function drawDanteWeaponPreview(ctx, x, y, angle, r) {
@@ -1069,4 +1241,74 @@ export function drawDanteTransientVfx(ctx, list) {
     ctx.drawImage(entry.img, frameIdx * entry.cw, 0, entry.cw, entry.ch, -w * 0.5, -h * 0.5, w, h);
     ctx.restore();
   }
+}
+
+/**
+ * Renders Dante's Side Special thrown Rebellion greatsword, flight ribbon trail,
+ * and 8-frame 16-bit whirling sawblade vortex ring (FORWARDTHROW.gif F40-F85).
+ */
+export function drawDanteSideSpecialBlade(ctx, fighter) {
+  const rt = fighter?._roundTripEntity;
+  if (!ctx || !rt || rt.phase === 'charge') return;
+
+  const r = fighter.r || 30;
+  const custom = (typeof state !== 'undefined' && state.weaponCustomizations?.dante) || {};
+  const scale = custom.scale ?? 1.0;
+  const isDT = Boolean(fighter.isDevilTrigger);
+  const isSpinning = rt.phase === 'spin';
+
+  // 1. Crimson flight / recall motion smear ribbon (out & return phases)
+  if (Array.isArray(rt.trail) && rt.trail.length >= 2 && (rt.phase === 'out' || rt.phase === 'return')) {
+    ctx.save();
+    for (let i = 1; i < rt.trail.length; i++) {
+      const a = rt.trail[i - 1];
+      const b = rt.trail[i];
+      const t = i / rt.trail.length;
+      ctx.strokeStyle = i % 2 === 0 ? '#EF4444' : '#F59E0B';
+      ctx.globalAlpha = t * 0.62;
+      ctx.lineWidth = Math.max(2, r * 0.42 * t);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 2. 16-bit 8-frame whirling crimson sawblade vortex disc
+  const whirlEntry = _getVfxEntry('roundTripWhirl');
+  if (_isEntryReady(whirlEntry) && !_isVfxDisabled()) {
+    const frameIdx = Math.floor((rt.whirlFrame || 0) * 0.5 + Math.abs(rt.spinAngle) * 1.4) % whirlEntry.frames;
+    const discSize = isSpinning ? r * 4.35 : r * 2.95;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(rt.x, rt.y);
+    ctx.rotate(isSpinning ? 0.14 : (rt.lockedAngle || 0));
+    ctx.scale(1.0, isSpinning ? 0.78 : 0.66);
+    ctx.globalAlpha = isSpinning ? 0.94 : 0.62;
+    ctx.drawImage(whirlEntry.img, frameIdx * whirlEntry.cw, 0, whirlEntry.cw, whirlEntry.ch, -discSize * 0.5, -discSize * 0.5, discSize, discSize);
+    ctx.restore();
+  }
+
+  // 3. Real Rebellion greatsword spinning rapidly inside the vortex (+ ghost blur blade)
+  ctx.save();
+  ctx.translate(rt.x, rt.y);
+  ctx.scale(1.0, isSpinning ? 0.80 : 0.92);
+
+  ctx.save();
+  ctx.rotate(rt.spinAngle - 0.62);
+  ctx.translate(-r * 0.96 * scale, 0);
+  ctx.globalAlpha = 0.36;
+  _drawRebellionShape(ctx, r * 0.92, scale, true);
+  ctx.restore();
+
+  ctx.save();
+  ctx.rotate(rt.spinAngle);
+  ctx.translate(-r * 0.96 * scale, 0);
+  ctx.globalAlpha = 0.98;
+  _drawRebellionShape(ctx, r * 0.95, scale, isDT);
+  ctx.restore();
+
+  ctx.restore();
 }

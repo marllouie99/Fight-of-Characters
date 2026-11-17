@@ -3948,7 +3948,7 @@ export const HUD_SKILL_PROVIDERS = {
     };
 
     pushCdSkill('spot_dodge', isSkillEnabled(cfg.enableTricksterDash, true) && isSkillEnabled(cfg.enableSpotDodge, true), f.tricksterCooldown, cfg.tricksterCooldown || 75, 'SPOT DODGE', 'spotDodgeSkillName', Boolean(f.isSpotDodging));
-    pushCdSkill('round_trip', cfg.enableRoundTrip, f.roundTripCooldown, cfg.roundTripCooldown || 300, 'ROUND TRIP', 'roundTripSkillName', Boolean(f._roundTripEntity));
+    pushCdSkill('round_trip', cfg.enableRoundTrip, f.roundTripCooldown, cfg.roundTripCooldown || 300, 'SIDE SPECIAL', 'roundTripSkillName', Boolean(f._roundTripEntity));
     pushCdSkill('drive', cfg.enableDrive, f.driveCooldown, cfg.driveCooldown || 270, 'DRIVE', 'driveSkillName', (f._driveChargeTimer || 0) > 0);
     pushCdSkill('doppelganger', cfg.enableDoppelganger, f.doppelgangerCooldown, cfg.doppelgangerCooldown || 620, 'DOPPELGANGER', 'doppelgangerSkillName', Boolean(f._doppelganger));
     pushCdSkill('kalina_ann', cfg.enableKalinaAnn, f.kalinaCooldown, cfg.kalinaCooldown || 360, 'KALINA ANN', 'kalinaSkillName', (f._kalinaCastTimer || 0) > 0);

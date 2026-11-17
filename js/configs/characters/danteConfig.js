@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const danteConfig = {
+  // ─── Model & Weapon Sprite Assets ───
   assets: {
     hair: 'Assets/model/dante/Dante-hair.png',
     weapon: 'Assets/model/dante/Dante-rebellion.png',
@@ -12,9 +13,11 @@ export const danteConfig = {
     ivory: 'Assets/model/dante/Dante-ivory.png',
   },
 
+  // ─── 16-Bit Visual Effect Sprite Sheets ───
   vfxAssets: {
     slashArc: 'Assets/effects/dante/dante-slash-arc.png',
     roundTrip: 'Assets/effects/dante/dante-round-trip.png',
+    roundTripWhirl: 'Assets/effects/dante/dante-round-trip-whirl.png',
     driveWave: 'Assets/effects/dante/dante-drive-wave.png',
     jackpotBeam: 'Assets/effects/dante/dante-jackpot-beam.png',
     rocket: 'Assets/effects/dante/dante-rocket.png',
@@ -25,14 +28,13 @@ export const danteConfig = {
     weaponVanish: 'Assets/effects/dante/dante-weapon-vanish.png',
   },
 
+  // ─── Identity & Baseline Attributes (Rule 24 Humanoid Standard) ───
   name: 'DANTE',
   displayName: 'Dante',
   grade: 'SS',
   category: 'Anime',
   bossTitle: 'Son of Sparda',
   title: 'The Legendary Devil Hunter',
-
-  // Baseline Attributes (Rule 24 Humanoid Standard)
   hp: 380,
   maxHpRatio: 1.0,
   speed: 5.5,
@@ -56,18 +58,13 @@ export const danteConfig = {
   ability: 'Rebellion & Ebony/Ivory, Round Trip, Drive, Doppelganger, Kalina Ann & Devil Trigger Jackpot!',
   desc: 'Legendary Devil Hunter and son of Sparda wielding Rebellion, Ebony & Ivory, and Kalina Ann. Chains crimson blade cleaves with rapid pistol bursts, hurls spinning Round Trip blades, summons a Doppelganger shadow, launches unguardable Demon Cannon rockets, and unleashes Devil Trigger Tornado & Jackpot twin beams.',
 
-  // ─── Basic Attack: Rebellion 4-Stage Greatsword Combo & Ebony/Ivory Gunfire (St 200/300/400/685) ───
+  // ─── Basic Attack: Rebellion 4-Stage Greatsword Combo (St 200/300/400/685) ───
   enableRebellionCombo: 1,
   rebellionSkillName: 'REBELLION COMBO',
   swordReach: 94,
   swordArcDeg: 135,
   swordDamage: 21,
   swordCooldown: 22,
-  weaponSwitchFrames: 14,
-  weaponSwitchCooldown: 200,
-  enableFinisherGunSequence: 1,
-  finisherGunDurationFrames: 200,
-  finisherGunFireInterval: 11,
   comboPostFinisherCooldownPad: 14,
   dtSwordReachBonus: 14,
 
@@ -113,6 +110,7 @@ export const danteConfig = {
   highTimeHitShake: 8.5,
   highTimeHitShakeFrames: 11,
 
+  // ─── Basic Attack: Ebony & Ivory Gunfire ───
   enableGunfire: 1,
   gunDamage: 8,
   gunCooldown: 68,
@@ -120,6 +118,13 @@ export const danteConfig = {
   gunShotSpeed: 16,
   coyoteDamage: 16,
   coyoteRange: 98,
+
+  // ─── Weapon Switching & Post-Finisher Gun Sequence ───
+  weaponSwitchFrames: 14,
+  weaponSwitchCooldown: 200,
+  enableFinisherGunSequence: 1,
+  finisherGunDurationFrames: 200,
+  finisherGunFireInterval: 11,
 
   // ─── Basic Attack Crit Mechanic (Rebellion Melee & Ebony/Ivory Gunfire) ───
   enableBasicCrit: 1,
@@ -131,14 +136,27 @@ export const danteConfig = {
   critChancePerBasicHit: 0.04,
   maxCritChance: 0.65,
 
-  // ─── Skill 1: Round Trip (Spinning Rebellion Boomerang — St 1000/1005) ───
-  enableRoundTrip: 0,
-  roundTripSkillName: 'ROUND TRIP',
+  // ─── Skill 1: Side Special (Forward Blade Throw & Whirling Vortex — St 1000/1005) ───
+  enableRoundTrip: 1,
+  roundTripSkillName: 'SIDE SPECIAL',
   roundTripCooldown: 300,
-  roundTripDamage: 14,
-  roundTripSpeed: 10.5,
-  roundTripMaxTicks: 4,
-  roundTripHoldFrames: 42,
+  roundTripChargeFrames: 16,
+  roundTripLaunchDamage: 14,
+  roundTripDamage: 9,
+  roundTripSpeed: 13.5,
+  roundTripReturnSpeed: 15.5,
+  roundTripMaxRange: 250,
+  roundTripMaxTicks: 12,
+  roundTripHoldFrames: 200,
+  roundTripWhirlTickInterval: 8,
+  roundTripBladeRadius: 18,
+  roundTripWhirlRadius: 56,
+  roundTripWhirlDriftSpeed: 1.35,
+  roundTripLaunchHitPauseFrames: 5,
+  roundTripHitPauseFrames: 4,
+  roundTripSlowFrames: 36,
+  roundTripSlowMultiplier: 0.30,
+  roundTripVoicelineChance: 0.70,
 
   // ─── Skill 2: Drive (Crimson Blade Wave — St 1200/1220) ───
   enableDrive: 0,
@@ -178,7 +196,6 @@ export const danteConfig = {
   dtTornadoDamage: 12,
   dtTornadoRadius: 128,
   dtTornadoDuration: 96,
-
   jackpotDamage: 54,
   jackpotChargeFrames: 18,
   jackpotFireFrames: 42,
@@ -188,14 +205,21 @@ export const danteConfig = {
   enableTricksterDash: 1,
   enableSpotDodge: 1,
   spotDodgeSkillName: 'SPOT DODGE',
-  tricksterCooldown: 75,
+  tricksterCooldown: 200,
   tricksterDistance: 100,
   spotDodgeDuration: 18,
-  spotDodgeChance: 1.0,
-  dtSpotDodgeChance: 1.0,
+  spotDodgeChance: 0.80,
+  dtSpotDodgeChance: 0.80,
 
-  // ─── Sound System Configuration (MUGEN Dante SFX) ───
+  // ─── Sound System Configuration (MUGEN Dante SFX & Voicelines) ───
+  enableBasicVoicelines: 1,
+  swordVoicelineChance: 0.45,
+  gunVoicelineChance: 0.30,
+  finisherVoicelineChance: 0.75,
+  basicVoiceCooldownFrames: 38,
+
   sounds: {
+    // Combat & Skill SFX
     swordSlash: 'Assets/Sound Effects/DanteSFX/dante-sword-slash.ogg',
     gunshot: 'Assets/Sound Effects/DanteSFX/dante-gunshot.ogg',
     shotgun: 'Assets/Sound Effects/DanteSFX/dante-shotgun.ogg',
@@ -211,6 +235,17 @@ export const danteConfig = {
     spotDodge: 'Assets/Sound Effects/DanteSFX/dante-spot-dodge.ogg',
     trickVanish: 'Assets/Sound Effects/VergilSFX/vergil-trick-vanish.ogg',
     trickAppear: 'Assets/Sound Effects/VergilSFX/vergil-trick-appear.ogg',
+    weaponSwitch: 'Assets/Sound Effects/DanteSFX/dante-weapon-switch.ogg',
+
+    // Basic Attack & Finisher Voicelines
+    voSlash1: 'Assets/Sound Effects/DanteSFX/dante-slash-voiceline1.ogg',
+    voSlash2: 'Assets/Sound Effects/DanteSFX/dante-slash-voiceline2.ogg',
+    voSlash3: 'Assets/Sound Effects/DanteSFX/dante-slash-voiceline3.ogg',
+    voGun1: 'Assets/Sound Effects/DanteSFX/dante-gun-voiceline1.ogg',
+    voGun2: 'Assets/Sound Effects/DanteSFX/dante-gun-voiceline2.ogg',
+    voGun3: 'Assets/Sound Effects/DanteSFX/dante-gun-voiceline3.ogg',
+    voGun4: 'Assets/Sound Effects/DanteSFX/dante-gun-voiceline4.ogg',
+    voFinisher: 'Assets/Sound Effects/DanteSFX/dante-finisher-voiceline1.ogg',
   },
 
   soundVolumes: {
@@ -229,5 +264,16 @@ export const danteConfig = {
     spotDodge: 0.88,
     trickVanish: 0.82,
     trickAppear: 0.85,
+    weaponSwitch: 0.85,
+    voSlash1: 0.82,
+    voSlash2: 0.84,
+    voSlash3: 0.86,
+    voGun1: 0.84,
+    voGun2: 0.84,
+    voGun3: 0.85,
+    voGun4: 0.86,
+    voFinisher: 0.88,
   },
 };
+
+//audio chance

@@ -3265,6 +3265,11 @@ export const MOBILE_ASSET_MANIFEST = {
     58,
     1
   ],
+  "Assets/effects/dante/dante-round-trip-whirl.png": [
+    1024,
+    128,
+    1
+  ],
   "Assets/effects/dante/dante-slash-arc.png": [
     824,
     130,

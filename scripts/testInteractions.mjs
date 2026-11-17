@@ -27868,12 +27868,20 @@ async function runInteractionTests() {
       dante._weaponVanishGhosts.length = 0;
       dante._weaponSwitchTimer = 0;
       dante.weaponSwitchCooldown = 0;
+      dante._gunShotIndex = 0;
+      dante._ebonyRecoilTimer = 0;
+      dante._ivoryRecoilTimer = 0;
       dante._fireSingleEbonyIvoryBullet(dDef);
-      assert(dante._weaponMode === 'guns' && dante._weaponSwitchTimer > 0, 'Switching Rebellion -> Ebony & Ivory must activate smooth switch animation');
+      assert(dante._weaponMode === 'guns' && dante._weaponSwitchTimer > 0 && dante._ebonyRecoilTimer > 0, 'Switching Rebellion -> Ebony & Ivory must activate smooth switch animation and Ebony recoil');
       assert(dante.weaponSwitchCooldown === (dDef.weaponSwitchCooldown ?? 18), 'Switching weapons must apply post-switch weaponSwitchCooldown');
       assert(dante._weaponVanishGhosts.length === 1 && dante._weaponVanishGhosts[0].kind === 'rebellion', 'Switching Rebellion -> Ebony & Ivory must spawn Rebellion vanishing VFX ghost');
       dante.draw(stackCtx, enemy);
       assert(stackCtx.getStackDepth() === 0, 'Weapon switch Rebellion -> Guns draw must preserve stack depth 0');
+
+      dante._fireSingleEbonyIvoryBullet(dDef);
+      assert(dante._ivoryRecoilTimer > 0, 'Consecutive Ebony & Ivory shots must alternate to Ivory recoil animation');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Dual-pistol alternating recoil & muzzle flash draw must preserve stack depth 0');
 
       dante._executeRebellionCleave(enemy, dDef);
       assert(dante._weaponMode === 'rebellion' && dante._weaponSwitchTimer > 0, 'Switching Ebony & Ivory -> Rebellion must activate smooth switch animation');
@@ -27949,36 +27957,109 @@ async function runInteractionTests() {
       assert(dante.vx > 0, 'Dante must naturally rebound off arena walls without magnet-homing overriding bounce velocity');
 
       // Spot Dodge: Dante vanishes and reappears in a split second via real takeDamage
-      dante._millionStabTimer = 0;
-      dante.slashSwingTimer = 0;
-      dante.tricksterCooldown = 0;
-      dante.isSpotDodging = false;
-      dante._spotDodgeTimer = 0;
-      const hpBeforeHit = dante.hp;
-      const hitApplied = dante.takeDamage(45, enemy, { isMelee: true });
-      assert(hitApplied === false && dante.hp === hpBeforeHit, 'Spot Dodge must intercept incoming takeDamage and negate damage');
-      assert(dante.isSpotDodging === true && dante._spotDodgeTimer > 0, 'Spot Dodge must activate vanish timer and state on incoming hit');
-      assert(!dante.vanishTimer && dante.suppressInkOutline === true && dante.suppressFloorShadow === true && dante.hideHpText === true, 'Spot Dodge must suppress ink outline, floor shadow, and HP text without setting vanishTimer so EntityRenderer still renders the spotDodge VFX');
-      assert(dante._danteVfx.some(v => v.kind === 'spotDodge'), 'Spot Dodge must spawn spotDodge smoke distortion VFX');
-      const hpWhileDodging = dante.hp;
-      const dmgWhileDodging = dante.takeDamage(50, enemy, { isMelee: true });
-      assert(dmgWhileDodging === false && dante.hp === hpWhileDodging, 'Dante must be completely invulnerable during active Spot Dodge vanish window');
-      dante.draw(stackCtx, enemy);
-      assert(stackCtx.getStackDepth() === 0, 'Spot Dodge vanish draw must preserve stack depth 0');
-      while (dante._spotDodgeTimer > 0) {
-        dante.update(enemy, 0, testArena);
+      const prevSpotDodgeChance = dDef.spotDodgeChance;
+      dDef.spotDodgeChance = 1.0;
+      try {
+        dante._millionStabTimer = 0;
+        dante.slashSwingTimer = 0;
+        dante.tricksterCooldown = 0;
+        dante.isSpotDodging = false;
+        dante._spotDodgeTimer = 0;
+        const hpBeforeHit = dante.hp;
+        const hitApplied = dante.takeDamage(45, enemy, { isMelee: true });
+        assert(hitApplied === false && dante.hp === hpBeforeHit, 'Spot Dodge must intercept incoming takeDamage and negate damage');
+        assert(dante.isSpotDodging === true && dante._spotDodgeTimer > 0, 'Spot Dodge must activate vanish timer and state on incoming hit');
+        assert(!dante.vanishTimer && dante.suppressInkOutline === true && dante.suppressFloorShadow === true && dante.hideHpText === true, 'Spot Dodge must suppress ink outline, floor shadow, and HP text without setting vanishTimer so EntityRenderer still renders the spotDodge VFX');
+        assert(dante._danteVfx.some(v => v.kind === 'spotDodge'), 'Spot Dodge must spawn spotDodge smoke distortion VFX');
+        const hpWhileDodging = dante.hp;
+        const dmgWhileDodging = dante.takeDamage(50, enemy, { isMelee: true });
+        assert(dmgWhileDodging === false && dante.hp === hpWhileDodging, 'Dante must be completely invulnerable during active Spot Dodge vanish window');
         dante.draw(stackCtx, enemy);
-        assert(stackCtx.getStackDepth() === 0, 'Spot Dodge phase draw must preserve stack depth 0');
+        assert(stackCtx.getStackDepth() === 0, 'Spot Dodge vanish draw must preserve stack depth 0');
+        while (dante._spotDodgeTimer > 0) {
+          dante.update(enemy, 0, testArena);
+          dante.draw(stackCtx, enemy);
+          assert(stackCtx.getStackDepth() === 0, 'Spot Dodge phase draw must preserve stack depth 0');
+        }
+        assert(dante.isSpotDodging === false && dante.suppressInkOutline === false && dante.suppressFloorShadow === false, 'Spot Dodge must cleanly end and restore outline after split-second vanish window');
+      } finally {
+        dDef.spotDodgeChance = prevSpotDodgeChance;
       }
-      assert(dante.isSpotDodging === false && dante.suppressInkOutline === false && dante.suppressFloorShadow === false, 'Spot Dodge must cleanly end and restore outline after split-second vanish window');
 
-      // Skill 1: Round Trip boomerang
-      dante.x = 160; dante.y = 420; enemy.x = 260; enemy.y = 420;
+      // Skill 1: Side Special (Forward Blade Throw -> Lock-On Whirling Shred -> Return & Catch)
+      dante.x = 160; dante.y = 420; enemy.x = 320; enemy.y = 420;
       const preRtHp = enemy.hp;
       dante.startRoundTrip(enemy);
-      assert(Boolean(dante._roundTripEntity), 'Round Trip must launch spinning Rebellion entity');
-      for (let t = 0; t < 30; t++) dante.update(enemy, 0, testArena);
-      assert(enemy.hp < preRtHp, 'Round Trip spinning sword must deal multi-hit damage to enemy');
+      assert(Boolean(dante._roundTripEntity) && dante._roundTripEntity.phase === 'charge', 'Side Special must begin with blade charge coil');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Side Special charge phase draw must preserve stack depth 0');
+
+      const rtChargeFrames = Math.max(0, dDef.roundTripChargeFrames ?? 16);
+      dante.gunCooldown = 0;
+      dante._bullets.length = 0;
+      dante._weaponVanishGhosts.length = 0;
+      // Right after throw release ('out' flight before landing), Dante must stay out of guns mode until the blade lands
+      for (let t = 0; t < rtChargeFrames + 2; t++) dante.update(enemy, 0, testArena);
+      assert(dante._roundTripEntity?.phase === 'out' && dante._weaponMode === 'rebellion' && dante._bullets.length === 0, 'Side Special blade must stay out of guns mode while still in flight before landing');
+      for (let t = 0; t < 8; t++) dante.update(enemy, 0, testArena);
+      assert(Boolean(dante._roundTripEntity) && dante._roundTripEntity.phase === 'spin' && dante._roundTripEntity.latchedTarget === enemy, 'Side Special thrown blade must latch onto struck foe and enter whirling spin');
+      assert(dante._weaponMode === 'guns', 'Once Side Special blade lands and starts spinning, Dante must equip Ebony & Ivory guns');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Side Special whirling vortex + Ebony & Ivory draw must preserve stack depth 0');
+
+      // Each Side Special hit must creep forward slowly without rotating/pulling enemy around blade, apply hit-pause + movement slow, and allow gun bursts while spinning
+      const anchorX = dante._roundTripEntity.anchorX ?? dante._roundTripEntity.x;
+      const anchorY = dante._roundTripEntity.anchorY ?? dante._roundTripEntity.y;
+      const preEnemyY = enemy.y;
+      const preEnemyAngle = enemy.gunAngle;
+      assert(enemy.timeStopTimer > 0 && enemy.slowTimer > 0 && enemy.slowMultiplier < 1, 'Side Special initial hit must apply hit-pause and movement slow to struck foe');
+      const bladeCollisionDist = (enemy.r || 28) + (dDef.roundTripBladeRadius ?? 18);
+      let sawWhirlHitPause = false;
+      let sawSpinGunshot = dante._bullets.length > 0;
+      for (let t = 0; t < 18; t++) {
+        dante.update(enemy, 0, testArena);
+        if (enemy.timeStopTimer > 0) sawWhirlHitPause = true;
+        if (dante._bullets.length > 0) sawSpinGunshot = true;
+      }
+      const curAnchorX = dante._roundTripEntity.anchorX ?? dante._roundTripEntity.x;
+      const curAnchorY = dante._roundTripEntity.anchorY ?? dante._roundTripEntity.y;
+      const postDist = Math.hypot(enemy.x - curAnchorX, enemy.y - curAnchorY);
+      assert(sawSpinGunshot === true, 'Dante must be able to fire Ebony & Ivory shots while Side Special blade is still spinning');
+      assert(curAnchorX > anchorX + 10 && Math.abs(curAnchorY - anchorY) < 6, 'Landed whirling Side Special blade must creep slowly forward along throw direction');
+      assert(Math.abs(enemy.y - preEnemyY) < 4 && enemy.gunAngle === preEnemyAngle, 'Side Special hits must NOT orbit/rotate the enemy around the blade');
+      assert(postDist >= bladeCollisionDist - 1.5, `Side Special blade collision must keep solid contact boundary (min=${bladeCollisionDist}, got=${postDist.toFixed(1)})`);
+      assert(sawWhirlHitPause && enemy.slowTimer > 0 && enemy.slowMultiplier < 1, 'Each Side Special whirl hit must refresh hit-pause and slow the target movement');
+      assert(enemy.hp < preRtHp - 15, 'Side Special spinning sword must deal launch + multi-hit whirl shred damage');
+
+      // Walking Dante directly onto the landed blade (or taking knockback) must NOT pick it up before holdTimer ends
+      dante.x = curAnchorX; dante.y = curAnchorY;
+      dante.interruptAttacks(true);
+      dante.update(enemy, 0, testArena);
+      assert(Boolean(dante._roundTripEntity) && dante._roundTripEntity.phase === 'spin' && dante._roundTripEntity.holdTimer > 0, 'Walking Dante close to landed Side Special blade (or taking knockback) must NOT pick up or cancel the blade before duration ends');
+      assert(dante.roundTripCooldown === (dDef.roundTripCooldown ?? 300), 'Side Special cooldown must NOT tick down until the blade returns to Dante');
+
+      // Finish whirl duration -> return flight -> catch back in hand (switch back to Rebellion + start cooldown ticking)
+      dante.x = 160; dante.y = 420;
+      const holdRem = (dante._roundTripEntity?.holdTimer || 0) + 45;
+      for (let t = 0; t < holdRem && dante._roundTripEntity; t++) {
+        dante.update(enemy, 0, testArena);
+        if (t === 2) {
+          dante.draw(stackCtx, enemy);
+          assert(stackCtx.getStackDepth() === 0, 'Side Special return phase draw must preserve stack depth 0');
+        }
+      }
+      assert(dante._roundTripEntity === null && dante._roundTripCatchTimer > 0 && dante._weaponMode === 'rebellion', 'Returning Side Special blade must cleanly snap back into Dante hand and restore Rebellion mode');
+      const fullRtCd = dDef.roundTripCooldown ?? 300;
+      const catchCd = dante.roundTripCooldown;
+      assert(catchCd >= fullRtCd - 1 && catchCd <= fullRtCd, `Side Special full cooldown must start from max when the blade returns (got ${catchCd}/${fullRtCd})`);
+      dante.update(enemy, 0, testArena);
+      assert(dante.roundTripCooldown === catchCd - 1, 'Side Special cooldown must tick down once the blade has returned');
+      dante._bullets.length = 0;
+
+      // Refresh dummy HP for remaining skill assertions
+      enemy.hp = enemy.maxHp;
+      enemy.isDead = false;
+      enemy.dead = false;
 
       // Skill 2: Drive crimson wave
       const preDriveHp = enemy.hp;
@@ -28029,13 +28110,22 @@ async function runInteractionTests() {
       try {
         dante._playSfx('swordSlash');
         dante._playSfx('devilTrigger');
+        dante._playSfx('weaponSwitch');
+        dante._basicVoiceCooldown = 0;
+        const missedVo = dante._maybePlayBasicVoice(['voSlash1'], 0, dDef, 30);
+        const hitVo = dante._maybePlayBasicVoice(['voSlash1'], 1.0, dDef, 30);
+        const cdBlockedVo = dante._maybePlayBasicVoice(['voGun1'], 1.0, dDef, 30);
+        assert(missedVo === null && hitVo === 'voSlash1' && cdBlockedVo === null, 'Dante _maybePlayBasicVoice must respect random chance and _basicVoiceCooldown gating');
       } finally {
         audioSystem.playSFX = origPlaySFX;
+        dante._basicVoiceCooldown = 0;
       }
       assert(
         playedSfx.some(s => s.src === dDef.sounds.swordSlash) &&
-        playedSfx.some(s => s.src === dDef.sounds.devilTrigger),
-        'Dante _playSfx must dispatch mapped MUGEN SFX paths via audioSystem.playSFX'
+        playedSfx.some(s => s.src === dDef.sounds.devilTrigger) &&
+        playedSfx.some(s => s.src === dDef.sounds.weaponSwitch) &&
+        playedSfx.some(s => s.src === dDef.sounds.voSlash1),
+        'Dante _playSfx must dispatch mapped MUGEN SFX & basic voiceline paths via audioSystem.playSFX'
       );
 
       // Rule 18 HUD bars check
