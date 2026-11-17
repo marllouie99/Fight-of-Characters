@@ -26,9 +26,10 @@ if (isFrozen || this.isTargetOfAmbush) {
 
 At the end of `update()`:
 ```javascript
-// Delegate to base class centralized physics
+// Delegate to base class centralized physics (preserves natural wall & fighter rebound momentum)
 super.update(opponent, ownerIndex, arena);
 ```
+- **Natural Rebound Movement Requirement (Zero Continuous Magnet Homing)**: NEVER overwrite `this.vx` / `this.vy` toward `aimAng` on every frame in `update()`. Let `super.update(opponent, ownerIndex, arena)` govern velocity recovery and `resolveWallBounce(arena, opponent)` so the fighter rebounds naturally off walls and opponents like Vergil, Toji, and Gojo.
 
 ### 2. Upright Minimalist Skin Standard (Front POV) & Offscreen Caching (Rule 19 & 3.5)
 - **Offscreen Canvas Caching (Gojo / Yuji / Sukuna Pattern)**: When rendering procedural pixel art bodies, ALWAYS rasterize once to an offscreen canvas (`_cachedFighterCanvas`) and blit via `ctx.drawImage`. NEVER call per-pixel `ctx.fillRect` loops inside the rotated game loop.

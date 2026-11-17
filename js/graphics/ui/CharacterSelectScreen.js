@@ -2829,6 +2829,10 @@ export function getFighterWeaponInfo(def) {
       return { name: 'DRAGON SLAYER & CALAMITY CLEAVE', category: 'COLOSSAL MELEE // BERSERK', desc: 'Monstrous 400-pound black iron greatsword cleaving across 210° frontal arcs, supersonic Calamity Cleave crescent shockwaves, and unyielding poise.' };
     case 'vergil':
       return { name: 'YAMATO & SUMMONED SWORDS', category: 'DEMONIC KATANA // SON OF SPARDA', desc: 'Dimensional Space-Cutting katana paired with 6-Ring Summoned Swords -> Heavy Rain follow-up, reactive Trick Dodge, Yamato Parry, and Rapid Slash -> Judgment Cut End.' };
+    case 'kashimo':
+      return { name: 'NYOI STAFF & MYTHICAL BEAST AMBER', category: 'ELECTRIFIED CURSED ENERGY // GOD OF LIGHTNING', desc: 'Ancient sorcerer stacking Static Charges for guaranteed Sure-Hit Lightning Discharges, Violence Rampage Counter, piercing Railgun beams, and guard-breaking Mythical Beast Amber.' };
+    case 'dante':
+      return { name: 'REBELLION, EBONY & IVORY & KALINA ANN', category: 'DEVIL ARSENAL // SON OF SPARDA', desc: 'Legendary Devil Hunter chaining Rebellion cleaves, Ebony & Ivory bursts, spinning Round Trip blades, piercing Drive waves, Doppelganger clones, Kalina Ann rockets, and Devil Trigger Jackpot!' };
     case 'dummy':
       return { name: 'BALLISTIC TARGET CHASSIS', category: 'TRAINING // SANDBOX', desc: 'Reinforced training frame designed for testing weapon DPS and combos.' };
     default:

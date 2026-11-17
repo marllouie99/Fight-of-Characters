@@ -615,6 +615,11 @@ export const MOBILE_ASSET_MANIFEST = {
     724,
     1
   ],
+  "Assets/model/dante/Dante-rebellion.png": [
+    560,
+    140,
+    1
+  ],
   "Assets/model/denji/Chainsaw Blade Parts/chainsaw-blade-no-teeth-transparent.png": [
     2170,
     725,
@@ -3240,6 +3245,41 @@ export const MOBILE_ASSET_MANIFEST = {
     183,
     1
   ],
+  "Assets/effects/dante/dante-drive-wave.png": [
+    948,
+    180,
+    1
+  ],
+  "Assets/effects/dante/dante-dt-aura.png": [
+    1536,
+    96,
+    1
+  ],
+  "Assets/effects/dante/dante-dt-tornado.png": [
+    1890,
+    255,
+    1
+  ],
+  "Assets/effects/dante/dante-explosion.png": [
+    638,
+    58,
+    1
+  ],
+  "Assets/effects/dante/dante-slash-arc.png": [
+    824,
+    130,
+    1
+  ],
+  "Assets/effects/dante/dante-spot-dodge.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/dante/dante-weapon-vanish.png": [
+    1024,
+    128,
+    1
+  ],
   "Assets/effects/dbz/dbz-beam-blue.png": [
     1344,
     128,
@@ -3348,6 +3388,46 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/effects/Impact/impact-b.png": [
     3072,
     256,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-amber-aura.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-counter-wave.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-lightning-arc.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-p2-shock.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-railgun-beam.png": [
+    1344,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-shock-ring.png": [
+    768,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-thunder-dome.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/kashimo/kashimo-thunder-pillar.png": [
+    1024,
+    192,
     1
   ],
   "Assets/effects/lightning/lightning_spritesheet_360x640_4x3.png": [

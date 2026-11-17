@@ -177,6 +177,8 @@ const TYPE_THEME_MAP = {
   ulquiorra: 'emerald',
   aizen: 'violet',
   vergil: 'cyan',
+  kashimo: 'cyan',
+  dante: 'crimson',
   makima: 'crimson',
   reze: 'violet',
   denji: 'gold',

@@ -42,6 +42,8 @@ import { drawKaizoKnightWeaponPreview } from '../weapons/kaizoKnightWeaponGraphi
 import { drawErrorSansWeaponPreview } from '../weapons/errorSansWeaponGraphics.js';
 import { drawJevilWeaponPreview } from '../weapons/jevilWeaponGraphics.js';
 import { drawVergilWeaponPreview } from '../weapons/vergilWeaponGraphics.js';
+import { drawKashimoWeaponPreview } from '../weapons/kashimoWeaponGraphics.js';
+import { drawDanteWeaponPreview } from '../weapons/danteWeaponGraphics.js';
 import { drawNamelessDeitySkin } from '../fighters/namelessDeitySkin.js';
 import { spawnHollowMaskShatter, updateDeathEffects, drawDeathEffects } from '../particles/deathShatterEffect.js';
 import { audioSystem } from '../../systems/audioSystem.js';
@@ -1931,7 +1933,7 @@ function drawWeaponPreview(ctx, type, color) {
   else if (type === 'zeus' || type === 'darkslategray' || type === 'berserker' || type === 'bomber' || type === 'melee') offsetX = -35;
   else if (type === 'cronos') offsetX = -55;
   else if (type === 'ruby') offsetX = -75;
-  else if (type === 'toji' || type === 'denji' || type === 'power' || type === 'tanjiro' || type === 'zenitsu' || type === 'inosuke' || type === 'reze' || type === 'crazydave' || type === 'crazy_dave' || type === 'guts' || type === 'escanor' || type === 'roaring_knight' || type === 'kaizo_knight' || type === 'error_sans' || type === 'jevil' || type === 'vergil') offsetX = -40;
+  else if (type === 'toji' || type === 'denji' || type === 'power' || type === 'tanjiro' || type === 'zenitsu' || type === 'inosuke' || type === 'reze' || type === 'crazydave' || type === 'crazy_dave' || type === 'guts' || type === 'escanor' || type === 'roaring_knight' || type === 'kaizo_knight' || type === 'error_sans' || type === 'jevil' || type === 'vergil' || type === 'kashimo' || type === 'dante') offsetX = -40;
   else if (type === 'nezuko') offsetX = -35;
   else if (type === 'yuta') offsetX = -40;
   else if (type === 'megumi') offsetX = -45;
@@ -2363,6 +2365,14 @@ function drawWeaponPreview(ctx, type, color) {
 
       case 'vergil':
         drawVergilWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
+        return;
+
+      case 'kashimo':
+        drawKashimoWeaponPreview(ctx, 0, 0, gunAngle, r);
+        return;
+
+      case 'dante':
+        drawDanteWeaponPreview(ctx, 0, 0, gunAngle, r);
         return;
 
       case 'namelessdeity':

@@ -82,6 +82,8 @@ import { errorSansConfig } from '../configs/characters/errorSansConfig.js';
 import { jevilConfig } from '../configs/characters/jevilConfig.js';
 import { aizenConfig } from '../configs/characters/aizenConfig.js';
 import { vergilConfig } from '../configs/characters/vergilConfig.js';
+import { kashimoConfig } from '../configs/characters/kashimoConfig.js';
+import { danteConfig } from '../configs/characters/danteConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -193,6 +195,14 @@ export const CONFIG = {
   Vergil: vergilConfig,
   VERGIL: vergilConfig,
   vergil_sparda: vergilConfig,
+  kashimo: kashimoConfig,
+  Kashimo: kashimoConfig,
+  KASHIMO: kashimoConfig,
+  hajime_kashimo: kashimoConfig,
+  dante: danteConfig,
+  Dante: danteConfig,
+  DANTE: danteConfig,
+  dante_sparda: danteConfig,
   makima: makimaConfig,
   reze: rezeConfig,
   denji: denjiConfig,
@@ -2277,6 +2287,54 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: vergilConfig.projectileSpeedMultiplier || 1.0,
     ability: vergilConfig.ability || 'Yamato, Summoned Swords, Doppelganger & Judgment Cut End',
     desc: vergilConfig.desc,
+  },
+  {
+    id: 79,
+    name: kashimoConfig.name || 'KASHIMO',
+    grade: kashimoConfig.grade ?? DEFAULT_GRADE,
+    displayName: kashimoConfig.displayName || kashimoConfig.name || 'Hajime Kashimo',
+    category: kashimoConfig.category || 'Anime',
+    color: kashimoConfig.color || '#38BDF8',
+    themeColor: kashimoConfig.themeColor || '#38BDF8',
+    secondaryColor: kashimoConfig.secondaryColor || '#A855F7',
+    startX: kashimoConfig.startX || 300,
+    startY: kashimoConfig.startY || 250,
+    startVx: kashimoConfig.startVx || 1.1,
+    startVy: kashimoConfig.startVy || 1.0,
+    radius: kashimoConfig.radius || kashimoConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'kashimo',
+    hp: kashimoConfig.hp || 375,
+    damage: kashimoConfig.staffDamage || 20,
+    cooldown: kashimoConfig.staffCooldown || 24,
+    moveSpeed: kashimoConfig.moveSpeed || kashimoConfig.speed || 5.5,
+    projectileSpeedMultiplier: kashimoConfig.projectileSpeedMultiplier || 1.0,
+    ability: kashimoConfig.ability || 'Electrified Nyoi Staff, Static Counter, Sure-Hit Railgun & Mythical Beast Amber',
+    desc: kashimoConfig.desc,
+  },
+  {
+    id: 80,
+    name: danteConfig.name || 'DANTE',
+    grade: danteConfig.grade ?? DEFAULT_GRADE,
+    displayName: danteConfig.displayName || danteConfig.name || 'Dante',
+    category: danteConfig.category || 'Anime',
+    color: danteConfig.color || '#EF4444',
+    themeColor: danteConfig.themeColor || '#EF4444',
+    secondaryColor: danteConfig.secondaryColor || '#F59E0B',
+    startX: danteConfig.startX || 300,
+    startY: danteConfig.startY || 250,
+    startVx: danteConfig.startVx || 1.1,
+    startVy: danteConfig.startVy || 1.0,
+    radius: danteConfig.radius || danteConfig.r || 25,
+    type: 'dante',
+    hp: danteConfig.hp || 380,
+    damage: danteConfig.swordDamage || 21,
+    cooldown: danteConfig.swordCooldown || 22,
+    moveSpeed: danteConfig.moveSpeed || danteConfig.speed || 5.5,
+    projectileSpeedMultiplier: danteConfig.projectileSpeedMultiplier || 1.0,
+    ability: danteConfig.ability || 'Rebellion & Ebony/Ivory, Round Trip, Drive, Doppelganger, Kalina Ann & Devil Trigger Jackpot!',
+    desc: danteConfig.desc,
   }
 ];
 

@@ -1128,17 +1128,37 @@ export const SKILL_SOUNDS = {
     sparda_form: { src: 'Assets/Sound Effects/VergilSFX/vergil-sparda-awaken.ogg', volume: 0.90, delay: 0 },
     judgment_cut_end: { src: 'Assets/Sound Effects/VergilSFX/vergil-glass-shatter.ogg', volume: 0.92, delay: 0 },
   },
-  'vergil': {
-    judgment_cut: { src: 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg', volume: 0.86, delay: 0 },
-    rapid_slash: { src: 'Assets/Sound Effects/VergilSFX/vergil-rapid-dash.ogg', volume: 0.82, delay: 0 },
-    trick_teleport: { src: 'Assets/Sound Effects/VergilSFX/vergil-trick-vanish.ogg', volume: 0.74, delay: 0 },
-    summoned_swords: { src: 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg', volume: 0.74, delay: 0 },
-    sword_rain: { src: 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg', volume: 0.80, delay: 0 },
-    mirage_boomerang: { src: 'Assets/Sound Effects/VergilSFX/vergil-mirage-boomerang.ogg', volume: 0.80, delay: 0 },
-    doppelganger: { src: 'Assets/Sound Effects/VergilSFX/vergil-doppelganger.ogg', volume: 0.84, delay: 0 },
-    judgment_barrage: { src: 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg', volume: 0.88, delay: 0 },
-    sparda_form: { src: 'Assets/Sound Effects/VergilSFX/vergil-sparda-awaken.ogg', volume: 0.90, delay: 0 },
-    judgment_cut_end: { src: 'Assets/Sound Effects/VergilSFX/vergil-glass-shatter.ogg', volume: 0.92, delay: 0 },
+  // ── Hajime Kashimo (God of Lightning) ───────────────────────
+  79: {
+    counter: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-counter-trigger.ogg', volume: 0.92, delay: 0 },
+    railgun_charge: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-railgun-charge.ogg', volume: 0.88, delay: 0 },
+    railgun: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-railgun.ogg', volume: 0.95, delay: 0 },
+    amber_form: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-amber-transform.ogg', volume: 0.98, delay: 0 },
+  },
+  'kashimo': {
+    counter: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-counter-trigger.ogg', volume: 0.92, delay: 0 },
+    railgun_charge: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-railgun-charge.ogg', volume: 0.88, delay: 0 },
+    railgun: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-railgun.ogg', volume: 0.95, delay: 0 },
+    amber_form: { src: 'Assets/Sound Effects/KashimoSFX/kashimo-amber-transform.ogg', volume: 0.98, delay: 0 },
+  },
+  // ── Dante (Devil May Cry) ───────────────────────────────────
+  80: {
+    round_trip: { src: 'Assets/Sound Effects/DanteSFX/dante-round-trip.ogg', volume: 0.88, delay: 0 },
+    drive: { src: 'Assets/Sound Effects/DanteSFX/dante-heavy-blast.ogg', volume: 0.90, delay: 0 },
+    doppelganger: { src: 'Assets/Sound Effects/DanteSFX/dante-doppelganger.ogg', volume: 0.86, delay: 0 },
+    kalina_ann: { src: 'Assets/Sound Effects/DanteSFX/dante-kalina-fire.ogg', volume: 0.88, delay: 0 },
+    devil_trigger: { src: 'Assets/Sound Effects/DanteSFX/dante-devil-trigger.ogg', volume: 0.96, delay: 0 },
+    jackpot: { src: 'Assets/Sound Effects/DanteSFX/dante-jackpot-shot.ogg', volume: 0.98, delay: 0 },
+    spot_dodge: { src: 'Assets/Sound Effects/DanteSFX/dante-spot-dodge.ogg', volume: 0.88, delay: 0 },
+  },
+  'dante': {
+    round_trip: { src: 'Assets/Sound Effects/DanteSFX/dante-round-trip.ogg', volume: 0.88, delay: 0 },
+    drive: { src: 'Assets/Sound Effects/DanteSFX/dante-heavy-blast.ogg', volume: 0.90, delay: 0 },
+    doppelganger: { src: 'Assets/Sound Effects/DanteSFX/dante-doppelganger.ogg', volume: 0.86, delay: 0 },
+    kalina_ann: { src: 'Assets/Sound Effects/DanteSFX/dante-kalina-fire.ogg', volume: 0.88, delay: 0 },
+    devil_trigger: { src: 'Assets/Sound Effects/DanteSFX/dante-devil-trigger.ogg', volume: 0.96, delay: 0 },
+    jackpot: { src: 'Assets/Sound Effects/DanteSFX/dante-jackpot-shot.ogg', volume: 0.98, delay: 0 },
+    spot_dodge: { src: 'Assets/Sound Effects/DanteSFX/dante-spot-dodge.ogg', volume: 0.88, delay: 0 },
   }
 };
 

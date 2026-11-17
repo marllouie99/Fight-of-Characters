@@ -3926,6 +3926,136 @@ export const HUD_SKILL_PROVIDERS = {
     return skills;
   },
 
+  dante(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.dante) ? CONFIG.dante : {};
+    const themeColor = f.color || cfg.themeColor || '#EF4444';
+    const skills = [];
+
+    const pushCdSkill = (id, enabled, cdVal, maxCdVal, defaultName, cfgKey, isActive = false) => {
+      if (!isSkillEnabled(enabled, true)) return;
+      const cd = cdVal || 0;
+      const maxCd = Math.max(1, maxCdVal, cd);
+      const baseName = cfgSkillName(cfg, [cfgKey], defaultName);
+      const pct = isActive ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      skills.push({
+        id,
+        pct,
+        active: Boolean(isActive),
+        ready: !isActive && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label: cd > 0 && !isActive ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName,
+      });
+    };
+
+    pushCdSkill('spot_dodge', isSkillEnabled(cfg.enableTricksterDash, true) && isSkillEnabled(cfg.enableSpotDodge, true), f.tricksterCooldown, cfg.tricksterCooldown || 75, 'SPOT DODGE', 'spotDodgeSkillName', Boolean(f.isSpotDodging));
+    pushCdSkill('round_trip', cfg.enableRoundTrip, f.roundTripCooldown, cfg.roundTripCooldown || 300, 'ROUND TRIP', 'roundTripSkillName', Boolean(f._roundTripEntity));
+    pushCdSkill('drive', cfg.enableDrive, f.driveCooldown, cfg.driveCooldown || 270, 'DRIVE', 'driveSkillName', (f._driveChargeTimer || 0) > 0);
+    pushCdSkill('doppelganger', cfg.enableDoppelganger, f.doppelgangerCooldown, cfg.doppelgangerCooldown || 620, 'DOPPELGANGER', 'doppelgangerSkillName', Boolean(f._doppelganger));
+    pushCdSkill('kalina_ann', cfg.enableKalinaAnn, f.kalinaCooldown, cfg.kalinaCooldown || 360, 'KALINA ANN', 'kalinaSkillName', (f._kalinaCastTimer || 0) > 0);
+
+    if (isSkillEnabled(cfg.enableDevilTrigger, true)) {
+      const cd = f.devilTriggerCooldown || 0;
+      const maxCd = Math.max(1, cfg.devilTriggerCooldown || 1450, cd);
+      const active = Boolean(f.isDevilTrigger);
+      const baseName = cfgSkillName(cfg, ['devilTriggerSkillName'], 'DEVIL TRIGGER');
+      const pct = active
+        ? Math.max(0, Math.min(100, ((f.devilTriggerTimer || 0) / Math.max(1, cfg.devilTriggerDuration || 660)) * 100))
+        : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      const label = active
+        ? `${baseName} (${((f.devilTriggerTimer || 0) / 60).toFixed(1)}S)`
+        : (cd > 0 ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName);
+      skills.push({
+        id: 'devil_trigger',
+        pct,
+        active,
+        ready: !active && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
+  kashimo(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.kashimo) ? CONFIG.kashimo : {};
+    const themeColor = f.color || cfg.themeColor || '#38BDF8';
+    const skills = [];
+
+    if (isSkillEnabled(cfg.enableStaticCharge, true)) {
+      const stacks = f.lastChargeCount || 0;
+      const maxStacks = cfg.staticChargeMaxStacks || 3;
+      const baseName = cfgSkillName(cfg, ['staticChargeSkillName'], 'STATIC CHARGE');
+      skills.push({
+        id: 'static_charge',
+        pct: Math.max(0, Math.min(100, (stacks / maxStacks) * 100)),
+        active: stacks > 0,
+        ready: stacks >= maxStacks,
+        color: themeColor,
+        label: stacks > 0 ? `${baseName} (${stacks}/${maxStacks})` : baseName
+      });
+    }
+
+    if (isSkillEnabled(cfg.enableCounter, true)) {
+      const cd = f.counterCooldown || 0;
+      const maxCd = Math.max(1, cfg.counterCooldown || 390, cd);
+      const active = Boolean(f.isCounterStance || f.isPhotonSlicing);
+      const baseName = cfgSkillName(cfg, ['counterSkillName'], 'LIGHTNING COUNTER');
+      const pct = active ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      skills.push({
+        id: 'counter',
+        pct,
+        active,
+        ready: !active && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label: cd > 0 && !active ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName
+      });
+    }
+
+    if (isSkillEnabled(cfg.enableRailgun, true)) {
+      const cd = f.railgunCooldown || 0;
+      const maxCd = Math.max(1, cfg.railgunCooldown || 450, cd);
+      const active = Boolean(f.isChargingRailgun || f.isFiringRailgun);
+      const baseName = cfgSkillName(cfg, ['railgunSkillName'], 'SURE-HIT RAILGUN');
+      const pct = active ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      skills.push({
+        id: 'railgun',
+        pct,
+        active,
+        ready: !active && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label: cd > 0 && !active ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName
+      });
+    }
+
+    if (isSkillEnabled(cfg.enableAmberForm, true)) {
+      const cd = f.amberCooldown || 0;
+      const maxCd = Math.max(1, cfg.amberCooldown || 1650, cd);
+      const active = Boolean(f.isAmberForm);
+      const baseName = cfgSkillName(cfg, ['amberSkillName'], 'MYTHICAL BEAST AMBER');
+      const pct = active ? Math.max(0, Math.min(100, ((f.amberTimer || 0) / Math.max(1, cfg.amberDuration || 900)) * 100)) : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      const label = active
+        ? `${baseName} (${((f.amberTimer || 0) / 60).toFixed(1)}S)`
+        : (cd > 0 ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName);
+      skills.push({
+        id: 'amber_form',
+        pct,
+        active,
+        ready: !active && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true
+      });
+    }
+
+    return skills;
+  },
+
   vergil(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.vergil) ? CONFIG.vergil : {};
     const themeColor = f.color || cfg.themeColor || '#38BDF8';
@@ -4819,6 +4949,8 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     jevil: ['final_chaos', 'finalchaos', 'FINAL CHAOS'],
     aizen: ['kurohitsugi', 'KUROHITSUGI', 'PERFECT KUROHITSUGI', 'ULTRA FRAGOR'],
     vergil: ['judgment_cut_end', 'JUDGMENT CUT END'],
+    kashimo: ['amber_form', 'MYTHICAL BEAST AMBER'],
+    dante: ['devil_trigger', 'DEVIL TRIGGER'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 

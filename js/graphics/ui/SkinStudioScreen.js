@@ -38,6 +38,8 @@ import { drawInosukeSkin, _drawInosukeHair, _getInosukeHairImage } from '../figh
 import { drawUlquiorraSkin, _drawUlquiorraHair, _getUlquiorraHairImage } from '../fighters/ulquiorraSkin.js';
 import { drawAizenSkin, _drawAizenHair, _getAizenHairImage, _getAizenFinalHairImage } from '../fighters/aizenSkin.js';
 import { drawVergilSkin, _drawVergilHair, _getVergilHairImage } from '../fighters/vergilSkin.js';
+import { drawKashimoSkin, _drawKashimoHair, _getKashimoHairImage } from '../fighters/kashimoSkin.js';
+import { drawDanteSkin, _drawDanteHair, _getDanteHairImage } from '../fighters/danteSkin.js';
 import { drawZeusSkin, _drawZeusHair, _getZeusHairImage, _drawZeusCrown, _getZeusCrownImage } from '../fighters/zeusSkin.js';
 import { drawCronosSkin } from '../fighters/cronosSkin.js';
 import { drawBomberPixelBody } from '../fighters/bomberSkin.js';
@@ -775,6 +777,42 @@ export const SKIN_STUDIO_FIGHTERS = [
     forms: [
       { id: 'default', label: 'SON OF SPARDA' },
       { id: 'sparda', label: 'SEED OF SPARDA' }
+    ]
+  },
+  {
+    key: 'kashimo',
+    label: 'KASHIMO',
+    asset: 'Assets/model/kashimo/Kashimo-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 3.05,
+    baseH: 2.15,
+    baseCrownY: -1.48,
+    visW: 932,
+    visH: 841,
+    centerX: 516.5,
+    topY: 61,
+    themeColor: '#38BDF8',
+    forms: [
+      { id: 'default', label: 'CULLING GAME' },
+      { id: 'amber', label: 'MYTHICAL BEAST AMBER' }
+    ]
+  },
+  {
+    key: 'dante',
+    label: 'DANTE',
+    asset: 'Assets/model/dante/Dante-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 3.04,
+    baseH: 2.10,
+    baseCrownY: -1.44,
+    visW: 897,
+    visH: 920,
+    centerX: 511.5,
+    topY: 52,
+    themeColor: '#EF4444',
+    forms: [
+      { id: 'default', label: 'DEVIL HUNTER' },
+      { id: 'devil_trigger', label: 'DEVIL TRIGGER' }
     ]
   },
   {
@@ -2226,6 +2264,12 @@ export function drawSkinStudioScreen() {
       } else if (fDef.key === 'vergil') {
         dummyFighter.vergilForm = state.studioSkinForm === 'sparda' ? 1 : 0;
         drawVergilSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'kashimo') {
+        dummyFighter.isAmberForm = (state.studioSkinForm === 'amber');
+        drawKashimoSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'dante') {
+        dummyFighter.isDevilTrigger = (state.studioSkinForm === 'devil_trigger');
+        drawDanteSkin(ctx, dummyFighter);
       } else if (fDef.key === 'genos') {
         drawGenosSkin(ctx, dummyFighter);
         drawGenosHands(ctx, dummyFighter);

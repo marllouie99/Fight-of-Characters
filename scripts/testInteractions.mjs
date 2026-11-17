@@ -3540,6 +3540,8 @@ async function runInteractionTests() {
         weapon: state.studioSelectedWeapon,
         detail: state.studioSelectedDetail,
         zenitsuPart: state.studioZenitsuPart,
+        modalOpen: state.studioWeaponModalOpen,
+        modalPage: state.studioWeaponModalPage,
         zenitsu: JSON.parse(JSON.stringify(state.weaponCustomizations.zenitsu))
       };
       const renderedLabels = [];
@@ -3556,10 +3558,19 @@ async function runInteractionTests() {
         mockCanvas.width = 540;
         mockCanvas.height = 960;
         state.studioSelectedWeapon = 'yuta';
-        state.studioSelectedDetail = null;
+        state.studioWeaponModalOpen = false;
+        state.studioSelectedDetail = 'position';
         drawWeaponStudioScreen();
 
-        assert(handleUIClick(312, 151), 'Zenitsu must be selectable in Weapon Studio');
+        // Open Roster Modal via selector pill, turn to page 2, and pick Zenitsu
+        assert(handleUIClick(270, 81), 'Weapon Studio roster pill must open weapon picker modal');
+        assert(state.studioWeaponModalOpen === true, 'Weapon Studio modal must open');
+        drawWeaponStudioScreen();
+        assert(handleUIClick(472, 675), 'Weapon Studio modal NEXT page button must advance roster page');
+        drawWeaponStudioScreen();
+        assert(handleUIClick(108, 427), 'Zenitsu must be selectable in Weapon Studio roster modal');
+        assert(state.studioSelectedWeapon === 'zenitsu', 'Clicking Zenitsu card must select zenitsu');
+        assert(state.studioWeaponModalOpen === false, 'Selecting weapon from modal must close modal');
         assert(state.studioSelectedDetail === 'proportions', 'Selecting Zenitsu must open its length and width controls');
         state.studioZenitsuPart = 'overall';
         drawWeaponStudioScreen();
@@ -3568,12 +3579,12 @@ async function runInteractionTests() {
         assert(renderedLabels.some(label => label.includes('LENGTH:')), 'Zenitsu proportions panel must display weapon length');
 
         const initialWidth = state.weaponCustomizations.zenitsu.widthScale;
-        assert(handleUIClick(498, 606), 'Zenitsu width increase control must be clickable');
+        assert(handleUIClick(498, 578), 'Zenitsu width increase control must be clickable');
         assert(state.weaponCustomizations.zenitsu.widthScale > initialWidth, 'Zenitsu width control must update its weapon customization');
 
         drawWeaponStudioScreen();
         const initialLength = state.weaponCustomizations.zenitsu.lengthScale;
-        assert(handleUIClick(498, 642), 'Zenitsu length increase control must be clickable');
+        assert(handleUIClick(498, 614), 'Zenitsu length increase control must be clickable');
         assert(state.weaponCustomizations.zenitsu.lengthScale > initialLength, 'Zenitsu length control must update its weapon customization');
       } finally {
         mockCtx.fillText = originalFillText;
@@ -3585,6 +3596,8 @@ async function runInteractionTests() {
         state.studioSelectedWeapon = originalState.weapon;
         state.studioSelectedDetail = originalState.detail;
         state.studioZenitsuPart = originalState.zenitsuPart;
+        state.studioWeaponModalOpen = originalState.modalOpen;
+        state.studioWeaponModalPage = originalState.modalPage;
         state.weaponCustomizations.zenitsu = originalState.zenitsu;
       }
     }
@@ -27563,6 +27576,504 @@ async function runInteractionTests() {
       state.arena = prevArena;
       state.getFighterTeam = prevGetTeam;
       state.frameCount = prevFrameCount;
+    }
+  }
+
+  // Test 194: Hajime Kashimo (God of Lightning) MUGEN Mechanics & Rule 18/21/23/24/25 Verification
+  console.log('\n⚡ [Test 194] Verifying Hajime Kashimo MUGEN Mechanics, Static Charge, Counter, Railgun & Mythical Beast Amber...');
+  {
+    const { Fighter, computeScaledFighterRadius } = await import('../js/entities/fighter.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const KashimoClass = FIGHTER_CLASS_MAP['kashimo'];
+    assert(typeof KashimoClass === 'function', 'KashimoFighter class must be registered in FighterFactory');
+    const kDef = CONFIG.kashimo || {};
+    const kToggleKeys = ['enableStaffCombo', 'enableStaticCharge', 'enableCounter', 'enableRailgun', 'enableAmberForm', 'enableDodge'];
+    const savedKToggles = {};
+    for (const k of kToggleKeys) {
+      savedKToggles[k] = kDef[k];
+      kDef[k] = true;
+    }
+    const kashimo = new KashimoClass({ ...kDef, name: 'KASHIMO', characterId: 'kashimo', type: 'kashimo', x: 200, y: 400, radius: 25, hp: 375, maxHp: 375 });
+    const enemy = new Fighter({ name: 'Enemy', type: 'normal', x: 260, y: 400, radius: 25, hp: 1000, maxHp: 1000 });
+    enemy.maxHp = 1000;
+    enemy.hp = 1000;
+    const ally = new Fighter({ name: 'Ally', type: 'normal', x: 140, y: 400, radius: 25, hp: 500, maxHp: 500 });
+    assert(kashimo && enemy && ally, 'Kashimo and dummies must instantiate cleanly');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevMode = state.mode;
+    const prevGameState = state.gameState;
+    const prevGetTeam = state.getFighterTeam;
+    const prevProjectiles = state.projectiles ? [...state.projectiles] : [];
+    const stackCtx = createMockCtx();
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    try {
+      state.mode = '1v1';
+      state.gameState = 'playing';
+      state.arena = testArena;
+      state.fighters = [kashimo, enemy, ally];
+      state.getFighterTeam = (idx) => (idx === 0 || idx === 2 ? 'A' : 'B');
+      assert(kashimo._isHostile(enemy) === true, 'Kashimo must treat opposing team B as hostile');
+      assert(kashimo._isHostile(ally) === false, 'Kashimo must treat allied team A as non-hostile');
+      state.getFighterTeam = () => null;
+      assert(kashimo._isHostile(enemy) === true, 'Kashimo must treat enemy as hostile in 1v1 null-team mode');
+
+      // Rule 23 & Rule 24 checks
+      assert(kashimo.r === computeScaledFighterRadius(25), `Kashimo radius must preserve global scaling (got ${kashimo.r})`);
+      const beforeProj = state.projectiles.length;
+      kashimo.shoot(0);
+      assert(state.projectiles.length === beforeProj, 'Kashimo shoot() must suppress generic bullet projectiles (Rule 23)');
+
+      // Static Charge 3-stack Sure-Hit Discharge
+      kashimo.x = 200; kashimo.y = 400;
+      enemy.x = 260; enemy.y = 400;
+      const startHp = enemy.hp;
+      kashimo._executeStaffSwing(enemy);
+      assert(kashimo.lastChargeCount === 1, 'Staff hit 1 must apply 1 Static Charge stack');
+      kashimo._executeStaffSwing(enemy);
+      assert(kashimo.lastChargeCount === 2, 'Staff hit 2 must apply 2 Static Charge stacks');
+      kashimo._executeStaffSwing(enemy);
+      assert(kashimo.lastChargeCount === 0 && enemy.hp < startHp - 80, 'Staff hit 3 must trigger Sure-Hit Discharge and reset stacks');
+
+      // Skill 1: Counter trigger + damage negation
+      kashimo.startCounterStance();
+      assert(kashimo.isCounterStance === true, 'Counter stance must activate');
+      const hpPreHit = kashimo.hp;
+      const enemyPreCounterHp = enemy.hp;
+      const dmgRes = kashimo.takeDamage(50, enemy, { isMelee: true });
+      assert(dmgRes === false && kashimo.hp === hpPreHit && !kashimo.isCounterStance, 'Counter stance must negate incoming hit');
+      assert(enemy.hp < enemyPreCounterHp, 'Counter stance must punish attacker');
+
+      // Skill 2: Sure-Hit Railgun beam charge -> fire -> hit
+      kashimo.x = 180; kashimo.y = 420;
+      enemy.x = 320; enemy.y = 420;
+      const preRailHp = enemy.hp;
+      kashimo.startRailgun(enemy);
+      for (let t = 0; t < 30; t++) kashimo.update(enemy, 0, testArena);
+      assert(enemy.hp < preRailHp, 'Sure-Hit Railgun must deal beam + thunder pillar damage');
+
+      // Ultimate: Mythical Beast Amber + Sphere of Destruction (Statedef 3015 + 32010 P2 shock damage) + Rule 25 non-freezing VFX
+      kashimo.hp = kashimo.maxHp * 0.40;
+      kashimo.x = 290; kashimo.y = 420;
+      enemy.x = 320; enemy.y = 420;
+      const preAmberEnemyHp = enemy.hp;
+      kashimo.activateAmberForm(enemy);
+      assert(kashimo.isAmberForm === true && enemy.hp < preAmberEnemyHp, 'Mythical Beast Amber must activate and apply Sphere of Destruction + St 32010 shock damage to enemy');
+      assert(kashimo.prewarmAssets(stackCtx) >= 8, 'Kashimo prewarmAssets must register all 8 MUGEN VFX strips');
+      kashimo.applyTimeStop(10);
+      const vfxBefore = kashimo._kashimoVfx.map(v => v.life);
+      kashimo.update(enemy, 0, testArena);
+      const vfxAfter = kashimo._kashimoVfx.map(v => v.life);
+      assert(vfxBefore.length > 0 && vfxAfter.every((v, idx) => v === vfxBefore[idx] - 1), 'Kashimo VFX must decay under time-stop (Rule 25)');
+
+      // Rule 21 & Canvas Stack Depth = 0
+      kashimo.timeStopTimer = 0;
+      kashimo.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, `Kashimo draw() must leave Canvas stack depth 0 (got ${stackCtx.getStackDepth()})`);
+
+      // Rule 18 HUD bars check
+      const hudBars = getSkillDataForFighter(kashimo);
+      assert(Array.isArray(hudBars) && hudBars.length >= 3 && hudBars.every(b => b.color === kashimo.themeColor), 'Kashimo HUD bars must follow Rule 18 unified themeColor');
+      console.log('      ✅ Hajime Kashimo full MUGEN kit, Static Charge, Counter, Railgun, Amber & Rule 18/21/23/24/25 verified.');
+    } finally {
+      for (const k of kToggleKeys) kDef[k] = savedKToggles[k];
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.mode = prevMode;
+      state.gameState = prevGameState;
+      state.getFighterTeam = prevGetTeam;
+      state.projectiles = prevProjectiles;
+    }
+  }
+
+  // Test 195: Dante (Son of Sparda) MUGEN Mechanics & Rule 18/21/23/24/25 Verification
+  console.log('\n🔥 [Test 195] Verifying Dante MUGEN Mechanics, Rebellion, Round Trip, Drive, Doppelganger, Kalina Ann & Devil Trigger Jackpot!...');
+  {
+    const { Fighter, computeScaledFighterRadius } = await import('../js/entities/fighter.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevMode = state.mode;
+    const prevGameState = state.gameState;
+    const prevGetTeam = state.getFighterTeam;
+    const prevProjectiles = state.projectiles ? [...state.projectiles] : [];
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    const stackCtx = createMockCtx();
+    const dDef = CONFIG.dante || {};
+    const dToggleKeys = ['enableRebellionCombo', 'enableMillionStab', 'enableHighTime', 'enableFinisherGunSequence', 'enableGunfire', 'enableBasicCrit', 'enableRoundTrip', 'enableDrive', 'enableDoppelganger', 'enableKalinaAnn', 'enableDevilTrigger', 'enableTricksterDash', 'enableSpotDodge'];
+    const savedDToggles = {};
+    for (const k of dToggleKeys) {
+      savedDToggles[k] = dDef[k];
+      dDef[k] = true;
+    }
+
+    try {
+      const DanteClass = FIGHTER_CLASS_MAP['dante'];
+      assert(typeof DanteClass === 'function', 'DanteFighter class must be registered in FighterFactory');
+
+      const dante = new DanteClass({ ...dDef, name: 'DANTE', characterId: 'dante', type: 'dante', x: 180, y: 420, radius: 25, hp: 380, maxHp: 380 });
+      const enemy = new Fighter({ name: 'Enemy', type: 'normal', x: 250, y: 420, radius: 25, hp: 1000, maxHp: 1000 });
+      enemy.maxHp = 1000;
+      enemy.hp = 1000;
+      const ally = new Fighter({ name: 'Ally', type: 'normal', x: 140, y: 420, radius: 25, hp: 500, maxHp: 500 });
+      assert(dante && enemy && ally, 'Dante and dummies must instantiate cleanly');
+
+      state.arena = testArena;
+      state.mode = '2v2';
+      state.gameState = 'playing';
+      state.fighters = [dante, enemy, ally];
+      state.projectiles = [];
+      state.getFighterTeam = (idx) => (idx === 1 ? 1 : 0);
+
+      // Hostility & Ally Protection
+      assert(dante._isHostile(enemy) === true, 'Dante must treat opposing team B as hostile');
+      assert(dante._isHostile(ally) === false, 'Dante must treat allied team A as non-hostile');
+      state.getFighterTeam = () => null;
+      state.mode = '1v1';
+      assert(dante._isHostile(enemy) === true, 'Dante must treat enemy as hostile in 1v1 null-team mode');
+
+      // Rule 24 Scaled Radius & Rule 23 Projectile Suppression
+      assert(dante.r === computeScaledFighterRadius(25), `Dante radius must preserve global scaling (got ${dante.r})`);
+      const beforeProj = state.projectiles.length;
+      dante.shoot(0);
+      assert(state.projectiles.length === beforeProj, 'Dante shoot() must suppress generic bullet projectiles (Rule 23)');
+
+      // Basic Attack: 4-Stage Rebellion Greatsword Combo (Cleave Right -> Cleave Return -> Million Stab -> High Time)
+      dante.x = 180; dante.y = 420;
+      enemy.x = 250; enemy.y = 420;
+      ally.x = 120; ally.y = 420;
+      dante.comboStep = 0;
+      dante.aim(enemy);
+      const startEnemyHp = enemy.hp;
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante.slashMoveType === 'cleave_right' && dante.slashSwingTimer > 0 && enemy.hp < startEnemyHp, 'Stage 1 (cleave_right) must damage target and start Greatsword Combo');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Stage 1 draw must preserve stack depth 0');
+
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante.slashMoveType === 'cleave_return', 'Stage 2 must transition into reverse backhand cleave (cleave_return)');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Stage 2 draw must preserve stack depth 0');
+
+      const hpPreMillion = enemy.hp;
+      enemy.hitStunTimer = 0;
+      enemy.knockbackVx = 0;
+      dante._executeRebellionCleave(enemy, dDef);
+      const millionX = dante.x;
+      const millionY = dante.y;
+      assert(dante.slashMoveType === 'million_stab' && dante._millionStabTimer > 0, 'Stage 3 must transition into Million Stab rapid thrust flurry');
+      assert(dante.hasActiveFinishingAbility() === true, 'Dante hasActiveFinishingAbility() must return true during Million Stab so post-kill roundEnd does not cut off the animation');
+      assert(dante.vx === 0 && dante.vy === 0, 'Million Stab must stop Dante movement');
+      assert(enemy.hitStunTimer > 0 && enemy.timeStopTimer > 0 && (enemy.knockbackVx > 0 || enemy.vx > 0), 'Million Stab thrust must apply visible stun (timeStop + hitStun) and small knockback to hit enemy');
+      dante.tricksterCooldown = 0;
+      dante.isSpotDodging = false;
+      assert(dante._performTricksterDash(enemy, dDef) === false && dante.isSpotDodging === false, 'Spot Dodge must NOT trigger while Dante is performing Million Stab');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Stage 3 (Million Stab) draw must preserve stack depth 0');
+      const flurryFrames = Math.max(8, dDef.millionStabFlurryFrames ?? 28);
+      const windupFrames = Math.max(0, dDef.millionStabFinisherWindupFrames ?? 10);
+      const preLungeTicks = flurryFrames + windupFrames - 1;
+      for (let t = 0; t < preLungeTicks; t++) dante.update(enemy, 0, testArena);
+      assert(dante.x === millionX && dante.y === millionY, 'Dante must remain stationary during Million Stab rapid thrusts and wind-up coil');
+      for (let t = 0; t < 4; t++) dante.update(enemy, 0, testArena);
+      assert(dante.x > millionX, 'Dante must physically lunge forward when delivering the Thrust Finisher');
+      assert(enemy.hp < hpPreMillion - 10, 'Million Stab must land multi-hit follow-up stabs and thrust finisher');
+      assert(dante._millionStabTimer === 0 && dante._millionStabFinisherDelay === 0 && dante._shockwaves.length > 0, 'Million Stab must trigger heavy thrust finisher shockwave after wind-up coil');
+      assert(enemy.hitStunTimer > 0 && enemy.timeStopTimer === 0 && (enemy.knockbackVx > 5 || enemy.vx > 5), 'Million Stab thrust finisher must clear time-stop pin and launch enemy back with strong knockback');
+
+      // Million Stab whiff guard: if no enemy was hit, cancel finisher and do NOT enter finisher animation
+      dante.comboStep = 2;
+      dante.slashSwingTimer = 0;
+      dante._shockwaves.length = 0;
+      dante.x = 120; dante.y = 420; enemy.x = 460; enemy.y = 420; ally.x = 460; ally.y = 420;
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante.slashMoveType === 'million_stab' && dante._millionStabHitLanded === false, 'Whiffed Million Stab must start with _millionStabHitLanded === false');
+      for (let t = 0; t < flurryFrames + 1; t++) dante.update(enemy, 0, testArena);
+      assert(dante._millionStabTimer === 0 && dante._millionStabFinisherDelay === 0 && dante.slashSwingTimer === 0 && dante._shockwaves.length === 0, 'Whiffed Million Stab must NOT proceed to the Thrust Finisher animation');
+
+      dante.comboStep = 3;
+      dante.x = 180; dante.y = 420; enemy.x = 245; enemy.y = 420; ally.x = 120; ally.y = 420;
+
+      dante.x = 180; dante.y = 420; enemy.x = 245; enemy.y = 420;
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante.slashMoveType === 'high_time' && dante._highTimeHopTimer > 0, 'Stage 4 must transition into High Time rising launcher uppercut');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Stage 4 (High Time) draw must preserve stack depth 0');
+
+      // Basic Attack Crit Mechanic (Rebellion Melee & Ebony/Ivory Gunfire)
+      const prevCritChance = dDef.critChance;
+      try {
+        // Non-crit momentum builds _critComboStacks; forced/100% crit multiplies damage & resets stacks
+        dDef.critChance = 0;
+        dante._critComboStacks = 0;
+        dante.isDevilTrigger = false;
+        const nonCritMelee = dante.evaluateBasicCrit(20, { isMelee: true });
+        assert(nonCritMelee.isCrit === false && nonCritMelee.damage === 20, '0% crit roll must return unmultiplied melee damage');
+        dante.comboStep = 0;
+        dante.x = 180; dante.y = 420; enemy.x = 240; enemy.y = 420;
+        enemy.hitStunTimer = 0; enemy.timeStopTimer = 0;
+        dante._dealBasicAttackDamage(enemy, 20, { isMelee: true, preRolledCrit: nonCritMelee });
+        assert(dante._critComboStacks === 1, 'Landed non-crit basic attack must build crit combo momentum');
+
+        // Finisher must 100% land a crit even when base critChance is 0
+        const guaranteedFinisher = dante.evaluateBasicCrit(18, { isMelee: true, isFinisher: true });
+        assert(guaranteedFinisher.isCrit === true && guaranteedFinisher.critChance === 1.0 && guaranteedFinisher.damage === Math.round(18 * (dDef.critMultiplier ?? 1.75)), 'Finishers (Million Stab Finisher & High Time) must 100% land a crit');
+        const hpBeforeFinisher = enemy.hp;
+        dante._executeMillionStabFinisher(enemy, dDef);
+        const expectedFinisherDmg = Math.round((dDef.millionStabFinisherDamage ?? 18) * (dDef.critMultiplier ?? 1.75));
+        assert(hpBeforeFinisher - enemy.hp === expectedFinisherDmg, 'Million Stab Thrust Finisher must deal 100% guaranteed crit damage');
+
+        dDef.critChance = 1.0;
+        dante.comboStep = 0;
+        dante._bullets.length = 0;
+        const preCritMeleeHp = enemy.hp;
+        dante._executeRebellionCleave(enemy, dDef);
+        assert(preCritMeleeHp - enemy.hp === Math.round((dDef.swordDamage ?? 21) * (dDef.critMultiplier ?? 1.75)), 'Critical Rebellion cleave must multiply melee damage by critMultiplier');
+        assert(dante._critComboStacks === 0, 'Landing a basic attack crit must reset crit combo momentum stacks');
+
+        // Ebony & Ivory gunfire crit round
+        dante._fireSingleEbonyIvoryBullet(dDef);
+        assert(dante._bullets.length === 1 && dante._bullets[0].isCrit === true, '100% crit roll must mark spawned Ebony & Ivory bullet as critical');
+        assert(dante._bullets[0].damage === Math.round((dDef.gunDamage ?? 8) * (dDef.critMultiplier ?? 1.75)), 'Critical Ebony & Ivory round must carry multiplied damage');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'Critical Ebony & Ivory bullet render must preserve stack depth 0');
+
+        // Toggle off enableBasicCrit
+        dDef.enableBasicCrit = false;
+        const disabledCrit = dante.evaluateBasicCrit(20, { isMelee: true, isFinisher: true });
+        assert(disabledCrit.isCrit === false && disabledCrit.damage === 20, 'Disabling enableBasicCrit must suppress basic attack crits');
+        dDef.enableBasicCrit = true;
+
+        // Config-driven Rebellion Combo stage gating & custom stage damage
+        dDef.enableMillionStab = false;
+        dante.comboStep = 2;
+        dante._executeRebellionCleave(enemy, dDef);
+        assert(dante.slashMoveType === 'high_time', 'Disabling enableMillionStab must skip Million Stab directly to High Time');
+        dDef.enableMillionStab = true;
+        dante.comboStep = 0;
+        dante._comboChainActive = false;
+      } finally {
+        dDef.critChance = prevCritChance;
+        dante._bullets.length = 0;
+        dante._critComboStacks = 0;
+      }
+
+      // Smooth Weapon Switch Animation & Vanishing VFX (Rebellion <-> Ebony & Ivory)
+      dante._weaponMode = 'rebellion';
+      dante._gunVisualTimer = 0;
+      dante._roundTripEntity = null;
+      dante._jackpotTimer = 0;
+      dante._jackpotFireTimer = 0;
+      dante._weaponVanishGhosts.length = 0;
+      dante._weaponSwitchTimer = 0;
+      dante.weaponSwitchCooldown = 0;
+      dante._fireSingleEbonyIvoryBullet(dDef);
+      assert(dante._weaponMode === 'guns' && dante._weaponSwitchTimer > 0, 'Switching Rebellion -> Ebony & Ivory must activate smooth switch animation');
+      assert(dante.weaponSwitchCooldown === (dDef.weaponSwitchCooldown ?? 18), 'Switching weapons must apply post-switch weaponSwitchCooldown');
+      assert(dante._weaponVanishGhosts.length === 1 && dante._weaponVanishGhosts[0].kind === 'rebellion', 'Switching Rebellion -> Ebony & Ivory must spawn Rebellion vanishing VFX ghost');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Weapon switch Rebellion -> Guns draw must preserve stack depth 0');
+
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante._weaponMode === 'rebellion' && dante._weaponSwitchTimer > 0, 'Switching Ebony & Ivory -> Rebellion must activate smooth switch animation');
+      assert(dante.weaponSwitchCooldown === (dDef.weaponSwitchCooldown ?? 18) && dante.gunCooldown >= dante.weaponSwitchCooldown, 'Switching back to Rebellion must apply weaponSwitchCooldown and enforce minimum gunCooldown');
+      assert(dante._weaponVanishGhosts.some(g => g.kind === 'guns'), 'Switching Ebony & Ivory -> Rebellion must spawn Ebony & Ivory vanishing VFX ghost');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Weapon switch Guns -> Rebellion draw must preserve stack depth 0');
+
+      const ghostBeforeFreeze = dante._weaponVanishGhosts[0].life;
+      dante.timeStopTimer = 5;
+      dante.update(enemy, 0, testArena);
+      assert(!dante._weaponVanishGhosts[0] || dante._weaponVanishGhosts[0].life < ghostBeforeFreeze, 'Weapon vanishing VFX must still decay during time-stop freeze (Rule 25)');
+      dante.timeStopTimer = 0;
+      dante.weaponSwitchCooldown = 0;
+      dante._bullets.length = 0;
+
+      // Sequence: After combo finisher -> auto-switch to Guns -> fire during duration -> auto-switch back to Melee
+      dante._weaponMode = 'rebellion';
+      dante._gunVisualTimer = 0;
+      dante._gunSequenceTimer = 0;
+      dante._pendingGunSequence = false;
+      dante._weaponVanishGhosts.length = 0;
+      dante._roundTripEntity = null;
+      dante.roundTripCooldown = 999;
+      dante.driveCooldown = 999;
+      dante.doppelgangerCooldown = 999;
+      dante.kalinaCooldown = 999;
+      dante.gunCooldown = 0;
+      dante.weaponSwitchCooldown = 0;
+      dante._comboHitLanded = false;
+      // Distant enemy before finisher must NOT prematurely switch to guns while enableFinisherGunSequence is active
+      dante.x = 120; dante.y = 420; enemy.x = 440; enemy.y = 420;
+      dante.update(enemy, 0, testArena);
+      assert(dante._weaponMode === 'rebellion' && dante._gunSequenceTimer === 0 && dante._bullets.length === 0, 'With Finisher Gun Sequence enabled, Dante must stay in Rebellion melee until a combo finisher hits');
+      // Whiffed finisher with no combo hits must NOT trigger gun sequence
+      dante.comboStep = 3;
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante._pendingGunSequence === false, 'Whiffed finisher with zero combo hits must NOT trigger gun sequence');
+      dante.slashSwingTimer = 0;
+      dante.swordCooldown = 0;
+
+      dante.x = 180; dante.y = 420; enemy.x = 240; enemy.y = 420;
+      dante.comboStep = 3;
+      dante._executeRebellionCleave(enemy, dDef);
+      assert(dante._pendingGunSequence === true, 'Combo finisher must queue post-finisher gun switch sequence');
+      const htFrames = Math.max(12, dDef.highTimeFrames ?? 36);
+      for (let t = 0; t < htFrames; t++) dante.update(enemy, 0, testArena);
+      assert(dante._weaponMode === 'guns' && dante._gunSequenceTimer > 0, 'Once finisher animation ends, Dante must switch to Ebony & Ivory guns');
+      assert(dante._weaponVanishGhosts.some(g => g.kind === 'rebellion'), 'Auto-switch after finisher must spawn Rebellion vanish VFX');
+      const gunSeqDur = Math.max(20, dDef.finisherGunDurationFrames ?? 64);
+      let sawGunSeqShot = false;
+      for (let t = 0; t < gunSeqDur + 2; t++) {
+        dante.update(enemy, 0, testArena);
+        if (dante._bullets.length > 0) sawGunSeqShot = true;
+      }
+      assert(sawGunSeqShot === true, 'Dante must fire Ebony & Ivory shots during the post-finisher gun duration');
+      assert(dante._gunSequenceTimer === 0 && dante._weaponMode === 'rebellion', 'When post-finisher gun duration ends, Dante must automatically switch back to Rebellion melee');
+      assert(dante._weaponVanishGhosts.some(g => g.kind === 'guns'), 'Returning to melee after gun sequence must spawn Ebony & Ivory vanish VFX');
+      dante.weaponSwitchCooldown = 0;
+      dante._bullets.length = 0;
+
+      // Natural Rebound Movement: moving into an arena wall must naturally reverse velocity without magnet-homing override
+      dante.slashSwingTimer = 0;
+      dante._comboChainActive = false;
+      dante._pendingGunSequence = false;
+      dante._gunSequenceTimer = 0;
+      dante.x = testArena.x + (dante.r || 30) + 1;
+      dante.y = 420;
+      dante.vx = -6.0;
+      dante.vy = 1.5;
+      enemy.x = testArena.x + 180; enemy.y = 420;
+      dante.update(enemy, 0, testArena);
+      assert(dante.vx > 0, 'Dante must naturally rebound off arena walls without magnet-homing overriding bounce velocity');
+
+      // Spot Dodge: Dante vanishes and reappears in a split second via real takeDamage
+      dante._millionStabTimer = 0;
+      dante.slashSwingTimer = 0;
+      dante.tricksterCooldown = 0;
+      dante.isSpotDodging = false;
+      dante._spotDodgeTimer = 0;
+      const hpBeforeHit = dante.hp;
+      const hitApplied = dante.takeDamage(45, enemy, { isMelee: true });
+      assert(hitApplied === false && dante.hp === hpBeforeHit, 'Spot Dodge must intercept incoming takeDamage and negate damage');
+      assert(dante.isSpotDodging === true && dante._spotDodgeTimer > 0, 'Spot Dodge must activate vanish timer and state on incoming hit');
+      assert(!dante.vanishTimer && dante.suppressInkOutline === true && dante.suppressFloorShadow === true && dante.hideHpText === true, 'Spot Dodge must suppress ink outline, floor shadow, and HP text without setting vanishTimer so EntityRenderer still renders the spotDodge VFX');
+      assert(dante._danteVfx.some(v => v.kind === 'spotDodge'), 'Spot Dodge must spawn spotDodge smoke distortion VFX');
+      const hpWhileDodging = dante.hp;
+      const dmgWhileDodging = dante.takeDamage(50, enemy, { isMelee: true });
+      assert(dmgWhileDodging === false && dante.hp === hpWhileDodging, 'Dante must be completely invulnerable during active Spot Dodge vanish window');
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, 'Spot Dodge vanish draw must preserve stack depth 0');
+      while (dante._spotDodgeTimer > 0) {
+        dante.update(enemy, 0, testArena);
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'Spot Dodge phase draw must preserve stack depth 0');
+      }
+      assert(dante.isSpotDodging === false && dante.suppressInkOutline === false && dante.suppressFloorShadow === false, 'Spot Dodge must cleanly end and restore outline after split-second vanish window');
+
+      // Skill 1: Round Trip boomerang
+      dante.x = 160; dante.y = 420; enemy.x = 260; enemy.y = 420;
+      const preRtHp = enemy.hp;
+      dante.startRoundTrip(enemy);
+      assert(Boolean(dante._roundTripEntity), 'Round Trip must launch spinning Rebellion entity');
+      for (let t = 0; t < 30; t++) dante.update(enemy, 0, testArena);
+      assert(enemy.hp < preRtHp, 'Round Trip spinning sword must deal multi-hit damage to enemy');
+
+      // Skill 2: Drive crimson wave
+      const preDriveHp = enemy.hp;
+      dante.x = 160; dante.y = 420; enemy.x = 260; enemy.y = 420;
+      dante.startDrive(enemy);
+      for (let t = 0; t < 28; t++) dante.update(enemy, 0, testArena);
+      assert(enemy.hp < preDriveHp, 'Drive crimson slash wave must damage enemy along committed angle');
+
+      // Skill 3: Doppelganger shadow clone
+      dante.startDoppelganger(enemy);
+      assert(Boolean(dante._doppelganger), 'Doppelganger must spawn shadow clone');
+
+      // Skill 4: Kalina Ann rocket explosion
+      dante.x = 160; dante.y = 420; enemy.x = 250; enemy.y = 420;
+      const preKalinaHp = enemy.hp;
+      dante.startKalinaAnn(enemy);
+      for (let t = 0; t < 26; t++) dante.update(enemy, 0, testArena);
+      assert(enemy.hp < preKalinaHp, 'Kalina Ann rocket must detonate and deal explosion damage');
+
+      // Ultimate: Devil Trigger + Tornado + Jackpot! + Rule 25 non-freezing VFX decay
+      dante.hp = dante.maxHp * 0.45;
+      dante.x = 220; dante.y = 420; enemy.x = 270; enemy.y = 420;
+      const preUltHp = enemy.hp;
+      dante.activateDevilTrigger(enemy);
+      dante.startJackpot(enemy);
+      for (let t = 0; t < 24; t++) dante.update(enemy, 0, testArena);
+      assert(dante.isDevilTrigger === true && enemy.hp < preUltHp, 'Devil Trigger & Jackpot! must activate and damage enemy');
+
+      assert(dante.prewarmAssets(stackCtx) >= 8, 'Dante prewarmAssets must register all 8 MUGEN VFX strips');
+      dante._danteVfx.length = 0;
+      dante._spawnVfx('explosion', 250, 420, 0, 80, 80, 12);
+      dante.applyTimeStop(10);
+      const vfxBefore = dante._danteVfx.map(v => v.life);
+      dante.update(enemy, 0, testArena);
+      const vfxAfter = dante._danteVfx.map(v => v.life);
+      assert(vfxBefore.length > 0 && vfxAfter.every((v, idx) => v === vfxBefore[idx] - 1), 'Dante VFX must decay under time-stop (Rule 25)');
+
+      // Rule 21 & Canvas Stack Depth = 0
+      dante.timeStopTimer = 0;
+      dante.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0, `Dante draw() must leave Canvas stack depth 0 (got ${stackCtx.getStackDepth()})`);
+
+      // Audio SFX dispatch verification (must route through audioSystem.playSFX, never missing playSound)
+      const { audioSystem } = await import('../js/systems/audioSystem.js');
+      const playedSfx = [];
+      const origPlaySFX = audioSystem.playSFX;
+      audioSystem.playSFX = (src, vol) => { playedSfx.push({ src, vol }); return null; };
+      try {
+        dante._playSfx('swordSlash');
+        dante._playSfx('devilTrigger');
+      } finally {
+        audioSystem.playSFX = origPlaySFX;
+      }
+      assert(
+        playedSfx.some(s => s.src === dDef.sounds.swordSlash) &&
+        playedSfx.some(s => s.src === dDef.sounds.devilTrigger),
+        'Dante _playSfx must dispatch mapped MUGEN SFX paths via audioSystem.playSFX'
+      );
+
+      // Rule 18 HUD bars check
+      const hudBars = getSkillDataForFighter(dante);
+      assert(Array.isArray(hudBars) && hudBars.length >= 4 && hudBars.every(b => b.color === dante.themeColor), 'Dante HUD bars must follow Rule 18 unified themeColor');
+
+      // Skill Toggle Verification: Setting every toggle to numeric 0 must disable every skill & hide HUD bars
+      for (const k of dToggleKeys) dDef[k] = 0;
+      dante.reset();
+      const enemyHpBeforeDisabled = enemy.hp;
+      assert(dante._tryCastSkills(enemy, dDef, 120) === false, 'Disabled skills (0) must never cast via _tryCastSkills');
+      dante._executeRebellionCleave(enemy, dDef);
+      dante.startRoundTrip(enemy);
+      dante.startDrive(enemy);
+      dante.startDoppelganger(enemy);
+      dante.startKalinaAnn(enemy);
+      dante.activateDevilTrigger(enemy);
+      for (let t = 0; t < 15; t++) dante.update(enemy, 0, testArena);
+      assert(
+        enemy.hp === enemyHpBeforeDisabled &&
+        !dante._roundTripEntity &&
+        dante._driveWaves.length === 0 &&
+        !dante._doppelganger &&
+        dante._rockets.length === 0 &&
+        !dante.isDevilTrigger &&
+        dante._bullets.length === 0,
+        'Setting Dante config toggles to 0 must strictly disable all basic attacks & skills'
+      );
+      assert(getSkillDataForFighter(dante).length === 0, 'Setting Dante config toggles to 0 must cleanly hide all HUD skill bars');
+      console.log('      ✅ Dante full MUGEN kit, Rebellion, Round Trip, Drive, Doppelganger, Kalina Ann, Devil Trigger Jackpot & Rule 18/21/23/24/25 verified.');
+    } finally {
+      for (const k of dToggleKeys) dDef[k] = savedDToggles[k];
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.mode = prevMode;
+      state.gameState = prevGameState;
+      state.getFighterTeam = prevGetTeam;
+      state.projectiles = prevProjectiles;
     }
   }
 

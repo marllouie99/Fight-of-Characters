@@ -83,6 +83,8 @@ import { ErrorSansFighter } from '../fighters/ErrorSansFighter.js';
 import { JevilFighter } from '../fighters/JevilFighter.js';
 import { AizenFighter } from '../fighters/AizenFighter.js';
 import { VergilFighter } from '../fighters/VergilFighter.js';
+import { KashimoFighter } from '../fighters/KashimoFighter.js';
+import { DanteFighter } from '../fighters/DanteFighter.js';
 
 export const FIGHTER_CLASS_MAP = {
   'unarmed':    UnarmedFighter,
@@ -136,6 +138,14 @@ export const FIGHTER_CLASS_MAP = {
   'Vergil':         VergilFighter,
   'VERGIL':         VergilFighter,
   'vergil_sparda':  VergilFighter,
+  'kashimo':        KashimoFighter,
+  'Kashimo':        KashimoFighter,
+  'KASHIMO':        KashimoFighter,
+  'hajime_kashimo': KashimoFighter,
+  'dante':          DanteFighter,
+  'Dante':          DanteFighter,
+  'DANTE':          DanteFighter,
+  'dante_sparda':   DanteFighter,
   'Unarmed':    UnarmedFighter,
   'UNARMED':    UnarmedFighter,
   'zombie':     ZombieFighter,

@@ -1473,6 +1473,24 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
       return CONFIG.vergil?.soundVolumes?.yamatoSlash ?? 0.74;
     },
     delay: 0,
+  },
+  'kashimo': {
+    get src() {
+      return CONFIG.kashimo?.sounds?.staffSwing || 'Assets/Sound Effects/KashimoSFX/kashimo-staff-swing.ogg';
+    },
+    get volume() {
+      return CONFIG.kashimo?.soundVolumes?.staffSwing ?? 0.82;
+    },
+    delay: 0,
+  },
+  'dante': {
+    get src() {
+      return CONFIG.dante?.sounds?.swordSlash || 'Assets/Sound Effects/DanteSFX/dante-sword-slash.ogg';
+    },
+    get volume() {
+      return CONFIG.dante?.soundVolumes?.swordSlash ?? 0.85;
+    },
+    delay: 0,
   }
 };
 

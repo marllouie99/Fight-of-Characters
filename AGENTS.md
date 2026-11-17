@@ -360,6 +360,13 @@ Whenever packaging, scaffolding, optimizing, configuring, or preparing the proje
 - **Policy Compliance & Store Review Guardrails**:
   - Ensure a live HTTPS Privacy Policy is linked, Data Safety declarations reflect zero unauthorized user data tracking, and IARC content rating is calibrated to Fantasy Cartoon Violence (Everyone 10+ / PEGI 7).
 
+## Mandatory Natural Rebound Movement Standard (Rule 37 — Prohibition of Continuous Homing Overwrites)
+
+When creating, scaffolding, or tuning any fighter class (`js/entities/fighters/*Fighter.js`):
+- **Preserve Authentic Arena Ricochet & Rebound Physics**: Fighters MUST move and rebound naturally off arena walls and colliding entities via `super.update(opponent, ownerIndex, arena)` (or `applyMovementPhysics()` + `resolveWallBounce(arena, opponent)`), matching Vergil, Toji, Gojo, and Sukuna.
+- **STRICT PROHIBITION of Per-Frame Homing Velocity Overwrites**: NEVER write a continuous steering loop in `update()` that forces `this.vx` and `this.vy` directly toward the opponent's angle (`this.vx = this.vx * 0.78 + Math.cos(aimAng) * speed * 0.28`), as that cancels wall/body bounce reflections and turns organic arena ricochets into robotic straight-line chasing.
+- **Discrete Impulses Only**: Only override `vx`/`vy` for discrete skill dashes, finisher lunges, or knockback/recoil bursts, and implement `isStationarySkillActive()` for moves that intentionally plant the fighter in place.
+
 ## Post-Change Suggestions
 
 This applies to any chat-based AI coding assistant working in this repository, regardless of IDE, extension, model, or provider, whenever these project instructions are loaded.

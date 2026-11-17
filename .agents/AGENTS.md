@@ -110,6 +110,10 @@ After completing ANY code modification, update, or fix in the project, the agent
 
 ### 1.2 Centralized Movement & Physics Standard
 - Upcoming fighters MUST NOT manually integrate position using `this.x += this.vx; this.y += this.vy;`.
+- **Natural Rebound Movement Standard (STRICT PROHIBITION of Continuous Magnet Homing)**:
+  - New fighters MUST move naturally by rebounding/ricocheting off arena walls and opponents via `super.update(opponent, ownerIndex, arena)` (or `applyMovementPhysics()` + `resolveWallBounce(arena, opponent)`), matching Vergil, Toji, Gojo, and Sukuna.
+  - **NEVER** overwrite `this.vx` / `this.vy` every frame to home directly toward the opponent (`this.vx = this.vx * 0.78 + Math.cos(aimAng) * moveSpd * 0.28;`), as doing so overrides wall/entity bounce reflections and destroys natural arena pinball movement.
+  - Reserve explicit directional velocity writes strictly for discrete dash, finisher lunge, or recoil impulses, letting `super.update(...)` naturally preserve and recover speed after bounces.
 - At the end of `update()`, upcoming fighters MUST either:
   1. Call `super.update(opponent, ownerIndex, arena)`, OR
   2. Call `this.applyMovementPhysics(speedMultiplier)` followed by `this.resolveWallBounce(arena, opponent)`.

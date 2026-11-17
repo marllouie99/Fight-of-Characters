@@ -501,7 +501,33 @@ export const AUDIO_CONFIG = {
   'vegeta_galick_gun_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-galick-gun-voiceline.ogg',
   'vegeta_ssj_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-ssj-voiceline.ogg',
   'vegeta_final_flash_charge_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-charge-voiceline.ogg',
-  'vegeta_final_flash_fire_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-fire-voiceline.ogg'
+  'vegeta_final_flash_fire_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-fire-voiceline.ogg',
+
+  // Hajime Kashimo (JJK — Extracted MUGEN Lightning SFX)
+  'kashimo_staff_swing': 'Assets/Sound Effects/KashimoSFX/kashimo-staff-swing.ogg',
+  'kashimo_lightning_hit': 'Assets/Sound Effects/KashimoSFX/kashimo-lightning-hit.ogg',
+  'kashimo_teleporte': 'Assets/Sound Effects/KashimoSFX/kashimo-teleporte.ogg',
+  'kashimo_counter_trigger': 'Assets/Sound Effects/KashimoSFX/kashimo-counter-trigger.ogg',
+  'kashimo_railgun_charge': 'Assets/Sound Effects/KashimoSFX/kashimo-railgun-charge.ogg',
+  'kashimo_railgun': 'Assets/Sound Effects/KashimoSFX/kashimo-railgun.ogg',
+  'kashimo_thunder_pillar': 'Assets/Sound Effects/KashimoSFX/kashimo-thunder-pillar.ogg',
+  'kashimo_sphere_boom': 'Assets/Sound Effects/KashimoSFX/kashimo-sphere-boom.ogg',
+  'kashimo_amber_transform': 'Assets/Sound Effects/KashimoSFX/kashimo-amber-transform.ogg',
+
+  // Dante (Devil May Cry — Extracted MUGEN SFX)
+  'dante_sword_slash': 'Assets/Sound Effects/DanteSFX/dante-sword-slash.ogg',
+  'dante_gunshot': 'Assets/Sound Effects/DanteSFX/dante-gunshot.ogg',
+  'dante_shotgun': 'Assets/Sound Effects/DanteSFX/dante-shotgun.ogg',
+  'dante_round_trip': 'Assets/Sound Effects/DanteSFX/dante-round-trip.ogg',
+  'dante_devil_trigger': 'Assets/Sound Effects/DanteSFX/dante-devil-trigger.ogg',
+  'dante_doppelganger': 'Assets/Sound Effects/DanteSFX/dante-doppelganger.ogg',
+  'dante_kalina_fire': 'Assets/Sound Effects/DanteSFX/dante-kalina-fire.ogg',
+  'dante_demon_cannon': 'Assets/Sound Effects/DanteSFX/dante-demon-cannon.ogg',
+  'dante_explosion': 'Assets/Sound Effects/DanteSFX/dante-explosion.ogg',
+  'dante_heavy_blast': 'Assets/Sound Effects/DanteSFX/dante-heavy-blast.ogg',
+  'dante_jackpot_shot': 'Assets/Sound Effects/DanteSFX/dante-jackpot-shot.ogg',
+  'dante_dt_tornado': 'Assets/Sound Effects/DanteSFX/dante-dt-tornado.ogg',
+  'dante_spot_dodge': 'Assets/Sound Effects/DanteSFX/dante-spot-dodge.ogg'
 };
 
 
