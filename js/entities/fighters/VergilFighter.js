@@ -216,9 +216,22 @@ export class VergilFighter extends Fighter {
 
   canAim() {
     if (this.rapidSlashTimer > 0) return false;
-    if (this.judgmentBarrageState && this.judgmentBarrageState.active) return false;
     if (this.jceState && this.jceState.active) return false;
     return super.canAim ? super.canAim() : true;
+  }
+
+  applyAim(opponent, targetAngle) {
+    // Keep barrage iai flurry locked crisply onto moving targets rather than 0.045 beam turn throttling
+    if (this.judgmentBarrageState && this.judgmentBarrageState.active && !(this.jceState && this.jceState.active)) {
+      const prevTurnRate = this.aimTurnRate;
+      this.aimTurnRate = 1.0;
+      try {
+        return super.applyAim(opponent, targetAngle);
+      } finally {
+        this.aimTurnRate = prevTurnRate;
+      }
+    }
+    return super.applyAim(opponent, targetAngle);
   }
 
   isStationarySkillActive() {
@@ -1295,9 +1308,14 @@ export class VergilFighter extends Fighter {
     if (!jb || !jb.active) return;
     this.vx *= 0.2;
     this.vy *= 0.2;
-    if (jb.target && !jb.target.isDead && jb.target.hp > 0) {
-      jb.x += (jb.target.x - jb.x) * 0.35;
-      jb.y += (jb.target.y - jb.y) * 0.35;
+    const barrageTarget = (jb.target && !jb.target.isDead && !jb.target.dead && jb.target.hp > 0)
+      ? jb.target
+      : this._pickNearestTarget(null);
+    if (barrageTarget) {
+      jb.target = barrageTarget;
+      jb.x += (barrageTarget.x - jb.x) * 0.35;
+      jb.y += (barrageTarget.y - jb.y) * 0.35;
+      this.aim(barrageTarget);
     }
     if (jb.intervalTimer > 0) {
       jb.intervalTimer--;
@@ -1592,6 +1610,8 @@ export class VergilFighter extends Fighter {
   _detonateJudgmentCutEnd(jce, cfg) {
     const dmg = Math.round((cfg.judgmentCutEndShatterDamage ?? 48) * this._damageMultiplier());
     const kb = cfg.judgmentCutEndKnockback ?? 13.5;
+    const postStun = Math.max(0, cfg.judgmentCutEndPostStunFrames ?? 36);
+    const totalStun = postStun > 0 ? ((jce.shatterTicks || 22) + postStun) : 0;
 
     for (const foe of this._collectTargets()) {
       if (Math.hypot(foe.x - jce.cx, foe.y - jce.cy) <= jce.radius + (foe.r || 25)) {
@@ -1600,6 +1620,9 @@ export class VergilFighter extends Fighter {
         const ang = Math.atan2(foe.y - jce.cy, foe.x - jce.cx);
         foe.knockbackVx = (foe.knockbackVx || 0) + Math.cos(ang) * kb;
         foe.knockbackVy = (foe.knockbackVy || 0) + Math.sin(ang) * kb;
+        if (totalStun > 0 && typeof foe.applyHitStun === 'function') {
+          foe.applyHitStun(totalStun);
+        }
         spawnBloodEffect(foe.x, foe.y, 18);
         spawnImpactFlash(foe.x, foe.y, 52, '#38BDF8');
       }
@@ -1691,6 +1714,10 @@ export class VergilFighter extends Fighter {
 
     // Rule 1.2: Centralized natural movement & arena/fighter wall bounce
     super.update(opponent, ownerIndex, arenaObj);
+
+    if (this.judgmentBarrageState?.active && this.judgmentBarrageState.target) {
+      this.aim(this.judgmentBarrageState.target);
+    }
   }
 
   /**

@@ -27237,7 +27237,14 @@ async function runInteractionTests() {
       state.floatingTexts.length = 0;
       const trickPreDodgeX = vergil.x;
       const trickPreDodgeY = vergil.y;
-      const trickDodgeRes = vergil.takeDamage(18, enemy, { isMelee: true });
+      const prevTrickDodgeChance = vDef.trickDodgeChance;
+      let trickDodgeRes;
+      try {
+        vDef.trickDodgeChance = 1.0;
+        trickDodgeRes = vergil.takeDamage(18, enemy, { isMelee: true });
+      } finally {
+        vDef.trickDodgeChance = prevTrickDodgeChance;
+      }
       assert(trickDodgeRes === false && vergil.trickTeleportCooldown > 0, 'Reactive Trick Dodge must negate incoming dodgeable attack via takeDamage');
       assert(Math.hypot(vergil.x - trickPreDodgeX, vergil.y - trickPreDodgeY) >= 25, 'Reactive Trick Dodge must warp Vergil sideways cleanly');
       assert((state.floatingTexts || []).some(ft => ft && ft.text === 'MISS!' && ft.isMiss), 'Trick Dodge must spawn "MISS!" floating text');
@@ -27368,6 +27375,20 @@ async function runInteractionTests() {
         if ((vergil.barrageSlashTimer || 0) > 0) sawBarrageSlashAnim = true;
       }
       assert(sawBarrageFollowUp && sawBarrageSlashAnim, `Connected basic attack must automatically chain into Judgment Cut Barrage follow-up (sawF=${sawBarrageFollowUp}, sawS=${sawBarrageSlashAnim}, phase=${vergil.swordSwingPhase}, cd=${vergil.judgmentBarrageCooldown}, dist=${Math.hypot(enemy.x - vergil.x, enemy.y - vergil.y).toFixed(1)})`);
+
+      // Verify Vergil continues rotating his aim toward the moving target throughout Judgment Cut Barrage
+      const savedEnemyX = enemy.x;
+      const savedEnemyY = enemy.y;
+      vergil._startJudgmentBarrage(enemy, vDef);
+      assert(vergil.canAim(), 'Vergil must be able to rotate aim during Judgment Cut Barrage');
+      enemy.x = vergil.x - 85;
+      enemy.y = vergil.y - 65;
+      vergil.update(enemy, 0, testArena);
+      const expectedBarrageAim = Math.atan2(enemy.y - vergil.y, enemy.x - vergil.x);
+      const barrageAimDiff = Math.abs(Math.atan2(Math.sin((vergil.gunAngle ?? 0) - expectedBarrageAim), Math.cos((vergil.gunAngle ?? 0) - expectedBarrageAim)));
+      assert(barrageAimDiff < 0.08, `Vergil must rotate aim toward target during Judgment Cut Barrage animation (diff=${barrageAimDiff.toFixed(3)})`);
+      enemy.x = savedEnemyX;
+      enemy.y = savedEnemyY;
 
       // 4. Rule 18 Base HUD vs Seed of Sparda Form-Reactive HUD (Rapid Slash merged into JCE Ultimate, Sword Rain merged into Summoned Swords, Dimension Barrage merged into Basic Attack)
       vergil.vergilForm = 0;
@@ -27508,6 +27529,10 @@ async function runInteractionTests() {
       assert(sawWindup && sawDash && sawCharge && sawSlash && sawShatter && sawFullArenaShatterFx, 'JCE Ultimate must progress through windup -> dash -> charge -> slash -> full-arena shatter');
       assert(vergil.jceState === null, 'Judgment Cut End must complete full windup->dash->charge->slash->shatter lifecycle');
       assert(enemy.hp < 2750, 'Vergil full MUGEN kit must deal significant cumulative damage');
+      const expectedPostJceStun = vDef.judgmentCutEndPostStunFrames ?? 36;
+      if (expectedPostJceStun > 0) {
+        assert((enemy.hitStunTimer || 0) > 0, `Target must remain stunned briefly after Judgment Cut End completes (hitStunTimer=${enemy.hitStunTimer})`);
+      }
 
       // 5b. Verify Judgment Cut End aborts cleanly if Rapid Slash does NOT pass behind enemy (whiff)
       vergil.x = 120;
@@ -27827,10 +27852,13 @@ async function runInteractionTests() {
         dDef.critChance = 1.0;
         dante.comboStep = 0;
         dante._bullets.length = 0;
+        state.floatingTexts.length = 0;
         const preCritMeleeHp = enemy.hp;
         dante._executeRebellionCleave(enemy, dDef);
         assert(preCritMeleeHp - enemy.hp === Math.round((dDef.swordDamage ?? 21) * (dDef.critMultiplier ?? 1.75)), 'Critical Rebellion cleave must multiply melee damage by critMultiplier');
         assert(dante._critComboStacks === 0, 'Landing a basic attack crit must reset crit combo momentum stacks');
+        const critFloating = (state.floatingTexts || []).find(ft => ft && ft.isCrit);
+        assert(Boolean(critFloating) && critFloating.color === (dante.damageNumberColor || dante.themeColor || dante.color), `CRIT! floating text must use fighter theme color (${dante.themeColor}), got ${critFloating?.color}`);
 
         // Ebony & Ivory gunfire crit round
         dante._fireSingleEbonyIvoryBullet(dDef);

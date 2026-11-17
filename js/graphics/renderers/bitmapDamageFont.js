@@ -111,7 +111,7 @@ export function drawBitmapCombatText(ctx, text, x, y, color, isCrit, scale = 1.0
     if (!_charMap.has(ch)) return false; // Unbaked character - trigger fallback
   }
 
-  const fillColor = isCrit ? '#FF3B30' : (color || '#FFFFFF');
+  const fillColor = color || (isCrit ? '#FF3B30' : '#FFFFFF');
   const strip = _getColorStrip(fillColor, '#0E0F14');
   if (!strip) return false;
 

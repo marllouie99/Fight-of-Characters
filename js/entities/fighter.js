@@ -226,6 +226,9 @@ export function resolveDamageNumberColor(attacker, opts = {}, fallback = '#EF444
     if (attacker.owner && attacker.owner.damageNumberColor) {
       return attacker.owner.damageNumberColor;
     }
+    if (attacker.themeColor) {
+      return attacker.themeColor;
+    }
     if (attacker.color) {
       return attacker.color;
     }
@@ -2967,7 +2970,7 @@ export class Fighter {
       const isCritical = Boolean(opts.isCrit || opts.isRatioCrit || opts.isCritical);
       if (isCritical) {
         if (!opts.fromBlackHole) {
-          spawnFloatingText(this.x, this.y - this.r - 12, `CRIT! ${damageText}`, '#FF3B30');
+          spawnFloatingText(this.x, this.y - this.r - 12, `CRIT! ${damageText}`, color);
         }
       } else {
         if (!opts.fromBlackHole) {

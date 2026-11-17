@@ -276,7 +276,7 @@ export function drawFloatingTexts() {
     }
 
     const isCrit = Boolean(t.isCrit);
-    const targetColor = isCrit ? '#FF3B30' : (t.color || '#FFFFFF');
+    const targetColor = t.color || (isCrit ? '#FF3B30' : '#FFFFFF');
 
     // Only engage pre-baked bitmap font quad blitting on mobile devices (Rule 35) to eliminate tile-based rasterizer stalls;
     // on desktop PC, use full vector typography for 100% crisp esports visual fidelity and exact fighter theme colors.

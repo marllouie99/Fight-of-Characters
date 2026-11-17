@@ -3119,10 +3119,6 @@ export class SaitamaFighter extends Fighter {
           }
         }
 
-        const flurrySparkStartIdx = (typeof state !== 'undefined' && Array.isArray(state.sparkEffects))
-          ? state.sparkEffects.length
-          : -1;
-
         // Spawn forward punch wind speed lines
         if (typeof spawnPunchWindSpeedLines === 'function') {
           spawnPunchWindSpeedLines(this.x, this.y, aimAngle, isFinalHit ? 280 : 220, 'orange');
@@ -3255,14 +3251,6 @@ export class SaitamaFighter extends Fighter {
                   spawnImpactFlash(target.x, target.y, 25, 'default');
                 }
               }
-            }
-          }
-        }
-
-        if (flurrySparkStartIdx >= 0 && typeof state !== 'undefined' && Array.isArray(state.sparkEffects)) {
-          for (let si = flurrySparkStartIdx; si < state.sparkEffects.length; si++) {
-            if (state.sparkEffects[si]) {
-              state.sparkEffects[si].clipToArena = true;
             }
           }
         }

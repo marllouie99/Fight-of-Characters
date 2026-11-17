@@ -935,16 +935,13 @@ async function main() {
         fighter.draw(mockCtx, null);
         assertCanvasStackBalance(`Saitama hit pause & Serious counter test`);
 
-        // Test: Saitama Consecutive Normal Punches visuals clip strictly inside arena & keep Canvas stack balanced
+        // Test: Saitama Consecutive Normal Punches visuals extend freely without arena clipping & keep Canvas stack balanced
         const prevCtx = state.ctx;
         const prevGameState = state.gameState;
         const prevSparks = state.sparkEffects;
         const origClip = mockCtx.clip;
-        const origRect = mockCtx.rect;
         let clipCount = 0;
-        const clippedRects = [];
         mockCtx.clip = () => { clipCount++; };
-        mockCtx.rect = (rx, ry, rw, rh) => { clippedRects.push({ x: rx, y: ry, width: rw, height: rh }); };
 
         try {
           const { drawSaitamaSpeedLines } = await import('../js/graphics/renderers/speedLinesRenderer.js');
@@ -974,20 +971,20 @@ async function main() {
             throw new Error('Saitama executeConsecutiveNormalPunches failed to initiate flurry in test');
           }
 
-          // Frame during barrage
+          // Frame during barrage (must NOT clip to arena bounds)
           mockCtx.resetStackDepth();
           clipCount = 0;
           fighter.update(dummyOpponent, 0, state.arena);
           fighter.draw(mockCtx, dummyOpponent);
-          if (clipCount < 1) {
-            throw new Error('Saitama Consecutive Normal Punches barrage did not clip to arena bounds');
+          if (clipCount !== 0) {
+            throw new Error(`Expected Saitama Consecutive Normal Punches barrage to render unclipped, got clipCount=${clipCount}`);
           }
           assertCanvasStackBalance('Saitama Consecutive Normal Punches barrage draw');
 
           clipCount = 0;
           drawSaitamaSpeedLines();
-          if (clipCount < 1) {
-            throw new Error('Saitama Consecutive Normal Punches speed lines did not clip to arena bounds');
+          if (clipCount !== 0) {
+            throw new Error(`Expected Saitama speed lines to render unclipped, got clipCount=${clipCount}`);
           }
           assertCanvasStackBalance('Saitama Consecutive Normal Punches speed lines draw');
 
@@ -999,48 +996,28 @@ async function main() {
             throw new Error('Saitama Consecutive Normal Punches did not enter final finisher follow-through phase');
           }
 
-          // Finisher punch & VFX clip check
+          // Finisher punch & VFX unclipped check
           clipCount = 0;
           fighter.draw(mockCtx, dummyOpponent);
-          if (clipCount < 1) {
-            throw new Error('Saitama Consecutive Normal Punches finisher punch VFX did not clip to arena bounds');
+          if (clipCount !== 0) {
+            throw new Error(`Expected Saitama finisher punch VFX to render unclipped, got clipCount=${clipCount}`);
           }
           assertCanvasStackBalance('Saitama Consecutive Normal Punches finisher draw');
 
-          // Spawned frontal blast & wind speed lines clip check
-          const hasFlurryFrontalBlast = state.sparkEffects.some(e => e && e.type === 'saitamaCounterFrontalBlast' && e.clipToArena === true);
-          const hasFlurryWindLine = state.sparkEffects.some(e => e && e.type === 'punchWindSpeedLine' && e.clipToArena === true);
+          // Spawned frontal blast & wind speed lines unclipped check
+          const hasFlurryFrontalBlast = state.sparkEffects.some(e => e && e.type === 'saitamaCounterFrontalBlast' && e.clipToArena !== true);
+          const hasFlurryWindLine = state.sparkEffects.some(e => e && e.type === 'punchWindSpeedLine' && e.clipToArena !== true);
           if (!hasFlurryFrontalBlast || !hasFlurryWindLine) {
-            throw new Error(`Expected Consecutive Normal Punches blast/wind effects with clipToArena=true (blast=${hasFlurryFrontalBlast}, wind=${hasFlurryWindLine})`);
+            throw new Error(`Expected Consecutive Normal Punches blast/wind effects without clipToArena=true (blast=${hasFlurryFrontalBlast}, wind=${hasFlurryWindLine})`);
           }
           clipCount = 0;
           drawSparkEffects();
-          if (clipCount < 2) {
-            throw new Error('Saitama Consecutive Normal Punches spark/blast effects did not clip to arena bounds');
+          if (clipCount !== 0) {
+            throw new Error(`Expected Saitama blast/wind spark effects to render unclipped, got clipCount=${clipCount}`);
           }
           assertCanvasStackBalance('Saitama Consecutive Normal Punches spark effects draw');
-
-          // Verify clipped rect matches arena bounds
-          const matchesArena = clippedRects.some(r =>
-            r.x === state.arena.x && r.y === state.arena.y &&
-            r.width === state.arena.width && r.height === state.arena.height
-          );
-          if (!matchesArena) {
-            throw new Error('Saitama Consecutive Normal Punches clip rect did not match active arena geometry');
-          }
-
-          // Verify UI/card preview skips arena clipping
-          fighter._isPreview = true;
-          clipCount = 0;
-          fighter.draw(mockCtx, null);
-          fighter._isPreview = false;
-          if (clipCount !== 0) {
-            throw new Error(`Expected UI/card preview render to skip arena clip, got clipCount=${clipCount}`);
-          }
-          assertCanvasStackBalance('Saitama UI preview without arena clip');
         } finally {
           mockCtx.clip = origClip;
-          mockCtx.rect = origRect;
           state.ctx = prevCtx;
           state.gameState = prevGameState;
           state.sparkEffects = prevSparks;

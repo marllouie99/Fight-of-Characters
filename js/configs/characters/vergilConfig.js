@@ -87,7 +87,7 @@ export const vergilConfig = {
   spardaFormThresholdHpRatio: 0.25, // Triggers Seed of Sparda strictly once HP drops to <= ratio (e.g. 0.90 = 10% HP lost)
   spardaFormSpeedMultiplier: 1.24,
   spardaFormDamageMultiplier: 1.22,
-  spardaFormHealPercent: 0.20,
+  spardaFormHealPercent: 0.50,
 
   // ── Skill 1: Judgment Cut (State 1000 / 1020) ──
   enableJudgmentCut: 0,
@@ -116,10 +116,10 @@ export const vergilConfig = {
   summonedSwordCount: 6,
   summonedSwordScale: 1.60,
   summonedSwordOrbitOffset: 28,
-  summonedSwordDamage: 7,
+  summonedSwordDamage: 12,
   summonedSwordSpeed: 12.5,
   summonedSwordOrbitDuration: 280,
-  swordRainDamage: 6,
+  swordRainDamage: 12,
   swordRainHits: 7,
   swordRainSlowFrames: 34,
 
@@ -142,7 +142,7 @@ export const vergilConfig = {
   judgmentBarrageSkillName: 'DIMENSION BARRAGE',
   judgmentBarrageCooldown: 360,
   judgmentBarrageDamage: 10,
-  judgmentBarrageTicks: 6,
+  judgmentBarrageTicks: 12,
 
   // ── Ultimate: Rapid Slash -> Judgment Cut End (State 3000 -> 3004) ──
   enableJudgmentCutEnd: 1,
@@ -157,6 +157,7 @@ export const vergilConfig = {
   judgmentCutEndBarrageDamage: 24,
   judgmentCutEndShatterDamage: 48,
   judgmentCutEndKnockback: 13.5,
+  judgmentCutEndPostStunFrames: 36,
 
   // ── Audio Registry (Extracted Clean SOUNDS.snd SFX) ──
   sounds: {
