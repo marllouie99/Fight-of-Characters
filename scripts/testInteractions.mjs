@@ -27172,6 +27172,7 @@ async function runInteractionTests() {
       vergil.y = 450;
       vergil.vx = 3.2;
       vergil.vy = 0;
+      vergil.judgmentBarrageCooldown = 360; // Keep follow-up barrage on cooldown to test standalone basic attack Mini JCE
       vergil._startSwordSwing(enemy, vDef);
       let sawMiniJceFlurry = false;
       let prevBasicHp = enemy.hp;
@@ -27290,10 +27291,39 @@ async function runInteractionTests() {
       assert(swordRainStrikeCount === 3, `Heavy Rain Swords must spawn exact count matching damaging Summoned Swords (expected 3, got ${swordRainStrikeCount})`);
       vergil._castMirageBoomerang(enemy, vDef);
       assert(vergil.vergilProjectiles.some(p => p.kind === 'mirage_boomerang'), 'Mirage Edge must launch mirage_boomerang projectile');
-      vergil._startJudgmentBarrage(enemy, vDef);
-      for (let t = 410; t < 460; t++) { state.frameCount = t; vergil.update(enemy, 0, testArena); vergil.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
 
-      // 4. Rule 18 Base HUD vs Seed of Sparda Form-Reactive HUD (Rapid Slash merged into JCE Ultimate, Sword Rain merged into Summoned Swords)
+      // 3d. Basic Attack Follow-Up: whiffed swing must NOT trigger Judgment Cut Barrage; landed hit must chain into barrage automatically
+      vergil.judgmentBarrageCooldown = 0;
+      vergil.judgmentBarrageState = null;
+      vergil.swordCooldown = 0;
+      vergil.x = 60;
+      vergil.y = 260;
+      vergil._startSwordSwing(enemy, vDef);
+      for (let t = 410; t < 442; t++) {
+        state.frameCount = t;
+        vergil.update(enemy, 0, testArena);
+      }
+      assert(!vergil.judgmentBarrageState, 'Whiffed basic attack must NOT trigger Judgment Cut Barrage follow-up');
+
+      vergil.x = enemy.x - 45;
+      vergil.y = enemy.y;
+      vergil.swordCooldown = 0;
+      vergil.judgmentBarrageCooldown = 0;
+      vergil.aim(enemy);
+      vergil._startSwordSwing(enemy, vDef);
+      let sawBarrageFollowUp = false;
+      let sawBarrageSlashAnim = false;
+      for (let t = 442; t < 495; t++) {
+        state.frameCount = t;
+        vergil.update(enemy, 0, testArena);
+        vergil.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0);
+        if (vergil.judgmentBarrageState && vergil.judgmentBarrageState.active) sawBarrageFollowUp = true;
+        if ((vergil.barrageSlashTimer || 0) > 0) sawBarrageSlashAnim = true;
+      }
+      assert(sawBarrageFollowUp && sawBarrageSlashAnim, 'Connected basic attack must automatically chain into Judgment Cut Barrage follow-up with cleave animation');
+
+      // 4. Rule 18 Base HUD vs Seed of Sparda Form-Reactive HUD (Rapid Slash merged into JCE Ultimate, Sword Rain merged into Summoned Swords, Dimension Barrage merged into Basic Attack)
       vergil.vergilForm = 0;
       const baseHud = getSkillDataForFighter(vergil);
       assert(baseHud.every(s => s.color === (vDef.themeColor || '#38BDF8')), 'Base Vergil HUD bars must share unified themeColor');
@@ -27301,6 +27331,7 @@ async function runInteractionTests() {
       assert(!baseHud.some(s => s.id === 'yamato_parry'), 'Vergil HUD must omit yamato_parry bar');
       assert(!baseHud.some(s => s.id === 'rapid_slash'), 'Merged Rapid Slash must not render as a separate HUD bar from Judgment Cut End');
       assert(!baseHud.some(s => s.id === 'sword_rain'), 'Merged Heavy Rain Swords must not render as a separate HUD bar from Summoned Swords');
+      assert(!baseHud.some(s => s.id === 'judgment_barrage'), 'Merged Judgment Cut Barrage must not render as a separate HUD bar from Basic Attack');
 
       // 4b. Yamato Parry mitigation, Concentration gain, guard stance rendering & unblockable bypass
       const prevParryActive = vDef.parryActiveChance;

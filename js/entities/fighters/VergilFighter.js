@@ -149,9 +149,10 @@ export class VergilFighter extends Fighter {
     this.parryStanceIndex = 0;
     this.activeParryBlockVfx = [];
 
-    this.judgmentBarrageCooldown = 190;
+    this.judgmentBarrageCooldown = 0;
     this.judgmentBarrageCooldownMax = cfg.judgmentBarrageCooldown ?? 360;
     this.judgmentBarrageState = null;
+    this._pendingBarrageFollowUpTarget = null;
     this.barrageSlashTimer = 0;
     this.barrageSlashMax = 7;
     this.barrageCutCenter = 0;
@@ -353,6 +354,7 @@ export class VergilFighter extends Fighter {
     this.swordSwingPhase = 'idle';
     this.swordSwingTimer = 0;
     this.rapidSlashTimer = 0;
+    this._pendingBarrageFollowUpTarget = null;
     if (forceCancelAll) {
       this.judgmentBarrageState = null;
       this.barrageSlashTimer = 0;
@@ -837,6 +839,7 @@ export class VergilFighter extends Fighter {
     this.swordSwingPhaseMax = cfg.swordLiftFrames ?? 5;
     this.swordSwingPhaseProgress = 0;
     this.swordHitDealt = false;
+    this._pendingBarrageFollowUpTarget = null;
     this._swordTarget = opponent || null;
     this._playSound('yamatoSlash', 0.72);
     if (opponent) this.aim(opponent);
@@ -884,6 +887,23 @@ export class VergilFighter extends Fighter {
       this.swordSwingPhase = 'idle';
       this.swordSwingTimer = 0;
       this.swordSwingPhaseProgress = 0;
+
+      // Basic Attack Follow-Up: Judgment Cut Barrage (State 1150 / 1160)
+      const followTarget = this._pendingBarrageFollowUpTarget;
+      this._pendingBarrageFollowUpTarget = null;
+      if (
+        followTarget &&
+        !followTarget.isDead &&
+        !followTarget.dead &&
+        followTarget.hp > 0 &&
+        this._isHostile(followTarget) &&
+        this.isSkillEnabled(cfg.enableJudgmentBarrage, true) &&
+        (this.judgmentBarrageCooldown || 0) <= 0 &&
+        !(this.jceState && this.jceState.active) &&
+        !(this.judgmentBarrageState && this.judgmentBarrageState.active)
+      ) {
+        this._startJudgmentBarrage(followTarget, cfg);
+      }
     }
   }
 
@@ -897,6 +917,7 @@ export class VergilFighter extends Fighter {
     const kb = cfg.swordKnockback ?? 6.8;
 
     let hitAny = false;
+    let primaryHitFoe = null;
     const targets = this._collectTargets();
     for (const foe of targets) {
       const dx = foe.x - this.x;
@@ -914,6 +935,7 @@ export class VergilFighter extends Fighter {
       }
 
       hitAny = true;
+      if (!primaryHitFoe) primaryHitFoe = foe;
       // Flush/replace any prior unfinished Mini JCE flurry on the same target so consecutive hits never stack visually
       for (let i = this.activeVisualEffects.length - 1; i >= 0; i--) {
         const oldFx = this.activeVisualEffects[i];
@@ -980,6 +1002,7 @@ export class VergilFighter extends Fighter {
     }
 
     if (hitAny) {
+      this._pendingBarrageFollowUpTarget = primaryHitFoe;
       // Layered fleshy slap + rapid Yamato multi-cut SFX (no glass shatter) + light recoil
       if (typeof audioSystem !== 'undefined' && typeof audioSystem.playSFX === 'function') {
         audioSystem.playSFX('Assets/Sound Effects/Attacks/fleshhit.mp3', 0.85);
@@ -1413,6 +1436,8 @@ export class VergilFighter extends Fighter {
       halo: (jce.screenCuts.length % 4 === 0 && this.vergilForm >= 1) ? '#E11D48' : '#38BDF8',
       age: 0,
     });
+    const cutShake = this._cfg()?.judgmentCutEndCutShake ?? 7.5;
+    triggerGlobalScreenShake(cutShake, 4);
   }
 
   _updateJudgmentCutEndState(cfg) {
@@ -1529,7 +1554,6 @@ export class VergilFighter extends Fighter {
             alpha: 0.45,
           });
           this._playSound('yamatoSlash', 0.72);
-          triggerGlobalScreenShake(4, 4);
         }
       }
       if (jce.phaseTimer % 9 === 1) {
@@ -1604,13 +1628,7 @@ export class VergilFighter extends Fighter {
       return;
     }
 
-    // 2. Super: Dimension Barrage (mid-range pressure)
-    if (this.isSkillEnabled(cfg.enableJudgmentBarrage, true) && (this.judgmentBarrageCooldown || 0) <= 0 && dist <= 230) {
-      this._startJudgmentBarrage(target, cfg);
-      return;
-    }
-
-    // 3. Base Form Awakening Helper: Doppelganger Clone
+    // 2. Base Form Awakening Helper: Doppelganger Clone (Dimension Barrage is merged into Basic Attack follow-up)
     if (this.vergilForm === 0 && this.isSkillEnabled(cfg.enableDoppelganger, true) && (this.doppelgangerCooldown || 0) <= 0 && this.doppelgangerTimer <= 0) {
       if (this._castDoppelganger(cfg)) return;
     }

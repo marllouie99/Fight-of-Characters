@@ -309,18 +309,29 @@ function _getSwordSwingOffsets(fighter) {
       const bp = Math.max(0.08, Math.min(1, 1 - ((fighter.barrageSlashTimer - 0.5) / maxT)));
       const center = fighter.barrageCutCenter || 0;
       const cDir = fighter.barrageCutDir || 1;
-      const halfSweep = 1.05;
+      const halfSweep = 1.08;
       const startA = center - cDir * halfSweep;
       const endA = center + cDir * halfSweep;
-      const snap = bp < 0.48 ? (1 - Math.pow(1 - (bp / 0.48), 2.5)) : 1.0;
-      const curAngle = startA + (endA - startA) * snap;
+      const whipP = Math.min(1, bp / 0.48);
+      const snap = bp < 0.48 ? (1 - Math.pow(1 - whipP, 2.5)) : 1.0;
+      const settle = bp >= 0.48 ? Math.sin(((bp - 0.48) / 0.52) * Math.PI * 2.5) * (1 - bp) * 0.09 : 0;
+      const curAngle = startA + (endA - startA) * snap + settle * cDir;
+      // Kinetic shoulder-to-elbow arm whip along the randomized diagonal iai cleave plane
+      const sweepVel = bp < 0.48 ? Math.sin(whipP * Math.PI) : 0;
+      const coilBack = bp < 0.48 ? -3.5 * (1 - snap) : 0;
+      const arcReach = Math.sin(snap * Math.PI * 0.72) * 8.5 + Math.cos(curAngle) * 3.8;
+      const armThrowY = Math.sin(curAngle) * 7.2 + sweepVel * cDir * 1.6;
+      const elbowLagX = -Math.cos(curAngle) * (2.5 + 3.8 * sweepVel);
+      const elbowLagY = -cDir * Math.cos(center) * (4.5 * sweepVel);
       return {
         angleOff: curAngle,
-        lunge: Math.cos(curAngle) * 4.5,
-        offY: Math.sin(curAngle) * 4.5,
-        offHandLunge: 0,
-        offHandOffY: 0,
-        reachScale: 1.0 + 0.14 * Math.sin(Math.min(1, bp / 0.55) * Math.PI),
+        lunge: coilBack + arcReach,
+        offY: armThrowY,
+        offHandLunge: -1.8 * sweepVel,
+        offHandOffY: -cDir * 1.4 * sweepVel,
+        elbowLagX,
+        elbowLagY,
+        reachScale: 1.0 + 0.16 * sweepVel,
         phase: 'barrageSlash',
         p: bp,
         startSweep: startA,
@@ -510,7 +521,9 @@ function _drawYamatoCrescentSlash(ctx, r, fighter, swing) {
   if (phase !== 'strike' && phase !== 'impactLock' && phase !== 'recovery' && phase !== 'barrageSlash') return;
 
   const dir = fighter.swordSwingDir || 1;
-  const slashRadius = r * 2.38 * (swing.reachScale || 1.0);
+  const isSparda = (fighter.vergilForm || 0) >= 1;
+  const barrageRadiusMult = (phase === 'barrageSlash' && isSparda) ? 1.12 : 1.0;
+  const slashRadius = r * 2.38 * (swing.reachScale || 1.0) * barrageRadiusMult;
   const startSweep = phase === 'barrageSlash' ? (swing.startSweep ?? -1.05) : (-1.75 * dir);
   const endSweep = phase === 'barrageSlash' ? (swing.endSweep ?? 1.05) : (1.55 * dir);
 
@@ -565,7 +578,6 @@ function _drawYamatoCrescentSlash(ctx, r, fighter, swing) {
     innerPts.push([ca * (slashRadius - thick * 0.55), sa * (slashRadius - thick * 0.55)]);
   }
 
-  const isSparda = (fighter.vergilForm || 0) >= 1;
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
   ctx.beginPath();
@@ -663,16 +675,20 @@ export function drawVergilBladeAndSlashVFX(ctx, fighter) {
   const vSheathHandX = -r * 0.22;
   const vSheathHandY = vMouthY - r * 0.06;
 
+  const isBarrageSlash = swing.phase === 'barrageSlash';
   const handX = isSheathingScene ? 0 : (r * 0.88 + (swing.lunge || 0));
-  const handY = isSheathingScene ? vGripY : Math.max(r * 0.32, r * 0.46 + (swing.offY || 0) * 0.45);
+  const baseRestY = isBarrageSlash ? r * 0.56 : r * 0.46;
+  const handY = isSheathingScene ? vGripY : Math.max(r * 0.32, baseRestY + (swing.offY || 0) * (isBarrageSlash ? 1.0 : 0.45));
 
   // Coat Sleeve Linkages
   if (!fighter._isSilhouettePass) {
-    const drawCoatSleeve = (sx, sy, ex, ey) => {
+    const drawCoatSleeve = (sx, sy, ex, ey, elbowOffX = 0, elbowOffY = 0) => {
+      const elbowX = (sx + ex) * 0.52 + elbowOffX;
+      const elbowY = Math.max(r * 0.30, (sy + ey) * 0.52 + 2.5 + elbowOffY);
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(sx, sy);
-      ctx.lineTo((sx + ex) * 0.52, (sy + ey) * 0.52 + 2.5);
+      ctx.lineTo(elbowX, elbowY);
       ctx.lineTo(ex, ey);
       ctx.lineWidth = Math.max(5.5, r * 0.24);
       ctx.lineCap = 'round';
@@ -695,8 +711,10 @@ export function drawVergilBladeAndSlashVFX(ctx, fighter) {
       const rearHandY = Math.max(r * 0.30, handY - sinA * (r * 0.30));
       const leadHandX = handX + cosA * (r * 0.14);
       const leadHandY = Math.max(r * 0.30, handY + sinA * (r * 0.14));
-      drawCoatSleeve(-r * 0.46, r * 0.36, rearHandX, rearHandY);
-      drawCoatSleeve(r * 0.48, r * 0.34, leadHandX, leadHandY);
+      const eLagX = swing.elbowLagX || 0;
+      const eLagY = swing.elbowLagY || 0;
+      drawCoatSleeve(-r * 0.46, r * 0.36, rearHandX, rearHandY, eLagX * 0.75 - 1.5, eLagY * 0.75);
+      drawCoatSleeve(r * 0.48, r * 0.34, leadHandX, leadHandY, eLagX, eLagY);
     }
   }
 

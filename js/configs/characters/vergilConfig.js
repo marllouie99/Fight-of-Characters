@@ -87,7 +87,7 @@ export const vergilConfig = {
   spardaFormThresholdHpRatio: 0.25, // Triggers Seed of Sparda strictly once HP drops to <= ratio (e.g. 0.90 = 10% HP lost)
   spardaFormSpeedMultiplier: 1.24,
   spardaFormDamageMultiplier: 1.22,
-  spardaFormHealPercent: 0.50,
+  spardaFormHealPercent: 0.20,
 
   // ── Skill 1: Judgment Cut (State 1000 / 1020) ──
   enableJudgmentCut: 0,

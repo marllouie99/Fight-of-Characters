@@ -3979,9 +3979,7 @@ export const HUD_SKILL_PROVIDERS = {
       pushCdSkill('doppelganger', cfg.enableDoppelganger, f.doppelgangerCooldown, cfg.doppelgangerCooldown || 420, 'DOPPELGANGER', 'doppelgangerSkillName', (f.doppelgangerTimer || 0) > 0);
     }
 
-    pushCdSkill('judgment_barrage', cfg.enableJudgmentBarrage, f.judgmentBarrageCooldown, cfg.judgmentBarrageCooldown || 360, 'DIMENSION BARRAGE', 'judgmentBarrageSkillName', Boolean(f.judgmentBarrageState?.active));
-
-    // 3. Signature Ultimate: Judgment Cut End
+    // 3. Signature Ultimate: Judgment Cut End (Dimension Barrage is merged into Basic Attack follow-up)
     if (isSkillEnabled(cfg.enableJudgmentCutEnd, true)) {
       const cd = f.judgmentCutEndCooldown || 0;
       const maxCd = Math.max(1, cfg.judgmentCutEndCooldown || 620, cd);
