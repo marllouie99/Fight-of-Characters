@@ -81,6 +81,7 @@ import { kaizoKnightConfig } from '../configs/characters/kaizoKnightConfig.js';
 import { errorSansConfig } from '../configs/characters/errorSansConfig.js';
 import { jevilConfig } from '../configs/characters/jevilConfig.js';
 import { aizenConfig } from '../configs/characters/aizenConfig.js';
+import { vergilConfig } from '../configs/characters/vergilConfig.js';
 import { DEFAULT_GRADE } from '../configs/gradeConfig.js';
 import { blackFlashConfig } from '../configs/skills/blackFlashConfig.js';
 import { bloodConfig } from '../configs/bloodConfig.js';
@@ -188,6 +189,10 @@ export const CONFIG = {
   Aizen: aizenConfig,
   AIZEN: aizenConfig,
   aizen_sosuke: aizenConfig,
+  vergil: vergilConfig,
+  Vergil: vergilConfig,
+  VERGIL: vergilConfig,
+  vergil_sparda: vergilConfig,
   makima: makimaConfig,
   reze: rezeConfig,
   denji: denjiConfig,
@@ -2247,6 +2252,31 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: aizenConfig.projectileSpeedMultiplier || 1.0,
     ability: aizenConfig.ability || 'Kyōka Suigetsu, Kurohitsugi & Hōgyoku Transcendence',
     desc: aizenConfig.desc,
+  },
+  {
+    id: 78,
+    name: vergilConfig.name || 'Vergil',
+    grade: vergilConfig.grade ?? DEFAULT_GRADE,
+    displayName: vergilConfig.displayName || vergilConfig.name || 'VERGIL',
+    category: vergilConfig.category || 'Anime',
+    color: vergilConfig.color || '#38BDF8',
+    themeColor: vergilConfig.themeColor || '#38BDF8',
+    secondaryColor: vergilConfig.secondaryColor || '#60A5FA',
+    startX: vergilConfig.startX || 300,
+    startY: vergilConfig.startY || 250,
+    startVx: vergilConfig.startVx || 1.3,
+    startVy: vergilConfig.startVy || 1.1,
+    radius: vergilConfig.radius || vergilConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'vergil',
+    hp: vergilConfig.hp || 255,
+    damage: vergilConfig.swordDamage || 15,
+    cooldown: vergilConfig.swordCooldown || 24,
+    moveSpeed: vergilConfig.moveSpeed || vergilConfig.speed || 6.4,
+    projectileSpeedMultiplier: vergilConfig.projectileSpeedMultiplier || 1.0,
+    ability: vergilConfig.ability || 'Yamato, Summoned Swords, Doppelganger & Judgment Cut End',
+    desc: vergilConfig.desc,
   }
 ];
 

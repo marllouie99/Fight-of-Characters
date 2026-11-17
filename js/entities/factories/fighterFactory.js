@@ -82,6 +82,7 @@ import { KaizoKnightFighter } from '../fighters/KaizoKnightFighter.js';
 import { ErrorSansFighter } from '../fighters/ErrorSansFighter.js';
 import { JevilFighter } from '../fighters/JevilFighter.js';
 import { AizenFighter } from '../fighters/AizenFighter.js';
+import { VergilFighter } from '../fighters/VergilFighter.js';
 
 export const FIGHTER_CLASS_MAP = {
   'unarmed':    UnarmedFighter,
@@ -131,6 +132,10 @@ export const FIGHTER_CLASS_MAP = {
   'Aizen':          AizenFighter,
   'AIZEN':          AizenFighter,
   'aizen_sosuke':   AizenFighter,
+  'vergil':         VergilFighter,
+  'Vergil':         VergilFighter,
+  'VERGIL':         VergilFighter,
+  'vergil_sparda':  VergilFighter,
   'Unarmed':    UnarmedFighter,
   'UNARMED':    UnarmedFighter,
   'zombie':     ZombieFighter,

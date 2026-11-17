@@ -3926,6 +3926,85 @@ export const HUD_SKILL_PROVIDERS = {
     return skills;
   },
 
+  vergil(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.vergil) ? CONFIG.vergil : {};
+    const themeColor = f.color || cfg.themeColor || '#38BDF8';
+    const formLevel = f.vergilForm || 0;
+    const skills = [];
+
+    const pushCdSkill = (id, enabled, cdVal, maxCdVal, defaultName, cfgKey, isActive = false) => {
+      if (!isSkillEnabled(enabled, true)) return;
+      const cd = cdVal || 0;
+      const maxCd = Math.max(1, maxCdVal, cd);
+      const baseName = cfgSkillName(cfg, [cfgKey], defaultName);
+      const pct = isActive ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      const label = cd > 0 && !isActive ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName;
+      skills.push({ id, pct, active: isActive, ready: !isActive && pct >= 99 && cd <= 0, color: themeColor, label });
+    };
+
+    // 1. Passive: Seed of Sparda Form Banner (tracks HP lost toward transformation threshold)
+    if (isSkillEnabled(cfg.enableSpardaForm, true)) {
+      const maxHp = Math.max(1, f.maxHp || 1);
+      const hpThresh = cfg.spardaFormThresholdHpRatio ?? 0.58;
+      const requiredLossRatio = Math.max(0.01, 1 - hpThresh);
+      const currentLossRatio = Math.max(0, (maxHp - (f.hp || 0)) / maxHp);
+      const baseName = cfgSkillName(cfg, ['spardaFormSkillName'], 'SEED OF SPARDA');
+      const pct = formLevel >= 1 ? 100 : Math.max(0, Math.min(100, (currentLossRatio / requiredLossRatio) * 100));
+      skills.push({
+        id: 'sparda_form',
+        pct,
+        active: formLevel >= 1,
+        ready: formLevel >= 1,
+        color: themeColor,
+        label: baseName,
+      });
+    }
+
+    // 2. Form-Reactive Active Kit
+    pushCdSkill('judgment_cut', cfg.enableJudgmentCut, f.judgmentCutCooldown, cfg.judgmentCutCooldown || 190, 'JUDGMENT CUT', 'judgmentCutSkillName');
+    pushCdSkill('trick_teleport', cfg.enableTrickTeleport, f.trickTeleportCooldown, cfg.trickTeleportCooldown || 170, 'TRICK', 'trickTeleportSkillName');
+    pushCdSkill(
+      'summoned_swords',
+      cfg.enableSummonedSwords,
+      f.summonedSwordsCooldown,
+      cfg.summonedSwordsCooldown || 280,
+      'SUMMONED SWORDS',
+      'summonedSwordsSkillName',
+      (Array.isArray(f.orbitingSwords) && f.orbitingSwords.length > 0) || Boolean(f.swordRainState?.active)
+    );
+    pushCdSkill('mirage_boomerang', cfg.enableMirageBoomerang, f.mirageBoomerangCooldown, cfg.mirageBoomerangCooldown || 250, 'MIRAGE EDGE', 'mirageBoomerangSkillName');
+
+    // MUGEN var(2)=0 restriction: Doppelganger Clone is Base Form; hidden once Seed of Sparda activates
+    if (formLevel === 0) {
+      pushCdSkill('doppelganger', cfg.enableDoppelganger, f.doppelgangerCooldown, cfg.doppelgangerCooldown || 420, 'DOPPELGANGER', 'doppelgangerSkillName', (f.doppelgangerTimer || 0) > 0);
+    }
+
+    pushCdSkill('judgment_barrage', cfg.enableJudgmentBarrage, f.judgmentBarrageCooldown, cfg.judgmentBarrageCooldown || 360, 'DIMENSION BARRAGE', 'judgmentBarrageSkillName', Boolean(f.judgmentBarrageState?.active));
+
+    // 3. Signature Ultimate: Judgment Cut End
+    if (isSkillEnabled(cfg.enableJudgmentCutEnd, true)) {
+      const cd = f.judgmentCutEndCooldown || 0;
+      const maxCd = Math.max(1, cfg.judgmentCutEndCooldown || 620, cd);
+      const isCasting = Boolean(f.jceState && f.jceState.active);
+      const baseName = cfgSkillName(cfg, ['judgmentCutEndSkillName'], 'JUDGMENT CUT END');
+      const pct = isCasting ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
+      const label = cd > 0 && !isCasting ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'judgment_cut_end',
+        pct,
+        active: isCasting,
+        ready: !isCasting && pct >= 99 && cd <= 0,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
   pacman(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.pacman) ? CONFIG.pacman : {};
     const themeColor = f.color || cfg.themeColor || '#FACC15';
@@ -4741,6 +4820,7 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     errorsans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
     jevil: ['final_chaos', 'finalchaos', 'FINAL CHAOS'],
     aizen: ['kurohitsugi', 'KUROHITSUGI', 'PERFECT KUROHITSUGI', 'ULTRA FRAGOR'],
+    vergil: ['judgment_cut_end', 'JUDGMENT CUT END'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 

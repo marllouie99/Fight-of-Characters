@@ -375,7 +375,7 @@ ctx.rotate(baseAngle);
 - [ ] **NEVER let the blade stick out past the slash ribbon**: Always calibrate `outerR = r + hiltOffset + bladeLength + 4px` so the crescent envelops the entire blade.
 - [ ] **NEVER detonate impact sparks in mid-blade**: Sparks and compression rings must explode at `tipDist = r + hiltOffset + bladeLength`.
 - [ ] **NEVER use single-sound whooshes**: Always layer `attack_fleshhit` for the fleshy slap.
-- [ ] **Always anchor to canonical hands (Rule 20)**: Right hand at `(+0.82r, +0.38r)`, Left hand at `(-0.82r, +0.38r)`.
+- [ ] **Always anchor to lower-flank canonical hands — NEVER on top of the head (Rule 20, Reference `js/graphics/weapons/aizenWeaponGraphics.js`)**: Right hand at `(+0.82r, +0.38r..0.52r)`, Left hand at `(-0.82r, +0.38r)`. Always mirror when `facingLeft` (`Math.abs(normAim) > Math.PI / 2`) and keep hand coordinates strictly in the lower torso hemisphere (`y >= +0.30r`) so hands, sleeves, and scabbards never flip onto the head/hair.
 - [ ] **Always render dynamic arm linkages from shoulders to hands (Section 2.1)**: Connect shoulders `(±r * 0.65, r * 0.22)` directly to hands with upper/forearm segments. Zero detached floating hands.
 - [ ] **Always translate hands with bodily kinetic force (Section 2.1)**: Hands and weapon hilt must move forward via `lunge` and vertical dip (`offY`), not rotate statically at `(0, 0)`.
 - [ ] **Always apply backward recoil impulse and spring damping (Section 2.1)**: Heavy swings must kick back on the body (`this.vx -= Math.cos(angle) * recoilKick`) with damped spring settle.

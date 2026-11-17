@@ -1020,6 +1020,21 @@
         "knockback": 1,
         "cooldown": 1
       }
+    },
+    "vergil": {
+      "name": "Vergil",
+      "archetype": "swordsman",
+      "color": "#38BDF8",
+      "hp": 255,
+      "speed": 6.4,
+      "baseRange": 80,
+      "baseDamage": 15,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
     }
   }
 }

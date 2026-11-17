@@ -2500,6 +2500,11 @@ export const MOBILE_ASSET_MANIFEST = {
     1024,
     1
   ],
+  "Assets/model/vergil/Vergil-weapon.png": [
+    1178,
+    140,
+    1
+  ],
   "Assets/model/warden/sonic_boom/sonic_boom-1.png": [
     512,
     512,
@@ -3298,6 +3303,81 @@ export const MOBILE_ASSET_MANIFEST = {
   "Assets/effects/Static Effect/static-gold-b.png": [
     3072,
     256,
+    1
+  ],
+  "Assets/effects/vergil/vergil-crescent-wave.png": [
+    640,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-crimson-burst.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-cross-glint.png": [
+    768,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-dimension-shatter.png": [
+    768,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-doppelganger-portal.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-judgment-sphere.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-mirage-vortex.png": [
+    640,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-rapid-slash.png": [
+    1792,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-screen-slash.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-slash-eruption.png": [
+    896,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-sparda-aura.png": [
+    768,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-summoned-sword.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-sword-rain.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-trick-warp.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/vergil/vergil-yamato-cleave.png": [
+    512,
+    128,
     1
   ],
   "Assets/weapon/brassknuckle.png": [

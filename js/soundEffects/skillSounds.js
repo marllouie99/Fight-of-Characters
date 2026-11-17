@@ -1113,6 +1113,32 @@ export const SKILL_SOUNDS = {
     souls_torture: { src: 'Assets/Sound Effects/AizenSFX/aizen-souls-torture.ogg', volume: 0.88, delay: 0 },
     shadow_waves: { src: 'Assets/Sound Effects/AizenSFX/aizen-shadow-waves.ogg', volume: 0.88, delay: 0 },
     shells_inevitables: { src: 'Assets/Sound Effects/AizenSFX/aizen-shells-cast.ogg', volume: 0.88, delay: 0 },
+  },
+
+  // ── Vergil (Son of Sparda) ─────────────────────────────────
+  78: {
+    judgment_cut: { src: 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg', volume: 0.86, delay: 0 },
+    rapid_slash: { src: 'Assets/Sound Effects/VergilSFX/vergil-rapid-dash.ogg', volume: 0.82, delay: 0 },
+    trick_teleport: { src: 'Assets/Sound Effects/VergilSFX/vergil-trick-vanish.ogg', volume: 0.74, delay: 0 },
+    summoned_swords: { src: 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg', volume: 0.74, delay: 0 },
+    sword_rain: { src: 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg', volume: 0.80, delay: 0 },
+    mirage_boomerang: { src: 'Assets/Sound Effects/VergilSFX/vergil-mirage-boomerang.ogg', volume: 0.80, delay: 0 },
+    doppelganger: { src: 'Assets/Sound Effects/VergilSFX/vergil-doppelganger.ogg', volume: 0.84, delay: 0 },
+    judgment_barrage: { src: 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg', volume: 0.88, delay: 0 },
+    sparda_form: { src: 'Assets/Sound Effects/VergilSFX/vergil-sparda-awaken.ogg', volume: 0.90, delay: 0 },
+    judgment_cut_end: { src: 'Assets/Sound Effects/VergilSFX/vergil-glass-shatter.ogg', volume: 0.92, delay: 0 },
+  },
+  'vergil': {
+    judgment_cut: { src: 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg', volume: 0.86, delay: 0 },
+    rapid_slash: { src: 'Assets/Sound Effects/VergilSFX/vergil-rapid-dash.ogg', volume: 0.82, delay: 0 },
+    trick_teleport: { src: 'Assets/Sound Effects/VergilSFX/vergil-trick-vanish.ogg', volume: 0.74, delay: 0 },
+    summoned_swords: { src: 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg', volume: 0.74, delay: 0 },
+    sword_rain: { src: 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg', volume: 0.80, delay: 0 },
+    mirage_boomerang: { src: 'Assets/Sound Effects/VergilSFX/vergil-mirage-boomerang.ogg', volume: 0.80, delay: 0 },
+    doppelganger: { src: 'Assets/Sound Effects/VergilSFX/vergil-doppelganger.ogg', volume: 0.84, delay: 0 },
+    judgment_barrage: { src: 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg', volume: 0.88, delay: 0 },
+    sparda_form: { src: 'Assets/Sound Effects/VergilSFX/vergil-sparda-awaken.ogg', volume: 0.90, delay: 0 },
+    judgment_cut_end: { src: 'Assets/Sound Effects/VergilSFX/vergil-glass-shatter.ogg', volume: 0.92, delay: 0 },
   }
 };
 

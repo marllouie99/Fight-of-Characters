@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE — MASTER WEAPON CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Weapon Studio on 2026-11-16T13:08:30.486Z
+ * Generated from Weapon Studio on 2026-11-17T03:51:16.288Z
  * =============================================================================
  */
 
@@ -102,7 +102,8 @@ export const WEAPON_CUSTOMIZATIONS_DATABASE = {
   roaring_knight: { offsetX: -4, offsetY: 0, scale: 1.40, widthScale: 1.00, lengthScale: 1.15, angleOffset: 0.05 },
   kaizo_knight: { offsetX: -4, offsetY: 0, scale: 1.40, widthScale: 1.00, lengthScale: 1.15, angleOffset: 0.05 },
   error_sans: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
-  jevil: { offsetX: 0, offsetY: 0, scale: 1.15, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 }
+  jevil: { offsetX: 0, offsetY: 0, scale: 1.15, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
+  vergil: { offsetX: 0, offsetY: 0, scale: 1.15, widthScale: 1.05, lengthScale: 1.05, angleOffset: 0.05 }
 };
 
 export const DEFAULT_WEAPON_CUSTOMIZATIONS = WEAPON_CUSTOMIZATIONS_DATABASE;

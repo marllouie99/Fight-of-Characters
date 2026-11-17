@@ -86,7 +86,8 @@ export const SKIN_CUSTOMIZATIONS_DATABASE = {
   kaizo_knight: { widthScale: 1.20, heightScale: 1.20, offsetX: 0, offsetY: -5, angleOffset: 0, flipX: false, flipY: false },
   error_sans: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false },
   jevil: { widthScale: 1.10, heightScale: 1.50, offsetX: 0, offsetY: -20, angleOffset: 0, flipX: false, flipY: false },
-  aizen: { widthScale: 0.98, heightScale: 0.98, offsetX: -1, offsetY: -1, angleOffset: 0, flipX: false, flipY: false }
+  aizen: { widthScale: 0.98, heightScale: 0.98, offsetX: -1, offsetY: -1, angleOffset: 0, flipX: false, flipY: false },
+  vergil: { widthScale: 1.00, heightScale: 1.00, offsetX: 0, offsetY: 0, angleOffset: 0, flipX: false, flipY: false }
 };
 
 export const DEFAULT_SKIN_CUSTOMIZATIONS = SKIN_CUSTOMIZATIONS_DATABASE;

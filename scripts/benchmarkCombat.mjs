@@ -224,7 +224,8 @@ const CANONICAL_MATCHUPS = [
   { f1: 'denji', f2: 'john_wick', title: 'Denji (Chainsaw Man) vs John Wick' },
   { f1: 'escanor', f2: 'saitama', title: 'Lion Sin Escanor vs Saitama' },
   { f1: 'yuta', f2: 'crazydave', title: 'Yuta Okkotsu vs Crazy Dave' },
-  { f1: 'aizen', f2: 'ichigo', title: 'Sōsuke Aizen vs Ichigo Kurosaki' }
+  { f1: 'aizen', f2: 'ichigo', title: 'Sōsuke Aizen vs Ichigo Kurosaki' },
+  { f1: 'vergil', f2: 'aizen', title: 'Vergil vs Sōsuke Aizen' }
 ];
 
 // 5. Benchmark runner for a single matchup
@@ -583,6 +584,7 @@ Canonical Matchups (--all):
   4. Escanor vs Saitama
   5. Yuta vs Crazy Dave
   6. Aizen vs Ichigo
+  7. Vergil vs Aizen
 `);
     process.exit(0);
   }

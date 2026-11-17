@@ -455,7 +455,24 @@ export const AUDIO_CONFIG = {
   'aizen_shadow_waves': 'Assets/Sound Effects/AizenSFX/aizen-shadow-waves.ogg',
   'aizen_shadow_wave_fire': 'Assets/Sound Effects/AizenSFX/aizen-shadow-wave-fire.ogg',
   'aizen_shells_cast': 'Assets/Sound Effects/AizenSFX/aizen-shells-cast.ogg',
-  'aizen_shell_fire': 'Assets/Sound Effects/AizenSFX/aizen-shell-fire.ogg'
+  'aizen_shell_fire': 'Assets/Sound Effects/AizenSFX/aizen-shell-fire.ogg',
+
+  // Vergil (Devil May Cry — Extracted Jump Force MUGEN SFX)
+  'vergil_yamato_slash': 'Assets/Sound Effects/VergilSFX/vergil-yamato-slash.ogg',
+  'vergil_sheath_snap': 'Assets/Sound Effects/VergilSFX/vergil-sheath-snap.ogg',
+  'vergil_judgment_cut': 'Assets/Sound Effects/VergilSFX/vergil-judgment-cut.ogg',
+  'vergil_rapid_dash': 'Assets/Sound Effects/VergilSFX/vergil-rapid-dash.ogg',
+  'vergil_heavy_cleave': 'Assets/Sound Effects/VergilSFX/vergil-heavy-cleave.ogg',
+  'vergil_hit_slice': 'Assets/Sound Effects/VergilSFX/vergil-hit-slice.ogg',
+  'vergil_trick_vanish': 'Assets/Sound Effects/VergilSFX/vergil-trick-vanish.ogg',
+  'vergil_trick_appear': 'Assets/Sound Effects/VergilSFX/vergil-trick-appear.ogg',
+  'vergil_summon_sword': 'Assets/Sound Effects/VergilSFX/vergil-summon-sword.ogg',
+  'vergil_mirage_boomerang': 'Assets/Sound Effects/VergilSFX/vergil-mirage-boomerang.ogg',
+  'vergil_doppelganger': 'Assets/Sound Effects/VergilSFX/vergil-doppelganger.ogg',
+  'vergil_glass_shatter': 'Assets/Sound Effects/VergilSFX/vergil-glass-shatter.ogg',
+  'vergil_dimension_boom': 'Assets/Sound Effects/VergilSFX/vergil-dimension-boom.ogg',
+  'vergil_sparda_awaken': 'Assets/Sound Effects/VergilSFX/vergil-sparda-awaken.ogg',
+  'vergil_devil_roar': 'Assets/Sound Effects/VergilSFX/vergil-devil-roar.ogg'
 };
 
 

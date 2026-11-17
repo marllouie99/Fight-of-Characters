@@ -51,10 +51,13 @@ When creating or rendering new characters and model skins, ALWAYS use the approv
   - **Right Hand**: `(x: +r * 0.82, y: +r * 0.38)`
 - **Hand Radius**: `handRadius = r * 0.30` (or `getHandSize(r * 0.30)`).
 - **Layering & Overlap**: Both hands MUST be rendered on the **front layer** (after rendering the central body circle), overlapping the lower perimeter of the body circle so approximately half of each hand circle overlaps the body edge and half protrudes outward as a distinct side fist.
-- **MANDATORY INSTRUCTION — ALWAYS USE DEFAULT HANDS TO HOLD WEAPONS**:
-  - For all weapon users and dual wielders, weapons MUST ALWAYS be anchored directly at the canonical default hands:
-    - Main-hand (Right Hand): hilt/grip anchors directly at `(x: +r * 0.82, y: +r * 0.38)`.
-    - Off-hand / Dual-wield (Left Hand): hilt/grip anchors directly at `(x: -r * 0.82, y: +r * 0.38)`.
+- **MANDATORY INSTRUCTION — ALWAYS USE DEFAULT HANDS TO HOLD WEAPONS & NEVER PLACE HANDS ON TOP OF THE HEAD (Use Aizen as Reference: `js/graphics/weapons/aizenWeaponGraphics.js`)**:
+  - For all weapon users and dual wielders, weapons MUST ALWAYS be anchored directly at the canonical lower-torso flanks:
+    - Main-hand (Right Hand): hilt/grip anchors at lower-front torso flank `(x: +r * 0.82, y: +r * 0.38)` to `(x: +r * 0.82, y: +r * 0.52)` (see `drawAizenBladeAndSlashVFX` in `js/graphics/weapons/aizenWeaponGraphics.js`).
+    - Off-hand / Dual-wield (Left Hand): hilt/grip anchors at lower-back torso flank `(x: -r * 0.82, y: +r * 0.38)` (strictly `y >= +r * 0.30`).
+  - **STRICT PROHIBITION OF HANDS ON TOP OF THE HEAD / HAIR**:
+    - NEVER place `drawPixelHand`, sleeves, or scabbards in the upper head/hair hemisphere (`y < 0` in torso space) or allow `ctx.rotate(aim)` without horizontal/upright mirroring (`facingLeft = Math.abs(normAim) > Math.PI / 2`), which flips lower-flank hands upside down onto the top of the character's head when facing left or aiming upward.
+    - Always preserve upright lower-torso hand placement across ALL 360° aim angles (either normalize `ctx.scale(1, -1)` with `facingLeft` per `aizenWeaponGraphics.js` AND clamp shoulder/hand vertical travel to `y >= +r * 0.30`, or keep hands/scabbard in an upright horizontally-mirrored torso frame `if (facingLeft) ctx.scale(-1, 1)` while pivoting the blade around `(handX, handY)`).
   - The canonical default hand MUST be drawn directly over the weapon grip/hilt (`drawPixelHand` at `(0, 0)` in weapon local space).
   - **STRICT PROHIBITION of Weapon-Generated Duplicate Hands**: Weapon renderers MUST NEVER generate, create, or instantiate separate or arbitrary hands. Never render weapons with disconnected hands floating on the body while empty default hands sit below (resulting in 4 hands on screen). Always ensure single-source-of-truth hand rendering with exactly ONE pair of hands on the character across all match states.
 

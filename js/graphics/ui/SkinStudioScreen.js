@@ -37,6 +37,7 @@ import { drawNobaraSkin, _drawNobaraHair, _getNobaraHairImage } from '../fighter
 import { drawInosukeSkin, _drawInosukeHair, _getInosukeHairImage } from '../fighters/inosukeSkin.js';
 import { drawUlquiorraSkin, _drawUlquiorraHair, _getUlquiorraHairImage } from '../fighters/ulquiorraSkin.js';
 import { drawAizenSkin, _drawAizenHair, _getAizenHairImage, _getAizenFinalHairImage } from '../fighters/aizenSkin.js';
+import { drawVergilSkin, _drawVergilHair, _getVergilHairImage } from '../fighters/vergilSkin.js';
 import { drawZeusSkin, _drawZeusHair, _getZeusHairImage, _drawZeusCrown, _getZeusCrownImage } from '../fighters/zeusSkin.js';
 import { drawCronosSkin } from '../fighters/cronosSkin.js';
 import { drawBomberPixelBody } from '../fighters/bomberSkin.js';
@@ -756,6 +757,24 @@ export const SKIN_STUDIO_FIGHTERS = [
       { id: 'default', label: 'BASE' },
       { id: 'hogyoku', label: 'HŌGYOKU' },
       { id: 'final', label: 'FINAL FORM' }
+    ]
+  },
+  {
+    key: 'vergil',
+    label: 'VERGIL',
+    asset: 'Assets/model/vergil/Vergil-hair.png',
+    assetDims: '1024 x 1024',
+    baseW: 2.66,
+    baseH: 1.88,
+    baseCrownY: -1.38,
+    visW: 738,
+    visH: 630,
+    centerX: 512.0,
+    topY: 66,
+    themeColor: '#38BDF8',
+    forms: [
+      { id: 'default', label: 'SON OF SPARDA' },
+      { id: 'sparda', label: 'SEED OF SPARDA' }
     ]
   },
   {
@@ -1583,6 +1602,16 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -512 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 112 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
+  } else if (fDef.key === 'vergil') {
+    return `// Calibrated Hair for Vergil (Assets/model/vergil/Vergil-hair.png)\n` +
+           `const targetHairWidth = r * ${targetW};\n` +
+           `const targetHairHeight = r * ${targetH};\n` +
+           `const scaleX = targetHairWidth / 738;\n` +
+           `const scaleY = targetHairHeight / 630;\n` +
+           `const drawW = 1024 * scaleX;\n` +
+           `const drawH = 1024 * scaleY;\n` +
+           `const drawX = -512.0 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
+           `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 66 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
   } else if (fDef.key === 'tanjiro') {
     return `// Calibrated Hair for Tanjiro (Assets/model/tanjiro/TANJRO-HAIR-MODEL.png)\n` +
            `const targetHairWidth = r * ${targetW};\n` +
@@ -2194,6 +2223,9 @@ export function drawSkinStudioScreen() {
       } else if (fDef.key === 'aizen') {
         dummyFighter.aizenForm = state.studioSkinForm === 'final' ? 2 : (state.studioSkinForm === 'hogyoku' ? 1 : 0);
         drawAizenSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'vergil') {
+        dummyFighter.vergilForm = state.studioSkinForm === 'sparda' ? 1 : 0;
+        drawVergilSkin(ctx, dummyFighter);
       } else if (fDef.key === 'genos') {
         drawGenosSkin(ctx, dummyFighter);
         drawGenosHands(ctx, dummyFighter);

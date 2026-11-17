@@ -1464,6 +1464,15 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
       return CONFIG.aizen?.soundVolumes?.slash1 ?? 0.72;
     },
     delay: 0,
+  },
+  'vergil': {
+    get src() {
+      return CONFIG.vergil?.sounds?.yamatoSlash || 'Assets/Sound Effects/VergilSFX/vergil-yamato-slash.ogg';
+    },
+    get volume() {
+      return CONFIG.vergil?.soundVolumes?.yamatoSlash ?? 0.74;
+    },
+    delay: 0,
   }
 };
 

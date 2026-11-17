@@ -17,6 +17,7 @@ import { _preloadRoaringKnightWeaponSprites } from '../weapons/roaringKnightWeap
 import { _preloadKaizoKnightWeaponSprites } from '../weapons/kaizoKnightWeaponGraphics.js';
 import { _preloadErrorSansWeaponSprites } from '../weapons/errorSansWeaponGraphics.js';
 import { _preloadJevilWeaponSprites } from '../weapons/jevilWeaponGraphics.js';
+import { _getVergilWeaponImage } from '../weapons/vergilWeaponGraphics.js';
 
 if (typeof window !== 'undefined') {
   _getZenitsuAssemblyImage?.();
@@ -28,6 +29,7 @@ if (typeof window !== 'undefined') {
   _preloadKaizoKnightWeaponSprites?.();
   _preloadErrorSansWeaponSprites?.();
   _preloadJevilWeaponSprites?.();
+  _getVergilWeaponImage?.();
 }
 
 const TOJI_STUDIO_PART_KEYS = ['pistol', 'inverted_spear', 'split_soul_katana'];
@@ -200,6 +202,9 @@ function initCustomizations() {
   if (!state.weaponCustomizations.jevil) {
     state.weaponCustomizations.jevil = { offsetX: 0, offsetY: 0, scale: 1.15, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
   }
+  if (!state.weaponCustomizations.vergil) {
+    state.weaponCustomizations.vergil = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
   if (!state.weaponCustomizations.zenitsu) {
     state.weaponCustomizations.zenitsu = {
       offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0,
@@ -292,63 +297,68 @@ export function drawWeaponStudioScreen() {
     { key: 'escanor', label: 'ESCANOR' },
     { key: 'zenitsu', label: 'ZENITSU' },
     { key: 'engineer', label: 'ENGINEER' },
-    { key: 'guts', label: 'GUTS' }
+    { key: 'guts', label: 'GUTS' },
+    { key: 'vergil', label: 'VERGIL' }
   ];
 
-  // Distribute across 3 balanced rows (6, 6, 6)
+  // Distribute across 3 balanced rows (6, 6, 6) preserving fixed tab geometry + top-right overflow slot
   const row1 = weapons.slice(0, 6);
   const row2 = weapons.slice(6, 12);
   const row3 = weapons.slice(12, 18);
+  const overflowChips = weapons.slice(18);
 
   const rW = 80;
   const rH = 22;
   const rSpacing = 5;
 
+  const drawWeaponChip = (w, chipX, chipY) => {
+    const isSelected = activeWeaponKey === w.key;
+    ctx.save();
+    if (isSelected) {
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.2;
+    } else {
+      ctx.fillStyle = 'rgba(16, 20, 28, 0.90)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+    }
+    drawChamferedRect(ctx, chipX, chipY, rW, rH, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = isSelected ? '#f8fafc' : '#64748b';
+    ctx.font = '900 9.5px "Rajdhani", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(w.label, chipX + rW / 2, chipY + rH / 2);
+
+    _registerButton(chipX, chipY, rW, rH, () => {
+      state.studioSelectedWeapon = w.key;
+      if (w.key === 'zenitsu') {
+        state.studioZenitsuPart = 'overall';
+        state.studioSelectedDetail = 'proportions';
+      } else if (w.key === 'toji') {
+        if (state.tojiWeaponIndex !== 0 && state.tojiWeaponIndex !== 1 && state.tojiWeaponIndex !== 2) {
+          state.tojiWeaponIndex = 1;
+        }
+        state.studioSelectedDetail = 'position';
+      } else {
+        state.studioSelectedDetail = null;
+      }
+      isDraggingBase = false;
+      isDraggingTip = false;
+      activeDragFinger = -1;
+      activeDragType = null;
+    });
+  };
+
   const renderRow = (row, startY) => {
     const rTotalW = row.length * rW + (row.length - 1) * rSpacing;
     let rStartX = (canvas.width - rTotalW) / 2;
-
     row.forEach((w) => {
-      const isSelected = activeWeaponKey === w.key;
-      ctx.save();
-      if (isSelected) {
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 1.2;
-      } else {
-        ctx.fillStyle = 'rgba(16, 20, 28, 0.90)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-        ctx.lineWidth = 1;
-      }
-      drawChamferedRect(ctx, rStartX, startY, rW, rH, 4);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.fillStyle = isSelected ? '#f8fafc' : '#64748b';
-      ctx.font = '900 9.5px "Rajdhani", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(w.label, rStartX + rW / 2, startY + rH / 2);
-
-      _registerButton(rStartX, startY, rW, rH, () => {
-        state.studioSelectedWeapon = w.key;
-        if (w.key === 'zenitsu') {
-          state.studioZenitsuPart = 'overall';
-          state.studioSelectedDetail = 'proportions';
-        } else if (w.key === 'toji') {
-          if (state.tojiWeaponIndex !== 0 && state.tojiWeaponIndex !== 1 && state.tojiWeaponIndex !== 2) {
-            state.tojiWeaponIndex = 1;
-          }
-          state.studioSelectedDetail = 'position';
-        } else {
-          state.studioSelectedDetail = null;
-        }
-        isDraggingBase = false;
-        isDraggingTip = false;
-        activeDragFinger = -1;
-        activeDragType = null;
-      });
+      drawWeaponChip(w, rStartX, startY);
       rStartX += rW + rSpacing;
     });
   };
@@ -356,6 +366,9 @@ export function drawWeaponStudioScreen() {
   renderRow(row1, 88);
   renderRow(row2, 114);
   renderRow(row3, 140);
+  overflowChips.forEach((w, idx) => {
+    drawWeaponChip(w, canvas.width - 98 - idx * (rW + rSpacing), 58);
+  });
 
   // ── Tier 2: Precision Viewport Stage ──
   const viewportX = VIEWPORT_X;

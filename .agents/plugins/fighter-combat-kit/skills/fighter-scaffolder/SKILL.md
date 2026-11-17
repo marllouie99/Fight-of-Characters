@@ -41,6 +41,9 @@ super.update(opponent, ownerIndex, arena);
     ctx.scale(1, -1);
   }
   ```
+- **Upright Weapon Hand Placement (Aizen Reference — `js/graphics/weapons/aizenWeaponGraphics.js`)**:
+  - ALWAYS anchor weapon hands at the **lower torso/chest flanks** (`(+r * 0.82, +r * 0.38..0.52)` and `(-r * 0.82, +r * 0.38)`), NEVER on top of the head/hair (`y < 0`).
+  - Always normalize left-facing transforms (`const facingLeft = Math.abs(Math.atan2(Math.sin(aim), Math.cos(aim))) > Math.PI / 2;`) or keep hands in an upright mirrored torso frame (`if (facingLeft) ctx.scale(-1, 1)`) so rotating by `aim` never flips hands, sleeves, or scabbards upside down onto the crown.
 - **Facial Feature Prohibition**: NEVER draw eyes, pupils, mouth, or nose. Represent character identity through hair silhouette, headwear/eyewear, scars/markings, and clothing/collars.
 
 ### 3. Frontal Arc AOE Standards

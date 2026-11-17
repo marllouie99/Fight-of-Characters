@@ -38,9 +38,10 @@ Use this skill when designing or coding character skins, hair silhouettes, headw
    ```
 2. **Canonical Default Hand Positioning Standard**:
    - **Neutral Body Standard (Zero Floating Hands)**: Just like Toji, Gojo, and Sukuna, character body skin functions (`draw[Name]Skin`) **MUST NEVER render loose, static, disembodied hands (`drawPixelHand`) glued to the neutral body circle**. Neutral moving and idle sprites are clean circular manga figures.
-   - **Weapon Grips & Combat Strikes (Only When Wielding / Striking)**:
-     - **Main-Hand Weapon Anchor**: Main-hand weapon hilt anchors at `(+r * 0.82, +r * 0.38)` during idle/rest, with the right hand (`drawPixelHand`) drawn directly over the grip in weapon local space.
-     - **Off-Hand / Dual-Wield Anchor**: Off-hand anchors at `(-r * 0.82, +r * 0.38)` with the left hand drawn directly over the grip.
+   - **Weapon Grips & Combat Strikes (Only When Wielding / Striking — Reference `js/graphics/weapons/aizenWeaponGraphics.js`)**:
+     - **Main-Hand Weapon Anchor**: Main-hand weapon hilt anchors at the lower-chest/waist flank `(+r * 0.82, +r * 0.38..0.52)` (`drawAizenBladeAndSlashVFX` pattern), with the right hand (`drawPixelHand`) drawn directly over the grip in weapon local space.
+     - **Off-Hand / Dual-Wield Anchor**: Off-hand anchors at lower-back flank `(-r * 0.82, +r * 0.38..0.46)` with the left hand drawn directly over the grip.
+     - **STRICT ANTI-HEAD-HAND RULE**: NEVER place hands on top of the character's head/hair (`y < 0`), and NEVER omit the `facingLeft` mirror check (`if (Math.abs(normAim) > Math.PI / 2)`) before applying `+Y` lower-flank hand coordinates—otherwise turning left rotates lower-torso hands upside down onto the top of the head. Keep hands strictly below the face midline (`y >= +r * 0.30`) across all 360° aim angles.
 
 ## Phase 4: Mandatory Offscreen Canvas Caching Pattern (Canonical Trio Standard)
 - **STRICT PROHIBITION**: NEVER call per-pixel `ctx.fillRect(px, py, P, P)` loops directly in the game loop while the canvas is rotated (`ctx.rotate(angle)`). Rotated sub-pixel rectangles create ugly "crisscross white grid lines / screen-door artifacts" and cause severe frame drops.

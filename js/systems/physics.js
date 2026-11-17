@@ -292,6 +292,11 @@ export function resolveFighterCollision(a, b) {
   // Mahito phases directly through fighters during Phantom Soul Slip claw dash
   if ((a.soulPhaseDashTimer && a.soulPhaseDashTimer > 0) || (b.soulPhaseDashTimer && b.soulPhaseDashTimer > 0)) return;
 
+  // Vergil phases directly through fighters during Rapid Slash, Trick Teleport, and Judgment Cut End (MUGEN PlayerPush = 0)
+  const aIsVergilPhase = (a.rapidSlashTimer || 0) > 0 || (a.trickPhaseTimer || 0) > 0 || Boolean(a.jceState && a.jceState.active);
+  const bIsVergilPhase = (b.rapidSlashTimer || 0) > 0 || (b.trickPhaseTimer || 0) > 0 || Boolean(b.jceState && b.jceState.active);
+  if (aIsVergilPhase || bIsVergilPhase) return;
+
   // Zenitsu phases directly through entities during godspeed lightning dashes (Hekireki Issen)
   // Ender Dragon hyper-velocity divebomb strafe: Dragon is an unstoppable freight train, dragging victims along its flight path without deflection or speed loss
   const aIsDragon = Boolean(a && (a.characterId === 'ender_dragon' || a.type === 'ender_dragon'));

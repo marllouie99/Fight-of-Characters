@@ -26766,6 +26766,7 @@ async function runInteractionTests() {
     console.log('   Testing Yuta Pure Love Beam post-first-beam HP-lost recharge (combat & HUD)...');
     const YutaClass = FIGHTER_CLASS_MAP['yuta'];
     const { Fighter } = await import('../js/entities/fighter.js');
+    const { resolveFighterCollision } = await import('../js/systems/physics.js');
     const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
 
     const prevFighters = state.fighters;
@@ -27022,12 +27023,13 @@ async function runInteractionTests() {
       assert(sawDarkBlast && enemy.hp < 900, 'Multi Explosions flanking hits must deal damage and spawn Explod 13410 darkBlast VFX');
 
       // Verify Rule 25 decay on Multi Explosions / Dark Blast VFX while time-stopped
-      aizen.activeVisualEffects.push({ kind: 'multiExplosionPillar', x: 270, y: 465, radius: 56, timer: 12, maxTimer: 26 });
-      const pBefore = aizen.activeVisualEffects[aizen.activeVisualEffects.length - 1].timer;
+      const trackedPillar = { kind: 'multiExplosionPillar', x: 270, y: 465, radius: 56, timer: 12, maxTimer: 26 };
+      aizen.activeVisualEffects.push(trackedPillar);
+      const pBefore = trackedPillar.timer;
       aizen.applyTimeStop(5);
       state.frameCount = 780;
       aizen.update(enemy, 0, testArena);
-      assert(aizen.activeVisualEffects[aizen.activeVisualEffects.length - 1].timer === pBefore - 1, 'Rule 25: Multi Explosions pillar VFX must continue decaying during time-stop');
+      assert(trackedPillar.timer === pBefore - 1, 'Rule 25: Multi Explosions pillar VFX must continue decaying during time-stop');
 
       // 8. Complete All-Form MUGEN Kit (Base States 400/1400/1500, Hogyoku 25300/25400/25500, Final Form 27000/27100/27300/27400/27500)
       aizen.reset();
@@ -27101,6 +27103,398 @@ async function runInteractionTests() {
 
       console.log('      ✅ Sōsuke Aizen full 3-form MUGEN kit, hostility checks, Rule 18 HUD, Rule 25 & Rule 35 pre-warm verified.');
     } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.getFighterTeam = prevGetTeam;
+      state.frameCount = prevFrameCount;
+    }
+  }
+
+  // ⚔️ 193. Testing Vergil — Son of Sparda Full MUGEN Kit, Hostility, Rule 18/24/25/35 ⚔️
+  console.log('\n   193. Testing Vergil (Son of Sparda) Full MUGEN Kit, Form Switch & Rule 35 Pre-Warm...');
+  {
+    const { Fighter } = await import('../js/entities/fighter.js');
+    const { resolveFighterCollision } = await import('../js/systems/physics.js');
+    const { getSkillDataForFighter } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const { prewarmMatchAssets } = await import('../js/graphics/mobileAssetScaler.js');
+    const { MOBILE_ASSET_MANIFEST } = await import('../js/configs/mobileAssetManifest.js');
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevGetTeam = state.getFighterTeam;
+    const prevFrameCount = state.frameCount;
+
+    const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+    const vDef = CONFIG.vergil || {};
+    const vToggleKeys = [
+      'enableSwordAttack', 'enableParry', 'enableSpardaForm', 'enableJudgmentCut',
+      'enableTrickTeleport', 'enableSummonedSwords', 'enableMirageBoomerang',
+      'enableDoppelganger', 'enableJudgmentBarrage', 'enableJudgmentCutEnd'
+    ];
+    const savedVToggles = {};
+    for (const k of vToggleKeys) {
+      savedVToggles[k] = vDef[k];
+      vDef[k] = true;
+    }
+    try {
+      const VergilClass = FIGHTER_CLASS_MAP['vergil'];
+      assert(typeof VergilClass === 'function', 'VergilFighter class must be registered in FighterFactory');
+      const vergil = new VergilClass({ ...vDef, name: 'Vergil', characterId: 'vergil', type: 'vergil', x: 150, y: 450, radius: 25, hp: 255, maxHp: 255 });
+      // Rule 24 scaled radius check (25 * 1.2 * internalScale >= 28)
+      assert(vergil.r >= 29, `Vergil radius must preserve globalFighter scaling (got ${vergil.r})`);
+
+      const enemy = new Fighter({ name: 'Enemy', type: 'normal', x: 240, y: 450, radius: 25, hp: 3000, maxHp: 3000 });
+      enemy.maxHp = 3000;
+      enemy.hp = 3000;
+      const ally = new Fighter({ name: 'Ally', type: 'normal', x: 120, y: 420, radius: 25, hp: 500, maxHp: 500 });
+      state.arena = testArena;
+      state.fighters = [vergil, enemy, ally];
+
+      // 1. Hostility check (1v1 + team index)
+      state.getFighterTeam = () => null;
+      assert(vergil._isHostile(enemy) === true, 'Vergil _isHostile must return true in 1v1 mode');
+      state.getFighterTeam = (idx) => (idx === 1 ? 1 : 0);
+      assert(vergil._isHostile(ally) === false, 'Vergil _isHostile must return false for teammate');
+      assert(vergil._isHostile(enemy) === true, 'Vergil _isHostile must return true for opposing team');
+
+      // 2. Single-decrement cooldown cadence (no _tickCooldowns shadowing)
+      vergil.reset();
+      vergil.x = 150;
+      vergil.y = 450;
+      const startJceCd = vergil.judgmentCutEndCooldown;
+      state.frameCount = 1;
+      vergil.update(enemy, 0, testArena);
+      assert(vergil.judgmentCutEndCooldown === startJceCd - 1, `Vergil judgmentCutEndCooldown must tick by 1 per frame (expected ${startJceCd - 1}, got ${vergil.judgmentCutEndCooldown})`);
+
+      // 3. Verify all core & MUGEN abilities execute and render with Canvas 2D stack depth 0
+      const stackCtx = createMockCtx();
+      assert(vergil._castDoppelganger(vDef) === true && vergil.doppelgangerTimer > 0, 'Doppelganger must activate in Base Form');
+      vergil.x = 212;
+      vergil.y = 450;
+      vergil.vx = 3.2;
+      vergil.vy = 0;
+      vergil._startSwordSwing(enemy, vDef);
+      let sawMiniJceFlurry = false;
+      let prevBasicHp = enemy.hp;
+      let cutDamageTicks = 0;
+      const startBasicHp = enemy.hp;
+      for (let t = 2; t < 38; t++) {
+        state.frameCount = t;
+        vergil.update(enemy, 0, testArena);
+        vergil.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0);
+        if (enemy.hp < prevBasicHp) {
+          cutDamageTicks++;
+          prevBasicHp = enemy.hp;
+        }
+        const miniFx = vergil.activeVisualEffects.find(fx => fx.kind === 'miniJceFlurry');
+        if (miniFx) {
+          sawMiniJceFlurry = true;
+          assert(miniFx.radius >= 54 && miniFx.radius <= 110, `Basic attack Mini JCE must stay scoped cleanly around target body (got r=${miniFx.radius})`);
+          assert(Array.isArray(miniFx.cuts) && miniFx.cuts.length >= 6, 'Basic attack Mini JCE must generate multiple rapid slash cuts');
+          assert(miniFx.cuts[miniFx.cuts.length - 1].delay > miniFx.cuts[0].delay, 'Basic attack Mini JCE cuts must stagger sequentially rather than appearing together');
+        }
+        assert(!vergil.activeVisualEffects.some(fx => fx.kind === 'dimensionShatterBurst'), 'Basic attack must NEVER trigger glass shatter');
+      }
+      assert(sawMiniJceFlurry, 'Vergil basic attack must spawn a localized Mini JCE multi-slash flurry around target');
+      assert(cutDamageTicks >= 5 && (startBasicHp - enemy.hp) >= 14, `Each staggered basic-attack cut must deal damage (ticks=${cutDamageTicks}, dmg=${startBasicHp - enemy.hp})`);
+      assert((enemy.timeStopTimer || 0) === 0 && (enemy.hitStunTimer || 0) === 0, 'Vergil basic attack Mini JCE must not stun or pause target');
+      // Verify foreground FX pass deferral & zero same-target flurry stacking
+      vergil.x = enemy.x - 45;
+      vergil.y = enemy.y;
+      vergil.aim(enemy);
+      vergil._executeYamatoArcHit(vDef);
+      vergil._executeYamatoArcHit(vDef);
+      const flurriesForEnemy = vergil.activeVisualEffects.filter(fx => fx.kind === 'miniJceFlurry' && fx.trackTarget === enemy);
+      assert(flurriesForEnemy.length === 1, `Consecutive hits on same target must not stack overlapping flurries (got ${flurriesForEnemy.length})`);
+      const prevDefer = state._deferFighterForegroundFx;
+      const prevQueue = state._deferredForegroundFx;
+      state._deferredForegroundFx = [];
+      state._deferFighterForegroundFx = true;
+      vergil.draw(stackCtx, enemy);
+      assert(stackCtx.getStackDepth() === 0 && state._deferredForegroundFx.length === 1, 'Vergil combat VFX must defer onto Foreground FX pass above enemy bodies');
+      state._deferFighterForegroundFx = prevDefer;
+      state._deferredForegroundFx = prevQueue;
+      vergil._castJudgmentCut(enemy, vDef);
+      assert(vergil.activeVisualEffects.some(fx => fx.kind === 'judgmentCutSphere'), 'Judgment Cut must spawn judgmentCutSphere');
+      vergil.trickTeleportCooldown = 0;
+      vergil.blockPoseTimer = 0;
+      vergil.vx = 6.0;
+      vergil.vy = 0;
+      state.floatingTexts.length = 0;
+      const trickPreDodgeX = vergil.x;
+      const trickPreDodgeY = vergil.y;
+      const trickDodgeRes = vergil.takeDamage(18, enemy, { isMelee: true });
+      assert(trickDodgeRes === false && vergil.trickTeleportCooldown > 0, 'Reactive Trick Dodge must negate incoming dodgeable attack via takeDamage');
+      assert(Math.hypot(vergil.x - trickPreDodgeX, vergil.y - trickPreDodgeY) >= 25, 'Reactive Trick Dodge must warp Vergil sideways cleanly');
+      assert((state.floatingTexts || []).some(ft => ft && ft.text === 'MISS!' && ft.isMiss), 'Trick Dodge must spawn "MISS!" floating text');
+      assert(vergil.shunpoVfxTimer > 0 && vergil.trickPhaseTimer > 0 && vergil.trickSlowTimer > 0, 'Trick Dodge must activate shunpo/warp VFX, Trick pass-through, post-Trick slow moment & realign aim');
+      assert(Math.hypot(vergil.vx, vergil.vy) <= 3.5, `Vergil must slow momentarily after Trick Dodge (got speed=${Math.hypot(vergil.vx, vergil.vy)})`);
+      vergil.x = enemy.x - 10;
+      vergil.y = enemy.y;
+      const trickPreX = vergil.x;
+      const trickEnemyPreX = enemy.x;
+      resolveFighterCollision(vergil, enemy);
+      assert(vergil.x === trickPreX && enemy.x === trickEnemyPreX, 'physics.js must skip body-blocking separation during Vergil Trick Teleport');
+      vergil.trickPhaseTimer = 0;
+      vergil.trickSlowTimer = 0;
+      vergil.x = enemy.x - 95;
+      vergil.y = enemy.y;
+      vergil.orbitingSwords.length = 0;
+      vergil.vergilProjectiles.length = 0;
+      vergil.activeVisualEffects.length = 0;
+      vergil.swordRainState = null;
+
+      // 3b. 0 damaging Summoned Swords -> 0 Heavy Rain Swords
+      enemy.isInvulnerable = true;
+      vergil.judgmentCutEndCooldown = 620;
+      vergil.judgmentBarrageCooldown = 360;
+      vergil.mirageBoomerangCooldown = 250;
+      vergil._castSummonedSwords(vDef, enemy);
+      assert(vergil.orbitingSwords.length === 6, 'Summoned Swords must spawn 6 orbiting Phantom Blades');
+      for (let t = 50; t < 200; t++) {
+        state.frameCount = t;
+        vergil.update(enemy, 0, testArena);
+        vergil.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0);
+      }
+      assert(!vergil.swordRainState && !vergil.activeVisualEffects.some(fx => fx.kind === 'swordRainStrike'), 'Heavy Rain Swords must NOT spawn when 0 Summoned Swords deal damage');
+
+      // 3c. Partial hits (first 3 bolts blocked via invulnerability, final 3 deal damage) -> exactly 3 Heavy Rain Swords
+      vergil.activeVisualEffects.length = 0;
+      vergil.vergilProjectiles.length = 0;
+      vergil.swordRainState = null;
+      vergil.judgmentCutEndCooldown = 620;
+      vergil.judgmentBarrageCooldown = 360;
+      vergil.mirageBoomerangCooldown = 250;
+      vergil._castSummonedSwords(vDef, enemy);
+      let swordRainStrikeCount = 0;
+      const seenRainStrikes = new Set();
+      let unlockedHits = false;
+      for (let t = 200; t < 410; t++) {
+        if (!unlockedHits && vergil.orbitingSwords.length <= 3 && !vergil.vergilProjectiles.some(p => p.kind === 'summoned_bolt')) {
+          enemy.isInvulnerable = false;
+          unlockedHits = true;
+        }
+        state.frameCount = t;
+        vergil.update(enemy, 0, testArena);
+        vergil.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0);
+        for (const fx of vergil.activeVisualEffects) {
+          if (fx.kind === 'swordRainStrike' && !seenRainStrikes.has(fx)) {
+            seenRainStrikes.add(fx);
+            swordRainStrikeCount++;
+          }
+        }
+      }
+      enemy.isInvulnerable = false;
+      assert(swordRainStrikeCount === 3, `Heavy Rain Swords must spawn exact count matching damaging Summoned Swords (expected 3, got ${swordRainStrikeCount})`);
+      vergil._castMirageBoomerang(enemy, vDef);
+      assert(vergil.vergilProjectiles.some(p => p.kind === 'mirage_boomerang'), 'Mirage Edge must launch mirage_boomerang projectile');
+      vergil._startJudgmentBarrage(enemy, vDef);
+      for (let t = 410; t < 460; t++) { state.frameCount = t; vergil.update(enemy, 0, testArena); vergil.draw(stackCtx, enemy); assert(stackCtx.getStackDepth() === 0); }
+
+      // 4. Rule 18 Base HUD vs Seed of Sparda Form-Reactive HUD (Rapid Slash merged into JCE Ultimate, Sword Rain merged into Summoned Swords)
+      vergil.vergilForm = 0;
+      const baseHud = getSkillDataForFighter(vergil);
+      assert(baseHud.every(s => s.color === (vDef.themeColor || '#38BDF8')), 'Base Vergil HUD bars must share unified themeColor');
+      assert(baseHud.some(s => s.id === 'doppelganger'), 'Base Vergil HUD must include doppelganger bar');
+      assert(!baseHud.some(s => s.id === 'yamato_parry'), 'Vergil HUD must omit yamato_parry bar');
+      assert(!baseHud.some(s => s.id === 'rapid_slash'), 'Merged Rapid Slash must not render as a separate HUD bar from Judgment Cut End');
+      assert(!baseHud.some(s => s.id === 'sword_rain'), 'Merged Heavy Rain Swords must not render as a separate HUD bar from Summoned Swords');
+
+      // 4b. Yamato Parry mitigation, Concentration gain, guard stance rendering & unblockable bypass
+      const prevParryActive = vDef.parryActiveChance;
+      try {
+        vDef.parryActiveChance = 1.0;
+        vergil.trickTeleportCooldown = 120; // Trick on cooldown so onProjectileApproach falls back to Parry guard
+        vergil.parryCooldown = 0;
+        vergil.isSlashing = false;
+        vergil.jceState = null;
+        vergil.judgmentBarrageState = null;
+        vergil.timeStopTimer = 0;
+        vergil.hitStunTimer = 0;
+        vergil.concentrationGauge = 10;
+        vergil.hp = vergil.maxHp;
+        vergil.vergilForm = 0;
+        vergil.onProjectileApproach({ kind: 'test_bolt', owner: 1 }, enemy);
+        assert(vergil.blockPoseTimer > 0, 'Vergil onProjectileApproach must raise Yamato guard stance');
+        const hpBeforeParry = vergil.hp;
+        const parryRes = vergil.takeDamage(20, enemy, { isMelee: true });
+        assert(parryRes === false && vergil.hp === hpBeforeParry, 'Yamato Parry must negate blockable hit damage');
+        assert(vergil.parryHitAnimTimer > 0 && vergil.parryWhiteFlashTimer > 0 && vergil.parryShakeTimer > 0 && vergil.parryCooldown > 0 && vergil.concentrationGauge > 10, 'Yamato Parry must trigger deflection anim, white flash, shake, cooldown & Concentration gain');
+        assert(vergil.activeParryBlockVfx.some(fx => fx.kind === 'clash_arc') && vergil.activeParryBlockVfx.some(fx => fx.kind === 'spark'), 'Yamato Parry must spawn Roaring Knight clash_arc and 4-point block stars');
+        for (let pt = 0; pt < 6; pt++) {
+          vergil.update(enemy, 0, testArena);
+          vergil.draw(stackCtx, enemy);
+          assert(stackCtx.getStackDepth() === 0, 'Vergil draw() during Yamato Parry animation must preserve Canvas stack depth 0');
+        }
+        vergil.parryCooldown = 0;
+        vergil.takeDamage(12, enemy, { undodgeable: true });
+        assert(vergil.hp < hpBeforeParry, 'Unblockable/undodgeable attacks must bypass Yamato Parry cleanly');
+      } finally {
+        vDef.parryActiveChance = prevParryActive;
+        vergil.parryCooldown = 0;
+        vergil.blockPoseTimer = 0;
+        vergil.parryHitAnimTimer = 0;
+      }
+
+      // Verify Seed of Sparda triggers strictly from HP lost (full Concentration at high HP must NOT awaken)
+      vergil.vergilForm = 0;
+      vergil.hp = vergil.maxHp;
+      vergil.concentrationGauge = 100;
+      vergil.update(enemy, 0, testArena);
+      assert(vergil.vergilForm === 0, 'Concentration alone at full HP must NOT awaken Seed of Sparda');
+      const midLossHp = Math.round(vergil.maxHp * (1 - (1 - (vDef.spardaFormThresholdHpRatio ?? 0.90)) * 0.5));
+      vergil.hp = midLossHp;
+      const halfSpardaHud = getSkillDataForFighter(vergil).find(s => s.id === 'sparda_form');
+      assert(halfSpardaHud && halfSpardaHud.pct > 0 && halfSpardaHud.pct < 100, 'Seed of Sparda HUD bar must scale progress based on HP lost');
+      vergil.hp = Math.round(vergil.maxHp * ((vDef.spardaFormThresholdHpRatio ?? 0.90) - 0.08));
+      vergil.update(enemy, 0, testArena);
+      assert(vergil.vergilForm === 1, 'Vergil must awaken into Seed of Sparda form once HP lost crosses threshold');
+      const spardaHud = getSkillDataForFighter(vergil);
+      assert(!spardaHud.some(s => s.id === 'doppelganger') && spardaHud.some(s => s.id === 'judgment_cut_end'), 'Seed of Sparda HUD must hide base-only doppelganger and keep JCE');
+
+      // 5. Ultimate Sequence: Rapid Slash Windup -> Pass-Through (no body block) -> Judgment Cut End (Whole Arena) + Rule 25 decay
+      vergil.x = 180;
+      vergil.y = 465;
+      enemy.x = 250;
+      enemy.y = 465;
+      enemy.vx = 0;
+      enemy.vy = 0;
+      vergil._startJudgmentCutEnd(enemy, vDef);
+      assert(vergil.jceState?.active === true && vergil.jceState.phase === 'windup', 'Judgment Cut End must begin with Rapid Slash iai windup phase');
+      assert(vergil.rapidSlashTimer === 0, 'Rapid Slash dash timer must stay 0 during windup crouch');
+
+      const prevGameState = state.gameState;
+      state.gameState = 'playing';
+      let sawWindup = true;
+      let sawDash = false;
+      let testedDashNoBlock = false;
+      let sawCharge = false;
+      let sawSlash = false;
+      let sawShatter = false;
+      let sawFullArenaShatterFx = false;
+      let crossedEnemy = false;
+      let lockedJceX = null;
+      let lockedJceY = null;
+      try {
+        for (let t = 135; t < 275; t++) {
+          state.frameCount = t;
+          vergil.update(enemy, 0, testArena);
+          if (vergil.jceState?.phase === 'dash' && !testedDashNoBlock) {
+            testedDashNoBlock = true;
+            const saveX = vergil.x;
+            vergil.x = enemy.x - 10;
+            resolveFighterCollision(vergil, enemy);
+            assert(vergil.x === enemy.x - 10 && enemy.x === 250, 'physics.js must skip body-blocking separation during Vergil Rapid Slash / JCE dash');
+            vergil.x = saveX;
+          } else {
+            resolveFighterCollision(vergil, enemy);
+          }
+          vergil.draw(stackCtx, enemy);
+          assert(stackCtx.getStackDepth() === 0);
+          if (vergil.jceState?.phase === 'windup') {
+            assert(vergil.x === 180 && vergil.y === 465 && vergil.vx === 0 && vergil.vy === 0, 'Vergil must hold stationary iai crouch during Rapid Slash windup');
+          }
+          if (vergil.jceState?.phase === 'dash') sawDash = true;
+          if (vergil.x > enemy.x) crossedEnemy = true;
+          if (vergil.jceState && (vergil.jceState.phase === 'charge' || vergil.jceState.phase === 'slash' || vergil.jceState.phase === 'shatter')) {
+            if (lockedJceX === null) {
+              lockedJceX = vergil.x;
+              lockedJceY = vergil.y;
+            }
+            assert(
+              vergil.x === lockedJceX && vergil.y === lockedJceY && vergil.vx === 0 && vergil.vy === 0,
+              `Vergil must remain completely stationary throughout JCE ${vergil.jceState.phase} (pos=${vergil.x},${vergil.y}, lock=${lockedJceX},${lockedJceY}, v=${vergil.vx},${vergil.vy})`
+            );
+          }
+          if (vergil.jceState?.phase === 'charge') sawCharge = true;
+          if (vergil.jceState?.phase === 'slash') sawSlash = true;
+          if (vergil.jceState?.phase === 'shatter') {
+            sawShatter = true;
+            assert(vergil.jceState.screenCuts.length >= 20, `Judgment Cut End must carve screen-spanning cut seams (got ${vergil.jceState.screenCuts.length})`);
+            if (vergil.activeVisualEffects.some(fx =>
+              fx.kind === 'dimensionShatterBurst' &&
+              fx.arenaX === testArena.x &&
+              fx.arenaY === testArena.y &&
+              fx.arenaW === testArena.width &&
+              fx.arenaH === testArena.height
+            )) {
+              sawFullArenaShatterFx = true;
+            }
+          }
+        }
+      } finally {
+        state.gameState = prevGameState;
+      }
+      assert(crossedEnemy, 'Vergil Rapid Slash phase must physically dash through enemy without body block');
+      assert(sawWindup && sawDash && sawCharge && sawSlash && sawShatter && sawFullArenaShatterFx, 'JCE Ultimate must progress through windup -> dash -> charge -> slash -> full-arena shatter');
+      assert(vergil.jceState === null, 'Judgment Cut End must complete full windup->dash->charge->slash->shatter lifecycle');
+      assert(enemy.hp < 2750, 'Vergil full MUGEN kit must deal significant cumulative damage');
+
+      // 5b. Verify Judgment Cut End aborts cleanly if Rapid Slash does NOT pass behind enemy (whiff)
+      vergil.x = 120;
+      vergil.y = 465;
+      enemy.x = 120;
+      enemy.y = 260;
+      vergil._startJudgmentCutEnd({ x: 460, y: 465, r: 25, hp: 100 }, vDef);
+      let whiffTriggeredCharge = false;
+      for (let t = 0; t < 40; t++) {
+        vergil.update(enemy, 0, testArena);
+        if (vergil.jceState && vergil.jceState.phase !== 'windup' && vergil.jceState.phase !== 'dash') whiffTriggeredCharge = true;
+      }
+      assert(!whiffTriggeredCharge && vergil.jceState === null, 'JCE Ultimate must NOT trigger charge/slash/shatter if Rapid Slash fails to dash through behind an enemy');
+
+      const trackedSphere = { kind: 'judgmentCutSphere', x: 200, y: 400, radius: 50, timer: 4, maxTimer: 4 };
+      vergil.activeVisualEffects.push(trackedSphere);
+      vergil.timeStopTimer = 10;
+      for (let t = 0; t < 5; t++) vergil.update(enemy, 0, testArena);
+      assert(trackedSphere.timer <= 0 && !vergil.activeVisualEffects.includes(trackedSphere), 'Rule 25: VFX timers must decay even while Vergil is frozen');
+
+      // 5c. Verify Vergil's hands, sleeve & Yamato rotate along with body at all aim angles
+      {
+        const origRotate = stackCtx.rotate;
+        const prevDoppel = vergil.doppelgangerTimer;
+        const prevAngle = vergil.gunAngle;
+        const prevSlashing = vergil.isSlashing;
+        const prevSpinning = vergil.isSpinning;
+        try {
+          vergil.doppelgangerTimer = 0;
+          vergil.isSlashing = false;
+          vergil.isSpinning = false;
+          for (const testAng of [0.75, -2.15]) {
+            const rotCalls = [];
+            stackCtx.rotate = (a) => rotCalls.push(a);
+            vergil.gunAngle = testAng;
+            vergil.draw(stackCtx, enemy);
+            assert(stackCtx.getStackDepth() === 0, 'Vergil draw must preserve Canvas stack depth across aim angles');
+            const bodyAndHandRotCount = rotCalls.filter(a => Math.abs(a - testAng) < 1e-6).length;
+            assert(bodyAndHandRotCount >= 2, `Vergil hands/weapon must rotate along with body at angle ${testAng} (got ${bodyAndHandRotCount})`);
+          }
+        } finally {
+          stackCtx.rotate = origRotate;
+          vergil.doppelgangerTimer = prevDoppel;
+          vergil.gunAngle = prevAngle;
+          vergil.isSlashing = prevSlashing;
+          vergil.isSpinning = prevSpinning;
+        }
+      }
+
+      // 6. Rule 35 Pre-warm & Manifest check
+      const warmed = vergil.prewarmAssets(stackCtx);
+      assert(warmed >= 16, `Vergil prewarmAssets must queue weapon sprite + 15 VFX strips (got ${warmed})`);
+      prewarmMatchAssets([vergil], stackCtx);
+      assert(stackCtx.getStackDepth() === 0, 'Vergil prewarmMatchAssets must leave Canvas stack depth 0');
+      assert(
+        Array.isArray(MOBILE_ASSET_MANIFEST['Assets/model/vergil/Vergil-weapon.png']) &&
+        Array.isArray(MOBILE_ASSET_MANIFEST['Assets/effects/vergil/vergil-judgment-sphere.png']) &&
+        Array.isArray(MOBILE_ASSET_MANIFEST['Assets/effects/vergil/vergil-dimension-shatter.png']),
+        'MOBILE_ASSET_MANIFEST must contain Vergil weapon & VFX strip entries'
+      );
+
+      console.log('      ✅ Vergil (Son of Sparda) full MUGEN kit, Rule 18/24/25/35 verified.');
+    } finally {
+      for (const k of vToggleKeys) vDef[k] = savedVToggles[k];
       state.fighters = prevFighters;
       state.arena = prevArena;
       state.getFighterTeam = prevGetTeam;
