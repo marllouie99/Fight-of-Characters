@@ -4,6 +4,55 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { state } from '../../core/state.js';
 
+// ── 12-Frame 16-Bit Pixel Art Black Flash Animation Cache (twelve-frame-animation-generator & Rule 35) ──
+const BLACK_FLASH_FRAME_COUNT = 12;
+const BLACK_FLASH_FRAME_PATHS = [
+  'Assets/model/yuji/Black_flash/black_flash-1.png',
+  'Assets/model/yuji/Black_flash/black_flash-2.png',
+  'Assets/model/yuji/Black_flash/black_flash-3.png',
+  'Assets/model/yuji/Black_flash/black_flash-4.png',
+  'Assets/model/yuji/Black_flash/black_flash-5.png',
+  'Assets/model/yuji/Black_flash/black_flash-6.png',
+  'Assets/model/yuji/Black_flash/black_flash-7.png',
+  'Assets/model/yuji/Black_flash/black_flash-8.png',
+  'Assets/model/yuji/Black_flash/black_flash-9.png',
+  'Assets/model/yuji/Black_flash/black_flash-10.png',
+  'Assets/model/yuji/Black_flash/black_flash-11.png',
+  'Assets/model/yuji/Black_flash/black_flash-12.png',
+];
+const BLACK_FLASH_STRIP_SRC = 'Assets/model/yuji/Black_flash/black_flash-b.png';
+
+let _blackFlashFrames = [];
+let _blackFlashFramesLoading = false;
+let _blackFlashStripImg = null;
+
+export function _getBlackFlashFrames() {
+  if (
+    _blackFlashFrames.length === BLACK_FLASH_FRAME_COUNT &&
+    _blackFlashFrames.every(img => img && img.complete && (img.naturalWidth > 0 || img.width > 0))
+  ) {
+    return _blackFlashFrames;
+  }
+  if (!_blackFlashFramesLoading && typeof Image !== 'undefined') {
+    _blackFlashFramesLoading = true;
+    _blackFlashFrames = [];
+    BLACK_FLASH_FRAME_PATHS.forEach((src, idx) => {
+      const img = new Image();
+      img.onload = () => { _blackFlashFrames[idx] = img; };
+      img.src = src;
+      _blackFlashFrames[idx] = img;
+    });
+    const stripImg = new Image();
+    stripImg.src = BLACK_FLASH_STRIP_SRC;
+    _blackFlashStripImg = stripImg;
+  }
+  return _blackFlashFrames;
+}
+
+if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+  _getBlackFlashFrames();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERNAL OBJECT POOL (Zero GC Overhead design)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -175,14 +224,15 @@ export function spawnBlackFlash(x, y) {
 
     _initBfCoreCanvas();
 
-    // 1. IMPACT CORE (Void Singularity Implosion)
+    // 1. IMPACT CORE (MUGEN Black Flash Singularity Implosion + Pixel Fallback)
     const core = _getBFParticle();
     core.type = 'bfCore';
     core.x = x; core.y = y;
-    core.size = 10;
-    core.maxSize = is1v2 ? 38 : 46;
+    core.size = 24;
+    core.maxSize = is1v2 ? 52 : 64;
     core.life = 1.0;
-    core.decay = is1v2 ? 0.028 : 0.045;
+    core.decay = is1v2 ? 0.032 : 0.048;
+    core.angle = (Math.random() - 0.5) * 0.65;
     
     // Generate radial micro-fracture spikes radiating from core
     const P = 2.5;
@@ -361,46 +411,69 @@ export function drawBlackFlashEffects(ctx) {
 
     } else if (p.type === 'bfCore') {
       p.size += (p.maxSize - p.size) * 0.28;
-      const alpha = Math.max(0, Math.min(1.0, p.life * 1.2));
+      const progress = Math.max(0, Math.min(0.999, 1 - p.life));
+      const fadeAlpha = progress > 0.82 ? Math.max(0, (1.0 - progress) / 0.18) : 1.0;
+      const alpha = Math.max(0, Math.min(1.0, p.life * 1.25)) * fadeAlpha;
       if (alpha <= 0.01) continue;
 
-      _initBfCoreCanvas();
+      const frames = _getBlackFlashFrames();
+      const frameIndex = Math.min(BLACK_FLASH_FRAME_COUNT - 1, Math.max(0, Math.floor(progress * BLACK_FLASH_FRAME_COUNT)));
+      const frameImg = frames[frameIndex];
+      const hasFrameImg = Boolean(frameImg && frameImg.complete && (frameImg.naturalWidth > 0 || frameImg.width > 0));
+      const hasStripImg = Boolean(_blackFlashStripImg && _blackFlashStripImg.complete && (_blackFlashStripImg.naturalWidth > 0 || _blackFlashStripImg.width > 0));
 
-      if (_cachedBfCoreCanvas) {
-        const drawSize = Math.round(p.size * 2);
+      if (hasFrameImg || hasStripImg) {
+        const drawSize = Math.round(p.size * 2.25);
         ctx.save();
+        ctx.translate(Math.round(p.x), Math.round(p.y));
+        if (p.angle) ctx.rotate(p.angle);
         ctx.globalAlpha = alpha;
-        ctx.drawImage(_cachedBfCoreCanvas, Math.round(p.x - drawSize / 2), Math.round(p.y - drawSize / 2), drawSize, drawSize);
-
-        // Radiating Stepped Pixel Micro-Fractures (Fast stroke lines)
-        if (p.microSpikes && p.microSpikes.length > 0) {
-          ctx.translate(p.x, p.y);
-          ctx.lineCap = 'square';
-
-          // Outer Crimson Spikes
-          ctx.strokeStyle = `rgba(255, 15, 30, ${(alpha * 0.90).toFixed(3)})`;
-          ctx.lineWidth = 3.0;
-          ctx.beginPath();
-          for (let s = 0; s < p.microSpikes.length; s++) {
-            const spk = p.microSpikes[s];
-            ctx.moveTo(spk.x0, spk.y0);
-            ctx.lineTo(spk.x1, spk.y1);
-          }
-          ctx.stroke();
-
-          // Inner Black Spikes
-          ctx.strokeStyle = `rgba(0, 0, 0, ${alpha.toFixed(3)})`;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          for (let s = 0; s < p.microSpikes.length; s++) {
-            const spk = p.microSpikes[s];
-            ctx.moveTo(spk.x0, spk.y0);
-            ctx.lineTo(spk.x1 * 0.8, spk.y1 * 0.8);
-          }
-          ctx.stroke();
+        ctx.imageSmoothingEnabled = false;
+        if (hasFrameImg) {
+          ctx.drawImage(frameImg, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+        } else {
+          const sw = (_blackFlashStripImg.naturalWidth || _blackFlashStripImg.width || 3072) / BLACK_FLASH_FRAME_COUNT;
+          const sh = _blackFlashStripImg.naturalHeight || _blackFlashStripImg.height || 256;
+          ctx.drawImage(_blackFlashStripImg, frameIndex * sw, 0, sw, sh, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
         }
-
         ctx.restore();
+      } else {
+        _initBfCoreCanvas();
+
+        if (_cachedBfCoreCanvas) {
+          const drawSize = Math.round(p.size * 2);
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(_cachedBfCoreCanvas, Math.round(p.x - drawSize / 2), Math.round(p.y - drawSize / 2), drawSize, drawSize);
+
+          // Radiating Stepped Pixel Micro-Fractures (Fast stroke lines)
+          if (p.microSpikes && p.microSpikes.length > 0) {
+            ctx.translate(p.x, p.y);
+            ctx.lineCap = 'square';
+
+            ctx.strokeStyle = `rgba(255, 15, 30, ${(alpha * 0.90).toFixed(3)})`;
+            ctx.lineWidth = 3.0;
+            ctx.beginPath();
+            for (let s = 0; s < p.microSpikes.length; s++) {
+              const spk = p.microSpikes[s];
+              ctx.moveTo(spk.x0, spk.y0);
+              ctx.lineTo(spk.x1, spk.y1);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha.toFixed(3)})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let s = 0; s < p.microSpikes.length; s++) {
+              const spk = p.microSpikes[s];
+              ctx.moveTo(spk.x0, spk.y0);
+              ctx.lineTo(spk.x1 * 0.8, spk.y1 * 0.8);
+            }
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
       }
 
     } else if (p.type === 'bfSpark') {

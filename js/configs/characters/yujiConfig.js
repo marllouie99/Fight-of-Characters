@@ -6,6 +6,7 @@ export const yujiConfig = {
     hair: 'Assets/model/yuji/Yuji-hair.png',
     skin: 'Assets/model/yuji/Yuji-SKIN.png',
     soulSwapOverlay: 'Assets/Overlays/Yuji-soulswap-overlay.png',
+    blackFlash: 'Assets/model/yuji/Black_flash/black_flash-b.png',
   },
 
   name: 'Yuji',
@@ -97,7 +98,7 @@ export const yujiConfig = {
   soulSwapFugaChargeMax: 85,       // Frames to channel Fuga flaming arrow construct (~1.4s)
   soulSwapFugaRecovery: 40,        // Recoil recovery frames after releasing Fuga arrow
   soulSwapFugaDamage: 150,         // Nuke damage of Soul Swap Fuga arrow
-  soulSwapHealPercent: 0.50,       // Percentage of max HP restored to Yuji upon swapping back after the slashes
+  soulSwapHealPercent: 0.25,       // Percentage of max HP restored to Yuji upon swapping back after the slashes
   soulSwapCooldown: 99999,         // Once per match only
 
   // Soul Swap Arena Overlay

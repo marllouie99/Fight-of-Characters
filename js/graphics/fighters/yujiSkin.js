@@ -83,9 +83,59 @@ export function _drawYujiHair(ctx, r, facingLeft = false) {
   }
 }
 
+const _yujiGhostCanvasCache = new Map();
+
+function _getYujiGhostCanvas(r, isSukunaForm = false, facingLeft = false) {
+  if (typeof document === 'undefined') return null;
+  const custom = typeof state !== 'undefined' && state.skinCustomizations?.yuji;
+  if (custom && Object.keys(custom).length > 0) return null;
+
+  const hairImg = _getYujiHairImage();
+  const hairReady = Boolean(hairImg && hairImg.complete && hairImg.naturalWidth > 0);
+  if (!isSukunaForm && !hairReady) return null;
+
+  const intR = Math.max(10, Math.round(r));
+  const key = `${intR}_${isSukunaForm ? 1 : 0}_${facingLeft ? 1 : 0}`;
+  let cached = _yujiGhostCanvasCache.get(key);
+  if (cached) return cached;
+
+  const w = Math.ceil(intR * 4.4);
+  const h = Math.ceil(intR * 4.4);
+  const originX = Math.round(w / 2);
+  const originY = Math.round(intR * 2.5);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const cctx = canvas.getContext('2d');
+  if (!cctx) return null;
+
+  cctx.save();
+  cctx.imageSmoothingEnabled = false;
+  cctx.translate(originX, originY);
+
+  // Composite body + hair at 1.0 alpha so the upper body circle outline never bleeds through semi-transparent hair
+  drawYujiPixelBody(cctx, intR, isSukunaForm);
+  if (isSukunaForm) {
+    _drawSukunaHair(cctx, intR, facingLeft);
+  } else {
+    _drawYujiHair(cctx, intR, facingLeft);
+  }
+
+  cctx.restore();
+
+  cached = { canvas, originX, originY };
+  if (_yujiGhostCanvasCache.size > 24) {
+    const firstKey = _yujiGhostCanvasCache.keys().next().value;
+    _yujiGhostCanvasCache.delete(firstKey);
+  }
+  _yujiGhostCanvasCache.set(key, cached);
+  return cached;
+}
+
 /**
- * Renders Yuji Itadori's authentic Ghost Model Afterimage (Rule 19 / Rule 24 / Rule 22).
- * Features pixel-art body rasterization, authentic hair asset overlay, and clean concentric cursed aura.
+ * Renders Yuji Itadori's authentic Ghost Model Afterimage (Rule 19 / Rule 24 / Rule 22 / Rule 35).
+ * Pre-composites body and hair on an offscreen canvas so no inner head silhouette or outline bleeds through.
  */
 export function drawYujiGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.45, isSukunaForm = false, isBlackFlash = false) {
   if (alpha <= 0.01) return;
@@ -100,36 +150,18 @@ export function drawYujiGhostSkin(ctx, x, y, angle = 0, r = 25, alpha = 0.45, is
     ctx.scale(1, -1);
   }
 
-  // 1. Cursed Energy Outer Glow Aura (Rule 11 compliant: concentric arcs, zero shadowBlur)
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
-  if (isSukunaForm) {
-    ctx.fillStyle = 'rgba(220, 20, 40, 0.28)'; // Sukuna Malevolent Crimson
-  } else if (isBlackFlash) {
-    ctx.fillStyle = 'rgba(180, 20, 60, 0.26)'; // Black Flash Crimson
+  const ghost = _getYujiGhostCanvas(r, isSukunaForm, facingLeft);
+  if (ghost && ghost.canvas) {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(ghost.canvas, -ghost.originX, -ghost.originY);
   } else {
-    ctx.fillStyle = 'rgba(217, 92, 126, 0.22)'; // Cursed Energy Pink
+    drawYujiPixelBody(ctx, r, isSukunaForm);
+    if (isSukunaForm) {
+      _drawSukunaHair(ctx, r, facingLeft);
+    } else {
+      _drawYujiHair(ctx, r, facingLeft);
+    }
   }
-  ctx.fill();
-
-  // 2. Procedural Pixel-Art Body (Rule 24 Toji standard architecture, cached offscreen)
-  drawYujiPixelBody(ctx, r, isSukunaForm);
-
-  // 3. Authentic Hair Model Overlay (Rule 22)
-  if (isSukunaForm) {
-    _drawSukunaHair(ctx, r, facingLeft);
-  } else {
-    _drawYujiHair(ctx, r, facingLeft);
-  }
-
-  // 4. Spectral Body Outline & Manga Rim
-  ctx.strokeStyle = isSukunaForm 
-    ? 'rgba(255, 36, 0, 0.85)' 
-    : (isBlackFlash ? 'rgba(240, 20, 50, 0.80)' : 'rgba(255, 120, 160, 0.75)');
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.stroke();
 
   ctx.restore();
 }
@@ -141,11 +173,12 @@ export function drawYujiSkin(ctx, fighter) {
   const isLowQuality = (typeof state !== 'undefined' && (state.performanceMode || (state.qualityLevel && state.qualityLevel < 0.5)));
   const now = Date.now();
   // 1. Draw afterimages (Zone & dash ghost trails) at their absolute coordinates
+  // Strictly suppressed during _isSilhouettePass so fighterOutlineRenderer never turns ghost afterimages into black silhouettes
   const isGojoDomainActive = typeof state !== 'undefined' && state.fighters && state.fighters.some(f => 
     f && (f.characterId === 'gojo' || f.type === 'gojo' || f._def?.id === 'gojo') && f.domainActive
   );
   const isSuppressed = typeof fighter.areAttackEffectsSuppressed === 'function' ? fighter.areAttackEffectsSuppressed() : (isGojoDomainActive || isSuppressedByGetsuga(fighter));
-  if (!isLowQuality && fighter.afterImages && fighter.afterImages.length > 0 && !isSuppressed) {
+  if (!isLowQuality && !fighter._isSilhouettePass && fighter.afterImages && fighter.afterImages.length > 0 && !isSuppressed) {
     // A. Draw subtle Dash Motion Trajectory Line if teleport occurred
     let lastDrawnFromKey = null;
     for (let i = 0; i < fighter.afterImages.length; i++) {
@@ -206,7 +239,7 @@ export function drawYujiSkin(ctx, fighter) {
   ctx.translate(fighter.x, fighter.y);
 
   // Black Flash Zone Visual Indicator (Stepped pixel crackling lightning streaks - No Diamonds)
-  if (fighter.blackFlashTimer > 0) {
+  if (fighter.blackFlashTimer > 0 && !fighter._isSilhouettePass) {
     const isMatchEnded = typeof state !== 'undefined' && (state.gameState === 'roundEnd' || state.gameState === 'matchEnd' || fighter._isWinnerReveal);
     const pulse = isMatchEnded ? 0.90 : (0.6 + Math.sin(now * 0.015) * 0.4);
     const sparkCount = isLowQuality ? 2 : (isMatchEnded ? 2 : 4);
@@ -355,7 +388,7 @@ export function drawYujiSkin(ctx, fighter) {
   }
 
   // Status overlays (stun, freeze, etc.)
-  if (typeof fighter.drawStatusOverlays === 'function') {
+  if (typeof fighter.drawStatusOverlays === 'function' && !fighter._isSilhouettePass) {
     fighter.drawStatusOverlays(ctx, r);
   }
 
@@ -365,7 +398,7 @@ export function drawYujiSkin(ctx, fighter) {
   }
 
   // Taut glowing fiery Cursed Energy bowstring during Fuga charge!
-  if (fighter.isChannelingDivineFlame && !hideFrontHand && !hideBackHand) {
+  if (fighter.isChannelingDivineFlame && !fighter._isSilhouettePass && !hideFrontHand && !hideBackHand) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const progress = Math.min(1.0, (fighter.divineFlameChargeTimer || 0) / Math.max(1, fighter.divineFlameChargeMax || 85));

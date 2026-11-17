@@ -2570,6 +2570,11 @@ export const MOBILE_ASSET_MANIFEST = {
     512,
     1
   ],
+  "Assets/model/yuji/Black_flash/black_flash-b.png": [
+    3072,
+    256,
+    1
+  ],
   "Assets/model/yuji/Yuji-SKIN.png": [
     499,
     500,
