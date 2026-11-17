@@ -17,6 +17,7 @@ import { MODE_SETTINGS } from '../../core/modeConfig.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { vegetaConfig } from '../../configs/characters/vegetaConfig.js';
 import { drawVegetaSkin } from '../../graphics/fighters/vegetaSkin.js';
+import { drawDbzAura, drawDbzChargeFlare, drawDbzKiOrb, drawDbzBeam, updateDbzTransientVfx, drawDbzTransientVfx } from '../../graphics/weapons/dbzWeaponGraphics.js';
 import { spawnImpactFlash, spawnSparks, spawnMeleeClashShockwave, spawnAnimePunchImpactFrame, spawnDbzInstantTransmissionVFX } from '../../graphics/particles/sparkEffect.js';
 
 export class VegetaFighter extends Fighter {
@@ -261,6 +262,7 @@ export class VegetaFighter extends Fighter {
     this._updateBigBangMissiles(currentArena, opponent);
     this._updateAfterimages();
     this._updateAuraParticles();
+    if (this._dbzTransientVfx) updateDbzTransientVfx(this._dbzTransientVfx);
 
     // 1. Mandatory Rule 1 Freeze & TimeStop Guard
     const isFrozen = this._handleTimeStop();
@@ -355,8 +357,14 @@ export class VegetaFighter extends Fighter {
 
     if (this.isSuperSaiyan) {
       this.superSaiyanTimer--;
+      this._ssjAuraSfxTimer = (this._ssjAuraSfxTimer || 0) - 1;
+      if (this._ssjAuraSfxTimer <= 0 && this.hp > 0) {
+        this._playAudio('ssjAuraAmbience', cfg.sounds?.ssjAuraAmbience, cfg.soundVolumes?.ssjAuraAmbience || 0.45);
+        this._ssjAuraSfxTimer = 110;
+      }
       if (this.superSaiyanTimer <= 0) {
         this.isSuperSaiyan = false;
+        this._ssjAuraSfxTimer = 0;
         this.moveSpeed = this.baseMoveSpeed;
         this.speed = this.baseMoveSpeed;
       }
@@ -383,6 +391,7 @@ export class VegetaFighter extends Fighter {
     triggerGlobalScreenShake(6.0, 24);
     this._playAudio('transform', cfg.sounds?.transform, cfg.soundVolumes?.transform || 0.95);
     this._playAudio('roar', cfg.sounds?.roar, cfg.soundVolumes?.roar || 0.85);
+    this._playVoiceline('ssjVoiceline');
 
     // Golden-Violet Shockwave
     this._spawnRadialShockwave(this.x, this.y, 80, '#7C4DFF', 20);
@@ -554,6 +563,7 @@ export class VegetaFighter extends Fighter {
         this._playAudio('fleshHit', cfg.sounds?.fleshHit, cfg.soundVolumes?.fleshHit || 0.90);
       }
       this.meleeHitIndex++;
+      this._playVoiceline(strikeType % 2 === 0 ? 'meleeVoiceline1' : 'meleeVoiceline2');
     } else {
       // Melee Mode Duration has completed! Execute Terminal Finisher Slam:
       // High Overhead Axe Kick Finisher Slam (36 base dmg) with wall bounce & shockwave!
@@ -562,6 +572,7 @@ export class VegetaFighter extends Fighter {
       this._playAudio('heavyPunch', cfg.sounds?.heavyPunch, cfg.soundVolumes?.heavyPunch || 0.90);
       triggerGlobalScreenShake(4.0, 12);
       this._spawnRadialShockwave(opponent.x, opponent.y, 45, '#00E5FF', 0);
+      this._pushDbzVfx({ type: 'impactArc', x: opponent.x, y: opponent.y, angle: this.gunAngle, r: this.r * 1.15, life: 10, maxLife: 10 });
 
       // Vault backward >= 120px to initiate Phase 3 Rapid Ki Volley (Renzoku Ki Dān)
       this._vaultBackward(opponent, arena, cfg.meleeBackstepDistance || 120);
@@ -679,6 +690,7 @@ export class VegetaFighter extends Fighter {
     // DBZ Instant Transmission Dematerialize & Materialize VFX
     spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
     spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
+    this._pushDbzVfx({ type: 'zVanish', x: oldX, y: oldY, r: this.r, life: 10, maxLife: 10 });
 
     // Instant snap aim facing back towards opponent
     const targetZ = opponent.z || 0;
@@ -734,6 +746,9 @@ export class VegetaFighter extends Fighter {
         return blast.life > 0;
       },
       draw: (ctx) => {
+        if (drawDbzKiOrb(ctx, blast.x, blast.y, Math.atan2(blast.vy, blast.vx), blast.r, 'cyan')) {
+          return;
+        }
         ctx.save();
         ctx.beginPath();
         ctx.arc(blast.x, blast.y, blast.r, 0, Math.PI * 2);
@@ -749,6 +764,9 @@ export class VegetaFighter extends Fighter {
 
     this.activeKiBlasts.push(blast);
     this._playAudio('kiBlast', cfg.sounds?.kiBlast, cfg.soundVolumes?.kiBlast || 0.75);
+    if (this.kiVolleyCount === 0) {
+      this._playVoiceline('kiBlastVoiceline');
+    }
   }
 
   _updateKiBlasts(arena) {
@@ -895,6 +913,7 @@ export class VegetaFighter extends Fighter {
     // DBZ Instant Transmission Dematerialize & Materialize VFX
     spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
     spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
+    this._pushDbzVfx({ type: 'zVanish', x: oldX, y: oldY, r: this.r, life: 10, maxLife: 10 });
 
     this.dodgeCooldown = cfg.dodgeCooldown || 4;
     this._playAudio('dodge', cfg.sounds?.dodge, cfg.soundVolumes?.dodge || 0.80);
@@ -959,7 +978,8 @@ export class VegetaFighter extends Fighter {
     this.bigBangAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
     this.gunAngle = this.bigBangAngle;
     this.angle = this.bigBangAngle;
-    this._playAudio('transform', cfg.sounds?.transform, 0.80);
+    this._playAudio('charge', cfg.sounds?.charge || cfg.sounds?.transform, cfg.soundVolumes?.charge || 0.85);
+    this._playVoiceline('bigBangVoiceline');
   }
 
   _updateBigBang(opponent, arena) {
@@ -1034,7 +1054,8 @@ export class VegetaFighter extends Fighter {
     this.galickGunAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
     this.gunAngle = this.galickGunAngle;
     this.angle = this.galickGunAngle;
-    this._playAudio('transform', cfg.sounds?.transform, 0.85);
+    this._playAudio('charge', cfg.sounds?.charge || cfg.sounds?.transform, cfg.soundVolumes?.charge || 0.88);
+    this._playVoiceline('galickGunVoiceline');
   }
 
   _updateGalickGun(opponent, arena) {
@@ -1087,7 +1108,8 @@ export class VegetaFighter extends Fighter {
     this.finalFlashAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
     this.gunAngle = this.finalFlashAngle;
     this.angle = this.finalFlashAngle;
-    this._playAudio('transform', cfg.sounds?.transform, 0.90);
+    this._playAudio('charge', cfg.sounds?.charge || cfg.sounds?.transform, cfg.soundVolumes?.charge || 0.92);
+    this._playVoiceline('finalFlashChargeVoiceline');
   }
 
   _updateFinalFlash(opponent, arena) {
@@ -1110,6 +1132,7 @@ export class VegetaFighter extends Fighter {
         this.finalFlashTicksFired = 0;
         this.finalFlashTickTimer = 0;
         this._playAudio('beamFire', cfg.sounds?.beamFire, cfg.soundVolumes?.beamFire || 1.10);
+        this._playVoiceline('finalFlashFireVoiceline');
       }
       return;
     }
@@ -1161,7 +1184,16 @@ export class VegetaFighter extends Fighter {
   }
 
   // ─── Helpers: Shockwaves, Afterimages & Sound ───
+  _pushDbzVfx(fx) {
+    if (!this._dbzTransientVfx) this._dbzTransientVfx = [];
+    if (this._dbzTransientVfx.length >= 24) this._dbzTransientVfx.shift();
+    this._dbzTransientVfx.push(fx);
+  }
+
   _spawnRadialShockwave(x, y, radius, color, damage = 0) {
+    if (damage > 0) {
+      this._pushDbzVfx({ type: 'explosion', x, y, r: radius, theme: color === '#FFD700' ? 'gold' : 'blue', life: 16, maxLife: 16 });
+    }
     this.activeVisualExplosions.push({
       x, y,
       maxRadius: radius,
@@ -1271,6 +1303,16 @@ export class VegetaFighter extends Fighter {
     }
   }
 
+  _playVoiceline(key) {
+    const cfg = this._cfg;
+    const src = cfg.sounds?.[key];
+    if (!src) return;
+    const chance = cfg.soundChances?.[key];
+    if (chance !== undefined && Math.random() > chance) return;
+    const vol = cfg.soundVolumes?.[key] ?? 0.90;
+    this._playAudio(key, src, vol);
+  }
+
   // ─── Rendering Pipeline (Rule 21 & Upright Standard) ───
   drawBody(ctx) {
     drawVegetaSkin(ctx, this);
@@ -1327,6 +1369,9 @@ export class VegetaFighter extends Fighter {
     }
     if (this.activeBigBangMissiles && this.activeBigBangMissiles.length > 0) {
       this.activeBigBangMissiles.forEach(m => {
+        if (drawDbzChargeFlare(ctx, m.x, m.y, m.r * 1.4, 'blue', 0.85)) {
+          return;
+        }
         ctx.save();
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
@@ -1340,8 +1385,41 @@ export class VegetaFighter extends Fighter {
       });
     }
 
+    // 5.5 Draw 16-bit Pixel-Art DBZ Ki Aura (behind body, matching CJ Baguvix aura clarity)
+    if (!this._isSilhouettePass) {
+      if (this.isSuperSaiyan || this.isChargingFinalFlash) {
+        drawDbzAura(ctx, this.x, this.y, this.r, 'gold', 0.98);
+      } else if (this.isChargingGalickGun || this.isChargingBigBang) {
+        drawDbzAura(ctx, this.x, this.y, this.r, 'blue', 0.95);
+      }
+    }
+
     // 6. Draw Vegeta Procedural Body Model
     drawVegetaSkin(ctx, this);
+
+    // 6.5 Draw DBZ Energy Charge/Muzzle Flares & Transient DBZ VFX
+    if (!this._isSilhouettePass) {
+      if (this.isChargingFinalFlash) {
+        const maxT = this._cfg.finalFlashChargeFrames || 75;
+        const p = 1 - Math.max(0, this.finalFlashChargeTimer) / maxT;
+        drawDbzChargeFlare(ctx, this.x + Math.cos(this.finalFlashAngle) * (this.r + 12), this.y + Math.sin(this.finalFlashAngle) * (this.r + 12), this.r * 1.1, 'gold', p);
+      } else if (this.isFiringFinalFlash) {
+        drawDbzChargeFlare(ctx, this.x + Math.cos(this.finalFlashAngle) * (this.r + 12), this.y + Math.sin(this.finalFlashAngle) * (this.r + 12), this.r * 1.2, 'gold', 0.95);
+      } else if (this.isChargingBigBang) {
+        const maxT = this._cfg.bigBangChargeFrames || 24;
+        const p = 1 - Math.max(0, this.bigBangChargeTimer) / maxT;
+        drawDbzChargeFlare(ctx, this.x + Math.cos(this.bigBangAngle) * (this.r + 10), this.y + Math.sin(this.bigBangAngle) * (this.r + 10), this.r * 0.95, 'blue', p);
+      } else if (this.isChargingGalickGun) {
+        const maxT = this._cfg.galickGunChargeFrames || 30;
+        const p = 1 - Math.max(0, this.galickGunChargeTimer) / maxT;
+        drawDbzChargeFlare(ctx, this.x + Math.cos(this.galickGunAngle) * (this.r + 10), this.y + Math.sin(this.galickGunAngle) * (this.r + 10), this.r * 0.9, 'blue', p);
+      } else if (this.isFiringGalickGun) {
+        drawDbzChargeFlare(ctx, this.x + Math.cos(this.galickGunAngle) * (this.r + 10), this.y + Math.sin(this.galickGunAngle) * (this.r + 10), this.r * 1.0, 'blue', 0.9);
+      }
+      if (this._dbzTransientVfx && this._dbzTransientVfx.length > 0) {
+        drawDbzTransientVfx(ctx, this._dbzTransientVfx);
+      }
+    }
 
     // 7. Rule 21 Mandatory Overhead HP & Freeze Indicators
     this.drawHealth(ctx);
@@ -1351,6 +1429,9 @@ export class VegetaFighter extends Fighter {
   _drawGalickGunBeam(ctx) {
     const beamWidth = this.isSuperSaiyan ? 75 : (this._cfg.galickGunWidth || 50);
     const length = 500;
+    if (drawDbzBeam(ctx, this.x, this.y, this.galickGunAngle, length, beamWidth, 'violet')) {
+      return;
+    }
 
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -1372,6 +1453,9 @@ export class VegetaFighter extends Fighter {
   _drawFinalFlashBeam(ctx) {
     const beamWidth = this.isSuperSaiyan ? 115 : (this._cfg.finalFlashBeamWidth || 90);
     const length = 560;
+    if (drawDbzBeam(ctx, this.x, this.y, this.finalFlashAngle, length, beamWidth, 'gold')) {
+      return;
+    }
 
     ctx.save();
     ctx.translate(this.x, this.y);

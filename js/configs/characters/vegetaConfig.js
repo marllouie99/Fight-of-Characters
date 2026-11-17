@@ -134,17 +134,27 @@ export const vegetaConfig = {
   dodgeTextColor: '#00E5FF',          // Cyan text color
   attackerTeleportChaseDelayFrames: 5,// Momentary disorientation delay for teleporting chasers
 
-  // Sound System Configuration
+  // Sound System Configuration (DBZ MUGEN SFX & Voiceline Bank)
   sounds: {
-    punch: 'Assets/Sound Effects/Attacks/punch.mp3',
-    fleshHit: 'Assets/Sound Effects/Attacks/fleshhit.mp3',
-    heavyPunch: 'Assets/Sound Effects/Attacks/heavypunch1.mp3',
-    dodge: 'Assets/Sound Effects/Skills/dash3.mp3',
-    kiBlast: 'Assets/Sound Effects/Attacks/lasersniper1.mp3',
-    beamFire: 'Assets/Sound Effects/Attacks/laserbeam.mp3',
-    transform: 'Assets/Sound Effects/Skills/enhance.mp3',
-    roar: 'Assets/Sound Effects/Skills/ragescream.mp3',
-    explosion: 'Assets/Sound Effects/Attacks/explosion.mp3'
+    punch: 'Assets/Sound Effects/VegetaSFX/vegeta-punch.ogg',
+    fleshHit: 'Assets/Sound Effects/VegetaSFX/vegeta-flesh-hit.ogg',
+    heavyPunch: 'Assets/Sound Effects/VegetaSFX/vegeta-heavy-punch.ogg',
+    dodge: 'Assets/Sound Effects/VegetaSFX/vegeta-z-vanish.ogg',
+    kiBlast: 'Assets/Sound Effects/VegetaSFX/vegeta-ki-blast.ogg',
+    charge: 'Assets/Sound Effects/VegetaSFX/vegeta-charge.ogg',
+    beamFire: 'Assets/Sound Effects/VegetaSFX/vegeta-beam-fire.ogg',
+    transform: 'Assets/Sound Effects/VegetaSFX/vegeta-ssj-transform.ogg',
+    ssjAuraAmbience: 'Assets/Sound Effects/GokuSFX/dbz-ssj-aura-ambience.ogg',
+    roar: 'Assets/Sound Effects/VegetaSFX/vegeta-ssj-transform.ogg',
+    explosion: 'Assets/Sound Effects/VegetaSFX/vegeta-explosion.ogg',
+    meleeVoiceline1: 'Assets/Sound Effects/VegetaSFX/vegeta-melee-voiceline1.ogg',
+    meleeVoiceline2: 'Assets/Sound Effects/VegetaSFX/vegeta-melee-voiceline2.ogg',
+    kiBlastVoiceline: 'Assets/Sound Effects/VegetaSFX/vegeta-kiblast-voiceline.ogg',
+    bigBangVoiceline: 'Assets/Sound Effects/VegetaSFX/vegeta-big-bang-voiceline.ogg',
+    galickGunVoiceline: 'Assets/Sound Effects/VegetaSFX/vegeta-galick-gun-voiceline.ogg',
+    ssjVoiceline: 'Assets/Sound Effects/VegetaSFX/vegeta-ssj-voiceline.ogg',
+    finalFlashChargeVoiceline: 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-charge-voiceline.ogg',
+    finalFlashFireVoiceline: 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-fire-voiceline.ogg'
   },
 
   soundVolumes: {
@@ -152,11 +162,32 @@ export const vegetaConfig = {
     fleshHit: 0.90,
     heavyPunch: 0.90,
     dodge: 0.80,
-    kiBlast: 0.75,
-    beamFire: 1.10,
+    kiBlast: 0.72,
+    charge: 0.90,
+    beamFire: 1.05,
     transform: 0.95,
-    roar: 0.85,
-    explosion: 0.95
+    ssjAuraAmbience: 0.45,
+    roar: 0.88,
+    explosion: 0.95,
+    meleeVoiceline1: 0.85,
+    meleeVoiceline2: 0.85,
+    kiBlastVoiceline: 0.82,
+    bigBangVoiceline: 0.95,
+    galickGunVoiceline: 0.95,
+    ssjVoiceline: 0.98,
+    finalFlashChargeVoiceline: 1.00,
+    finalFlashFireVoiceline: 1.05
+  },
+
+  soundChances: {
+    meleeVoiceline1: 0.40,
+    meleeVoiceline2: 0.45,
+    kiBlastVoiceline: 0.35,
+    bigBangVoiceline: 0.90,
+    galickGunVoiceline: 0.90,
+    ssjVoiceline: 1.0,
+    finalFlashChargeVoiceline: 1.0,
+    finalFlashFireVoiceline: 1.0
   }
 };
 

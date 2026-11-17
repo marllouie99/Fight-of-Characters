@@ -320,8 +320,9 @@ export function drawVegetaSkin(ctx, fighter) {
   const isKiVolley = Boolean(fighter.basicComboPhase === 3);
   const isFinisherSlam = Boolean(fighter.basicComboPhase === 2 && (fighter.meleeModeDurationTimer || 0) <= 0);
 
-  // Canonical Brawler Default Hand Placement along +X aim axis
+  // Canonical Brawler Lower-Torso Hand Placement along +X aim axis (Rule 20)
   const baseHandX = r * 0.88;
+  const baseHandY = r * 0.38;
   const idleBob = (!isPodiumPreview && !isPunching) ? Math.sin(Date.now() * 0.007) * (r * 0.05) : 0;
 
   // Single front hand brawler punch stance (matching GojoRenderer proven standard)
@@ -329,9 +330,9 @@ export function drawVegetaSkin(ctx, fighter) {
   let hideBackHand = true; // Other hand completely removed/chambered during punches and neutral stance
 
   let frontHandX = baseHandX + idleBob;
-  let frontHandY = 0;
-  let backHandX = 0;
-  let backHandY = 0;
+  let frontHandY = baseHandY;
+  let backHandX = -r * 0.82;
+  let backHandY = baseHandY;
 
   const hideHands = (typeof state !== 'undefined' && state.showSkinOnly) || isPodiumPreview || fighter.hideHands;
   let easePunch = 0;
@@ -396,33 +397,33 @@ export function drawVegetaSkin(ctx, fighter) {
     const dip = Math.sin(rawProgress * Math.PI) * (r * 0.12) * (fighter.isRightPunch ? 1 : -1);
 
     if (isFinisherSlam) {
-      // High Overhead Axe Kick / Fist Finisher: Fists braced overhead driving downward
+      // High Overhead Axe Kick / Fist Finisher: Fists braced driving downward
       hideBackHand = false;
       frontHandX = baseHandX + currentLunge;
-      frontHandY = +r * 0.08 + dip;
+      frontHandY = baseHandY + r * 0.08 + dip;
       backHandX = baseHandX + currentLunge;
-      backHandY = -r * 0.08 + dip;
+      backHandY = baseHandY - r * 0.08 + dip;
     } else {
-      // Single front striking fist lunges forward (Gojo / brawler standard)
+      // Single front striking fist lunges forward (lowered to chest/torso guard height)
       hideBackHand = true;
       frontHandX = baseHandX + currentLunge;
-      frontHandY = dip;
+      frontHandY = baseHandY * 0.85 + dip;
     }
   } else if (isKiVolley) {
-    // Phase 3: Rapid Ki Volley (Renzoku Ki Dān) — Manic alternating floating palm thrusts
+    // Phase 3: Rapid Ki Volley (Renzoku Ki Dān) — Manic alternating floating palm thrusts at torso height
     hideBackHand = false;
     const kiVibe = Math.sin((fighter.kiVolleyTimer || 0) * 2.2) * 3.5;
     frontHandX = r * 1.15 + kiVibe;
-    frontHandY = +r * 0.24;
+    frontHandY = r * 0.46;
     backHandX = r * 1.15 - kiVibe;
-    backHandY = -r * 0.24;
+    backHandY = r * 0.22;
   } else if (isBigBang) {
-    // Big Bang Attack: Open right palm thrust forward, left arm coiled back
+    // Big Bang Attack: Open right palm thrust forward, left arm coiled back at lower flank
     hideBackHand = false;
     frontHandX = r * 1.25;
-    frontHandY = +r * 0.08;
+    frontHandY = r * 0.38;
     backHandX = -r * 0.20;
-    backHandY = -r * 0.30;
+    backHandY = r * 0.34;
   } else if (isChargingFinalFlash) {
     // Dual arms spread wide charging golden lightning
     hideBackHand = false;
@@ -434,9 +435,9 @@ export function drawVegetaSkin(ctx, fighter) {
     // Both wrists clasped forward unleashing Final Flash beam
     hideBackHand = false;
     frontHandX = r * 1.25;
-    frontHandY = +r * 0.10;
+    frontHandY = r * 0.40;
     backHandX = r * 1.25;
-    backHandY = -r * 0.10;
+    backHandY = r * 0.22;
   }
 
   // Draw Floating White Combat Gloves (Zero stretching arm tubes — Gojo standard)

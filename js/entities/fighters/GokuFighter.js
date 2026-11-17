@@ -16,6 +16,7 @@ import { MODE_SETTINGS } from '../../core/modeConfig.js';
 import { audioSystem } from '../../systems/audioSystem.js';
 import { gokuConfig } from '../../configs/characters/gokuConfig.js';
 import { drawGokuSkin } from '../../graphics/fighters/gokuSkin.js';
+import { drawDbzAura, drawDbzChargeFlare, drawDbzKiOrb, drawDbzBeam, updateDbzTransientVfx, drawDbzTransientVfx } from '../../graphics/weapons/dbzWeaponGraphics.js';
 import { spawnImpactFlash, spawnSparks, spawnMeleeClashShockwave, spawnAnimePunchImpactFrame, spawnDbzInstantTransmissionVFX } from '../../graphics/particles/sparkEffect.js';
 import { projectileSystem } from '../../systems/projectileSystem.js';
 
@@ -247,6 +248,7 @@ export class GokuFighter extends Fighter {
     this._updateKiBlasts(currentArena);
     this._updateAfterimages();
     this._updateAuraParticles();
+    if (this._dbzTransientVfx) updateDbzTransientVfx(this._dbzTransientVfx);
 
     // 1. Mandatory Rule 1 Freeze & TimeStop Guard
     const isFrozen = this._handleTimeStop();
@@ -329,8 +331,14 @@ export class GokuFighter extends Fighter {
 
     if (this.isSuperSaiyan) {
       this.superSaiyanTimer--;
+      this._ssjAuraSfxTimer = (this._ssjAuraSfxTimer || 0) - 1;
+      if (this._ssjAuraSfxTimer <= 0 && this.hp > 0) {
+        this._playAudio('ssjAuraAmbience', cfg.sounds?.ssjAuraAmbience, cfg.soundVolumes?.ssjAuraAmbience || 0.45);
+        this._ssjAuraSfxTimer = 110;
+      }
       if (this.superSaiyanTimer <= 0) {
         this.isSuperSaiyan = false;
+        this._ssjAuraSfxTimer = 0;
         this.moveSpeed = this.baseMoveSpeed;
         this.speed = this.baseMoveSpeed;
       }
@@ -354,6 +362,7 @@ export class GokuFighter extends Fighter {
     triggerGlobalScreenShake(6.0, 24);
     this._playAudio('transform', cfg.sounds?.transform, cfg.soundVolumes?.transform || 0.95);
     this._playAudio('roar', cfg.sounds?.roar, cfg.soundVolumes?.roar || 0.85);
+    this._playVoiceline('ssjVoiceline');
 
     // Golden Eruption Shockwave
     this._spawnRadialShockwave(this.x, this.y, 80, '#FFD700', 20);
@@ -515,6 +524,7 @@ export class GokuFighter extends Fighter {
         this._playAudio('fleshHit', cfg.sounds?.fleshHit, cfg.soundVolumes?.fleshHit || 0.90);
       }
       this.meleeHitIndex++;
+      this._playVoiceline(strikeType % 2 === 0 ? 'meleeVoiceline1' : 'meleeVoiceline2');
     } else {
       // Melee Mode Duration has expired! Culminate in the Terminal Finisher Slam:
       // Overhead Sledgehammer Finisher Slam (34 base dmg) with wall bounce & shockwave!
@@ -523,6 +533,7 @@ export class GokuFighter extends Fighter {
       this._playAudio('heavyPunch', cfg.sounds?.heavyPunch, cfg.soundVolumes?.heavyPunch || 0.90);
       triggerGlobalScreenShake(3.8, 12);
       this._spawnRadialShockwave(opponent.x, opponent.y, 45, '#FFD700', 0);
+      this._pushDbzVfx({ type: 'impactArc', x: opponent.x, y: opponent.y, angle: this.gunAngle, r: this.r * 1.15, life: 10, maxLife: 10 });
 
       // Vault backward >= 120px to initiate Phase 3 Ki Blast Barrage (Renzoku Ki Dān)
       this._vaultBackward(opponent, arena, cfg.meleeBackstepDistance || 120);
@@ -640,6 +651,7 @@ export class GokuFighter extends Fighter {
     // DBZ Instant Transmission Dematerialize & Materialize VFX
     spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
     spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
+    this._pushDbzVfx({ type: 'zVanish', x: oldX, y: oldY, r: this.r, life: 10, maxLife: 10 });
 
     // Instant snap aim facing back towards opponent
     const targetZ = opponent.z || 0;
@@ -695,6 +707,9 @@ export class GokuFighter extends Fighter {
         return blast.life > 0;
       },
       draw: (ctx) => {
+        if (drawDbzKiOrb(ctx, blast.x, blast.y, Math.atan2(blast.vy, blast.vx), blast.r, 'gold')) {
+          return;
+        }
         ctx.save();
         ctx.beginPath();
         ctx.arc(blast.x, blast.y, blast.r, 0, Math.PI * 2);
@@ -710,6 +725,9 @@ export class GokuFighter extends Fighter {
 
     this.activeKiBlasts.push(blast);
     this._playAudio('kiBlast', cfg.sounds?.kiBlast, cfg.soundVolumes?.kiBlast || 0.75);
+    if (this.kiBarrageCount === 0) {
+      this._playVoiceline('kiBlastVoiceline');
+    }
   }
 
   _updateKiBlasts(arena) {
@@ -838,6 +856,7 @@ export class GokuFighter extends Fighter {
     // DBZ Instant Transmission Dematerialize & Materialize VFX
     spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
     spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
+    this._pushDbzVfx({ type: 'zVanish', x: oldX, y: oldY, r: this.r, life: 10, maxLife: 10 });
 
     this.dodgeCooldown = cfg.dodgeCooldown || 4;
     this._playAudio('dodge', cfg.sounds?.dodge, cfg.soundVolumes?.dodge || 0.80);
@@ -913,7 +932,9 @@ export class GokuFighter extends Fighter {
     // DBZ Instant Transmission Dematerialize & Materialize VFX
     spawnDbzInstantTransmissionVFX(oldX, oldY, this.r, { isArrival: false, fighter: this });
     spawnDbzInstantTransmissionVFX(this.x, this.y, this.r, { isArrival: true, fighter: this });
+    this._pushDbzVfx({ type: 'zVanish', x: oldX, y: oldY, r: this.r, life: 10, maxLife: 10 });
     this._playAudio('dodge', cfg.sounds?.dodge, 0.80);
+    this._playVoiceline('dragonHammerVoiceline');
   }
 
   _updateDragonHammer(opponent, arena) {
@@ -960,6 +981,7 @@ export class GokuFighter extends Fighter {
     this.gunAngle = this.kaiokenAngle;
     this.angle = this.kaiokenAngle;
     this._playAudio('roar', cfg.sounds?.roar, 0.80);
+    this._playVoiceline('kaiokenVoiceline');
   }
 
   _updateKaioken(opponent, arena) {
@@ -991,6 +1013,7 @@ export class GokuFighter extends Fighter {
         if (typeof spawnAnimePunchImpactFrame === 'function') {
           spawnAnimePunchImpactFrame(opponent.x, opponent.y, 85, this.kaiokenAngle, 'crimson');
         }
+        this._pushDbzVfx({ type: 'impactArc', x: opponent.x, y: opponent.y, angle: this.kaiokenAngle, r: this.r * 1.25, life: 11, maxLife: 11 });
         this.isKaiokenActive = false;
         return;
       }
@@ -1011,7 +1034,8 @@ export class GokuFighter extends Fighter {
     this.kamehamehaAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
     this.gunAngle = this.kamehamehaAngle;
     this.angle = this.kamehamehaAngle;
-    this._playAudio('transform', cfg.sounds?.transform, 0.85);
+    this._playAudio('kamehamehaCharge', cfg.sounds?.kamehamehaCharge || cfg.sounds?.transform, cfg.soundVolumes?.kamehamehaCharge || 0.90);
+    this._playVoiceline('kamehamehaChargeVoiceline');
   }
 
   _updateKamehameha(opponent, arena) {
@@ -1035,6 +1059,7 @@ export class GokuFighter extends Fighter {
         this.kamehamehaTicksFired = 0;
         this.kamehamehaTickTimer = 0;
         this._playAudio('beamFire', cfg.sounds?.beamFire, cfg.soundVolumes?.beamFire || 1.10);
+        this._playVoiceline('kamehamehaFireVoiceline');
       }
       return;
     }
@@ -1087,7 +1112,16 @@ export class GokuFighter extends Fighter {
   }
 
   // ─── Helpers: Shockwaves, Afterimages & Sound ───
+  _pushDbzVfx(fx) {
+    if (!this._dbzTransientVfx) this._dbzTransientVfx = [];
+    if (this._dbzTransientVfx.length >= 24) this._dbzTransientVfx.shift();
+    this._dbzTransientVfx.push(fx);
+  }
+
   _spawnRadialShockwave(x, y, radius, color, damage = 0) {
+    if (damage > 0) {
+      this._pushDbzVfx({ type: 'explosion', x, y, r: radius, theme: color === '#FFD700' ? 'gold' : 'blue', life: 16, maxLife: 16 });
+    }
     this.activeVisualExplosions.push({
       x, y,
       maxRadius: radius,
@@ -1197,6 +1231,16 @@ export class GokuFighter extends Fighter {
     }
   }
 
+  _playVoiceline(key) {
+    const cfg = this._cfg;
+    const src = cfg.sounds?.[key];
+    if (!src) return;
+    const chance = cfg.soundChances?.[key];
+    if (chance !== undefined && Math.random() > chance) return;
+    const vol = cfg.soundVolumes?.[key] ?? 0.90;
+    this._playAudio(key, src, vol);
+  }
+
   // ─── Rendering Pipeline (Rule 21 & Upright Standard) ───
   drawBody(ctx) {
     drawGokuSkin(ctx, this);
@@ -1239,7 +1283,7 @@ export class GokuFighter extends Fighter {
       });
     }
 
-    // 4. Draw Kamehameha Beam
+    // 4. Draw Kamehameha Beam & Charge Flare
     if (this.isFiringKamehameha) {
       this._drawKamehamehaBeam(ctx);
     }
@@ -1249,8 +1293,35 @@ export class GokuFighter extends Fighter {
       this.activeKiBlasts.forEach(b => b.draw(ctx));
     }
 
+    // 5.5 Draw 16-bit Pixel-Art DBZ Ki Aura (behind body, matching CJ Baguvix aura clarity)
+    if (!this._isSilhouettePass) {
+      if (this.isKaiokenActive) {
+        drawDbzAura(ctx, this.x, this.y, this.r, 'crimson', 0.98);
+      } else if (this.isSuperSaiyan) {
+        drawDbzAura(ctx, this.x, this.y, this.r, 'gold', 0.98);
+      } else if (this.isChargingKamehameha) {
+        drawDbzAura(ctx, this.x, this.y, this.r, 'blue', 0.95);
+      }
+    }
+
     // 6. Draw Goku Procedural Body Model
     drawGokuSkin(ctx, this);
+
+    // 6.5 Draw Kamehameha Charge Flare at hands & Transient DBZ VFX
+    if (this.isChargingKamehameha && !this._isSilhouettePass) {
+      const chargeMax = this._cfg.kamehamehaChargeFrames || 60;
+      const progress = 1 - Math.max(0, this.kamehamehaChargeTimer) / chargeMax;
+      const fx = this.x + Math.cos(this.kamehamehaAngle) * (this.r + 10);
+      const fy = this.y + Math.sin(this.kamehamehaAngle) * (this.r + 10);
+      drawDbzChargeFlare(ctx, fx, fy, this.r, 'blue', progress);
+    } else if (this.isFiringKamehameha && !this._isSilhouettePass) {
+      const fx = this.x + Math.cos(this.kamehamehaAngle) * (this.r + 10);
+      const fy = this.y + Math.sin(this.kamehamehaAngle) * (this.r + 10);
+      drawDbzChargeFlare(ctx, fx, fy, this.r * 1.15, 'blue', 0.95);
+    }
+    if (!this._isSilhouettePass && this._dbzTransientVfx && this._dbzTransientVfx.length > 0) {
+      drawDbzTransientVfx(ctx, this._dbzTransientVfx);
+    }
 
     // 7. Rule 21 Mandatory Overhead HP & Freeze Indicators
     this.drawHealth(ctx);
@@ -1260,6 +1331,9 @@ export class GokuFighter extends Fighter {
   _drawKamehamehaBeam(ctx) {
     const beamWidth = this.isSuperSaiyan ? 110 : (this._cfg.kamehamehaBeamWidth || 85);
     const length = 550;
+    if (drawDbzBeam(ctx, this.x, this.y, this.kamehamehaAngle, length, beamWidth, 'blue')) {
+      return;
+    }
 
     ctx.save();
     ctx.translate(this.x, this.y);

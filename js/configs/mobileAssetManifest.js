@@ -3240,6 +3240,106 @@ export const MOBILE_ASSET_MANIFEST = {
     183,
     1
   ],
+  "Assets/effects/dbz/dbz-beam-blue.png": [
+    1344,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-beam-gold.png": [
+    1344,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-beam-violet.png": [
+    1344,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-blue-aura_frame_1.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-blue-aura_frame_2.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-blue-aura_frame_3.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-charge-flare-blue.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-charge-flare-gold.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-explosion-blue.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-explosion-gold.png": [
+    1024,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-impact-arc.png": [
+    640,
+    128,
+    1
+  ],
+  "Assets/effects/dbz/dbz-kaioken-aura_frame_1.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-kaioken-aura_frame_2.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-kaioken-aura_frame_3.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-ki-orb-cyan.png": [
+    768,
+    96,
+    1
+  ],
+  "Assets/effects/dbz/dbz-ki-orb-gold.png": [
+    768,
+    96,
+    1
+  ],
+  "Assets/effects/dbz/dbz-ssj-aura_frame_1.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-ssj-aura_frame_2.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-ssj-aura_frame_3.png": [
+    724,
+    724,
+    1
+  ],
+  "Assets/effects/dbz/dbz-z-vanish.png": [
+    768,
+    96,
+    1
+  ],
   "Assets/effects/Impact/explosion-b.png": [
     3072,
     256,

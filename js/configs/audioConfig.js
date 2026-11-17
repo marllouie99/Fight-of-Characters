@@ -483,7 +483,25 @@ export const AUDIO_CONFIG = {
   'vergil_doppelganger_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-doppelganger-voiceline.ogg',
   'vergil_rapid_slash_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-rapid-slash-voiceline.ogg',
   'vergil_sparda_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-sparda-voiceline.ogg',
-  'vergil_jce_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-jce-voiceline.ogg'
+  'vergil_jce_voiceline': 'Assets/Sound Effects/VergilSFX/vergil-jce-voiceline.ogg',
+
+  // Son Goku & Vegeta (Dragon Ball — Extracted Jump Force MUGEN Voicelines)
+  'goku_melee_voiceline1': 'Assets/Sound Effects/GokuSFX/goku-melee-voiceline1.ogg',
+  'goku_melee_voiceline2': 'Assets/Sound Effects/GokuSFX/goku-melee-voiceline2.ogg',
+  'goku_kiblast_voiceline': 'Assets/Sound Effects/GokuSFX/goku-kiblast-voiceline.ogg',
+  'goku_dragon_hammer_voiceline': 'Assets/Sound Effects/GokuSFX/goku-dragon-hammer-voiceline.ogg',
+  'goku_kaioken_voiceline': 'Assets/Sound Effects/GokuSFX/goku-kaioken-voiceline.ogg',
+  'goku_ssj_voiceline': 'Assets/Sound Effects/GokuSFX/goku-ssj-voiceline.ogg',
+  'goku_kamehameha_charge_voiceline': 'Assets/Sound Effects/GokuSFX/goku-kamehameha-charge-voiceline.ogg',
+  'goku_kamehameha_fire_voiceline': 'Assets/Sound Effects/GokuSFX/goku-kamehameha-fire-voiceline.ogg',
+  'vegeta_melee_voiceline1': 'Assets/Sound Effects/VegetaSFX/vegeta-melee-voiceline1.ogg',
+  'vegeta_melee_voiceline2': 'Assets/Sound Effects/VegetaSFX/vegeta-melee-voiceline2.ogg',
+  'vegeta_kiblast_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-kiblast-voiceline.ogg',
+  'vegeta_big_bang_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-big-bang-voiceline.ogg',
+  'vegeta_galick_gun_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-galick-gun-voiceline.ogg',
+  'vegeta_ssj_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-ssj-voiceline.ogg',
+  'vegeta_final_flash_charge_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-charge-voiceline.ogg',
+  'vegeta_final_flash_fire_voiceline': 'Assets/Sound Effects/VegetaSFX/vegeta-final-flash-fire-voiceline.ogg'
 };
 
 

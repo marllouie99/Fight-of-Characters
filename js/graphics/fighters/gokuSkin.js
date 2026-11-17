@@ -319,8 +319,9 @@ export function drawGokuSkin(ctx, fighter) {
   const isKiBarrage = Boolean(fighter.basicComboPhase === 3);
   const isFinisherSlam = Boolean(fighter.basicComboPhase === 2 && (fighter.meleeModeDurationTimer || 0) <= 0);
 
-  // Canonical Brawler Default Hand Placement along +X aim axis
+  // Canonical Brawler Lower-Torso Hand Placement along +X aim axis (Rule 20)
   const baseHandX = r * 0.88;
+  const baseHandY = r * 0.38;
   const idleBob = (!isPodiumPreview && !isPunching) ? Math.sin(Date.now() * 0.007) * (r * 0.05) : 0;
 
   // Single front hand brawler punch stance (matching GojoRenderer proven standard)
@@ -328,9 +329,9 @@ export function drawGokuSkin(ctx, fighter) {
   let hideBackHand = true; // Other hand completely removed/chambered during punches and neutral stance
 
   let frontHandX = baseHandX + idleBob;
-  let frontHandY = 0;
-  let backHandX = 0;
-  let backHandY = 0;
+  let frontHandY = baseHandY;
+  let backHandX = -r * 0.82;
+  let backHandY = baseHandY;
 
   const hideHands = (typeof state !== 'undefined' && state.showSkinOnly) || isPodiumPreview || fighter.hideHands;
   let easePunch = 0;
@@ -398,37 +399,37 @@ export function drawGokuSkin(ctx, fighter) {
       // Overhead Sledgehammer Finisher Slam: Both hands clasped together driving downward
       hideBackHand = false;
       frontHandX = baseHandX + currentLunge;
-      frontHandY = +r * 0.08 + dip;
+      frontHandY = baseHandY + r * 0.08 + dip;
       backHandX = baseHandX + currentLunge;
-      backHandY = -r * 0.08 + dip;
+      backHandY = baseHandY - r * 0.08 + dip;
     } else {
-      // Single front striking fist lunges forward (Gojo / brawler standard)
+      // Single front striking fist lunges forward (lowered to chest/torso guard height)
       hideBackHand = true;
       frontHandX = baseHandX + currentLunge;
-      frontHandY = dip;
+      frontHandY = baseHandY * 0.85 + dip;
     }
   } else if (isKiBarrage) {
-    // Phase 3: Ki Blast Barrage (Renzoku Ki Dān) — Dual floating palms thrust forward with vibration
+    // Phase 3: Ki Blast Barrage (Renzoku Ki Dān) — Dual floating palms thrust forward at torso height
     hideBackHand = false;
     const kiVibe = Math.sin((fighter.kiBarrageTimer || 0) * 1.8) * 3.0;
     frontHandX = r * 1.15 + kiVibe;
-    frontHandY = +r * 0.24;
+    frontHandY = r * 0.46;
     backHandX = r * 1.15 - kiVibe;
-    backHandY = -r * 0.24;
+    backHandY = r * 0.22;
   } else if (isChargingKamehameha) {
     // Cupped hands at right hip channeling blue Ki
     hideBackHand = false;
     frontHandX = -r * 0.35;
-    frontHandY = +r * 0.35;
+    frontHandY = +r * 0.48;
     backHandX = -r * 0.45;
-    backHandY = +r * 0.25;
+    backHandY = +r * 0.36;
   } else if (isFiringKamehameha) {
     // Both palms locked forward unleashing Super Kamehameha beam
     hideBackHand = false;
     frontHandX = r * 1.30;
-    frontHandY = +r * 0.14;
+    frontHandY = r * 0.42;
     backHandX = r * 1.30;
-    backHandY = -r * 0.14;
+    backHandY = r * 0.22;
   }
 
   // Draw Floating Pixel Fists (Zero stretching arm tubes — Gojo standard)

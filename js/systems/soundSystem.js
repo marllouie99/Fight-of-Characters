@@ -226,7 +226,9 @@ export function getVoicelinePriority(src) {
       s.includes('faah') || s.includes('chessboard_shutdown') || s.includes('tadakaimagination') ||
       s.includes('finalflash') || s.includes('cosmiclaser') || s.includes('universalannihilation') ||
       s.includes('aizen-kurohitsugi-voiceline') || s.includes('aizen-fragor-voiceline') ||
-      s.includes('vergil-jce-voiceline') || s.includes('vergil-rapid-slash-voiceline')) {
+      s.includes('vergil-jce-voiceline') || s.includes('vergil-rapid-slash-voiceline') ||
+      s.includes('goku-kamehameha-charge-voiceline') || s.includes('goku-kamehameha-fire-voiceline') ||
+      s.includes('vegeta-final-flash-charge-voiceline') || s.includes('vegeta-final-flash-fire-voiceline')) {
     return 3;
   }
 
@@ -241,7 +243,9 @@ export function getVoicelinePriority(src) {
       s.includes('chain-voiceline') || s.includes('aizen-hogyoku-voiceline') || s.includes('aizen-kyoka-voiceline') ||
       s.includes('vergil-sparda-voiceline') || s.includes('vergil-judgment-cut-voiceline') ||
       s.includes('vergil-barrage-voiceline') || s.includes('vergil-summon-swords-voiceline') ||
-      s.includes('vergil-doppelganger-voiceline') || s.includes('vergil-mirage-edge-voiceline')) {
+      s.includes('vergil-doppelganger-voiceline') || s.includes('vergil-mirage-edge-voiceline') ||
+      s.includes('goku-ssj-voiceline') || s.includes('goku-kaioken-voiceline') || s.includes('goku-dragon-hammer-voiceline') ||
+      s.includes('vegeta-ssj-voiceline') || s.includes('vegeta-big-bang-voiceline') || s.includes('vegeta-galick-gun-voiceline')) {
     return 2;
   }
 
@@ -272,7 +276,7 @@ export function getCharacterIdFromSound(src) {
     'sukuna', 'gojo', 'toji', 'denji', 'makima', 'ichigo', 'genos', 'cj', 'yuta',
     'todo', 'yuji', 'zenitsu', 'saitama', 'nanami', 'reze', 'shiro', 'mahito',
     'johnwick', 'guts', 'escanor', 'crazydave', 'uryu', 'chigiri', 'megumi',
-    'nobara', 'choso', 'maki', 'naoya', 'layla', 'ruby', 'spartan', 'knight', 'aizen', 'vergil'
+    'nobara', 'choso', 'maki', 'naoya', 'layla', 'ruby', 'spartan', 'knight', 'aizen', 'vergil', 'goku', 'vegeta'
   ];
 
   for (const c of KNOWN_CHARS) {

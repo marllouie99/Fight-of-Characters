@@ -151,7 +151,7 @@ export const vergilConfig = {
   rapidSlashDamage: 24,
   rapidSlashWindupFrames: 12,
   rapidSlashDashSpeed: 18.0,
-  rapidSlashDurationFrames: 16,
+  rapidSlashDurationFrames: 20,
   judgmentCutEndRadius: 215,
   judgmentCutEndFreezeFrames: 38,
   judgmentCutEndBarrageDamage: 24,
