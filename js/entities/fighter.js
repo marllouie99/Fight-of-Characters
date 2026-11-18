@@ -713,6 +713,12 @@ export class Fighter {
       d.characterId === 'error_sans' ||
       d.type === 'error_sans'
     );
+    const isLastBreathSans = Boolean(
+      this.characterId === 'last_breath_sans' ||
+      this.type === 'last_breath_sans' ||
+      d.characterId === 'last_breath_sans' ||
+      d.type === 'last_breath_sans'
+    );
 
     const isMakima = Boolean(
       this.characterId === 'makima' ||
@@ -733,6 +739,8 @@ export class Fighter {
       this.maxHp = (typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : (d.hp || 1);
     } else if (isErrorSans) {
       this.maxHp = (typeof CONFIG !== 'undefined' && CONFIG.error_sans?.hp !== undefined) ? CONFIG.error_sans.hp : (d.hp || 1);
+    } else if (isLastBreathSans) {
+      this.maxHp = (typeof CONFIG !== 'undefined' && CONFIG.last_breath_sans?.hp !== undefined) ? CONFIG.last_breath_sans.hp : (d.hp || 1);
     } else if (!isTurretOrMinion && (MODE_SETTINGS[state.mode]?.fixedHp || modeFixed)) {
       const baseFixed = MODE_SETTINGS[state.mode]?.fixedHp || modeFixed;
       this.maxHp = Math.round(baseFixed * hpRatio);

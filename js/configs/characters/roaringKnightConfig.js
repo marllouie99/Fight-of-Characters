@@ -16,7 +16,7 @@
 export const roaringKnightConfig = {
   id: 'roaring_knight',
   name: 'Roaring Knight',
-  displayName: 'Roaring Knight',
+  displayName: 'The KNIGHT',
   grade: 'S',
   category: 'Gaming',
   title: 'Herald of the Roaring',
@@ -283,12 +283,6 @@ export const roaringKnightConfig = {
     rotatingSlashLine: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_rotatingslash_line.wav',
     cutExplosion: 'Assets/Sound Effects/Attacks/explosion.mp3',
     parry: 'Assets/Sound Effects/Skills/parry.mp3',
-    attackVoice1: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurt.wav',
-    attackVoice2: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_hurtb.wav',
-    attackGrowl: 'Assets/Sound Effects/RoaringKnightSFX/snd_knight_puff.wav',
-    ultRoar: 'Assets/Sound Effects/RoaringKnightSFX/snd_knightroar.wav',
-    heartSplit: 'Assets/Sound Effects/Sans/HeartSplit.ogg',
-    heartShatter: 'Assets/Sound Effects/Sans/HeartShatter.ogg',
   },
   soundVolumes: {
     cut1: 0.90,
@@ -316,11 +310,5 @@ export const roaringKnightConfig = {
     rotatingSlashLine: 0.82,
     cutExplosion: 0.28,
     parry: 0.85,
-    attackVoice1: 0.42,
-    attackVoice2: 0.42,
-    attackGrowl: 0.50,
-    ultRoar: 0.92,
-    heartSplit: 0.90,
-    heartShatter: 0.95,
   },
 };

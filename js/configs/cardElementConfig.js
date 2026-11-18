@@ -181,6 +181,8 @@ const TYPE_ELEMENT_MAP = {
   kaizoknight: 'dark',
   error_sans: 'dark',
   errorsans: 'dark',
+  last_breath_sans: 'dark',
+  lastbreathsans: 'dark',
   jevil: 'dark',
 
   // Grass (Flora, Botanical & Nature)
@@ -192,6 +194,8 @@ const TYPE_ELEMENT_MAP = {
   layla: 'water',
   cronos: 'water',
   cronus: 'water',
+  carol: 'water',
+  carol_holiday: 'water',
 
   // Dragon / Colossal (Raid Bosses & Titans)
   ender_dragon: 'dragon',

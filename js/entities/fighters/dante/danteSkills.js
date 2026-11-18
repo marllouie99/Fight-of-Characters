@@ -7,34 +7,34 @@ import { isSkillEnabled } from '../../fighter.js';
 import { CONFIG } from '../../../core/config.js';
 import { state, spawnFloatingText, triggerGlobalScreenShake } from '../../../core/state.js';
 import { spawnSparks, spawnImpactFlash } from '../../../graphics/particles/sparkEffect.js';
+import { tryCastDanteSdtSkills } from './danteSdtSkills.js';
 
 // ─── Skill Launchers ──────────────────────────────────────────────────────────
 
 export function activateDanteDevilTrigger(fighter, opponent) {
   const cfg = CONFIG.dante || {};
   if (!isSkillEnabled(cfg.enableDevilTrigger, true)) return;
+  fighter.interruptAttacks?.(false);
+  fighter._gunVisualTimer = 0;
   if (opponent) fighter.aim(opponent);
 
+  const txFrames = Math.max(24, cfg.dtTransformFrames ?? 54);
   fighter.isDevilTrigger = true;
   fighter.devilTriggerTimer = cfg.devilTriggerDuration ?? 660;
   fighter.devilTriggerCooldown = cfg.devilTriggerCooldown ?? 1450;
   fighter._jackpotUsedThisDT = false;
+  fighter._dtTransformMaxTimer = txFrames;
+  fighter._dtTransformTimer = txFrames;
+  fighter._dtTransformBlastDone = false;
+  fighter._dtTornado = null;
+  fighter._syncWeaponSwitch?.(cfg);
 
   const mult = cfg.dtSpeedMultiplier ?? 1.32;
   fighter.speed = fighter.baseMoveSpeed * mult;
   fighter.moveSpeed = fighter.speed;
   fighter._playSfx('devilTrigger');
-  fighter._playSfx('dtTornado');
-  triggerGlobalScreenShake?.(12, 16);
+  triggerGlobalScreenShake?.(8, 10);
   spawnFloatingText(fighter.x, fighter.y - (fighter.r || 30) - 22, 'DEVIL TRIGGER!', '#EF4444');
-  fighter._spawnRipple(fighter.x, fighter.y, 130, '#EF4444');
-  fighter._dtTornado = {
-    x: fighter.x,
-    y: fighter.y,
-    radius: cfg.dtTornadoRadius ?? 128,
-    life: cfg.dtTornadoDuration ?? 96,
-    tick: 2,
-  };
 }
 
 export function startDanteJackpot(fighter, opponent) {
@@ -166,6 +166,9 @@ export function startDanteDrive(fighter, opponent) {
 // ─── AI Skill Selection & Committed Aim Channeling ────────────────────────────
 
 export function tryCastDanteSkills(fighter, opponent, cfg, dist) {
+  if (fighter.isDevilTrigger && tryCastDanteSdtSkills(fighter, opponent, cfg, dist)) {
+    return true;
+  }
   if (isSkillEnabled(cfg.enableDevilTrigger, true) && !fighter.isDevilTrigger && fighter.devilTriggerCooldown <= 0) {
     const hpRatio = fighter.hp / Math.max(1, fighter.maxHp);
     if (hpRatio <= (cfg.devilTriggerHpThreshold ?? 0.55) || Math.random() < 0.02) {
@@ -290,24 +293,66 @@ export function processDanteChanneling(fighter, opponent, cfg) {
 
 // ─── Active Projectile & Summon Updaters ──────────────────────────────────────
 
-function _updateBullets(fighter, hostiles, bounds) {
+function _detonateChargeShotSplash(fighter, b, primaryEnemy, hostiles, kb, hitStun, cfg) {
+  const splashR = b.splashRadius || (cfg.dtChargeShotSplashRadius ?? 46);
+  const splashDmg = Math.max(1, Math.round(b.damage * 0.55));
+  for (let h = 0; h < hostiles.length; h++) {
+    const other = hostiles[h];
+    if (!other || other === primaryEnemy) continue;
+    if (Math.hypot(other.x - b.x, other.y - b.y) > (other.r || 28) + splashR) continue;
+    const sAng = Math.atan2(other.y - b.y, other.x - b.x);
+    const { dealt } = fighter._dealBasicAttackDamage(other, splashDmg, {
+      angle: sAng,
+      isKnockback: true,
+      knockbackForce: kb * 0.65,
+      isProjectile: true,
+      isGun: true,
+      isChargeShot: true,
+      preRolledCrit: { damage: splashDmg, isCrit: Boolean(b.isCrit) },
+    });
+    if (dealt > 0 && hitStun > 0 && typeof other.applyHitStun === 'function') {
+      other.applyHitStun(hitStun);
+    }
+  }
+  fighter._playSfx?.('explosion', 0.48);
+  fighter._spawnRipple(b.x, b.y, b.isCrit ? 64 : 52, '#EF4444');
+  spawnSparks(b.x, b.y, b.isCrit ? 12 : 8, 'crimson', '#FBBF24');
+  triggerGlobalScreenShake?.(b.isCrit ? 5.0 : 3.4, 5);
+}
+
+function _updateBullets(fighter, hostiles, bounds, cfg) {
   for (let i = fighter._bullets.length - 1; i >= 0; i--) {
     const b = fighter._bullets[i];
     b.x += b.vx;
     b.y += b.vy;
     b.life--;
+    const hitPad = b.hitRadius ?? 8;
     let hit = false;
     for (let h = 0; h < hostiles.length; h++) {
       const enemy = hostiles[h];
-      if (Math.hypot(enemy.x - b.x, enemy.y - b.y) > (enemy.r || 28) + 8) continue;
-      fighter._dealBasicAttackDamage(enemy, b.damage, {
+      if (Math.hypot(enemy.x - b.x, enemy.y - b.y) > (enemy.r || 28) + hitPad) continue;
+      const isCharge = Boolean(b.isChargeShot);
+      const kb = isCharge
+        ? (b.knockback ?? (cfg.dtChargeShotKnockback ?? 8.5)) + (b.isCrit ? 2.0 : 0)
+        : (b.isCrit ? 5.5 : 3.5);
+      const hitStun = isCharge ? (b.hitStun ?? (cfg.dtChargeShotHitStun ?? 8)) : 0;
+      const { dealt } = fighter._dealBasicAttackDamage(enemy, b.damage, {
         angle: b.angle,
-        knockback: b.isCrit ? 5.5 : 3.5,
+        isKnockback: isCharge,
+        knockbackForce: kb,
         isProjectile: true,
         isGun: true,
+        isChargeShot: isCharge,
         preRolledCrit: { damage: b.damage, isCrit: Boolean(b.isCrit) },
       });
-      fighter._spawnVfx('explosion', b.x, b.y, b.angle, b.isCrit ? 48 : 38, b.isCrit ? 48 : 38, 10, b.isCrit ? 0.95 : 0.85);
+      if (dealt > 0 && isCharge && hitStun > 0 && typeof enemy.applyHitStun === 'function') {
+        enemy.applyHitStun(hitStun);
+      }
+      const boomSz = isCharge ? (b.isCrit ? 82 : 70) : (b.isCrit ? 48 : 38);
+      fighter._spawnVfx('explosion', b.x, b.y, b.angle, boomSz, boomSz, isCharge ? 14 : 10, b.isCrit || isCharge ? 0.96 : 0.85);
+      if (isCharge) {
+        _detonateChargeShotSplash(fighter, b, enemy, hostiles, kb, hitStun, cfg);
+      }
       hit = true;
       break;
     }
@@ -644,6 +689,53 @@ function _updateDtTornado(fighter, hostiles, cfg) {
 }
 
 /**
+ * Advances Dante's FINALSMASH2.webp Devil Form transformation (rune chest-pierce -> volcanic blast -> winged ascension).
+ */
+export function stepDanteTransformSequence(fighter, hostiles, cfg) {
+  if (!(fighter._dtTransformTimer > 0)) return false;
+  const maxT = Math.max(1, fighter._dtTransformMaxTimer || cfg.dtTransformFrames || 54);
+  fighter._dtTransformTimer--;
+  const p = 1 - Math.max(0, fighter._dtTransformTimer) / maxT;
+
+  if (fighter._highTimeHopTimer <= 0) {
+    fighter.z = Math.max(0, Math.sin(Math.min(1, p / 0.92) * Math.PI) * 24);
+  }
+  if (!(fighter._jackpotTimer > 0) && !(fighter._jackpotFireTimer > 0)) {
+    fighter.vx = (fighter.vx || 0) * 0.78;
+    fighter.vy = (fighter.vy || 0) * 0.78;
+  }
+
+  // Volcanic breakout dome explosion at F39 (~36% progress)
+  if (p >= 0.36 && !fighter._dtTransformBlastDone) {
+    fighter._dtTransformBlastDone = true;
+    fighter._playSfx('explosion');
+    fighter._playSfx('heavyBlast', 0.85);
+    triggerGlobalScreenShake?.(12, 16);
+    fighter._spawnRipple(fighter.x, fighter.y, 136, '#EF4444');
+    spawnSparks(fighter.x, fighter.y, 24, 'crimson', '#FBBF24');
+    spawnImpactFlash(fighter.x, fighter.y, 46, '#EF4444');
+
+    const burstR = cfg.dtTransformBurstRadius ?? 135;
+    const burstDmg = cfg.dtTransformBurstDamage ?? 16;
+    const burstKb = cfg.dtTransformBurstKnockback ?? 14.0;
+    for (const enemy of hostiles) {
+      const dx = enemy.x - fighter.x;
+      const dy = enemy.y - fighter.y;
+      if (Math.hypot(dx, dy) > burstR + (enemy.r || 28)) continue;
+      const kbAng = (dx !== 0 || dy !== 0) ? Math.atan2(dy, dx) : (fighter.gunAngle || 0);
+      const dealt = fighter._dealDamage(enemy, burstDmg, { angle: kbAng, isKnockback: true, knockbackForce: burstKb, guardBreak: true });
+      if (dealt > 0 && typeof enemy.applyHitStun === 'function') enemy.applyHitStun(14);
+    }
+  }
+
+  if (fighter._dtTransformTimer <= 0) {
+    fighter._dtTransformTimer = 0;
+    if (fighter._highTimeHopTimer <= 0) fighter.z = 0;
+  }
+  return true;
+}
+
+/**
  * Updates all Dante projectiles, summons, and active hazards before freeze checks (Rule 25).
  */
 export function updateDanteProjectilesAndSummons(fighter, opponent, arena) {
@@ -651,7 +743,7 @@ export function updateDanteProjectilesAndSummons(fighter, opponent, arena) {
   const hostiles = fighter._getHostileTargets(opponent);
   const bounds = arena || state.arena || { x: 45, y: 240, width: 450, height: 450 };
 
-  _updateBullets(fighter, hostiles, bounds);
+  _updateBullets(fighter, hostiles, bounds, cfg);
   _updateRoundTrip(fighter, hostiles, bounds, cfg);
   _updateDriveWaves(fighter, hostiles, bounds, cfg);
   _updateRockets(fighter, hostiles, bounds, cfg);

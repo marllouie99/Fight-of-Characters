@@ -2833,6 +2833,10 @@ export function getFighterWeaponInfo(def) {
       return { name: 'NYOI STAFF & MYTHICAL BEAST AMBER', category: 'ELECTRIFIED CURSED ENERGY // GOD OF LIGHTNING', desc: 'Ancient sorcerer stacking Static Charges for guaranteed Sure-Hit Lightning Discharges, Violence Rampage Counter, piercing Railgun beams, and guard-breaking Mythical Beast Amber.' };
     case 'dante':
       return { name: 'REBELLION, EBONY & IVORY & KALINA ANN', category: 'DEVIL ARSENAL // SON OF SPARDA', desc: 'Legendary Devil Hunter chaining Rebellion cleaves, Ebony & Ivory bursts, spinning Round Trip blades, piercing Drive waves, Doppelganger clones, Kalina Ann rockets, and Devil Trigger Jackpot!' };
+    case 'last_breath_sans':
+      return { name: 'CRACKED BLASTERS & VOID GASTER HANDS', category: 'SIGNATURE // AN ENIGMATIC ENCOUNTER', desc: 'Undertale: Last Breath Sans scaling across 3 Phases! Defies lethal blows to awaken Phase 3, summoning Void Gaster Hand turrets, Blue/Orange Color Bones, and Enigmatic Encounter!' };
+    case 'carol':
+      return { name: 'GLACIAL KATANA & PERMAFROST', category: 'FROST IAIJUTSU // RESOLVE', desc: 'Mayor Carol Holiday wielding a Glacial Katana with 5-phase Iaijutsu combos, Frostbite Flash Freeze stacks, Dagger Hailstorm, Frost Gale Snowflakes, Ice Split Slashes, and Permafrost!' };
     case 'dummy':
       return { name: 'BALLISTIC TARGET CHASSIS', category: 'TRAINING // SANDBOX', desc: 'Reinforced training frame designed for testing weapon DPS and combos.' };
     default:

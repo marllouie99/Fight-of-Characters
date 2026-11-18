@@ -478,7 +478,7 @@ export function getAudioContext() {
                               (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));
     if (AudioContextClass) {
       try {
-        _sharedAudioCtx = new AudioContextClass({ latencyHint: 'interactive' });
+        _sharedAudioCtx = new AudioContextClass({ latencyHint: 'playback' });
       } catch (e) {
         try {
           _sharedAudioCtx = new AudioContextClass();
@@ -577,12 +577,12 @@ function getMasterAudioDestination() {
   if (!_masterLimiterNode) {
     try {
       _masterLimiterNode = audioCtx.createDynamicsCompressor();
-      // Relaxed limiter settings to prevent pumping artifacts while still clamping peaks
-      _masterLimiterNode.threshold.setValueAtTime(-6.0, audioCtx.currentTime);
-      _masterLimiterNode.knee.setValueAtTime(12.0, audioCtx.currentTime);
-      _masterLimiterNode.ratio.setValueAtTime(12.0, audioCtx.currentTime);
-      _masterLimiterNode.attack.setValueAtTime(0.003, audioCtx.currentTime);
-      _masterLimiterNode.release.setValueAtTime(0.15, audioCtx.currentTime);
+      // Gentle peak limiter settings to clamp clipping without audible compressor pumping/stuttering
+      _masterLimiterNode.threshold.setValueAtTime(-3.0, audioCtx.currentTime);
+      _masterLimiterNode.knee.setValueAtTime(16.0, audioCtx.currentTime);
+      _masterLimiterNode.ratio.setValueAtTime(6.0, audioCtx.currentTime);
+      _masterLimiterNode.attack.setValueAtTime(0.005, audioCtx.currentTime);
+      _masterLimiterNode.release.setValueAtTime(0.12, audioCtx.currentTime);
       _masterLimiterNode.connect(_masterGainNode || audioCtx.destination);
     } catch (e) {
       _masterLimiterNode = null;
@@ -811,6 +811,7 @@ export async function preloadAudioBufferBatch(urls, options = {}) {
       if (idx >= totalCount) break;
 
       const url = uniqueUrls[idx];
+      const wasCached = _cache.has(url) || Boolean(soundSpriteManager.getSpriteAudio(url)?.buffer);
       let success = true;
       try {
         await preloadAudioBuffer(url, options);
@@ -826,8 +827,8 @@ export async function preloadAudioBufferBatch(urls, options = {}) {
         } catch (e) {}
       }
 
-      // Periodically yield to browser event loop to prevent micro-stutter
-      if (completedCount % 4 === 0) {
+      // Periodically yield to browser event loop to prevent micro-stutter (skip when already cached)
+      if (!wasCached && completedCount % 4 === 0) {
         await new Promise(r => {
           if (isIdle && typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
             window.requestIdleCallback(() => setTimeout(r, 4), { timeout: 60 });
@@ -993,8 +994,12 @@ export function playLoopingSound(key, src, volume = 1.0, speed = 1.0, fadeMs = 0
     const interval = setInterval(() => {
       step++;
       audio.volume = Math.min(targetVol, targetVol * (step / steps));
-      if (step >= steps) clearInterval(interval);
+      if (step >= steps) {
+        clearInterval(interval);
+        if (audio._fadeInterval === interval) audio._fadeInterval = null;
+      }
     }, stepDelay);
+    audio._fadeInterval = interval;
   } else {
     audio.volume = targetVol;
     audio.play().catch(() => {});
@@ -1044,13 +1049,15 @@ export function fadeOutLoopingSound(key, fadeMs = 300) {
       gainNode.gain.cancelScheduledValues(now);
       gainNode.gain.setValueAtTime(currentGain, now);
       gainNode.gain.linearRampToValueAtTime(0.001, now + (fadeMs / 1000));
-      setTimeout(() => {
+      const stopTimer = setTimeout(() => {
+        _pendingSoundTimeouts.delete(stopTimer);
         try { source.stop(); } catch (e) {}
         try { gainNode.disconnect(); } catch (e) {}
         if (_loopingSounds.get(key) === soundObj) {
           _loopingSounds.delete(key);
         }
       }, fadeMs + 30);
+      _pendingSoundTimeouts.add(stopTimer);
     } catch (e) {
       try { source.stop(); } catch (e2) {}
       try { gainNode.disconnect(); } catch (e2) {}
@@ -1063,6 +1070,10 @@ export function fadeOutLoopingSound(key, fadeMs = 300) {
 
   // Handle HTML Audio elements
   const audio = soundObj;
+  if (audio._fadeInterval) {
+    clearInterval(audio._fadeInterval);
+    audio._fadeInterval = null;
+  }
   if (audio.paused || audio.ended) {
     if (_loopingSounds.get(key) === soundObj) {
       _loopingSounds.delete(key);
@@ -1078,6 +1089,7 @@ export function fadeOutLoopingSound(key, fadeMs = 300) {
     audio.volume = Math.max(0, startVol * (1 - step / steps));
     if (step >= steps) {
       clearInterval(interval);
+      if (audio._fadeInterval === interval) audio._fadeInterval = null;
       audio.pause();
       audio.currentTime = 0;
       audio.loop = false;
@@ -1086,6 +1098,7 @@ export function fadeOutLoopingSound(key, fadeMs = 300) {
       }
     }
   }, stepDelay);
+  audio._fadeInterval = interval;
 }
 
 /**
@@ -1104,10 +1117,12 @@ export function stopLoopingSound(key) {
       soundObj.gainNode.gain.cancelScheduledValues(now);
       soundObj.gainNode.gain.setValueAtTime(soundObj.gainNode.gain.value, now);
       soundObj.gainNode.gain.linearRampToValueAtTime(0.001, now + MICRO_FADE_OUT);
-      setTimeout(() => {
+      const stopTimer = setTimeout(() => {
+        _pendingSoundTimeouts.delete(stopTimer);
         try { soundObj.source.stop(); } catch (e) {}
         try { soundObj.gainNode.disconnect(); } catch (e) {}
       }, MICRO_FADE_OUT * 1000 + 5);
+      _pendingSoundTimeouts.add(stopTimer);
     } catch (e) {
       try { soundObj.source.stop(); } catch (e2) {}
       try { soundObj.gainNode.disconnect(); } catch (e2) {}
@@ -1118,6 +1133,10 @@ export function stopLoopingSound(key) {
 
   // Handle HTML Audio elements
   const audio = soundObj;
+  if (audio._fadeInterval) {
+    clearInterval(audio._fadeInterval);
+    audio._fadeInterval = null;
+  }
   audio.pause();
   audio.currentTime = 0;
   audio.loop = false;
@@ -1461,7 +1480,10 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
     srcLower.includes('illusion') || srcLower.includes('hit') || srcLower.includes('punch') ||
     srcLower.includes('smash') || srcLower.includes('parry') || srcLower.includes('clash') ||
     srcLower.includes('bump') || srcLower.includes('impact') || srcLower.includes('block') ||
-    srcLower.includes('slap') || srcLower.includes('chainsaw') || srcLower.includes('cleave');
+    srcLower.includes('slap') || srcLower.includes('chainsaw') || srcLower.includes('cleave') ||
+    srcLower.includes('cut') || srcLower.includes('beam') || srcLower.includes('laser') ||
+    srcLower.includes('pulse') || srcLower.includes('explosion') || srcLower.includes('hurt') ||
+    srcLower.includes('knight_') || srcLower.includes('teleport');
   const isUltimate = isUltimateVoiceline(resolvedSrc);
   const minInterval = isUltimate ? 0 : (isCombatSound ? SAME_COMBAT_SFX_COOLDOWN_MS : SOUND_THROTTLE_MS);
 
@@ -1509,16 +1531,21 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
       const startTime = audioCtx.currentTime + delaySec;
 
       const targetDest = getMasterAudioDestination();
+      const offsetSec = Math.max(0, spriteBaseOffset + offset);
 
-      // Instant zero-delay attack at startTime
-      gainNode.gain.setValueAtTime(targetGain, startTime);
+      // Apply 2ms micro fade-in when starting mid-waveform (offsetSec > 0) to prevent DC click/pop
+      if (offsetSec > 0) {
+        gainNode.gain.setValueAtTime(0.001, startTime);
+        gainNode.gain.linearRampToValueAtTime(targetGain, startTime + MICRO_FADE_IN);
+      } else {
+        gainNode.gain.setValueAtTime(targetGain, startTime);
+      }
       source.connect(gainNode);
       gainNode.connect(targetDest);
 
       const safeSpeed = Math.max(0.1, speed);
       source.playbackRate.value = safeSpeed;
 
-      const offsetSec = Math.max(0, spriteBaseOffset + offset);
       const remainingDuration = isSprite ? Math.max(0, spriteMaxDuration - offset) : Math.max(0, cached.duration - offsetSec);
       const duration = Math.max(0, remainingDuration / safeSpeed);
       const endTime = startTime + duration;
@@ -1675,6 +1702,10 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
   const cleanup = () => {
     if (cleanedUp) return;
     cleanedUp = true;
+    if (clone._fadeInterval) {
+      clearInterval(clone._fadeInterval);
+      clone._fadeInterval = null;
+    }
     _activeSounds.delete(clone);
     _activeSoundHandles.delete(handle);
     if (isVoice && charId && _activeCharacterVoiceHandles.get(charId)?.handle === handle) {
@@ -1686,7 +1717,7 @@ export function playSound(src, volume = 1.0, speed = 1.0, offset = 0, delay = 0,
     if (_audioPool.length < MAX_POOL_SIZE && !_audioPool.includes(clone)) {
       _audioPool.push(clone);
     }
-    if (typeof onEnded === 'function') {
+    if (typeof onEnded === 'function' && !handle._stopped) {
       onEnded();
     }
   };
@@ -1721,6 +1752,22 @@ export function stopSound(soundHandle, force = false) {
     clearTimeout(soundHandle.safetyTimeout);
     _pendingSoundTimeouts.delete(soundHandle.safetyTimeout);
   }
+  if (soundHandle._fadeStopTimeout) {
+    clearTimeout(soundHandle._fadeStopTimeout);
+    _pendingSoundTimeouts.delete(soundHandle._fadeStopTimeout);
+    soundHandle._fadeStopTimeout = null;
+  }
+  if (soundHandle._fadeInterval) {
+    clearInterval(soundHandle._fadeInterval);
+    soundHandle._fadeInterval = null;
+  }
+  if (soundHandle.audio && soundHandle.audio._fadeInterval) {
+    clearInterval(soundHandle.audio._fadeInterval);
+    soundHandle.audio._fadeInterval = null;
+  }
+  if (soundHandle.source) {
+    try { soundHandle.source.onended = null; } catch (e) {}
+  }
   try {
     // Web Audio: micro-fade-out then disconnect to prevent click/pop
     if (soundHandle.gainNode && typeof soundHandle.gainNode.gain === 'object') {
@@ -1742,11 +1789,15 @@ export function stopSound(soundHandle, force = false) {
         soundHandle.gainNode.gain.cancelScheduledValues(now);
         soundHandle.gainNode.gain.setValueAtTime(soundHandle.gainNode.gain.value, now);
         soundHandle.gainNode.gain.linearRampToValueAtTime(0.001, now + MICRO_FADE_OUT);
-        setTimeout(() => {
+        const fadeTimer = setTimeout(() => {
+          _pendingSoundTimeouts.delete(fadeTimer);
+          soundHandle._fadeStopTimeout = null;
           try { if (soundHandle.source) soundHandle.source.stop(0); } catch(e) {}
           try { if (soundHandle.source) soundHandle.source.disconnect(); } catch(e) {}
           try { soundHandle.gainNode.disconnect(); } catch(e) {}
         }, MICRO_FADE_OUT * 1000 + 5);
+        soundHandle._fadeStopTimeout = fadeTimer;
+        _pendingSoundTimeouts.add(fadeTimer);
       } catch(e) {
         try { if (soundHandle.source) soundHandle.source.stop(0); } catch(e2) {}
         try { if (soundHandle.source) soundHandle.source.disconnect(); } catch(e2) {}
@@ -1807,12 +1858,16 @@ export function fadeOutSound(soundHandle, fadeMs = 350, force = false) {
       soundHandle.gainNode.gain.cancelScheduledValues(now);
       soundHandle.gainNode.gain.setValueAtTime(currentGain, now);
       soundHandle.gainNode.gain.linearRampToValueAtTime(0.001, now + (fadeMs / 1000));
-      setTimeout(() => {
-        try { if (soundHandle.source) soundHandle.source.stop(0); } catch(e) {}
+      const fadeTimer = setTimeout(() => {
+        _pendingSoundTimeouts.delete(fadeTimer);
+        soundHandle._fadeStopTimeout = null;
+        try { if (soundHandle.source) { soundHandle.source.onended = null; soundHandle.source.stop(0); } } catch(e) {}
         try { if (soundHandle.source) soundHandle.source.disconnect(); } catch(e) {}
         try { soundHandle.gainNode.disconnect(); } catch(e) {}
         _activeSoundHandles.delete(soundHandle);
       }, fadeMs + 20);
+      soundHandle._fadeStopTimeout = fadeTimer;
+      _pendingSoundTimeouts.add(fadeTimer);
       return;
     } catch(e) {}
   }
@@ -1820,6 +1875,10 @@ export function fadeOutSound(soundHandle, fadeMs = 350, force = false) {
   // HTML5 Audio element instance
   const audio = soundHandle.audio || (typeof soundHandle.pause === 'function' ? soundHandle : null);
   if (audio && !audio.paused && !audio.ended) {
+    if (audio._fadeInterval) {
+      clearInterval(audio._fadeInterval);
+      audio._fadeInterval = null;
+    }
     const startVol = audio.volume;
     const steps = 15;
     const stepDelay = Math.max(10, fadeMs / steps);
@@ -1830,9 +1889,11 @@ export function fadeOutSound(soundHandle, fadeMs = 350, force = false) {
       audio.volume = Math.max(0, startVol * (1 - progress));
       if (step >= steps) {
         clearInterval(interval);
+        if (audio._fadeInterval === interval) audio._fadeInterval = null;
         stopSound(soundHandle);
       }
     }, stepDelay);
+    audio._fadeInterval = interval;
     return;
   }
 
@@ -1860,6 +1921,10 @@ export function fadeInSound(src, targetVolume = 1.0, fadeMs = 1500) {
   } else {
     const audio = handle.audio || (typeof handle.pause === 'function' ? handle : null);
     if (audio) {
+      if (audio._fadeInterval) {
+        clearInterval(audio._fadeInterval);
+        audio._fadeInterval = null;
+      }
       audio.volume = 0.001;
       const steps = 20;
       const stepDelay = Math.max(10, fadeMs / steps);
@@ -1867,8 +1932,12 @@ export function fadeInSound(src, targetVolume = 1.0, fadeMs = 1500) {
       const interval = setInterval(() => {
         step++;
         audio.volume = Math.min(targetVolume, targetVolume * (step / steps));
-        if (step >= steps) clearInterval(interval);
+        if (step >= steps) {
+          clearInterval(interval);
+          if (audio._fadeInterval === interval) audio._fadeInterval = null;
+        }
       }, stepDelay);
+      audio._fadeInterval = interval;
     }
   }
   return handle;
@@ -2042,40 +2111,50 @@ export function stopAllSounds(keepAnnouncer = true, fadeDelayMs = 2000, fadeDura
   }
 
   // 3. Stop any fallback HTML Audio elements
-  _activeSounds.forEach((audio) => {
-    if (audio) {
-      const src = String(audio.src || '').toLowerCase();
-      const isRespect = src.includes('respect') || src.includes('cj-respectoverlay-bgmusic');
-      if (!forceStopAll && isRespect) {
-        return; // CJ Respect music ALWAYS plays until it ends naturally!
-      }
-      if (!forceStopAll && isTodoTakadaWinnerSong(src)) {
-        return; // Todo Takada BG music ALWAYS plays until ultimate duration expires!
-      }
-      const isAnnouncer = isAnnouncerSound(audio.src);
-      const isWinnerChampion = src.includes('champion') && (typeof state !== 'undefined' && (state.gameState === 'roundEnd' || state.gameState === 'matchEnd'));
-      if (keepAnnouncer && (isAnnouncer || isWinnerChampion)) {
-        if (audio.isFinisher && audio.fighter && (audio.fighter.isDead || audio.fighter.dead || audio.fighter.hp <= 0)) {
-          // Fall through to stop
-        } else {
-          return;
-        }
-      }
-      if (fadeDelayMs > 0) {
-        const timerId = setTimeout(() => {
-          _pendingSoundTimeouts.delete(timerId);
-          try { audio.pause(); } catch(e) {}
-          audio.currentTime = 0;
-          audio.src = '';
-        }, fadeDelayMs);
-        _pendingSoundTimeouts.add(timerId);
+  for (const audio of Array.from(_activeSounds)) {
+    if (!audio) {
+      _activeSounds.delete(audio);
+      continue;
+    }
+    const src = String(audio.src || '').toLowerCase();
+    const isRespect = src.includes('respect') || src.includes('cj-respectoverlay-bgmusic');
+    if (!forceStopAll && isRespect) {
+      continue; // CJ Respect music ALWAYS plays until it ends naturally!
+    }
+    if (!forceStopAll && isTodoTakadaWinnerSong(src)) {
+      continue; // Todo Takada BG music ALWAYS plays until ultimate duration expires!
+    }
+    const isAnnouncer = isAnnouncerSound(audio.src);
+    const isWinnerChampion = src.includes('champion') && (typeof state !== 'undefined' && (state.gameState === 'roundEnd' || state.gameState === 'matchEnd'));
+    if (keepAnnouncer && (isAnnouncer || isWinnerChampion)) {
+      if (audio.isFinisher && audio.fighter && (audio.fighter.isDead || audio.fighter.dead || audio.fighter.hp <= 0)) {
+        // Fall through to stop
       } else {
-        try { audio.pause(); } catch(e) {}
-        audio.currentTime = 0;
-        audio.src = '';
+        continue;
       }
     }
-  });
+    if (fadeDelayMs > 0) {
+      const timerId = setTimeout(() => {
+        _pendingSoundTimeouts.delete(timerId);
+        if (audio._fadeInterval) {
+          clearInterval(audio._fadeInterval);
+          audio._fadeInterval = null;
+        }
+        try { audio.pause(); } catch(e) {}
+        audio.currentTime = 0;
+        _activeSounds.delete(audio);
+      }, fadeDelayMs);
+      _pendingSoundTimeouts.add(timerId);
+    } else {
+      if (audio._fadeInterval) {
+        clearInterval(audio._fadeInterval);
+        audio._fadeInterval = null;
+      }
+      try { audio.pause(); } catch(e) {}
+      audio.currentTime = 0;
+      _activeSounds.delete(audio);
+    }
+  }
 }
 
 /**

@@ -1491,6 +1491,24 @@ export const BASIC_ATTACK_SOUNDS_BY_TYPE = {
       return CONFIG.dante?.soundVolumes?.swordSlash ?? 0.85;
     },
     delay: 0,
+  },
+  'last_breath_sans': {
+    get src() {
+      return CONFIG.last_breath_sans?.sounds?.boneStab || 'Assets/Sound Effects/Sans/BoneStab.ogg';
+    },
+    get volume() {
+      return CONFIG.last_breath_sans?.soundVolumes?.boneStab ?? 0.80;
+    },
+    delay: 0,
+  },
+  'carol': {
+    get src() {
+      return CONFIG.carol?.sounds?.slice || 'Assets/Sound Effects/CarolSFX/carol_slice.mp3';
+    },
+    get volume() {
+      return CONFIG.carol?.soundVolumes?.slice ?? 0.78;
+    },
+    delay: 0,
   }
 };
 

@@ -79,6 +79,8 @@ import { wardenConfig } from '../configs/characters/wardenConfig.js';
 import { roaringKnightConfig } from '../configs/characters/roaringKnightConfig.js';
 import { kaizoKnightConfig } from '../configs/characters/kaizoKnightConfig.js';
 import { errorSansConfig } from '../configs/characters/errorSansConfig.js';
+import { lastBreathSansConfig } from '../configs/characters/lastBreathSansConfig.js';
+import { carolConfig } from '../configs/characters/carolConfig.js';
 import { jevilConfig } from '../configs/characters/jevilConfig.js';
 import { aizenConfig } from '../configs/characters/aizenConfig.js';
 import { vergilConfig } from '../configs/characters/vergilConfig.js';
@@ -134,6 +136,14 @@ export const CONFIG = {
   errorsans: errorSansConfig,
   ErrorSans: errorSansConfig,
   ERROR_SANS: errorSansConfig,
+  last_breath_sans: lastBreathSansConfig,
+  lastbreathsans: lastBreathSansConfig,
+  LastBreathSans: lastBreathSansConfig,
+  LAST_BREATH_SANS: lastBreathSansConfig,
+  carol: carolConfig,
+  Carol: carolConfig,
+  CAROL: carolConfig,
+  carol_holiday: carolConfig,
   jevil: jevilConfig,
   Jevil: jevilConfig,
   JEVIL: jevilConfig,
@@ -2335,6 +2345,56 @@ export const FIGHTER_DEFS = [
     projectileSpeedMultiplier: danteConfig.projectileSpeedMultiplier || 1.0,
     ability: danteConfig.ability || 'Rebellion & Ebony/Ivory, Round Trip, Drive, Doppelganger, Kalina Ann & Devil Trigger Jackpot!',
     desc: danteConfig.desc,
+  },
+  {
+    id: 81,
+    name: lastBreathSansConfig.name || 'Last Breath Sans',
+    grade: lastBreathSansConfig.grade ?? DEFAULT_GRADE,
+    displayName: lastBreathSansConfig.displayName || lastBreathSansConfig.name || 'LAST BREATH SANS',
+    category: lastBreathSansConfig.category || 'Gaming',
+    color: lastBreathSansConfig.color || '#EF4444',
+    themeColor: lastBreathSansConfig.themeColor || '#EF4444',
+    secondaryColor: lastBreathSansConfig.secondaryColor || '#00E5FF',
+    startX: lastBreathSansConfig.startX || 300,
+    startY: lastBreathSansConfig.startY || 250,
+    startVx: lastBreathSansConfig.startVx || 1.2,
+    startVy: lastBreathSansConfig.startVy || 1.1,
+    radius: lastBreathSansConfig.radius || lastBreathSansConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'last_breath_sans',
+    hp: lastBreathSansConfig.hp !== undefined ? lastBreathSansConfig.hp : 1,
+    damage: lastBreathSansConfig.basicBoneDamage || 11,
+    cooldown: lastBreathSansConfig.basicAttackCooldown || 52,
+    moveSpeed: lastBreathSansConfig.moveSpeed || lastBreathSansConfig.speed || 5.7,
+    projectileSpeedMultiplier: 1.0,
+    ability: lastBreathSansConfig.ability || '3-Phase Awakening, Gaster Hand Turrets, Color Bones & Enigmatic Encounter',
+    desc: lastBreathSansConfig.desc,
+  },
+  {
+    id: 82,
+    name: carolConfig.name || 'Carol',
+    grade: carolConfig.grade ?? DEFAULT_GRADE,
+    displayName: carolConfig.displayName || carolConfig.name || 'CAROL HOLIDAY',
+    category: carolConfig.category || 'Gaming',
+    color: carolConfig.color || '#38BDF8',
+    themeColor: carolConfig.themeColor || '#38BDF8',
+    secondaryColor: carolConfig.secondaryColor || '#BAE6FD',
+    startX: carolConfig.startX || 300,
+    startY: carolConfig.startY || 250,
+    startVx: carolConfig.startVx || 1.2,
+    startVy: carolConfig.startVy || 1.1,
+    radius: carolConfig.radius || carolConfig.r || 25,
+    aimbot: false,
+    spinRate: 0,
+    type: 'carol',
+    hp: carolConfig.hp || 360,
+    damage: carolConfig.hit1Damage || 18,
+    cooldown: carolConfig.swordCooldown || 34,
+    moveSpeed: carolConfig.moveSpeed || carolConfig.speed || 5.9,
+    projectileSpeedMultiplier: 1.0,
+    ability: carolConfig.ability || 'Frost Katana Iaijutsu, Dagger Hailstorm, Frost Gale, Ice Split & Permafrost',
+    desc: carolConfig.desc,
   }
 ];
 

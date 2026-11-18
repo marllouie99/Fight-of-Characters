@@ -336,7 +336,9 @@ class SoundSpriteManager {
           const AudioContextClass = (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) ||
                                     (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));
           if (AudioContextClass) {
-            try { audioCtx = new AudioContextClass(); } catch (e) {}
+            try { audioCtx = new AudioContextClass({ latencyHint: 'balanced' }); } catch (e) {
+              try { audioCtx = new AudioContextClass(); } catch (e2) {}
+            }
           }
         }
         if (!audioCtx) return null;

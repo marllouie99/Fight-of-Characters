@@ -1,7 +1,7 @@
 /**
  * CIRCLE MINI-BATTLE — MASTER WEAPON CUSTOMIZATIONS DATABASE
  * =============================================================================
- * Generated from Weapon Studio on 2026-11-17T14:15:07.333Z
+ * Generated from Weapon Studio on 2026-11-18T08:43:57.498Z
  * =============================================================================
  */
 
@@ -102,6 +102,8 @@ export const WEAPON_CUSTOMIZATIONS_DATABASE = {
   roaring_knight: { offsetX: -4, offsetY: 0, scale: 1.40, widthScale: 1.00, lengthScale: 1.15, angleOffset: 0.05 },
   kaizo_knight: { offsetX: -4, offsetY: 0, scale: 1.40, widthScale: 1.00, lengthScale: 1.15, angleOffset: 0.05 },
   error_sans: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
+  last_breath_sans: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
+  carol: { offsetX: 1, offsetY: 0, scale: 1.90, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0.0349 },
   jevil: { offsetX: 0, offsetY: 0, scale: 1.15, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },
   vergil: { offsetX: 4, offsetY: 0, scale: 1.25, widthScale: 1.05, lengthScale: 1.05, angleOffset: 0.05 },
   kashimo: { offsetX: 0, offsetY: 0, scale: 1.00, widthScale: 1.00, lengthScale: 1.00, angleOffset: 0 },

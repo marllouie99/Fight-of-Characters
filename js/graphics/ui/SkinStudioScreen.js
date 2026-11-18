@@ -75,6 +75,8 @@ import { drawWardenSkin, _drawWardenHair, _getWardenHairImage } from '../fighter
 import { drawRoaringKnightSkin, _drawRoaringKnightHair, _getRoaringKnightHairImage } from '../fighters/roaringKnightSkin.js';
 import { drawKaizoKnightSkin, _drawKaizoKnightHair, _getKaizoKnightHairImage } from '../fighters/kaizoKnightSkin.js';
 import { drawErrorSansSkin, _drawErrorSansHair, _getErrorSansHairImage } from '../fighters/errorSansSkin.js';
+import { drawLastBreathSansSkin, _drawLastBreathSansHair, _getLastBreathSansHairImage } from '../fighters/lastBreathSansSkin.js';
+import { drawCarolSkin, _drawCarolHair, _getCarolHairImage } from '../fighters/carolSkin.js';
 import { drawJevilSkin, _drawJevilHair, _getJevilHairImage } from '../fighters/jevilSkin.js';
 import { drawGokuSkin, _drawGokuHair, _getGokuHairImage, _getGokuSuperSaiyanHairImage } from '../fighters/gokuSkin.js';
 import { drawVegetaSkin, _drawVegetaHair, _getVegetaHairImage, _getVegetaSuperSaiyanHairImage } from '../fighters/vegetaSkin.js';
@@ -163,7 +165,7 @@ export const SKIN_STUDIO_CATEGORIES = [
   { id: 'SLAYER', label: 'SLAYER', filter: (f) => ['tanjiro', 'zenitsu', 'nezuko', 'inosuke'].includes(f.key) },
   { id: 'BERSERK', label: 'BERSERK', filter: (f) => f.key === 'guts' },
   { id: 'BLUELOCK', label: 'BLUE LOCK', filter: (f) => ['isagi', 'chigiri'].includes(f.key) },
-  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'roaring_knight', 'kaizo_knight', 'error_sans', 'jevil', 'goku', 'vegeta'].includes(f.key) },
+  { id: 'ARCADE', label: 'ARCADE', filter: (f) => ['genos', 'escanor', 'engineer', 'zeus', 'cronus', 'bomber', 'bomberman', 'pacman', 'creeper', 'black', 'knight', 'john_wick', 'gunslinger', 'doppleganger', 'orange', 'megumin', 'crazydave', 'pekka', 'sans', 'nameless_deity', 'avatar_of_emptiness', 'avatarofemptiness', 'eye_of_cthulhu', 'guts', 'ash', 'isagi', 'chigiri', 'warden', 'roaring_knight', 'kaizo_knight', 'error_sans', 'last_breath_sans', 'carol', 'jevil', 'goku', 'vegeta'].includes(f.key) },
   { id: 'DBZ', label: 'DBZ', filter: (f) => ['goku', 'vegeta'].includes(f.key) }
 ];
 
@@ -1140,6 +1142,42 @@ export const SKIN_STUDIO_FIGHTERS = [
     ]
   },
   {
+    key: 'last_breath_sans',
+    label: 'LAST BREATH SANS',
+    asset: 'Assets/model/last_breath_sans/LastBreathSans-hair.png',
+    assetDims: '148 x 68',
+    baseW: 2.88,
+    baseH: 1.34,
+    baseCrownY: -1.24,
+    visW: 140,
+    visH: 58,
+    centerX: 74,
+    topY: 4,
+    themeColor: '#EF4444',
+    forms: [
+      { id: 'default', label: 'PHASE 3 ENIGMATIC' },
+      { id: 'phase1', label: 'PHASE 1 JUDGMENT' },
+      { id: 'phase2', label: 'PHASE 2 CHEST SLASH' }
+    ]
+  },
+  {
+    key: 'carol',
+    label: 'CAROL HOLIDAY',
+    asset: 'Assets/model/carol/Carol-hair.png',
+    assetDims: '152 x 84',
+    baseW: 3.04,
+    baseH: 1.68,
+    baseCrownY: -1.42,
+    visW: 144,
+    visH: 76,
+    centerX: 76,
+    topY: 4,
+    themeColor: '#38BDF8',
+    forms: [
+      { id: 'default', label: 'FROZEN RESOLVE' }
+    ]
+  },
+  {
     key: 'jevil',
     label: 'JEVIL',
     asset: 'Assets/model/jevil/Jevil-hair.png',
@@ -1281,6 +1319,9 @@ function _resolveStudioCustomKey(fDef) {
   if (fDef.key === 'vegeta' && state.studioSkinForm === 'super_saiyan') {
     return 'vegeta_ssj';
   }
+  if (fDef.key === 'dante' && state.studioSkinForm === 'devil_trigger') {
+    return 'dante_devil';
+  }
   return fDef.key;
 }
 
@@ -1311,6 +1352,17 @@ function _resolveStudioActiveMetrics(fDef, baseRadius = 25) {
       baseW: 3.12,
       baseH: 2.72,
       baseCrownY: -baseRadius * 2.30
+    };
+  }
+  if (fDef.key === 'dante' && form === 'devil_trigger') {
+    return {
+      customKey,
+      displayLabel: `${fDef.label} (DEVIL FORM)`,
+      asset: 'Assets/model/dante/Dante-devil-hair.png',
+      assetDims: '1024 x 1024',
+      baseW: 3.15,
+      baseH: 2.55,
+      baseCrownY: -baseRadius * 1.80
     };
   }
   if (fDef.key === 'guts' && form === 'hair') {
@@ -1779,14 +1831,18 @@ function generateJsCode(fDef, custom) {
            `const drawH = 1024 * scaleY;\n` +
            `const drawX = -511.5 * scaleX${offX !== 0 ? (offX > 0 ? ` + ${offX}` : ` - ${Math.abs(offX)}`) : ''};\n` +
            `const drawY = -r * ${Math.abs(Number(crownY)).toFixed(2)} - 262 * scaleY${offY !== 0 ? (offY > 0 ? ` + ${offY}` : ` - ${Math.abs(offY)}`) : ''};`;
-  } else if (fDef.key === 'roaring_knight' || fDef.key === 'kaizo_knight' || fDef.key === 'error_sans' || fDef.key === 'jevil') {
+  } else if (fDef.key === 'roaring_knight' || fDef.key === 'kaizo_knight' || fDef.key === 'error_sans' || fDef.key === 'last_breath_sans' || fDef.key === 'carol' || fDef.key === 'jevil') {
     const assetName = fDef.key === 'jevil'
       ? 'Assets/model/jevil/Jevil-hair.png'
-      : (fDef.key === 'error_sans'
-        ? 'Assets/model/error_sans/ErrorSans-hair.png'
-        : (fDef.key === 'kaizo_knight'
-          ? 'Assets/model/kaizo_knight/KaizoKnight-hair.png'
-          : 'Assets/model/roaring_knight/RoaringKnight-hair.png'));
+      : (fDef.key === 'carol'
+        ? 'Assets/model/carol/Carol-hair.png'
+        : (fDef.key === 'last_breath_sans'
+          ? 'Assets/model/last_breath_sans/LastBreathSans-hair.png'
+          : (fDef.key === 'error_sans'
+            ? 'Assets/model/error_sans/ErrorSans-hair.png'
+            : (fDef.key === 'kaizo_knight'
+              ? 'Assets/model/kaizo_knight/KaizoKnight-hair.png'
+              : 'Assets/model/roaring_knight/RoaringKnight-hair.png'))));
     return `// Calibrated Horned Antler Crown (${assetName})\n` +
            `const drawW = r * ${targetW};\n` +
            `const drawH = r * ${targetH};\n` +
@@ -2340,6 +2396,13 @@ export function drawSkinStudioScreen() {
       } else if (fDef.key === 'error_sans') {
         dummyFighter._isStudioDummy = true;
         drawErrorSansSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'last_breath_sans') {
+        dummyFighter._isStudioDummy = true;
+        dummyFighter.studioPhase = state.studioSkinForm === 'phase1' ? 1 : (state.studioSkinForm === 'phase2' ? 2 : 3);
+        drawLastBreathSansSkin(ctx, dummyFighter);
+      } else if (fDef.key === 'carol') {
+        dummyFighter._isStudioDummy = true;
+        drawCarolSkin(ctx, dummyFighter);
       } else if (fDef.key === 'jevil') {
         dummyFighter._isStudioDummy = true;
         drawJevilSkin(ctx, dummyFighter);
@@ -2457,12 +2520,18 @@ export function drawSkinStudioScreen() {
       _drawKaizoKnightHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'error_sans') {
       _drawErrorSansHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'last_breath_sans') {
+      _drawLastBreathSansHair(ctx, baseRadius, isFacingLeft);
+    } else if (fDef.key === 'carol') {
+      _drawCarolHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'jevil') {
       _drawJevilHair(ctx, baseRadius, isFacingLeft);
     } else if (fDef.key === 'goku') {
       _drawGokuHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'super_saiyan');
     } else if (fDef.key === 'vegeta') {
       _drawVegetaHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'super_saiyan');
+    } else if (fDef.key === 'dante') {
+      _drawDanteHair(ctx, baseRadius, isFacingLeft, state.studioSkinForm === 'devil_trigger');
     }
 
     ctx.restore();

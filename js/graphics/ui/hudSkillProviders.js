@@ -3741,6 +3741,162 @@ export const HUD_SKILL_PROVIDERS = {
     return skills;
   },
 
+  last_breath_sans(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.last_breath_sans) ? CONFIG.last_breath_sans : {};
+    const themeColor = f.color || cfg.themeColor || '#EF4444';
+    const skills = [];
+
+    // 1. Unified Skill 1 Slot (Cracked Blasters / Gaster Hands / Bone Cage Slam)
+    const hasAnySkill1 =
+      isSkillEnabled(cfg.enableCrackedBlaster, true) ||
+      isSkillEnabled(cfg.enableGasterHands, true) ||
+      isSkillEnabled(cfg.enableBoneCage, true);
+    if (isSkillEnabled(cfg.enableSkill1, true) && hasAnySkill1) {
+      const cdTimer = f.skill1CooldownTimer || 0;
+      const cdMax = Math.max(1, f.skill1CooldownMax || cfg.skill1Cooldown || 300, cdTimer);
+      const isChanneling = Boolean(
+        (f.activeBlasters && f.activeBlasters.length > 0) ||
+        (f.activeGasterHands && f.activeGasterHands.length > 0) ||
+        (f.activeBoneTraps && f.activeBoneTraps.length > 0)
+      );
+      const skill1Default = cfgSkillName(cfg, ['skill1Name'], 'LAST BREATH ART');
+      const baseName = f._activeSkill1Label || skill1Default;
+      const pct = (isChanneling && cdTimer <= 0)
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = cdTimer > 0 ? `${baseName} (${(cdTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'last_breath_skill1',
+        pct,
+        active: isChanneling && cdTimer <= 0,
+        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 2. Signature Ultimate: AN ENIGMATIC ENCOUNTER
+    if (isSkillEnabled(cfg.enableEnigmaticFinale, true)) {
+      const hitsReq = Math.max(1, cfg.finaleHitsRequired ?? 5);
+      const curHits = Math.min(hitsReq, f.finaleHits || 0);
+      const cdTimer = f.enigmaticFinaleCooldownTimer || 0;
+      const isChanneling = Boolean(f.isEnigmaticFinaleActive);
+      const isReady = !isChanneling && curHits >= hitsReq && cdTimer <= 0;
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const finaleName = cfgSkillName(cfg, ['enigmaticFinaleSkillName'], 'ENIGMATIC ENCOUNTER');
+      const label = (isChanneling || isReady)
+        ? finaleName
+        : `${finaleName} (${curHits}/${hitsReq})`;
+      skills.push({
+        id: 'enigmatic_finale',
+        pct,
+        active: isChanneling,
+        ready: isReady,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
+  carol(f) {
+    const cfg = (typeof CONFIG !== 'undefined' && CONFIG.carol) ? CONFIG.carol : {};
+    const themeColor = f.color || cfg.themeColor || '#38BDF8';
+    const skills = [];
+
+    // 1. Passive: Dagger Hailstorm (triggers after 5 basic attack damage hits)
+    if (isSkillEnabled(cfg.enableDaggerHailstorm, true)) {
+      const hitsReq = Math.max(1, cfg.daggerHailstormHitsRequired ?? 5);
+      const curHits = Math.min(hitsReq, f.daggerHailBasicHits || 0);
+      const passiveCd = f.daggerHailPassiveCooldownTimer || 0;
+      const isChanneling = Boolean(f._daggerHailSeq || (f.activeDaggers && f.activeDaggers.length > 0));
+      const isReady = !isChanneling && curHits >= hitsReq && passiveCd <= 0;
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const passiveName = cfgSkillName(cfg, ['daggerHailstormSkillName'], 'DAGGER HAILSTORM');
+      const label = passiveCd > 0
+        ? `${passiveName} (${(passiveCd / 60).toFixed(1)}S)`
+        : ((isChanneling || isReady) ? passiveName : `${passiveName} (${curHits}/${hitsReq})`);
+      skills.push({
+        id: 'dagger_hailstorm',
+        pct,
+        active: isChanneling,
+        ready: isReady,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 2. Unified Skill 1 Slot (Fractal Slash / Icicle Blizzard / Frost Gale / Quick Slash / Dagger+Fractal II)
+    const hasAnySkill1 =
+      isSkillEnabled(cfg.enableDaggerFractalCombo, true) ||
+      isSkillEnabled(cfg.enableFractalSlash, true) ||
+      isSkillEnabled(cfg.enableIcicleBlizzard, true) ||
+      isSkillEnabled(cfg.enableFrostGale, true) ||
+      isSkillEnabled(cfg.enableQuickSlash ?? cfg.enableIceSplitSlash, true);
+    if (isSkillEnabled(cfg.enableSkill1, true) && hasAnySkill1) {
+      const cdTimer = f.skill1CooldownTimer || 0;
+      const cdMax = Math.max(1, f.skill1CooldownMax || cfg.skill1Cooldown || 270, cdTimer);
+      const isChanneling = Boolean(
+        f._daggerFractalSeq ||
+        f._quickSlashSeq ||
+        (f.activeFrostGales && f.activeFrostGales.length > 0) ||
+        (f.activeIceSplits && f.activeIceSplits.length > 0) ||
+        (f.activeBlizzardSpawners && f.activeBlizzardSpawners.length > 0)
+      );
+      const skill1Default = cfgSkillName(cfg, ['skill1Name'], 'RESOLVE ART');
+      const baseName = f._activeSkill1Label || skill1Default;
+      const pct = (isChanneling && cdTimer <= 0)
+        ? 100
+        : Math.max(0, Math.min(100, (1 - cdTimer / cdMax) * 100));
+      const label = cdTimer > 0 ? `${baseName} (${(cdTimer / 60).toFixed(1)}S)` : baseName;
+      skills.push({
+        id: 'carol_skill1',
+        pct,
+        active: isChanneling && cdTimer <= 0,
+        ready: !isChanneling && pct >= 99 && cdTimer <= 0,
+        color: themeColor,
+        label,
+      });
+    }
+
+    // 2. Signature Ultimate: PERMAFROST
+    if (isSkillEnabled(cfg.enablePermafrost, true)) {
+      const hitsReq = Math.max(1, cfg.permafrostHitsRequired ?? 5);
+      const curHits = Math.min(hitsReq, f.permafrostHits || 0);
+      const cdTimer = f.permafrostCooldownTimer || 0;
+      const isChanneling = Boolean(f.isPermafrostActive);
+      const isReady = !isChanneling && curHits >= hitsReq && cdTimer <= 0;
+      const pct = isChanneling
+        ? 100
+        : Math.max(0, Math.min(100, (curHits / hitsReq) * 100));
+      const permName = cfgSkillName(cfg, ['permafrostSkillName'], 'PERMAFROST');
+      const label = (isChanneling || isReady)
+        ? permName
+        : `${permName} (${curHits}/${hitsReq})`;
+      skills.push({
+        id: 'permafrost',
+        pct,
+        active: isChanneling,
+        ready: isReady,
+        color: themeColor,
+        label,
+        isSignature: true,
+        signature: true,
+        isUltimate: true,
+      });
+    }
+
+    return skills;
+  },
+
   jevil(f) {
     const cfg = (typeof CONFIG !== 'undefined' && CONFIG.jevil) ? CONFIG.jevil : {};
     const themeColor = f.color || cfg.themeColor || '#A855F7';
@@ -3931,27 +4087,42 @@ export const HUD_SKILL_PROVIDERS = {
     const themeColor = f.color || cfg.themeColor || '#EF4444';
     const skills = [];
 
-    const pushCdSkill = (id, enabled, cdVal, maxCdVal, defaultName, cfgKey, isActive = false) => {
+    const pushCdSkill = (id, enabled, cdVal, maxCdVal, defaultName, cfgKey, isActive = false, isSignature = false) => {
       if (!isSkillEnabled(enabled, true)) return;
       const cd = cdVal || 0;
       const maxCd = Math.max(1, maxCdVal, cd);
       const baseName = cfgSkillName(cfg, [cfgKey], defaultName);
       const pct = isActive ? 100 : Math.max(0, Math.min(100, (1 - cd / maxCd) * 100));
-      skills.push({
+      const entry = {
         id,
         pct,
         active: Boolean(isActive),
         ready: !isActive && pct >= 99 && cd <= 0,
         color: themeColor,
         label: cd > 0 && !isActive ? `${baseName} (${(cd / 60).toFixed(1)}S)` : baseName,
-      });
+      };
+      if (isSignature) {
+        entry.isSignature = true;
+        entry.signature = true;
+        entry.isUltimate = true;
+      }
+      skills.push(entry);
     };
 
-    pushCdSkill('spot_dodge', isSkillEnabled(cfg.enableTricksterDash, true) && isSkillEnabled(cfg.enableSpotDodge, true), f.tricksterCooldown, cfg.tricksterCooldown || 75, 'SPOT DODGE', 'spotDodgeSkillName', Boolean(f.isSpotDodging));
-    pushCdSkill('round_trip', cfg.enableRoundTrip, f.roundTripCooldown, cfg.roundTripCooldown || 300, 'SIDE SPECIAL', 'roundTripSkillName', Boolean(f._roundTripEntity));
-    pushCdSkill('drive', cfg.enableDrive, f.driveCooldown, cfg.driveCooldown || 270, 'DRIVE', 'driveSkillName', (f._driveChargeTimer || 0) > 0);
-    pushCdSkill('doppelganger', cfg.enableDoppelganger, f.doppelgangerCooldown, cfg.doppelgangerCooldown || 620, 'DOPPELGANGER', 'doppelgangerSkillName', Boolean(f._doppelganger));
-    pushCdSkill('kalina_ann', cfg.enableKalinaAnn, f.kalinaCooldown, cfg.kalinaCooldown || 360, 'KALINA ANN', 'kalinaSkillName', (f._kalinaCastTimer || 0) > 0);
+    const dodgeCdMax = f.isDevilTrigger ? (cfg.dtTricksterCooldown || 34) : (cfg.tricksterCooldown || 75);
+    pushCdSkill('spot_dodge', isSkillEnabled(cfg.enableTricksterDash, true) && isSkillEnabled(cfg.enableSpotDodge, true), f.tricksterCooldown, dodgeCdMax, 'SPOT DODGE', 'spotDodgeSkillName', Boolean(f.isSpotDodging));
+
+    if (f.isDevilTrigger) {
+      pushCdSkill('sdt_combo', cfg.enableSdtCombo, f.sdtComboCooldown, cfg.sdtComboCooldown || 180, 'SDT COMBO', 'sdtComboSkillName', Boolean(f._sdtComboState?.active));
+      pushCdSkill('sin_stinger', cfg.enableSinStinger, f.sinStingerCooldown, cfg.sinStingerCooldown || 240, 'SIN STINGER', 'sinStingerSkillName', Boolean(f._sinStingerState?.active));
+      pushCdSkill('ombra', cfg.enableOmbra, f.ombraCooldown, cfg.ombraCooldown || 210, 'OMBRA', 'ombraSkillName', Boolean(f._ombraState?.active));
+      pushCdSkill('judgment', cfg.enableJudgment, f.judgmentCooldown, cfg.judgmentCooldown || 420, 'JUDGMENT', 'judgmentSkillName', Boolean(f._judgmentState?.active), true);
+    } else {
+      pushCdSkill('round_trip', cfg.enableRoundTrip, f.roundTripCooldown, cfg.roundTripCooldown || 300, 'SIDE SPECIAL', 'roundTripSkillName', Boolean(f._roundTripEntity));
+      pushCdSkill('drive', cfg.enableDrive, f.driveCooldown, cfg.driveCooldown || 270, 'DRIVE', 'driveSkillName', (f._driveChargeTimer || 0) > 0);
+      pushCdSkill('doppelganger', cfg.enableDoppelganger, f.doppelgangerCooldown, cfg.doppelgangerCooldown || 620, 'DOPPELGANGER', 'doppelgangerSkillName', Boolean(f._doppelganger));
+      pushCdSkill('kalina_ann', cfg.enableKalinaAnn, f.kalinaCooldown, cfg.kalinaCooldown || 360, 'KALINA ANN', 'kalinaSkillName', (f._kalinaCastTimer || 0) > 0);
+    }
 
     if (isSkillEnabled(cfg.enableDevilTrigger, true)) {
       const cd = f.devilTriggerCooldown || 0;
@@ -4946,11 +5117,15 @@ export function isSkillExceptionInDarkMode(fighter, skill) {
     kaizoknight: ['roaring_delta', 'roaringdelta', 'ROARING DELTA', 'kaizo_delta', 'kaizodelta'],
     error_sans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
     errorsans: ['forced_crash', 'forcedcrash', 'FORCED CRASH'],
+    last_breath_sans: ['enigmatic_finale', 'ENIGMATIC ENCOUNTER'],
+    lastbreathsans: ['enigmatic_finale', 'ENIGMATIC ENCOUNTER'],
+    carol: ['permafrost', 'PERMAFROST'],
+    carol_holiday: ['permafrost', 'PERMAFROST'],
     jevil: ['final_chaos', 'finalchaos', 'FINAL CHAOS'],
     aizen: ['kurohitsugi', 'KUROHITSUGI', 'PERFECT KUROHITSUGI', 'ULTRA FRAGOR'],
     vergil: ['judgment_cut_end', 'JUDGMENT CUT END'],
     kashimo: ['amber_form', 'MYTHICAL BEAST AMBER'],
-    dante: ['devil_trigger', 'DEVIL TRIGGER'],
+    dante: ['devil_trigger', 'DEVIL TRIGGER', 'judgment', 'JUDGMENT'],
     unarmed: ['super_unarmed', 'superunarmed', 'SUPER UNARMED']
   };
 

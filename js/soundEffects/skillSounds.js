@@ -1159,6 +1159,42 @@ export const SKILL_SOUNDS = {
     devil_trigger: { src: 'Assets/Sound Effects/DanteSFX/dante-devil-trigger.ogg', volume: 0.96, delay: 0 },
     jackpot: { src: 'Assets/Sound Effects/DanteSFX/dante-jackpot-shot.ogg', volume: 0.98, delay: 0 },
     spot_dodge: { src: 'Assets/Sound Effects/DanteSFX/dante-spot-dodge.ogg', volume: 0.88, delay: 0 },
+  },
+  // ── Last Breath Sans (An Enigmatic Encounter) ───────────────
+  81: {
+    cracked_blaster: { src: 'Assets/Sound Effects/Sans/GasterBlaster.ogg', volume: 0.84, delay: 0 },
+    gaster_hands: { src: 'Assets/Sound Effects/LastBreathSans/biu.ogg', volume: 0.72, delay: 0 },
+    bone_cage: { src: 'Assets/Sound Effects/Sans/Slam.ogg', volume: 0.88, delay: 0 },
+    phase3_awaken: { src: 'Assets/Sound Effects/LastBreathSans/dark.ogg', volume: 0.90, delay: 0 },
+    enigmatic_finale: { src: 'Assets/Sound Effects/Sans/Flash.ogg', volume: 0.88, delay: 0 },
+  },
+  'last_breath_sans': {
+    cracked_blaster: { src: 'Assets/Sound Effects/Sans/GasterBlaster.ogg', volume: 0.84, delay: 0 },
+    gaster_hands: { src: 'Assets/Sound Effects/LastBreathSans/biu.ogg', volume: 0.72, delay: 0 },
+    bone_cage: { src: 'Assets/Sound Effects/Sans/Slam.ogg', volume: 0.88, delay: 0 },
+    phase3_awaken: { src: 'Assets/Sound Effects/LastBreathSans/dark.ogg', volume: 0.90, delay: 0 },
+    enigmatic_finale: { src: 'Assets/Sound Effects/Sans/Flash.ogg', volume: 0.88, delay: 0 },
+  },
+  // ── Carol Holiday (Deltarune — Resolve) ─────────────────────
+  82: {
+    dagger_hailstorm: { src: 'Assets/Sound Effects/CarolSFX/carol_cut.wav', volume: 0.76, delay: 0 },
+    fractal_slash: { src: 'Assets/Sound Effects/CarolSFX/carol_slash_line.wav', volume: 0.80, delay: 0 },
+    icicle_blizzard: { src: 'Assets/Sound Effects/CarolSFX/carol_stardrop.wav', volume: 0.76, delay: 0 },
+    frost_gale: { src: 'Assets/Sound Effects/CarolSFX/carol_icespell.wav', volume: 0.80, delay: 0 },
+    quick_slash: { src: 'Assets/Sound Effects/CarolSFX/carol_heavyswing.wav', volume: 0.82, delay: 0 },
+    ice_split: { src: 'Assets/Sound Effects/CarolSFX/carol_slash_line.wav', volume: 0.78, delay: 0 },
+    carol_heal: { src: 'Assets/Sound Effects/CarolSFX/carol_spellcast.wav', volume: 0.82, delay: 0 },
+    permafrost: { src: 'Assets/Sound Effects/CarolSFX/carol_snowgrave.wav', volume: 0.88, delay: 0 },
+  },
+  'carol': {
+    dagger_hailstorm: { src: 'Assets/Sound Effects/CarolSFX/carol_cut.wav', volume: 0.76, delay: 0 },
+    fractal_slash: { src: 'Assets/Sound Effects/CarolSFX/carol_slash_line.wav', volume: 0.80, delay: 0 },
+    icicle_blizzard: { src: 'Assets/Sound Effects/CarolSFX/carol_stardrop.wav', volume: 0.76, delay: 0 },
+    frost_gale: { src: 'Assets/Sound Effects/CarolSFX/carol_icespell.wav', volume: 0.80, delay: 0 },
+    quick_slash: { src: 'Assets/Sound Effects/CarolSFX/carol_heavyswing.wav', volume: 0.82, delay: 0 },
+    ice_split: { src: 'Assets/Sound Effects/CarolSFX/carol_slash_line.wav', volume: 0.78, delay: 0 },
+    carol_heal: { src: 'Assets/Sound Effects/CarolSFX/carol_spellcast.wav', volume: 0.82, delay: 0 },
+    permafrost: { src: 'Assets/Sound Effects/CarolSFX/carol_snowgrave.wav', volume: 0.88, delay: 0 },
   }
 };
 

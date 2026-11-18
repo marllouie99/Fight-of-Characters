@@ -326,6 +326,7 @@ window.addEventListener('keydown', (e) => {
       });
     }
   } else if (e.key.toLowerCase() === 'r') {
+    if (e.repeat) return;
     if (state.gameState === 'playing' || state.gameState === 'roundEnd') {
       restartCurrentRound();
     } else if (state.gameState === 'matchEnd') {

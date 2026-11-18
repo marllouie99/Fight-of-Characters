@@ -40,6 +40,8 @@ import { drawGutsWeaponPreview } from '../weapons/gutsWeaponGraphics.js';
 import { drawRoaringKnightWeaponPreview } from '../weapons/roaringKnightWeaponGraphics.js';
 import { drawKaizoKnightWeaponPreview } from '../weapons/kaizoKnightWeaponGraphics.js';
 import { drawErrorSansWeaponPreview } from '../weapons/errorSansWeaponGraphics.js';
+import { drawLastBreathSansWeaponPreview } from '../weapons/lastBreathSansWeaponGraphics.js';
+import { drawCarolWeaponPreview } from '../weapons/carolWeaponGraphics.js';
 import { drawJevilWeaponPreview } from '../weapons/jevilWeaponGraphics.js';
 import { drawVergilWeaponPreview } from '../weapons/vergilWeaponGraphics.js';
 import { drawKashimoWeaponPreview } from '../weapons/kashimoWeaponGraphics.js';
@@ -2357,6 +2359,14 @@ function drawWeaponPreview(ctx, type, color) {
 
       case 'error_sans':
         drawErrorSansWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
+        return;
+
+      case 'last_breath_sans':
+        drawLastBreathSansWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
+        return;
+
+      case 'carol':
+        drawCarolWeaponPreview(ctx, 0, 0, gunAngle, r, { isPreview: true });
         return;
 
       case 'jevil':

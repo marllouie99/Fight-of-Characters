@@ -399,6 +399,26 @@ export const AUDIO_CONFIG = {
   'error_sans_badnoise2': 'Assets/Sound Effects/ErrorSans/badnoise2.mp3',
   'error_sans_badnoise3': 'Assets/Sound Effects/ErrorSans/badnoise3.mp3',
 
+  // Last Breath Sans (An Enigmatic Encounter)
+  'last_breath_sans_biu': 'Assets/Sound Effects/LastBreathSans/biu.ogg',
+  'last_breath_sans_dark': 'Assets/Sound Effects/LastBreathSans/dark.ogg',
+
+  // Carol Holiday (Deltarune — Resolve)
+  'carol_slice': 'Assets/Sound Effects/CarolSFX/carol_slice.mp3',
+  'carol_cut': 'Assets/Sound Effects/CarolSFX/carol_cut.wav',
+  'carol_dash': 'Assets/Sound Effects/CarolSFX/carol_dash.wav',
+  'carol_icespell': 'Assets/Sound Effects/CarolSFX/carol_icespell.wav',
+  'carol_snowgrave': 'Assets/Sound Effects/CarolSFX/carol_snowgrave.wav',
+  'carol_stardrop': 'Assets/Sound Effects/CarolSFX/carol_stardrop.wav',
+  'carol_slash_line': 'Assets/Sound Effects/CarolSFX/carol_slash_line.wav',
+  'carol_boxbreak': 'Assets/Sound Effects/CarolSFX/carol_boxbreak.wav',
+  'carol_star_explode': 'Assets/Sound Effects/CarolSFX/carol_star_explode.wav',
+  'carol_impact': 'Assets/Sound Effects/CarolSFX/carol_impact.wav',
+  'carol_txt': 'Assets/Sound Effects/CarolSFX/carol_txt.wav',
+  'carol_spellcast': 'Assets/Sound Effects/CarolSFX/carol_spellcast.wav',
+  'carol_spear_choppy': 'Assets/Sound Effects/CarolSFX/carol_spear_choppy.wav',
+  'carol_heavyswing': 'Assets/Sound Effects/CarolSFX/carol_heavyswing.wav',
+
   // Jevil (Deltarune Ch.1 Secret Boss)
   'jevil_attack_1': 'Assets/Sound Effects/Jevil/jevil_attack_1.wav',
   'jevil_hit_1': 'Assets/Sound Effects/Jevil/jevil_hit_1.wav',

@@ -721,6 +721,34 @@ function _getFugaArcadeBuffer() {
   return { canvas: _fugaArcadeCanvas, ctx: _fugaArcadeCtx };
 }
 
+const _fugaGlowCache = new Map();
+function _getFugaGlowCanvas(key, stops) {
+  if (_fugaGlowCache.has(key)) return _fugaGlowCache.get(key);
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 96;
+  c.height = 96;
+  const gctx = c.getContext('2d');
+  if (!gctx) return null;
+  const grad = gctx.createRadialGradient(48, 48, 2, 48, 48, 48);
+  for (let i = 0; i < stops.length; i++) {
+    grad.addColorStop(stops[i][0], stops[i][1]);
+  }
+  gctx.fillStyle = grad;
+  gctx.fillRect(0, 0, 96, 96);
+  _fugaGlowCache.set(key, c);
+  return c;
+}
+
+const _FUGA_NOSE_STOPS = [[0, 'rgba(255, 252, 215, 0.75)'], [0.32, 'rgba(255, 175, 30, 0.52)'], [0.70, 'rgba(255, 70, 10, 0.22)'], [1, 'rgba(200, 20, 0, 0)']];
+const _FUGA_NOSE_BLUE_STOPS = [[0, 'rgba(235, 255, 255, 0.72)'], [0.35, 'rgba(0, 230, 255, 0.45)'], [0.70, 'rgba(0, 120, 255, 0.18)'], [1, 'rgba(0, 100, 255, 0)']];
+const _FUGA_BODY_STOPS = [[0, 'rgba(255, 140, 20, 0.32)'], [0.60, 'rgba(220, 35, 5, 0.12)'], [1, 'rgba(0, 0, 0, 0)']];
+const _FUGA_BODY_BLUE_STOPS = [[0, 'rgba(0, 210, 255, 0.28)'], [0.60, 'rgba(0, 100, 255, 0.10)'], [1, 'rgba(0, 0, 0, 0)']];
+const _FUGA_TIP_STOPS = [[0, 'rgba(255, 255, 255, 0.98)'], [0.35, 'rgba(255, 240, 160, 0.82)'], [0.70, 'rgba(255, 130, 20, 0.38)'], [1, 'rgba(0, 0, 0, 0)']];
+const _FUGA_TIP_BLUE_STOPS = [[0, 'rgba(255, 255, 255, 0.98)'], [0.35, 'rgba(180, 245, 255, 0.75)'], [0.70, 'rgba(0, 210, 255, 0.32)'], [1, 'rgba(0, 0, 0, 0)']];
+const _FUGA_STREAK_STOPS = [[0, 'rgba(255, 255, 255, 0.95)'], [0.30, 'rgba(255, 225, 120, 0.70)'], [0.75, 'rgba(255, 110, 15, 0.22)'], [1, 'rgba(0, 0, 0, 0)']];
+const _FUGA_STREAK_BLUE_STOPS = [[0, 'rgba(255, 255, 255, 0.95)'], [0.30, 'rgba(160, 240, 255, 0.65)'], [0.75, 'rgba(0, 190, 255, 0.18)'], [1, 'rgba(0, 0, 0, 0)']];
+
 export function drawDivineFlameArrowConstruct(ctx, {
   x, y, angle = 0, scale = 1.0, progress = 1.0, isFlying = false, time = Date.now() * 0.012, isFrozenByInfinity = false
 }) {
@@ -752,44 +780,23 @@ export function drawDivineFlameArrowConstruct(ctx, {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    // A. Concentric nose heat bloom
+    // A. Concentric nose heat bloom (pre-baked radial glow canvas, zero per-frame gradient allocation)
     const glowCx = drawX + drawW * 0.84;
     const glowR = (isFlying ? 58 : 48) * pScale;
-    const auraGrad = ctx.createRadialGradient(glowCx, 0, 2, glowCx, 0, glowR);
-    if (isFrozenByInfinity) {
-      auraGrad.addColorStop(0.00, `rgba(235, 255, 255, ${0.72 * progress})`);
-      auraGrad.addColorStop(0.35, `rgba(0, 230, 255, ${0.45 * progress})`);
-      auraGrad.addColorStop(0.70, `rgba(0, 120, 255, ${0.18 * progress})`);
-      auraGrad.addColorStop(1.00, 'rgba(0, 100, 255, 0)');
-    } else {
-      auraGrad.addColorStop(0.00, `rgba(255, 252, 215, ${0.75 * progress})`);
-      auraGrad.addColorStop(0.32, `rgba(255, 175, 30, ${0.52 * progress})`);
-      auraGrad.addColorStop(0.70, `rgba(255, 70, 10, ${0.22 * progress})`);
-      auraGrad.addColorStop(1.00, 'rgba(200, 20, 0, 0)');
+    const noseGlow = _getFugaGlowCanvas(isFrozenByInfinity ? 'nose_blue' : 'nose_fire', isFrozenByInfinity ? _FUGA_NOSE_BLUE_STOPS : _FUGA_NOSE_STOPS);
+    ctx.globalAlpha = progress;
+    if (noseGlow) {
+      ctx.drawImage(noseGlow, glowCx - glowR * 1.35, -glowR * 0.90, glowR * 2.70, glowR * 1.80);
     }
-    ctx.fillStyle = auraGrad;
-    ctx.beginPath();
-    ctx.ellipse(glowCx, 0, glowR * 1.35, glowR * 0.90, 0, 0, Math.PI * 2);
-    ctx.fill();
 
     // B. Atmospheric flame body heat wash along arrow shaft
     const bodyAuraCx = drawX + drawW * 0.52;
     const bodyAuraRx = drawW * 0.44;
     const bodyAuraRy = drawH * 0.68;
-    const bodyGrad = ctx.createRadialGradient(bodyAuraCx, 0, 4, bodyAuraCx, 0, bodyAuraRx);
-    if (isFrozenByInfinity) {
-      bodyGrad.addColorStop(0.00, `rgba(0, 210, 255, ${0.28 * progress})`);
-      bodyGrad.addColorStop(0.60, `rgba(0, 100, 255, ${0.10 * progress})`);
-      bodyGrad.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
-    } else {
-      bodyGrad.addColorStop(0.00, `rgba(255, 140, 20, ${0.32 * progress})`);
-      bodyGrad.addColorStop(0.60, `rgba(220, 35, 5, ${0.12 * progress})`);
-      bodyGrad.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
+    const bodyGlow = _getFugaGlowCanvas(isFrozenByInfinity ? 'body_blue' : 'body_fire', isFrozenByInfinity ? _FUGA_BODY_BLUE_STOPS : _FUGA_BODY_STOPS);
+    if (bodyGlow) {
+      ctx.drawImage(bodyGlow, bodyAuraCx - bodyAuraRx, -bodyAuraRy, bodyAuraRx * 2, bodyAuraRy * 2);
     }
-    ctx.fillStyle = bodyGrad;
-    ctx.beginPath();
-    ctx.ellipse(bodyAuraCx, 0, bodyAuraRx, bodyAuraRy, 0, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
 
     // ── 2. LAYER 2: 12-FRAME PIXEL-ART FIRE ARROW SPRITE ──
@@ -814,44 +821,22 @@ export function drawDivineFlameArrowConstruct(ctx, {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    // A. Blinding incandescent tip point flash
+    // A. Blinding incandescent tip point flash (pre-baked radial glow canvas)
     const tipCoreR = (isFlying ? 15 : 12) * pScale;
-    const tipBloom = ctx.createRadialGradient(tipX, 0, 0, tipX, 0, tipCoreR * 2.4);
-    if (isFrozenByInfinity) {
-      tipBloom.addColorStop(0.00, `rgba(255, 255, 255, ${0.98 * progress})`);
-      tipBloom.addColorStop(0.35, `rgba(180, 245, 255, ${0.75 * progress})`);
-      tipBloom.addColorStop(0.70, `rgba(0, 210, 255, ${0.32 * progress})`);
-      tipBloom.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
-    } else {
-      tipBloom.addColorStop(0.00, `rgba(255, 255, 255, ${0.98 * progress})`);
-      tipBloom.addColorStop(0.35, `rgba(255, 240, 160, ${0.82 * progress})`);
-      tipBloom.addColorStop(0.70, `rgba(255, 130, 20, ${0.38 * progress})`);
-      tipBloom.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
+    const tipRadius = tipCoreR * 2.4;
+    const tipGlow = _getFugaGlowCanvas(isFrozenByInfinity ? 'tip_blue' : 'tip_fire', isFrozenByInfinity ? _FUGA_TIP_BLUE_STOPS : _FUGA_TIP_STOPS);
+    ctx.globalAlpha = progress;
+    if (tipGlow) {
+      ctx.drawImage(tipGlow, tipX - tipRadius, -tipRadius, tipRadius * 2, tipRadius * 2);
     }
-    ctx.fillStyle = tipBloom;
-    ctx.beginPath();
-    ctx.arc(tipX, 0, tipCoreR * 2.4, 0, Math.PI * 2);
-    ctx.fill();
 
     // B. Cinematic Anamorphic Horizontal Lens Flare Streak (along the flight vector)
     const streakLen = (isFlying ? 46 : 34) * pScale;
     const streakThick = (isFlying ? 6.0 : 4.5) * pScale;
-    const streakGrad = ctx.createRadialGradient(tipX, 0, 0, tipX, 0, streakLen);
-    if (isFrozenByInfinity) {
-      streakGrad.addColorStop(0.00, `rgba(255, 255, 255, ${0.95 * progress})`);
-      streakGrad.addColorStop(0.30, `rgba(160, 240, 255, ${0.65 * progress})`);
-      streakGrad.addColorStop(0.75, `rgba(0, 190, 255, ${0.18 * progress})`);
-      streakGrad.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
-    } else {
-      streakGrad.addColorStop(0.00, `rgba(255, 255, 255, ${0.95 * progress})`);
-      streakGrad.addColorStop(0.30, `rgba(255, 225, 120, ${0.70 * progress})`);
-      streakGrad.addColorStop(0.75, `rgba(255, 110, 15, ${0.22 * progress})`);
-      streakGrad.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
+    const streakGlow = _getFugaGlowCanvas(isFrozenByInfinity ? 'streak_blue' : 'streak_fire', isFrozenByInfinity ? _FUGA_STREAK_BLUE_STOPS : _FUGA_STREAK_STOPS);
+    if (streakGlow) {
+      ctx.drawImage(streakGlow, tipX - streakLen, -streakThick, streakLen * 2, streakThick * 2);
     }
-    ctx.fillStyle = streakGrad;
-    ctx.beginPath();
-    ctx.ellipse(tipX, 0, streakLen, streakThick, 0, 0, Math.PI * 2);
-    ctx.fill();
 
     // C. Forward Radiant Illumination Cone (projecting forward into space ahead of the arrow)
     const coneReach = (isFlying ? 72 : 48) * pScale;

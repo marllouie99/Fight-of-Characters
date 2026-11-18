@@ -100,6 +100,7 @@ export function tickFighterIntroAndWinSpeech(fighter, opponent, opts = {}) {
   if (!fighter._hasSaidIntroQuote && opponent && opponent.hp > 0 && opts.introText) {
     fighter._hasSaidIntroQuote = true;
     triggerFighterSpeech(fighter, opts.introText, opts.speechStyle);
+    if (typeof opts.onSpeak === 'function') opts.onSpeak('intro');
   }
   const isMinionOrSummon = Boolean(
     opponent && (opponent.isMinion || opponent.isSummon || opponent.isTurret || opponent.isIllusion || opponent.owner)
@@ -107,5 +108,6 @@ export function tickFighterIntroAndWinSpeech(fighter, opponent, opts = {}) {
   if (opponent && opponent.hp <= 0 && !isMinionOrSummon && !fighter._hasSaidWinQuote && opts.winText) {
     fighter._hasSaidWinQuote = true;
     triggerFighterSpeech(fighter, opts.winText, { ...(opts.speechStyle || {}), duration: 140, force: true });
+    if (typeof opts.onSpeak === 'function') opts.onSpeak('win');
   }
 }

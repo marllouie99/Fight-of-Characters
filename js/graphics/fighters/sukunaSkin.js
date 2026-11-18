@@ -1,6 +1,25 @@
 // Offscreen canvas cache for Sukuna's pixel body model (avoids 1,000 fillRect calls per frame)
 let _cachedSukunaCanvas = null;
 let _cachedSukunaR = 0;
+let _cachedSukunaShadowCanvas = null;
+
+function _getSukunaShadowGlowCanvas() {
+  if (_cachedSukunaShadowCanvas) return _cachedSukunaShadowCanvas;
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const gctx = c.getContext('2d');
+  if (!gctx) return null;
+  const grad = gctx.createRadialGradient(32, 32, 4, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
+  grad.addColorStop(0.5, 'rgba(0, 0, 0, 0.4)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  gctx.fillStyle = grad;
+  gctx.fillRect(0, 0, 64, 64);
+  _cachedSukunaShadowCanvas = c;
+  return _cachedSukunaShadowCanvas;
+}
 
 function _renderSukunaPixelBodyToCanvas(destCtx, r) {
   destCtx.save();
@@ -400,15 +419,17 @@ export function drawSukunaBody(ctx, fighter) {
     ctx.translate(fighter.x, fighter.y);
     ctx.scale(1.0, 0.35);
 
-    const shadowGlow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.6);
-    shadowGlow.addColorStop(0, `rgba(0, 0, 0, ${0.7 * levFactor})`);
-    shadowGlow.addColorStop(0.5, `rgba(0, 0, 0, ${0.4 * levFactor})`);
-    shadowGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = shadowGlow;
-    ctx.fill();
+    const shadowCanvas = _getSukunaShadowGlowCanvas();
+    const sr = r * 1.6;
+    if (shadowCanvas) {
+      ctx.globalAlpha = levFactor;
+      ctx.drawImage(shadowCanvas, -sr, -sr, sr * 2, sr * 2);
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, sr, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 0, 0, ${(0.45 * levFactor).toFixed(3)})`;
+      ctx.fill();
+    }
 
     ctx.restore();
   }

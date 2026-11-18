@@ -24469,8 +24469,8 @@ async function runInteractionTests() {
         knight.interruptAttacks(true);
       }
 
-      // 8. Verify Roaring Knight attack voice/noise SFX keys & normalized volumes
-      for (const sfxKey of ['attackVoice1', 'attackVoice2', 'attackGrowl', 'ultRoar', 'stretch', 'powerupWhite', 'puff', 'roar']) {
+      // 8. Verify Roaring Knight non-verbal SFX keys & normalized volumes
+      for (const sfxKey of ['hurt1', 'hurt2', 'stretch', 'powerupWhite', 'puff', 'roar']) {
         assert(
           typeof rkCfg.sounds?.[sfxKey] === 'string' && rkCfg.sounds[sfxKey].length > 0,
           `Roaring Knight sounds.${sfxKey} must be defined`
@@ -24683,8 +24683,8 @@ async function runInteractionTests() {
         'Roaring Knight Top HUD Name must apply hud-roaring-knight-name class for black fill + white outline'
       );
       assert(
-        rkTopHtml.includes('hud-top-name__outline') && rkTopHtml.includes('hud-top-name__text'),
-        'buildTopDuelHUD must include outer outline and text layers for non-Knight Dark Mode white outline'
+        !rkTopHtml.includes('hud-top-name__outline') && rkTopHtml.includes('hud-top-name__text'),
+        'buildTopDuelHUD must NOT emit white outer outline layer for non-Knight fighters'
       );
       const origHudLayoutStyle = CONFIG.hudLayoutStyle;
       const origTheme = state.arenaTheme;
@@ -24705,9 +24705,10 @@ async function runInteractionTests() {
         };
         drawArenaMatchNames(topNameProbeCtx, true);
         assert(topNameProbeCtx.getStackDepth() === 0, 'drawArenaMatchNames must preserve Canvas 2D stack depth 0');
-        const rkStroke = nameCalls.find(c => c.op === 'stroke' && c.text.includes('ROARING KNIGHT'));
-        const rkFill = nameCalls.find(c => c.op === 'fill' && c.text.includes('ROARING KNIGHT'));
-        const opponentStroke = nameCalls.find(c => c.op === 'stroke' && !c.text.includes('ROARING KNIGHT') && c.text !== 'VS');
+        const isRkText = (t) => t.includes('ROARING KNIGHT') || t.includes('THE KNIGHT');
+        const rkStroke = nameCalls.find(c => c.op === 'stroke' && isRkText(c.text));
+        const rkFill = nameCalls.find(c => c.op === 'fill' && isRkText(c.text));
+        const opponentStroke = nameCalls.find(c => c.op === 'stroke' && !isRkText(c.text) && c.text !== 'VS');
         assert(
           rkStroke && String(rkStroke.strokeStyle).toUpperCase() === '#FFFFFF' && rkStroke.lineWidth >= 4,
           `Canvas top arena match name for Roaring Knight must stroke white outline (#FFFFFF), got ${JSON.stringify(rkStroke)}`
@@ -24717,8 +24718,8 @@ async function runInteractionTests() {
           `Canvas top arena match name for Roaring Knight must fill #050609, got ${JSON.stringify(rkFill)}`
         );
         assert(
-          opponentStroke && String(opponentStroke.strokeStyle).toUpperCase() === '#FFFFFF' && opponentStroke.lineWidth >= 4,
-          `Canvas top arena match name in Dark Mode must stroke white outline (#FFFFFF) for all fighters, got ${JSON.stringify(opponentStroke)}`
+          opponentStroke && String(opponentStroke.strokeStyle).toUpperCase() !== '#FFFFFF',
+          `Canvas top arena match name in Dark Mode must NOT stroke white outline (#FFFFFF) for non-Knight fighters, got ${JSON.stringify(opponentStroke)}`
         );
       } finally {
         CONFIG.hudLayoutStyle = origHudLayoutStyle;
@@ -27726,7 +27727,7 @@ async function runInteractionTests() {
     const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
     const stackCtx = createMockCtx();
     const dDef = CONFIG.dante || {};
-    const dToggleKeys = ['enableRebellionCombo', 'enableMillionStab', 'enableHighTime', 'enableFinisherGunSequence', 'enableGunfire', 'enableBasicCrit', 'enableRoundTrip', 'enableDrive', 'enableDoppelganger', 'enableKalinaAnn', 'enableDevilTrigger', 'enableTricksterDash', 'enableSpotDodge'];
+    const dToggleKeys = ['enableRebellionCombo', 'enableMillionStab', 'enableHighTime', 'enableFinisherGunSequence', 'enableGunfire', 'enableBasicCrit', 'enableRoundTrip', 'enableDrive', 'enableDoppelganger', 'enableKalinaAnn', 'enableDevilTrigger', 'enableTricksterDash', 'enableSpotDodge', 'enableSdtCombo', 'enableSinStinger', 'enableOmbra', 'enableJudgment'];
     const savedDToggles = {};
     for (const k of dToggleKeys) {
       savedDToggles[k] = dDef[k];
@@ -28107,14 +28108,262 @@ async function runInteractionTests() {
       for (let t = 0; t < 26; t++) dante.update(enemy, 0, testArena);
       assert(enemy.hp < preKalinaHp, 'Kalina Ann rocket must detonate and deal explosion damage');
 
-      // Ultimate: Devil Trigger + Tornado + Jackpot! + Rule 25 non-freezing VFX decay
+      // Ultimate: Devil Trigger Transformation (FINALSMASH2 rune coil -> volcanic blast -> winged ascension) & Jackpot!
       dante.hp = dante.maxHp * 0.45;
       dante.x = 220; dante.y = 420; enemy.x = 270; enemy.y = 420;
-      const preUltHp = enemy.hp;
+      const preTxHp = enemy.hp;
       dante.activateDevilTrigger(enemy);
+      assert(dante.isDevilTrigger === true && dante._dtTransformTimer > 0 && dante._dtTransformBlastDone === false, 'Devil Trigger must initiate FINALSMASH2 transformation sequence');
+      let sawTxLevitate = false;
+      const txTotalFrames = dante._dtTransformMaxTimer || 54;
+      for (let t = 0; t < txTotalFrames + 2; t++) {
+        dante.update(enemy, 0, testArena);
+        if ((dante.z || 0) > 4) sawTxLevitate = true;
+        if (t === 8 || t === Math.round(txTotalFrames * 0.42)) {
+          dante.draw(stackCtx, enemy);
+          assert(stackCtx.getStackDepth() === 0, 'Devil Trigger transformation & winged ascension draw must preserve stack depth 0');
+        }
+      }
+      assert(sawTxLevitate === true && dante.z === 0 && dante._dtTransformTimer === 0 && dante._dtTransformBlastDone === true && enemy.hp < preTxHp, 'Devil Trigger transformation must levitate, unleash volcanic burst damage, and land cleanly');
+
+      const preJackpotHp = enemy.hp;
       dante.startJackpot(enemy);
       for (let t = 0; t < 24; t++) dante.update(enemy, 0, testArena);
-      assert(dante.isDevilTrigger === true && enemy.hp < preUltHp, 'Devil Trigger & Jackpot! must activate and damage enemy');
+      assert(dante.isDevilTrigger === true && enemy.hp < preJackpotHp, 'Devil Trigger Jackpot! must activate and damage enemy');
+
+      // Devil Trigger: All Ebony & Ivory Gunfire Shots Become Empowered Charge Shots (with splash detonation)
+      const prevDtCrit = dDef.critChance;
+      const savedDtFighters = state.fighters;
+      try {
+        dDef.critChance = 0;
+        dante._jackpotTimer = 0;
+        dante._jackpotFireTimer = 0;
+        dante._roundTripEntity = null;
+        dante._doppelganger = null;
+        dante._driveWaves.length = 0;
+        dante._rockets.length = 0;
+        dante.swordCooldown = 999;
+        dante._bullets.length = 0;
+        dante._shockwaves.length = 0;
+        dante._danteVfx.length = 0;
+        dante.x = 180; dante.y = 420; dante.vx = 0; dante.vy = 0;
+        dante.gunAngle = 0;
+        enemy.x = 240; enemy.y = 420; enemy.vx = 0; enemy.vy = 0;
+        enemy.knockbackVx = 0; enemy.knockbackVy = 0;
+        enemy.hp = 800; enemy.maxHp = 800;
+        enemy.hitStunTimer = 0;
+        const splashTarget = new Fighter({ name: 'SplashFoe', type: 'normal', x: 256, y: 446, radius: 25, hp: 500, maxHp: 500 });
+        splashTarget.maxHp = 500;
+        splashTarget.hp = 500;
+        state.fighters = [dante, enemy, ally, splashTarget];
+
+        dante.isDevilTrigger = false;
+        dante._fireSingleEbonyIvoryBullet(dDef);
+        assert(dante._bullets.length === 1 && dante._bullets[0].isChargeShot === false, 'Base form gunshots must fire standard (non-Charge) rounds');
+        dante._bullets.length = 0;
+
+        dante.isDevilTrigger = true;
+        dante._fireSingleEbonyIvoryBullet(dDef);
+        assert(dante._bullets.length === 1 && dante._bullets[0].isChargeShot === true, 'While Devil Trigger is active, Ebony & Ivory gunfire must fire Charge Shots');
+        const expectedChargeRaw = Math.max(1, Math.round((dDef.gunDamage ?? 8) * (dDef.dtChargeShotDamageMultiplier ?? 1.85)));
+        const expectedChargeSpeed = (dDef.gunShotSpeed ?? 16) * (dDef.dtChargeShotSpeedMultiplier ?? 1.28);
+        assert(dante._bullets[0].damage === expectedChargeRaw, `DT Charge Shot bullet must carry scaled charge damage (${expectedChargeRaw}, got ${dante._bullets[0].damage})`);
+        assert(Math.abs(Math.hypot(dante._bullets[0].vx, dante._bullets[0].vy) - expectedChargeSpeed) < 0.05, 'DT Charge Shot must travel at empowered Charge Shot speed');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'Devil Trigger Charge Shot + gun charge aura draw must preserve stack depth 0');
+
+        const preChargeEnemyHp = enemy.hp;
+        const preSplashHp = splashTarget.hp;
+        for (let t = 0; t < 8 && dante._bullets.length > 0; t++) {
+          dante.update(enemy, 0, testArena);
+        }
+        assert(enemy.hp < preChargeEnemyHp && enemy.hitStunTimer > 0, 'DT Charge Shot detonation must damage target and apply hit-stun');
+        assert(splashTarget.hp < preSplashHp, 'DT Charge Shot detonation must splash nearby hostile enemies within splashRadius');
+        assert(dante._shockwaves.length > 0, 'DT Charge Shot detonation must emit shockwave ripple VFX');
+
+        // Post-finisher gun sequence in DT must also convert every sequence shot into a Charge Shot
+        dante._bullets.length = 0;
+        dante._startFinisherGunSequence(dDef);
+        let sawDtSeqChargeShot = false;
+        for (let t = 0; t < 24; t++) {
+          dante.update(enemy, 0, testArena);
+          if (dante._bullets.some(b => b.isChargeShot)) sawDtSeqChargeShot = true;
+        }
+        assert(sawDtSeqChargeShot === true && dante._bullets.every(b => b.isChargeShot), 'All post-finisher gun sequence rounds in Devil Trigger must fire as Charge Shots');
+        dante._gunSequenceTimer = 0;
+        dante._bullets.length = 0;
+      } finally {
+        dDef.critChance = prevDtCrit;
+        state.fighters = savedDtFighters;
+        dante._bullets.length = 0;
+        dante._gunSequenceTimer = 0;
+        dante._gunVisualTimer = 0;
+        dante.swordCooldown = 0;
+      }
+
+      // Devil Trigger Stage 3: Million Stab & Lunging Thrust Finisher (Stronger, Bigger Hitbox, Farther Lunge & Launch + dtStingerThrust VFX)
+      {
+        dante.isDevilTrigger = true;
+        dante._weaponMode = 'rebellion';
+        dante._roundTripEntity = null;
+        dante._danteVfx.length = 0;
+        dante._shockwaves.length = 0;
+        dante.x = 120; dante.y = 420;
+        dante.gunAngle = 0;
+        const baseFinisherReach = (dDef.swordReach ?? 94) + (dDef.millionStabReachBonus ?? 22) + 14;
+        const extDist = baseFinisherReach + (enemy.r || 28) + 22; // strictly outside base Million Stab reach, inside DT extended reach
+        enemy.x = dante.x + extDist;
+        enemy.y = 420;
+        enemy.hp = 1000; enemy.maxHp = 1000;
+        enemy.hitStunTimer = 0;
+        enemy.knockbackVx = 0;
+
+        // Extended reach + stronger entry hit in DT Stage 3
+        dante.comboStep = 2;
+        dante._executeRebellionCleave(enemy, dDef);
+        assert(dante.slashMoveType === 'million_stab' && enemy.hp < 1000 && dante._millionStabHitLanded === true, 'Devil Trigger Stage 3 Million Stab must land at extended DT hitbox reach beyond base reach');
+
+        // Advance past rapid thrusts & windup coil into DT Thrust Finisher
+        dante.x = 120; dante.y = 420;
+        enemy.x = dante.x + extDist; enemy.y = 420;
+        enemy.hp = 1000;
+        enemy.knockbackVx = 0;
+        dante._millionStabTimer = 0;
+        dante._millionStabFinisherDelay = 0;
+        dante.slashSwingTimer = Math.max(10, Math.round((dDef.millionStabFrames ?? 56) * 0.25));
+        dante.slashSwingMaxTimer = dDef.millionStabFrames ?? 56;
+        dante._executeMillionStabFinisher(enemy, dDef);
+
+        const dtLunge = dDef.dtMillionStabFinisherLunge ?? 18.5;
+        const baseLunge = dDef.millionStabFinisherLunge ?? 10.5;
+        const baseKb = dDef.millionStabFinisherKnockback ?? 14.5;
+        assert(dtLunge > baseLunge && Math.abs(dante.vx - dtLunge) < 0.05, `Devil Trigger Million Stab finisher must lunge Dante farther (${dtLunge} vs base ${baseLunge})`);
+        assert(enemy.hp < 1000 && enemy.knockbackVx > baseKb, `Devil Trigger Million Stab finisher must hit extended targets and launch them farther (kb=${enemy.knockbackVx.toFixed(1)} > ${baseKb})`);
+        assert(dante._danteVfx.some(v => v.kind === 'dtStingerThrust'), 'Devil Trigger Million Stab finisher must spawn 12-frame dtStingerThrust VFX');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'Devil Trigger Million Stab finisher + dtStingerThrust draw must preserve stack depth 0');
+        dante.slashSwingTimer = 0;
+        dante._comboChainActive = false;
+      }
+
+      // Devil Form (SDT): Buffed Lightning Teleport Dodge + SDT Combo + Sin Stinger + Ombra + Judgment (Ends SDT)
+      {
+        const { resolveFighterCollision } = await import('../js/systems/physics.js');
+        state.fighters = [dante, enemy];
+
+        // 0. Buffed Devil Form Lightning Teleport Dodge
+        dante.isDevilTrigger = true;
+        dante.devilTriggerTimer = 600;
+        dante.tricksterCooldown = 0;
+        dante.isSpotDodging = false;
+        dante._dtTeleportBolts.length = 0;
+        dante.x = 260; dante.y = 420;
+        enemy.x = 310; enemy.y = 420;
+        const dodgedInDt = dante._performTricksterDash(enemy, dDef);
+        assert(dodgedInDt === true && dante.isSpotDodging === true, 'Devil Form must trigger buffed lightning teleport dodge');
+        assert(dante.tricksterCooldown === (dDef.dtTricksterCooldown ?? 34), `DT dodge must use fast dtTricksterCooldown (got ${dante.tricksterCooldown})`);
+        assert(dante._spotDodgeMaxTimer === (dDef.dtSpotDodgeDuration ?? 8), `DT dodge must use fast dtSpotDodgeDuration (got ${dante._spotDodgeMaxTimer})`);
+        assert(dante._dtTeleportBolts.length > 0, 'DT dodge must spawn lightning bolt teleport trail');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'DT lightning teleport dodge draw must preserve stack depth 0');
+        dante._spotDodgeTimer = 0;
+        dante.isSpotDodging = false;
+        dante.trickPhaseTimer = 0;
+        dante.tricksterCooldown = 0;
+
+        // Rule 18 SDT HUD skill bar swap verification
+        const sdtHudBars = getSkillDataForFighter(dante);
+        assert(
+          ['sdt_combo', 'sin_stinger', 'ombra', 'judgment'].every(id => sdtHudBars.some(b => b.id === id)) &&
+          sdtHudBars.every(b => b.color === dante.themeColor),
+          'Devil Trigger HUD must swap to SDT Combo, Sin Stinger, Ombra & Judgment bars with unified themeColor'
+        );
+
+        // 1. SDT Skill 1: SDT Combo (wide sword cleaves -> 360-degree AOE sweep hitting enemies behind Dante)
+        dante.x = 260; dante.y = 420;
+        dante.gunAngle = 0;
+        dante.sdtComboCooldown = 0;
+        enemy.x = dante.x - 110; // strictly behind Dante; only a 360-degree finisher hits this
+        enemy.y = 420;
+        enemy.hp = 1000; enemy.maxHp = 1000;
+        enemy.hitStunTimer = 0;
+        assert(dante.startSdtCombo(enemy) === true, 'startSdtCombo must initiate in Devil Form');
+        for (let t = 0; t < 44; t++) dante.update(enemy, 0, testArena);
+        assert(enemy.hp < 1000 && dante._sdtComboState === null, 'SDT Combo 360-degree finisher sweep must damage targets around/behind Dante and complete cleanly');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'SDT Combo draw must preserve stack depth 0');
+
+        // 2. SDT Skill 2: Sin Stinger (pass-through charge + whirlwind of summoned swords)
+        dante.x = 140; dante.y = 420;
+        enemy.x = 240; enemy.y = 420;
+        enemy.hp = 1000;
+        enemy.hitStunTimer = 0;
+        dante.sinStingerCooldown = 0;
+        dante._danteVfx.length = 0;
+        assert(dante.startSinStinger(enemy) === true, 'startSinStinger must initiate in Devil Form');
+        let sawStingerVfx = dante._danteVfx.some(v => v.kind === 'dtStingerThrust');
+        for (let t = 0; t < 10; t++) {
+          dante.update(enemy, 0, testArena);
+          if (dante._danteVfx.some(v => v.kind === 'dtStingerThrust')) sawStingerVfx = true;
+        }
+        assert(dante.trickPhaseTimer > 0, 'Sin Stinger must maintain trickPhaseTimer for charging through enemies');
+        // Overlap test: resolveFighterCollision must skip solid separation while Sin Stinger passes through
+        dante.x = enemy.x; dante.y = enemy.y;
+        const preOverlapX = dante.x;
+        resolveFighterCollision(dante, enemy);
+        assert(dante.x === preOverlapX, 'Sin Stinger trickPhaseTimer must allow charging directly through enemy without body collision block');
+        for (let t = 0; t < 16; t++) {
+          dante.update(enemy, 0, testArena);
+          if (dante._danteVfx.some(v => v.kind === 'dtStingerThrust')) sawStingerVfx = true;
+        }
+        assert(enemy.hp < 1000 && sawStingerVfx, 'Sin Stinger whirlwind of summoned swords must deal damage and emit dtStingerThrust VFX');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'Sin Stinger draw must preserve stack depth 0');
+
+        // 3. SDT Skill 3: Ombra (rapid-fire high-damage demonic fireballs)
+        dante.x = 140; dante.y = 420;
+        enemy.x = 320; enemy.y = 420;
+        enemy.hp = 1000;
+        enemy.hitStunTimer = 0;
+        dante.ombraCooldown = 0;
+        dante._ombraFireballs.length = 0;
+        assert(dante.startOmbra(enemy) === true, 'startOmbra must initiate rapid demonic fireball barrage');
+        let sawOmbraFireballs = false;
+        for (let t = 0; t < 45; t++) {
+          dante.update(enemy, 0, testArena);
+          if (dante._ombraFireballs.length > 0) sawOmbraFireballs = true;
+        }
+        assert(sawOmbraFireballs && enemy.hp < 1000, 'Ombra must rapidly fire demonic fireballs and deal splash/direct damage');
+        dante.draw(stackCtx, enemy);
+        assert(stackCtx.getStackDepth() === 0, 'Ombra draw must preserve stack depth 0');
+
+        // 4. SDT Skill 4: Judgment (screen-clearing flurry -> massive explosion -> immediately ends SDT)
+        dante.x = 260; dante.y = 440;
+        enemy.x = 410; enemy.y = 440;
+        enemy.hp = 1000;
+        enemy.hitStunTimer = 0;
+        dante.judgmentCooldown = 0;
+        dante.isDevilTrigger = true;
+        dante.devilTriggerTimer = 500;
+        dante._danteVfx.length = 0;
+        assert(dante.startJudgment(enemy) === true, 'startJudgment must initiate in Devil Form');
+        let endedSdtOnExplosion = false;
+        for (let t = 0; t < 70; t++) {
+          dante.update(enemy, 0, testArena);
+          if (dante._danteVfx.some(v => v.kind === 'dtJudgmentExplosion') && !dante.isDevilTrigger && dante.devilTriggerTimer === 0) {
+            endedSdtOnExplosion = true;
+          }
+          if (t === 15 || t === 45) {
+            dante.draw(stackCtx, enemy);
+            assert(stackCtx.getStackDepth() === 0, 'Judgment active draw must preserve stack depth 0');
+          }
+        }
+        assert(endedSdtOnExplosion === true && dante.isDevilTrigger === false && dante.devilTriggerTimer === 0, 'Judgment detonation must immediately end Sin Devil Trigger');
+        assert(enemy.hp < 1000 && dante._judgmentState === null, 'Judgment flurry + massive explosion must deal heavy damage across the arena and reset cleanly');
+        dante.z = 0;
+        dante._danteVfx.length = 0;
+        dante._shockwaves.length = 0;
+      }
 
       assert(dante.prewarmAssets(stackCtx) >= 8, 'Dante prewarmAssets must register all 8 MUGEN VFX strips');
       dante._danteVfx.length = 0;
@@ -28171,6 +28420,7 @@ async function runInteractionTests() {
       dante.startDoppelganger(enemy);
       dante.startKalinaAnn(enemy);
       dante.activateDevilTrigger(enemy);
+      assert(dante.startSdtCombo(enemy) === false && dante.startSinStinger(enemy) === false && dante.startOmbra(enemy) === false && dante.startJudgment(enemy) === false, 'Disabled SDT toggles must block all SDT skills');
       for (let t = 0; t < 15; t++) dante.update(enemy, 0, testArena);
       assert(
         enemy.hp === enemyHpBeforeDisabled &&
@@ -28192,6 +28442,505 @@ async function runInteractionTests() {
       state.gameState = prevGameState;
       state.getFighterTeam = prevGetTeam;
       state.projectiles = prevProjectiles;
+    }
+  }
+
+  // ── TEST 196: Last Breath Sans (last_breath_sans) 3-Phase Awakening, Gaster Hands & Rules 18/21/23/24/25/32 ──
+  {
+    console.log('\n[TEST 196] Last Breath Sans Full Combat Kit, Phase Transitions & Repository Standards...');
+    const { LastBreathSansFighter } = await import('../js/entities/fighters/LastBreathSansFighter.js');
+    const { Fighter, computeScaledFighterRadius } = await import('../js/entities/fighter.js');
+    const { drawLastBreathSansSkin, getLastBreathSkinCacheCounts } = await import('../js/graphics/fighters/lastBreathSansSkin.js');
+    const { getLastBreathVfxCacheCounts } = await import('../js/graphics/weapons/lastBreathSansWeaponGraphics.js');
+    const { prewarmMatchAssets } = await import('../js/graphics/mobileAssetScaler.js');
+    const { getSkillDataForFighter, isSkillExceptionInDarkMode } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const { FIGHTER_DEFS } = await import('../js/core/config.js');
+
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+    const prevGetTeam = state.getFighterTeam;
+
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450 };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+      state.getFighterTeam = (idx) => idx;
+
+      assert(FIGHTER_CLASS_MAP['last_breath_sans'] === LastBreathSansFighter, 'last_breath_sans must be registered in FIGHTER_CLASS_MAP');
+      assert(FIGHTER_DEFS.some(d => d && d.type === 'last_breath_sans'), 'last_breath_sans must be registered in FIGHTER_DEFS');
+
+      const lb = new LastBreathSansFighter({ id: 'last_breath_sans', x: 180, y: 460, radius: 25 });
+      const dummy = new Fighter({ name: 'Target', type: 'dummy', x: 350, y: 460, radius: 25, maxHp: 5000, hp: 5000 });
+      dummy.reset();
+      dummy.maxHp = 5000;
+      dummy.hp = 5000;
+      dummy.x = 350;
+      dummy.y = 460;
+      state.fighters = [lb, dummy];
+
+      // 1. Rule 24 Scaled Radius & 1 HP Glass-Cannon Stamina Identity
+      const expectedR = computeScaledFighterRadius(25);
+      assert(Math.abs(lb.r - expectedR) < 0.01, `Last Breath Sans must preserve scaled radius ${expectedR} (got ${lb.r})`);
+      assert(lb.hp === 1 && lb.maxHp === 1 && lb.stamina === 100, 'Last Breath Sans must start at 1/1 HP and 100 Stamina');
+
+      // 2. Rule 23 Generic Projectile Suppression
+      const projBefore = state.projectiles.length;
+      lb.shoot(0);
+      assert(state.projectiles.length === projBefore, 'Rule 23: LastBreathSansFighter.shoot() must not spawn generic bullets');
+
+      // 3. Dodge + Counter Cracked Blaster + Phase 2 Awakening below threshold
+      lb.takeDamage(25, dummy, { isMelee: true });
+      assert(lb.hp === 1 && lb.stamina < 100 && lb.activeBlasters.length >= 2, 'Shadow-Step dodge must negate damage, spend stamina, and counter with Cracked Blasters');
+      lb.stamina = (CONFIG.last_breath_sans?.phase2StaminaThreshold ?? 62) - 5;
+      lb.takeDamage(20, dummy, { isMelee: true });
+      assert(lb.lastBreathPhase === 2, `Low stamina dodge must awaken Phase 2 (got Phase ${lb.lastBreathPhase})`);
+
+      // 4. Phase 2+ Basic Color Bone Volley
+      lb._fireBasicBoneVolley(dummy, CONFIG.last_breath_sans);
+      assert(lb.activeBones.some(b => b.boneColor === 'blue') && lb.activeBones.some(b => b.boneColor === 'orange'), 'Phase 2+ Basic Bone Volley must include Blue & Orange Color Bones');
+
+      // 5. Phase 3 One-Time Lethal Defiance + Gaster Hand Turrets
+      lb.stamina = 0;
+      lb.takeDamage(50, dummy, { isMelee: true });
+      assert(lb.hp === 1 && lb.lastBreathPhase === 3 && lb._revivePhase3Used === true && lb.stamina > 0, 'First lethal hit with depleted stamina must trigger Phase 3 Second Wind once');
+      assert(lb.activeGasterHands.length === 2, 'Phase 3 awakening must summon 2 flanking Gaster Hand turrets');
+
+      // Step Gaster Hand turrets so they fire Void Bullets
+      for (let t = 0; t < 24; t++) lb._updateAllVfxLifecycles(testArena);
+      assert(lb.activeGasterBullets.length > 0, 'Gaster Hand turrets must fire aimed Void Bullets');
+
+      // Exhaust Phase 3 Stamina -> Subsequent un-dodged hit kills cleanly
+      lb.stamina = 0;
+      lb.takeDamage(50, dummy, { isMelee: true });
+      assert(lb.hp <= 0, 'After Phase 3 revival is spent and stamina is 0, subsequent hits must defeat Last Breath Sans cleanly');
+
+      // Reset to test Bone Cage, Enigmatic Encounter, Rule 25, Rule 18 & Rule 21
+      state.gameState = 'playing';
+      lb.reset();
+      lb.x = 180;
+      lb.y = 460;
+      dummy.maxHp = 5000;
+      dummy.hp = 5000;
+      dummy.dead = false;
+      dummy.isDead = false;
+      dummy.invincibleTimer = 0;
+      dummy.invincibilityTimer = 0;
+      const dHp = dummy.hp;
+      lb._executeSkill1ById('bone_cage', dummy, testArena, CONFIG.last_breath_sans);
+      assert(lb.activeBoneTraps.length >= 6 && dummy.hp < dHp, 'Bone Cage Slam must deal slam damage and spawn BoneStab traps');
+
+      lb.finaleHits = CONFIG.last_breath_sans?.finaleHitsRequired ?? 5;
+      lb._startEnigmaticFinale(dummy, testArena, CONFIG.last_breath_sans);
+      assert(lb.isEnigmaticFinaleActive === true && lb.canAim() === false, 'Enigmatic Encounter must lock aim via Rule 1.4');
+      for (let t = 0; t < 80; t++) lb.update(dummy, 0, testArena);
+      assert(lb.isEnigmaticFinaleActive === false, 'Enigmatic Encounter must complete and clear cleanly');
+
+      // Rule 25 Freeze VFX Decay
+      lb.activeBones.length = 0;
+      lb.activeBones.push({ x: lb.x, y: lb.y, vx: 0, vy: 0, angle: 0, damage: 5, life: 2 });
+      lb.isTimeStopped = true;
+      lb.timeStopTimer = 10;
+      lb.update(dummy, 0, testArena);
+      lb.update(dummy, 0, testArena);
+      assert(lb.activeBones.length === 0, 'Rule 25: Active bones/VFX must continue decaying while time-stopped');
+
+      // Rule 18 HUD Theme & Dark Mode Exception
+      const hudBars = getSkillDataForFighter(lb);
+      assert(hudBars.length === 2 && hudBars.every(b => b.color === lb.themeColor), 'Rule 18: Last Breath Sans HUD bars must share unified themeColor');
+      assert(isSkillExceptionInDarkMode(lb, hudBars.find(b => b.id === 'enigmatic_finale')), 'Rule 18: Enigmatic Encounter must be registered in signatureMap');
+
+      // Rule 21 drawHealth & Canvas 2D stack depth == 0
+      let stack = 0;
+      let healthDrawn = false;
+      const traceCtx = {
+        canvas: { width: 540, height: 960 },
+        save() { stack++; },
+        restore() { stack--; },
+        translate() {}, rotate() {}, scale() {},
+        beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
+        arc() {}, ellipse() {}, fill() {}, stroke() {}, rect() {}, clip() {},
+        fillRect() {}, strokeRect() {}, clearRect() {}, setLineDash() {}, drawImage() {},
+        fillText() { healthDrawn = true; },
+        strokeText() { healthDrawn = true; },
+      };
+      prewarmMatchAssets([lb], traceCtx);
+      const skinCaches = getLastBreathSkinCacheCounts();
+      const vfxCaches = getLastBreathVfxCacheCounts();
+      assert(skinCaches.bodies >= 6 && skinCaches.ghosts >= 2 && skinCaches.eyeGlows >= 2, `Rule 35: Last Breath Sans prewarm must bake 6 phase bodies, 2 ghost tiers & 2 eye glows (got ${JSON.stringify(skinCaches)})`);
+      assert(vfxCaches.glows >= 4, `Rule 35: Last Breath Sans VFX prewarm must bake 4 radial glows (got ${JSON.stringify(vfxCaches)})`);
+
+      lb.isTimeStopped = false;
+      lb.freezeTimer = 10;
+      lb.draw(traceCtx);
+      drawLastBreathSansSkin(traceCtx, lb);
+      assert(stack === 0, `Canvas 2D stack must be 0 after prewarmMatchAssets + LastBreathSansFighter.draw() (got ${stack})`);
+      assert(healthDrawn, 'Rule 21: LastBreathSansFighter.draw() must call drawHealth()');
+
+      console.log('      ✅ Last Breath Sans 3-phase awakening, Gaster Hands, Color Bones & Rules 18/21/23/24/25/32 verified.');
+    } finally {
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+      state.getFighterTeam = prevGetTeam;
+    }
+  }
+
+  console.log('\n🧪 [TEST 197] Carol Holiday (Deltarune Resolve) — 5-Phase Glacial Katana, Frostbite Freeze, Frost Parry, Resolve Arts, Permafrost & Rules 18/21/23/24/25/32/35...');
+  {
+    const { CarolFighter } = await import('../js/entities/fighters/CarolFighter.js');
+    const { Fighter, computeScaledFighterRadius } = await import('../js/entities/fighter.js');
+    const { FIGHTER_CLASS_MAP } = await import('../js/entities/factories/fighterFactory.js');
+    const { drawCarolSkin, getCarolSkinCacheCounts } = await import('../js/graphics/fighters/carolSkin.js');
+    const { getCarolVfxCacheCounts } = await import('../js/graphics/weapons/carolWeaponGraphics.js');
+    const { getSkillDataForFighter, isSkillExceptionInDarkMode } = await import('../js/graphics/ui/hudSkillProviders.js');
+    const { prewarmMatchAssets } = await import('../js/graphics/mobileAssetScaler.js');
+
+    const prevFighters = state.fighters;
+    const prevArena = state.arena;
+    const prevState = state.gameState;
+    const prevProjectiles = state.projectiles;
+    const prevGetTeam = state.getFighterTeam;
+    const prevRandom = Math.random;
+
+    try {
+      const testArena = { x: 45, y: 240, width: 450, height: 450, wallWidth: 4, shape: 'rect' };
+      state.arena = testArena;
+      state.gameState = 'playing';
+      state.projectiles = [];
+      state.getFighterTeam = (idx) => idx;
+
+      assert(FIGHTER_CLASS_MAP['carol'] === CarolFighter, 'carol must be registered in FIGHTER_CLASS_MAP');
+
+      // Rule 24: Scaled radius preserved via super(def) (25 * 1.2 = 30)
+      const carol = new CarolFighter({ id: 'carol', x: 180, y: 460, radius: 25 });
+      carol.team = 0;
+      const expectedRadius = computeScaledFighterRadius(25);
+      assert(Math.abs(carol.r - expectedRadius) < 0.01, `Rule 24: Carol radius must match computeScaledFighterRadius(25) (${expectedRadius}), got ${carol.r}`);
+
+      const dummy = new Fighter({ name: 'Target', type: 'dummy', x: 240, y: 460, radius: 25, hp: 5000, maxHp: 5000, speed: 0 });
+      dummy.reset();
+      dummy.maxHp = 5000;
+      dummy.hp = 5000;
+      dummy.x = 240;
+      dummy.y = 460;
+      dummy.team = 1;
+      dummy.vx = 0;
+      dummy.vy = 0;
+      state.fighters = [carol, dummy];
+
+      // Rule 23: Suppress default generic bullet shooting
+      const projBefore = state.projectiles.length;
+      carol.shoot(0);
+      assert(state.projectiles.length === projBefore, 'Rule 23: CarolFighter.shoot() must not spawn generic bullets');
+
+      // Regression check: Empty Skill 1 pool (all sub-arts disabled) must NOT block basic sword attacks
+      const savedSubFlags = {
+        enableDaggerHailstorm: CONFIG.carol.enableDaggerHailstorm,
+        enableDaggerFractalCombo: CONFIG.carol.enableDaggerFractalCombo,
+        enableFractalSlash: CONFIG.carol.enableFractalSlash,
+        enableIcicleBlizzard: CONFIG.carol.enableIcicleBlizzard,
+        enableFrostGale: CONFIG.carol.enableFrostGale,
+        enableQuickSlash: CONFIG.carol.enableQuickSlash,
+        enableIceSplitSlash: CONFIG.carol.enableIceSplitSlash,
+        enablePermafrost: CONFIG.carol.enablePermafrost,
+      };
+      try {
+        CONFIG.carol.enableDaggerHailstorm = 0;
+        CONFIG.carol.enableDaggerFractalCombo = 0;
+        CONFIG.carol.enableFractalSlash = 0;
+        CONFIG.carol.enableIcicleBlizzard = 0;
+        CONFIG.carol.enableFrostGale = 0;
+        CONFIG.carol.enableQuickSlash = 0;
+        CONFIG.carol.enableIceSplitSlash = 0;
+        CONFIG.carol.enablePermafrost = 0;
+        carol.skill1CooldownTimer = 0;
+        carol.swordCooldownTimer = 0;
+        carol.swordSwingTimer = 0;
+        dummy.x = carol.x + 60;
+        dummy.y = carol.y;
+        carol.update(dummy, 0, testArena);
+        assert(carol.swordSwingTimer > 0, 'Basic sword attack must still fire cleanly even when Skill 1 has no enabled sub-arts');
+      } finally {
+        Object.assign(CONFIG.carol, savedSubFlags);
+        carol.swordSwingTimer = 0;
+        carol.swordComboStep = 0;
+        carol.comboResetTimer = 0;
+      }
+
+      // Rule 30: 5-phase Glacial Katana 2-hit combo + Basic Attack Fractal Slash follow-up & Frostbite 3-stack Flash Freeze
+      carol.skill1CooldownTimer = 9999;
+      carol.activeIceSplits.length = 0;
+      const hpBeforeCombo = dummy.hp;
+      carol._startSwordSwing(dummy, CONFIG.carol);
+      carol.swordCooldownTimer = 999;
+      assert(carol.swordComboStep === 1 && carol.swordSwingTimer > 0, 'Hit 1 must initialize 5-phase Glacial Katana swing');
+      const hit1Frames = carol.swordSwingMax;
+      for (let t = 0; t < hit1Frames; t++) {
+        dummy.invincibilityTimer = 0;
+        dummy.x = carol.x + 52;
+        dummy.y = carol.y;
+        carol.update(dummy, 0, testArena);
+      }
+      assert(dummy.hp < hpBeforeCombo, 'Hit 1 Glacial Katana cleave must deal melee damage');
+      assert(carol.fractalFollowupSpawned && carol.activeIceSplits.some(s => s.isFractal && s.spinVel !== 0), 'Basic attack must automatically follow up with rotating Fractal Slash cuts');
+      assert((carol.frostStacks.get(dummy) || 0) === 1, 'Glacial Katana Hit 1 must apply 1 Frostbite stack');
+
+      carol.activeIceSplits.length = 0;
+      carol.comboResetTimer = 80;
+      carol._startSwordSwing(dummy, CONFIG.carol);
+      carol.swordCooldownTimer = 999;
+      assert(carol.swordComboStep === 2, 'Chaining within combo window must advance to Hit 2 Rising Cleave');
+      const hit2Frames = carol.swordSwingMax;
+      for (let t = 0; t < hit2Frames; t++) {
+        dummy.invincibilityTimer = 0;
+        dummy.x = carol.x + 52;
+        dummy.y = carol.y;
+        carol.update(dummy, 0, testArena);
+      }
+      assert(carol.activeIceSplits.filter(s => s.isFractal).length >= 6, 'Hit 2 combo finisher must follow up with full 6-line Fractal Star Web');
+      assert((carol.frostStacks.get(dummy) || 0) === 2, 'Glacial Katana Hit 2 must bring Frostbite to 2 stacks');
+      // Third Frostbite stack rolls frostFreezeChance (verify fail & success paths cleanly)
+      const hpBeforeMissFreeze = dummy.hp;
+      dummy.invincibilityTimer = 0;
+      dummy.iceFreezeTimer = 0;
+      Math.random = () => 0.99;
+      carol._applyFrostStack(dummy, CONFIG.carol, 1);
+      assert((carol.frostStacks.get(dummy) || 0) === 0 && dummy.hp === hpBeforeMissFreeze && !dummy.iceFreezeTimer, '3rd Frostbite stack must NOT Flash Freeze when frostFreezeChance roll fails');
+
+      carol.frostStacks.set(dummy, 2);
+      const hpBeforeShatter = dummy.hp;
+      dummy.invincibilityTimer = 0;
+      dummy.iceFreezeTimer = 0;
+      Math.random = () => 0.01;
+      carol._applyFrostStack(dummy, CONFIG.carol, 1);
+      Math.random = prevRandom;
+      assert((carol.frostStacks.get(dummy) || 0) === 0 && dummy.hp < hpBeforeShatter && (dummy.iceFreezeTimer || 0) > 0, '3rd Frostbite stack must trigger Flash Freeze + shatter bonus damage when frostFreezeChance succeeds');
+
+      // Passive 2: Iaijutsu Frost Parry riposte
+      Math.random = () => 0.01;
+      carol.parryCooldownTimer = 0;
+      carol.isTimeStopped = false;
+      dummy.invincibilityTimer = 0;
+      dummy.x = carol.x + 50;
+      dummy.y = carol.y;
+      const carolHpBeforeParry = carol.hp;
+      const dummyHpBeforeParry = dummy.hp;
+      const taken = carol.takeDamage(25, dummy, { isMelee: true });
+      Math.random = prevRandom;
+      assert(taken === 0 && carol.hp === carolHpBeforeParry && carol.parryFlashTimer > 0, 'Iaijutsu Frost Parry must negate incoming melee damage and flash');
+      assert(dummy.hp < dummyHpBeforeParry, 'Iaijutsu Frost Parry must riposte nearby attacker');
+
+      // Resolve Arts Skill 1 (exact project.json ports): Dagger Hailstorm, Fractal Slash, Icicle Blizzard, Frost Gale, Quick Slash
+      carol.activeDaggers.length = 0;
+      carol._executeSkill1ById('dagger_hailstorm', dummy, testArena, CONFIG.carol);
+      for (let f = 0; f < 30; f++) {
+        if (carol._daggerHailSeq) carol._updateDaggerHailSeq(dummy, testArena, CONFIG.carol);
+        carol._updateDaggers([dummy], testArena, CONFIG.carol);
+      }
+      assert(carol.activeDaggers.length === (CONFIG.carol?.daggerCount ?? 10), 'Dagger Hailstorm must spawn 10 Delaylist rotating ring daggers');
+      assert(carol.activeDaggers.some(d => d.stage === 'slide_aim' || d.stage === 'hold' || d.stage === 'fly'), 'Daggers must transition cleanly from pullback -> wait -> slide_aim -> hold -> fly');
+
+      carol.activeIceSplits.length = 0;
+      carol.activeFractalBursts.length = 0;
+      carol._executeSkill1ById('fractal_slash', dummy, testArena, CONFIG.carol);
+      assert(carol.activeFractalBursts.some(b => b.kind === 'ring'), 'Fractal Slash must emit Resolve effect1 center reticle pulse');
+      assert(carol.activeIceSplits.some(s => s.isFractal && s.useStretch && s.spinDecay > 1), 'Fractal Slash must emit stretching beams with exponential spinDecay');
+      for (let f = 0; f < 45; f++) carol._updateIceSplits([dummy], testArena, CONFIG.carol);
+      assert(carol.activeFractalBursts.some(b => b.kind === 'streak') && carol.activeFractalBursts.some(b => b.kind === 'flash'), 'Fractal Slash detonation must emit Resolve effect3/4 flash & effect5 radial streaks');
+
+      carol.activeBlizzardSpawners.length = 0;
+      carol.activeIcicles.length = 0;
+      carol._executeSkill1ById('icicle_blizzard', dummy, testArena, CONFIG.carol);
+      assert(carol.activeBlizzardSpawners.length === (CONFIG.carol?.blizzardWaveCount ?? 4) * 2, 'Icicle Blizzard must queue paired diagonal sweeping column spawners');
+      for (let f = 0; f < 80; f++) carol._updateBlizzardSpawners(testArena, CONFIG.carol);
+      assert(carol.activeIcicles.length >= 24, 'Icicle Blizzard spawners must emit paired vertical column walls of rotating splitbullet shards');
+
+      carol.activeFrostGales.length = 0;
+      carol._executeSkill1ById('frost_gale', dummy, testArena, CONFIG.carol);
+      assert(carol.activeFrostGales.length >= 4, 'Frost Gale must spawn decelerating Frost Nova snowflakes');
+      carol.activeFrostGales[0].life = 1;
+      const iciclesBeforeBurst = carol.activeIcicles.length;
+      carol._updateFrostGales([dummy], testArena, CONFIG.carol);
+      assert(carol.activeIcicles.length - iciclesBeforeBurst === ((CONFIG.carol?.galeOuterRingCount ?? 6) + (CONFIG.carol?.galeInnerRingCount ?? 6)), 'Expiring Frost Gale must burst into exact 6+6 staggered dual hexagon splitbullet shards');
+
+      carol.activeIceSplits.length = 0;
+      carol.activeDaggers.length = 0;
+      carol._executeSkill1ById('quick_slash', dummy, testArena, CONFIG.carol);
+      assert(carol.activeIceSplits.some(s => s.isRapidSlash) && carol._quickSlashSeq !== null, 'Quick Slash must start Resolve accelerating 9-beat telegraph + 10-slash barrage');
+      assert(carol.activeDaggers.length === 0, 'Quick Slash must stay pure blade slashes without welded daggers');
+      // Verify Dagger lock-in (daggerAutoAim: false): moving opponent after cast must NOT re-aim daggers
+      carol.activeDaggers.length = 0;
+      carol._daggerHailSeq = null;
+      dummy.x = 240;
+      dummy.y = 460;
+      carol.x = 120;
+      carol.y = 460;
+      carol._executeSkill1ById('dagger_hailstorm', dummy, testArena, { ...CONFIG.carol, daggerAutoAim: false, daggerCount: 4 });
+      const snapX = carol._daggerHailSeq?.lockedTargetX;
+      dummy.x = 60;
+      dummy.y = 260;
+      for (let t = 0; t < 80; t++) {
+        carol._updateDaggerHailSeq(dummy, testArena, { ...CONFIG.carol, daggerAutoAim: false, daggerCount: 4 });
+        carol._updateDaggers([dummy], testArena, { ...CONFIG.carol, daggerAutoAim: false, daggerCount: 4 });
+        if (carol.activeDaggers.some(d => d.stage === 'fly')) break;
+      }
+      const flyingLocked = carol.activeDaggers.find(d => d.stage === 'fly');
+      assert(snapX === 240 && flyingLocked && flyingLocked.vx > 0, 'Skill 1A with daggerAutoAim=false must stay locked onto initial cast position even if target relocates');
+
+      // Verify Dagger Trail + Wall-Embedded Dagger stick (`stuckTimer > 0`)
+      carol.activeDaggers.length = 0;
+      carol._daggerHailSeq = null;
+      dummy.x = 240;
+      dummy.y = 460;
+      carol._executeSkill1ById('dagger_hailstorm', dummy, testArena, CONFIG.carol);
+      carol.activeDaggers[0].stage = 'hold';
+      carol.activeDaggers[0].aimTimer = 1;
+      carol.activeDaggers[0].x = testArena.x + testArena.width - 10;
+      carol.activeDaggers[0].lockedAngle = 0;
+      carol._updateDaggers([dummy], testArena, CONFIG.carol);
+      assert(carol.activeDaggerTrails.length >= 1, 'Launching dagger must spawn Resolve Dagger-Trail + knifeDMG beam');
+      carol._updateDaggers([dummy], testArena, CONFIG.carol);
+      assert(carol.activeDaggers.some(d => d.stuckTimer > 0), 'Dagger impacting opposite arena border must embed briefly along wall edge');
+      for (const sp of carol.activeIceSplits) {
+        sp.delayTimer = 0;
+        sp.warnTimer = 0;
+      }
+      dummy.invincibilityTimer = 0;
+      const hpBeforeSplit = dummy.hp;
+      carol._updateIceSplits([dummy], testArena, CONFIG.carol);
+      assert(dummy.hp < hpBeforeSplit, 'Quick Slash detonation must deal AOE damage');
+
+      // Passive 3: Carol_Heal / Cryo Mend (once per match below 38% HP)
+      carol.hasUsedCarolHeal = false;
+      carol.hp = Math.floor(carol.maxHp * 0.25);
+      const hpBeforeHeal = carol.hp;
+      const didHeal = carol._tryCarolHeal(CONFIG.carol);
+      assert(didHeal && carol.hp > hpBeforeHeal && carol.hasUsedCarolHeal && carol._healthBarHealTimer > 0, 'Cryo Mend (Carol_Heal) must heal below threshold and trigger Rule 27 HUD bar pulse');
+      assert(carol._tryCarolHeal(CONFIG.carol) === false, 'Cryo Mend (Carol_Heal) must only trigger once per match');
+
+      // Signature Ultimate: PERMAFROST (horizontal snow wind, whole screen, 2 Ice_Slash cuts, 20 frozen Quick_Slash cuts + Aqua Heatbar Chill)
+      carol.permafrostHits = CONFIG.carol?.permafrostHitsRequired ?? 5;
+      carol.permafrostCooldownTimer = 0;
+      carol.activeIceSplits.length = 0;
+      carol._startPermafrost(dummy, testArena, CONFIG.carol);
+      assert(carol.isPermafrostActive === true && carol.canAim() === false, 'PERMAFROST must lock aim via Rule 1.4');
+      let saw20FrozenCuts = false;
+      const hpBeforePermafrost = dummy.hp;
+      for (let t = 0; t < 120; t++) {
+        dummy.invincibilityTimer = 0;
+        carol.update(dummy, 0, testArena);
+        if (carol.activeIceSplits.filter(s => s.isFrozenWait).length >= 20) saw20FrozenCuts = true;
+      }
+      assert(saw20FrozenCuts, 'PERMAFROST must lock 20 Quick_Slash cuts around target during freeze_wait');
+      assert(carol.isPermafrostActive === false && dummy.hp < hpBeforePermafrost, 'PERMAFROST must finish storm, detonate frozen cuts & deal finisher damage');
+      assert(carol.aquaChilledTargets.has(dummy) && carol.aquaChilledTargets.get(dummy).timer > 0, 'PERMAFROST must inflict lingering Aqua Soul Heatbar Chill on struck targets');
+
+      // Rule 25: VFX must continue decaying while time-stopped
+      carol.activeIcicles.length = 0;
+      carol.activeIcicles.push({ x: carol.x, y: carol.y, vx: 0, vy: 0, angle: 0, damage: 5, life: 2 });
+      carol.isTimeStopped = true;
+      carol.timeStopTimer = 10;
+      carol.update(dummy, 0, testArena);
+      carol.update(dummy, 0, testArena);
+      assert(carol.activeIcicles.length === 0, 'Rule 25: Active icicles/VFX must continue decaying while time-stopped');
+
+      // Rule 18: Unified themeColor HUD bars & signature dark-mode exception
+      const hudBars = getSkillDataForFighter(carol);
+      assert(hudBars.length >= 1 && hudBars.every(b => b.color === carol.themeColor), 'Rule 18: Carol HUD bars must share unified themeColor (#38BDF8)');
+      assert(hudBars.some(b => b.id === 'dagger_hailstorm'), 'Rule 18: Dagger Hailstorm 5-hit passive bar must appear when enabled');
+      if (isSkillEnabled(CONFIG.carol.enablePermafrost, true)) {
+        assert(isSkillExceptionInDarkMode(carol, hudBars.find(b => b.id === 'permafrost')), 'Rule 18: PERMAFROST must be registered in signatureMap');
+      }
+
+      // Passive 4: Dagger Hailstorm triggers after 5 successful basic attack damage hits
+      carol.activeDaggers.length = 0;
+      carol._daggerHailSeq = null;
+      carol.daggerHailBasicHits = 0;
+      carol.daggerHailPassiveCooldownTimer = 0;
+      dummy.x = carol.x + 52;
+      dummy.y = carol.y;
+      for (let h = 1; h <= 5; h++) {
+        dummy.invincibilityTimer = 0;
+        carol.swordHitDelivered = false;
+        carol.swordSlashAngle = 0;
+        carol.swordSwingDamage = 10;
+        carol._deliverSwordImpact([dummy], { ...CONFIG.carol, enableDaggerHailstorm: 1, daggerHailstormHitsRequired: 5 });
+        if (h < 5) {
+          assert(carol.daggerHailBasicHits === h && !carol._daggerHailSeq, `Dagger Hailstorm passive must accumulate hit ${h}/5 before triggering`);
+        }
+      }
+      assert(carol.daggerHailBasicHits === 0 && carol._daggerHailSeq !== null && carol.activeDaggers.length >= 1, 'Dagger Hailstorm passive must trigger automatically on 5th basic attack hit and reset hit counter');
+      carol.activeDaggers.length = 0;
+      carol._daggerHailSeq = null;
+
+      // Rule 35 & Rule 21: Prewarm caches, drawHealth(), and Canvas 2D stack depth == 0
+      let stack = 0;
+      let healthDrawn = false;
+      const traceCtx = {
+        canvas: { width: 540, height: 960 },
+        save() { stack++; },
+        restore() { stack--; },
+        translate() {}, rotate() {}, scale() {},
+        beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
+        arc() {}, ellipse() {}, fill() {}, stroke() {}, rect() {}, clip() {},
+        fillRect() {}, strokeRect() {}, clearRect() {}, setLineDash() {}, drawImage() {},
+        fillText() { healthDrawn = true; },
+        strokeText() { healthDrawn = true; },
+      };
+      prewarmMatchAssets([carol], traceCtx);
+      const skinCaches = getCarolSkinCacheCounts();
+      const vfxCaches = getCarolVfxCacheCounts();
+      assert(skinCaches.bodies >= 1 && skinCaches.ghosts >= 1 && skinCaches.auraGlow >= 1, `Rule 35: Carol skin prewarm must bake body, ghost & aura glow (got ${JSON.stringify(skinCaches)})`);
+      assert(vfxCaches.glows >= 4 && vfxCaches.sprites >= 37, `Rule 35: Carol VFX prewarm must bake 4 radial glows & preload 37 Resolve sprites (got ${JSON.stringify(vfxCaches)})`);
+
+      // Active cast animation states (`stance`, `point`, `flurry`, `sheath`, `spell` + `Cspell1..5` rings + 0:54-1:01 DaggerHail+Fractal II combo)
+      carol.activeDaggers.length = 0;
+      carol.activeIceSplits.length = 0;
+      const customComboCfg = {
+        ...CONFIG.carol,
+        daggerFractalDaggers: 2,
+        daggerFractalWaves: 2,
+        daggerFractalRingCount: 3,
+        daggerFractalExpandRings: 0,
+        daggerFractalSlashWidth: 30,
+        daggerFractalSlashDamage: 15,
+      };
+      carol._executeSkill1ById('dagger_fractal', dummy, testArena, customComboCfg);
+      assert(carol.castMistTimer > 0 && carol._daggerFractalSeq !== null && carol.activeIceSplits.some(s => s.isFractal), 'DaggerHail + Fractal II combo must trigger frost mist, crescent daggers & multi-wave triangle lattice');
+      assert(carol._daggerHailSeq && carol._daggerHailSeq.total === 2, 'Skill 1F config daggerFractalDaggers=2 must be respected without minimum-4 clamp');
+      assert(carol.activeIceSplits.length === 3 && carol.activeIceSplits[0].width === 30 && carol.activeIceSplits[0].damage === 15, 'Skill 1F config boundary daggerFractalExpandRings=0, width, and damage must be consumed cleanly');
+      carol.activeDaggers.length = 0;
+      carol.activeIceSplits.length = 0;
+      carol._daggerHailSeq = null;
+      carol._daggerFractalSeq = null;
+      carol._executeSkill1ById('dagger_fractal', dummy, testArena, CONFIG.carol);
+      for (const pose of ['stance', 'point', 'flurry', 'upslash', 'downslash', 'sheath', 'spell']) {
+        carol._triggerCastAnim(pose, 16);
+        carol.activeSpellRings.push({ x: carol.x, y: carol.y, life: 12, maxLife: 12 });
+        carol.draw(traceCtx);
+        assert(stack === 0, `Canvas 2D stack must be 0 during Carol Resolve cast pose '${pose}' (got ${stack})`);
+      }
+
+      carol.isTimeStopped = false;
+      carol.freezeTimer = 10;
+      carol.draw(traceCtx);
+      drawCarolSkin(traceCtx, carol);
+      assert(stack === 0, `Canvas 2D stack must be 0 after prewarmMatchAssets + CarolFighter.draw() (got ${stack})`);
+      assert(healthDrawn, 'Rule 21: CarolFighter.draw() must call drawHealth()');
+
+      console.log('      ✅ Carol Holiday Glacial Katana 5-phase combo, Frostbite freeze, Frost Parry, Resolve Arts, Permafrost & Rules 18/21/23/24/25/32/35 verified.');
+    } finally {
+      Math.random = prevRandom;
+      state.fighters = prevFighters;
+      state.arena = prevArena;
+      state.gameState = prevState;
+      state.projectiles = prevProjectiles;
+      state.getFighterTeam = prevGetTeam;
     }
   }
 

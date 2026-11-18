@@ -116,17 +116,22 @@ export function checkDanteSpotDodgeAnticipation(fighter, target, dist, cfg) {
 }
 
 /**
- * Executes Dante's Trickster Spot Dodge vanish, sidestep, and `MISS!` feedback.
+ * Executes Dante's Trickster Spot Dodge vanish (buffed into a lightning-fast long teleport in Devil Form).
  */
 export function performDanteTricksterDash(fighter, threat, cfg) {
   const activeCfg = cfg || CONFIG.dante || {};
   if (!isSkillEnabled(activeCfg.enableTricksterDash, true) || !isSkillEnabled(activeCfg.enableSpotDodge, true)) return false;
-  if (fighter._isPerformingMillionStab()) return false;
+  if (fighter._isPerformingMillionStab() || (fighter._judgmentState && fighter._judgmentState.active)) return false;
 
-  fighter.tricksterCooldown = activeCfg.tricksterCooldown ?? 75;
+  const isDT = Boolean(fighter.isDevilTrigger);
+  fighter.tricksterCooldown = isDT
+    ? (activeCfg.dtTricksterCooldown ?? 34)
+    : (activeCfg.tricksterCooldown ?? 200);
   fighter._spotDodgeOriginX = fighter.x;
   fighter._spotDodgeOriginY = fighter.y;
-  fighter._spotDodgeMaxTimer = activeCfg.spotDodgeDuration ?? 18;
+  fighter._spotDodgeMaxTimer = isDT
+    ? Math.max(4, activeCfg.dtSpotDodgeDuration ?? 8)
+    : (activeCfg.spotDodgeDuration ?? 18);
   fighter._spotDodgeTimer = fighter._spotDodgeMaxTimer;
   fighter.trickPhaseTimer = fighter._spotDodgeMaxTimer;
   fighter.suppressInkOutline = true;
@@ -138,22 +143,36 @@ export function performDanteTricksterDash(fighter, threat, cfg) {
   let awayAngle = (fighter.gunAngle || 0) + Math.PI * 0.5;
   if (threat && typeof threat.x === 'number' && typeof threat.y === 'number') {
     fighter._lastDodgeSide = !fighter._lastDodgeSide;
-    awayAngle = Math.atan2(fighter.y - threat.y, fighter.x - threat.x) + (fighter._lastDodgeSide ? 1.15 : -1.15);
+    const flankOffset = isDT ? (fighter._lastDodgeSide ? 1.85 : -1.85) : (fighter._lastDodgeSide ? 1.15 : -1.15);
+    awayAngle = Math.atan2(fighter.y - threat.y, fighter.x - threat.x) + flankOffset;
   }
 
-  const shift = activeCfg.tricksterDistance ?? 12;
+  const shift = isDT ? (activeCfg.dtTricksterDistance ?? 155) : (activeCfg.tricksterDistance ?? 100);
   const pad = (fighter.r || 30) + 6;
   fighter.x = Math.max(arena.x + pad, Math.min(arena.x + arena.width - pad, fighter.x + Math.cos(awayAngle) * shift));
   fighter.y = Math.max(arena.y + pad, Math.min(arena.y + arena.height - pad, fighter.y + Math.sin(awayAngle) * shift));
 
-  const vfxSize = (fighter.r || 30) * 3.8;
+  const vfxSize = (fighter.r || 30) * (isDT ? 4.2 : 3.8);
   fighter._spawnVfx('spotDodge', fighter._spotDodgeOriginX, fighter._spotDodgeOriginY - (fighter.r || 30) * 0.18, 0, vfxSize, vfxSize, fighter._spotDodgeMaxTimer + 2, 0.98);
+  if (isDT && Array.isArray(fighter._dtTeleportBolts)) {
+    fighter._dtTeleportBolts.push({
+      x1: fighter._spotDodgeOriginX,
+      y1: fighter._spotDodgeOriginY,
+      x2: fighter.x,
+      y2: fighter.y,
+      life: 12,
+      maxLife: 12,
+      seed: Math.random() * 100,
+    });
+    if (fighter._dtTeleportBolts.length > 6) fighter._dtTeleportBolts.shift();
+    fighter._spawnRipple(fighter._spotDodgeOriginX, fighter._spotDodgeOriginY, 54, '#FBBF24');
+  }
   fighter._playSfx('trickVanish');
   spawnFloatingText(
     fighter._spotDodgeOriginX,
     fighter._spotDodgeOriginY - (fighter.r || 30) - 18,
     activeCfg.spotDodgeText || 'MISS!',
-    activeCfg.spotDodgeTextColor || '#FFFFFF'
+    isDT ? '#FBBF24' : (activeCfg.spotDodgeTextColor || '#FFFFFF')
   );
   if (threat && typeof threat.x === 'number' && typeof threat.y === 'number' && !threat.isProjectile) {
     fighter.aim(threat);

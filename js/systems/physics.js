@@ -1215,12 +1215,15 @@ export function endRoundIfTlfsEnded() {
         const challengerHp = MODE_SETTINGS[state.mode]?.challengerFixedHp ?? MODE_SETTINGS[state.mode]?.enemyFixedHp ?? 500;
         const isSans = (newEnemy.characterId === 'sans' || newEnemy.type === 'sans');
         const isErrorSans = (newEnemy.characterId === 'error_sans' || newEnemy.type === 'error_sans');
+        const isLastBreathSans = (newEnemy.characterId === 'last_breath_sans' || newEnemy.type === 'last_breath_sans');
         const isMakima = (newEnemy.characterId === 'makima' || newEnemy.type === 'makima');
         const hp = isErrorSans
           ? ((typeof CONFIG !== 'undefined' && CONFIG.error_sans?.hp !== undefined) ? CONFIG.error_sans.hp : 1)
-          : (isSans
-            ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1)
-            : (isMakima ? Math.round(challengerHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : challengerHp));
+          : (isLastBreathSans
+            ? ((typeof CONFIG !== 'undefined' && CONFIG.last_breath_sans?.hp !== undefined) ? CONFIG.last_breath_sans.hp : 1)
+            : (isSans
+              ? ((typeof CONFIG !== 'undefined' && CONFIG.sans?.hp !== undefined) ? CONFIG.sans.hp : 1)
+              : (isMakima ? Math.round(challengerHp * (CONFIG.makima?.maxHpRatio ?? 1.0)) : challengerHp)));
         newEnemy.maxHp = hp;
         newEnemy.hp = hp;
         

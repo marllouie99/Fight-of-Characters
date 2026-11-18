@@ -197,7 +197,7 @@ function isStaminaSansVariant(f) {
     (f._def && (f._def.id || f._def.type)) ||
     ''
   ).toLowerCase();
-  return charId === 'sans' || charId === 'error_sans' || charId === 'errorsans';
+  return charId === 'sans' || charId === 'error_sans' || charId === 'errorsans' || charId === 'last_breath_sans' || charId === 'lastbreathsans';
 }
 
 export function getFighterThemeColor(f, fallbackColor = '#38bdf8') {
@@ -2061,14 +2061,10 @@ function getTopDuelTimerSecondsString() {
 }
 
 /**
- * Wraps Top Duel HUD name markup with a back outer-stroke layer used in dark mode
- * so white text + black inner stroke gets a crisp white outer outline on black backgrounds.
+ * Wraps Top Duel HUD name markup (only Roaring Knight uses the white outline via .hud-roaring-knight-name).
  */
 function wrapTopHudNameLayers(nameHtml, isRoaringKnight = false) {
-  if (isRoaringKnight) {
-    return `<span class="hud-top-name__text">${nameHtml}</span>`;
-  }
-  return `<span class="hud-top-name__outline" aria-hidden="true">${nameHtml}</span><span class="hud-top-name__text">${nameHtml}</span>`;
+  return `<span class="hud-top-name__text">${nameHtml}</span>`;
 }
 
 /**
@@ -2672,6 +2668,12 @@ function updateHealthHud() {
       const cfg = (typeof CONFIG !== 'undefined' && CONFIG.error_sans) ? CONFIG.error_sans : {};
       const baseBoneDmg = cfg.basicBoneDamage || cfg.damage || 11;
       info.push(`<b>DMG:</b> ${baseBoneDmg}`);
+      info.push(`<b>HP:</b> 1/1`);
+    } else if (f.characterId === 'last_breath_sans' || f.type === 'last_breath_sans') {
+      const cfg = (typeof CONFIG !== 'undefined' && CONFIG.last_breath_sans) ? CONFIG.last_breath_sans : {};
+      const baseBoneDmg = cfg.basicBoneDamage || cfg.damage || 11;
+      const phase = f.lastBreathPhase || 1;
+      info.push(`<b>DMG:</b> ${baseBoneDmg} <span style="color: #EF4444; font-size: 10px;">(PH.${phase})</span>`);
       info.push(`<b>HP:</b> 1/1`);
     } else if (f.characterId === 'yuta' || f.type === 'yuta') {
       const isRikaAlive = typeof f.isRikaAliveInDomain === 'function' ? f.isRikaAliveInDomain() : (f.rika && f.rika.active && !f.rika.isDying);

@@ -42,7 +42,8 @@ super.update(opponent, ownerIndex, arena);
     ctx.scale(1, -1);
   }
   ```
-- **Upright Weapon Hand Placement (Aizen Reference — `js/graphics/weapons/aizenWeaponGraphics.js`)**:
+- **Upright Weapon Hand Placement & Dante Hand Radius Standard (`js/graphics/weapons/danteWeaponGraphics.js` & `js/graphics/weapons/aizenWeaponGraphics.js`)**:
+  - ALWAYS use `const handRadius = r * 0.30;` passed directly into `drawPixelHand(ctx, 0, 0, handRadius, skinTone, '#0E0F14')` (matching Dante's exact hand size). NEVER wrap `r * 0.30` in `getHandSize(...)` (since `handSizeMultiplier` `1.4` bloats hands to `r * 0.42`).
   - ALWAYS anchor weapon hands at the **lower torso/chest flanks** (`(+r * 0.82, +r * 0.38..0.52)` and `(-r * 0.82, +r * 0.38)`), NEVER on top of the head/hair (`y < 0`).
   - Always normalize left-facing transforms (`const facingLeft = Math.abs(Math.atan2(Math.sin(aim), Math.cos(aim))) > Math.PI / 2;`) or keep hands in an upright mirrored torso frame (`if (facingLeft) ctx.scale(-1, 1)`) so rotating by `aim` never flips hands, sleeves, or scabbards upside down onto the crown.
 - **Facial Feature Prohibition**: NEVER draw eyes, pupils, mouth, or nose. Represent character identity through hair silhouette, headwear/eyewear, scars/markings, and clothing/collars.
@@ -155,5 +156,9 @@ super.update(opponent, ownerIndex, arena);
   8. Sound & Audio Engineering (Volume config in `audioVolumeConfig.js`, layered impact SFX)
   9. Asset Manifest & Directory Structure (`Assets/model/<characterId>/`)
   10. Verification & Test Coverage Matrix (`scripts/testInteractions.mjs`, `npm run verify`)
+
+### 13. Deltarune & Undertale Dialogue Authenticity Check (Rule 38)
+- When scaffolding any **Deltarune** or **Undertale** fighter, ALWAYS verify first whether the character actually speaks in canon (or in the exact source mod being ported).
+- If the character does **not** speak (e.g., canon *Roaring Knight*, *Kris*), **DO NOT** invent dialogue lines or talking voice blips (`blipSrc`). Omit speech bubbles, or use silent `'.....'` with `blipSrc: false` and authentic non-verbal SFX only.
 
 

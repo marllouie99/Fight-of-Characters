@@ -61,6 +61,10 @@ export { drawKaizoKnightSkin, drawKaizoKnightPixelBody, drawKaizoKnightGhostSkin
 export { drawKaizoKnightRadiantKnife, drawKaizoKnightWeaponPreview, drawKaizoCrescentProjectile, drawKaizoBoardSlashVFX, drawSoulSplitterVFX, drawDiamondStormProjectile, drawKaizoSwordVortexAndTunnelVFX, drawHypernovaStarstormVFX, drawRoaringDeltaVFX, drawKaizoParryVFX } from './weapons/kaizoKnightWeaponGraphics.js';
 export { drawErrorSansSkin, drawErrorSansPixelBody, drawErrorSansGhostSkin, _drawErrorSansHair, _getErrorSansHairImage } from './fighters/errorSansSkin.js';
 export { drawErrorSansWeaponPreview, drawErrorGasterBlaster, drawErrorBoneProjectile, drawErrorBoneTrap, drawErrorStringsVFX, drawForcedCrashVFX } from './weapons/errorSansWeaponGraphics.js';
+export { drawLastBreathSansSkin, drawLastBreathSansPixelBody, drawLastBreathSansGhostSkin, _drawLastBreathSansHair, _getLastBreathSansHairImage } from './fighters/lastBreathSansSkin.js';
+export { drawLastBreathSansWeaponPreview, drawLastBreathGasterBlaster, drawLastBreathBoneProjectile, drawLastBreathBoneTrap, drawGasterHandTurret, drawGasterBulletProjectile, drawEnigmaticFinaleVFX } from './weapons/lastBreathSansWeaponGraphics.js';
+export { drawCarolSkin, drawCarolPixelBody, drawCarolGhostSkin, _drawCarolHair, _getCarolHairImage } from './fighters/carolSkin.js';
+export { drawCarolKatanaAndSlashVFX, drawCarolWeaponPreview, drawCarolFrostDagger, drawCarolDaggerTrails, drawCarolFrostGale, drawCarolIcicleShard, drawCarolIceSplitLine, drawCarolIceSplitLines, drawCarolPermafrostVFX, drawCarolCryoMendAura, drawCarolAquaHeatbarChill } from './weapons/carolWeaponGraphics.js';
 export { drawJevilSkin, drawJevilPixelBody, drawJevilGhostSkin, _drawJevilHair, _getJevilHairImage } from './fighters/jevilSkin.js';
 export { drawJevilDevilsknife, drawJevilWeaponPreview, drawJevilSuitBullet, drawJevilSuitBomb, drawJevilSpinningScythe, drawJevilMerryGoRound, drawJevilFinalChaosRipples } from './weapons/jevilWeaponGraphics.js';
 export { drawIsagiSkin, drawIsagiGhostSkin, drawIsagiPixelBody, _drawIsagiHair, _getIsagiHairImage, drawIsagiFist } from './fighters/isagiSkin.js';

@@ -1734,9 +1734,9 @@ export function drawArenaMatchNames(ctx, alreadyInCameraSpace = false) {
 
   const getKnightAwareNameOpts = (entry, normalStrokeWidth, knightStrokeWidth) => {
     const isKnight = Boolean(entry && entry.isKnight);
-    if (isKnight || isDark) {
+    if (isKnight) {
       return {
-        color: isKnight ? '#050609' : entry.color,
+        color: '#050609',
         stroke: true,
         strokeColor: '#FFFFFF',
         strokeWidth: knightStrokeWidth,

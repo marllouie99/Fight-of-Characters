@@ -627,7 +627,7 @@ function _drawTrackingSwordDashTrail(ctx, slash, span) {
   const ghostCanvas = _getTrackingSwordVariantCanvas('ghost_red', swordImg);
   const mult = slash.dashTimer >= (slash.maxDashFrames || 2) ? 1.0 : 0.55;
   const scale = slash.scale ?? 1.2;
-  const count = 28;
+  const count = 14;
   const halfSpan = span * 0.56;
   const startLocalX = (slash.ox !== undefined && slash.oy !== undefined)
     ? ((slash.ox - slash.cx) * Math.cos(slash.angle) + (slash.oy - slash.cy) * Math.sin(slash.angle))
@@ -822,9 +822,9 @@ function _drawStarConeWindStrips(ctx, reach, halfAngle, tick, coneProgress = 0.5
   }
 
   // Subtle horizontal scanline grate flicker inside cone (matching spr_knight_line_grate)
-  const grateOffset = (tick * 3) % 10;
+  const grateOffset = (tick * 3) % 16;
   ctx.fillStyle = 'rgba(246, 224, 255, 0.11)';
-  for (let gy = -tipY + grateOffset; gy < tipY; gy += 10) {
+  for (let gy = -tipY + grateOffset; gy < tipY; gy += 16) {
     ctx.fillRect(10, gy, reach - 10, 1.4);
   }
   ctx.restore();
@@ -2222,14 +2222,14 @@ function _drawTunnelSwordSpritePass(ctx, sword) {
   const variant = useWhite ? 'white' : (useRed ? 'crimson' : 'normal');
   const sprite = _getTunnelLongswordCanvas(variant);
 
-  // 8-sample lerped conveyor motion trail (sword_tunnel.rs `for i in 0..10` -> ribbed metallic walls)
+  // 4-sample lerped conveyor motion trail (cuts Sword Tunnel draw calls in half while preserving ribbed wake)
   const dx = sword.x - (sword.prevX ?? sword.x);
   const dy = sword.y - (sword.prevY ?? sword.y);
   const moveDist = Math.hypot(dx, dy);
   const smearDistX = moveDist > 0.8 ? dx : (sword.smearX || 0);
   const smearDistY = moveDist > 0.8 ? dy : (sword.smearY || 0);
   if (Math.hypot(smearDistX, smearDistY) > 0.9) {
-    const samples = 8;
+    const samples = 4;
     for (let s = 0; s < samples; s++) {
       const frac = s / samples;
       const sx = sword.x - smearDistX * (1 - frac);
@@ -2237,7 +2237,7 @@ function _drawTunnelSwordSpritePass(ctx, sword) {
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(sword.angle);
-      ctx.globalAlpha = 0.08 + 0.62 * frac;
+      ctx.globalAlpha = 0.14 + 0.56 * frac;
       if (sprite) {
         const tw = sprite.width;
         const th = sprite.height * (isFinisher ? 0.74 : scaleH);
@@ -2375,5 +2375,30 @@ export function drawRoaringKnightParryVFX(ctx, fighter) {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+}
+
+/**
+ * Pre-bakes all Roaring Knight offscreen sword, flurry, gauntlet, and glow caches
+ * before Round 1 begins so first skill casts cause zero mid-combat canvas allocation stalls (Rule 35).
+ */
+export function prewarmRoaringKnightVfxCaches(radius = 28) {
+  if (typeof document === 'undefined') return;
+  const sprites = _preloadRoaringKnightWeaponSprites();
+  _getKnightCircleGlowCanvas();
+  _getKnightGripCanvas(getHandSize(radius * 0.32));
+  _getTunnelLongswordCanvas('normal');
+  _getTunnelLongswordCanvas('crimson');
+  _getTunnelLongswordCanvas('white');
+  const fallingImg = sprites.fallingSword;
+  if (fallingImg && fallingImg.complete && fallingImg.naturalWidth > 0) {
+    _getTrackingSwordVariantCanvas('white_flash', fallingImg);
+    _getTrackingSwordVariantCanvas('ghost_red', fallingImg);
+    _getTrackingSwordVariantCanvas('track_grey', fallingImg);
+    _getTrackingSwordVariantCanvas('red_freeze', fallingImg);
+  }
+  const flurryImg = sprites.battleFlurry;
+  if (flurryImg && flurryImg.complete && flurryImg.naturalWidth > 0) {
+    _getKnightFlurryGhostCanvas(flurryImg);
   }
 }

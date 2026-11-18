@@ -9,6 +9,7 @@ import { drawPixelHand } from '../renderers/fighterRenderer.js';
 
 const DANTE_WEAPON_SPECS = {
   rebellion: 'Assets/model/dante/Dante-rebellion.png',
+  devilSword: 'Assets/model/dante/Dante-devil-sword.png',
   ebony: 'Assets/model/dante/Dante-ebony.png',
   ivory: 'Assets/model/dante/Dante-ivory.png',
 };
@@ -42,6 +43,9 @@ const DANTE_VFX_SPECS = {
   dtAura: { src: 'Assets/effects/dante/dante-dt-aura.png', frames: 12, cw: 128, ch: 96 },
   spotDodge: { src: 'Assets/effects/dante/dante-spot-dodge.png', frames: 8, cw: 128, ch: 128 },
   weaponVanish: { src: 'Assets/effects/dante/dante-weapon-vanish.png', frames: 8, cw: 128, ch: 128 },
+  dtStingerThrust: { src: 'Assets/model/dante/dt-stinger-thrust/dt-stinger-thrust-b.png', frames: 12, cw: 256, ch: 256 },
+  dtTransform: { src: 'Assets/model/dante/dt-transform/dt-transform-b.png', frames: 12, cw: 256, ch: 256 },
+  dtJudgmentExplosion: { src: 'Assets/model/dante/dt-judgment-explosion/dt-judgment-explosion-b.png', frames: 12, cw: 256, ch: 256 },
 };
 
 const _vfxCache = new Map();
@@ -117,9 +121,9 @@ function _drawPistolShape(ctx, r, scale, isIvory = false) {
 }
 
 function _drawRebellionShape(ctx, r, scale, isDT = false) {
-  const rebImg = _getDanteWeaponImage('rebellion');
+  const rebImg = (isDT && _getDanteWeaponImage('devilSword')) || _getDanteWeaponImage('rebellion');
   if (rebImg) {
-    // Assets/model/dante/Dante-rebellion.png (560x140): handle grip center (92, 70), tip x=559
+    // Dante-rebellion.png & Dante-devil-sword.png (560x140): handle grip center (92, 70), tip x=559
     const custom = (typeof state !== 'undefined' && state.weaponCustomizations?.dante) || {};
     const cLen = custom.lengthScale ?? 1.0;
     const cWid = custom.widthScale ?? 1.0;
@@ -168,6 +172,85 @@ function _drawRebellionShape(ctx, r, scale, isDT = false) {
 }
 
 function _computeDanteMeleeKinematics(fighter, r) {
+  const dtTx = fighter._dtTransformTimer || 0;
+  if (dtTx > 0 && !(fighter._jackpotTimer > 0) && !(fighter._jackpotFireTimer > 0)) {
+    const maxT = Math.max(1, fighter._dtTransformMaxTimer || 54);
+    const p = 1 - Math.max(0, Math.min(1, dtTx / maxT));
+    // FINALSMASH2.webp F15-F35: chest-cross blade pierce -> F36-F87: volcanic arm-spread ascension
+    if (p < 0.36) {
+      const cp = Math.sin((p / 0.36) * (Math.PI / 2));
+      return {
+        active: false, moveType: 'dt_transform_coil', p, phase: 1,
+        chargeLevel: cp,
+        swingAngle: -0.32 - 1.15 * cp,
+        lungeX: -r * 0.42 * cp,
+        offY: -r * 0.12 * cp,
+        offHandLunge: r * 0.34 * cp,
+        offHandOffY: -r * 0.10 * cp,
+        tremorX: (Math.random() - 0.5) * 1.4 * cp,
+        tremorY: (Math.random() - 0.5) * 1.2 * cp,
+        scaleX: 1, scaleY: 1,
+        arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0,
+      };
+    }
+    const sp = Math.min(1, (p - 0.36) / 0.64);
+    const flare = Math.sin(Math.min(1, sp * 1.6) * (Math.PI / 2));
+    return {
+      active: false, moveType: 'dt_transform_ascend', p, phase: 4,
+      isTransformSpread: true,
+      swingAngle: 0,
+      lungeX: r * 0.18 * flare,
+      offY: -r * 0.08 * flare,
+      offHandLunge: -r * 0.16 * flare,
+      offHandOffY: -r * 0.08 * flare,
+      tremorX: (Math.random() - 0.5) * 0.8 * (1 - sp),
+      tremorY: 0,
+      scaleX: 1, scaleY: 1,
+      arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0,
+    };
+  }
+
+  if (fighter._judgmentState?.active) {
+    const jst = fighter._judgmentState;
+    const isFlurry = jst.phase === 'flurry';
+    const spin = isFlurry ? ((jst.flurryMax - jst.timer) * 0.85) : 0;
+    return {
+      active: false, moveType: isFlurry ? 'sdt_judgment_flurry' : 'sdt_judgment_finisher',
+      p: 0.5, phase: isFlurry ? 3 : 2,
+      chargeLevel: isFlurry ? 0.5 : 1.0,
+      swingAngle: isFlurry ? (-1.5 + Math.sin(spin) * 1.8) : -1.55,
+      lungeX: isFlurry ? r * 0.34 : -r * 0.20,
+      offY: isFlurry ? Math.cos(spin) * r * 0.16 : -r * 0.14,
+      tremorX: (Math.random() - 0.5) * 1.8,
+      tremorY: (Math.random() - 0.5) * 1.8,
+      scaleX: 1.08, scaleY: 1.0,
+      arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0,
+    };
+  }
+  if (fighter._sinStingerState?.active) {
+    return {
+      active: true, moveType: 'sin_stinger', p: 0.5, phase: 4,
+      swingAngle: 0, lungeX: r * 0.45, offY: 0, bladeThrust: r * 1.65,
+      thrustCycle: 6, thrustPulse: 1.0,
+      tremorX: (Math.random() - 0.5) * 1.6, tremorY: 0,
+      scaleX: 1.15, scaleY: 0.94,
+      arcStart: 0, arcEnd: 0, arcAlpha: 0.95, stabCount: 1, isFinisher: true,
+    };
+  }
+  if (fighter._sdtComboState?.active) {
+    const st = fighter._sdtComboState;
+    const sp = 1 - Math.max(0, Math.min(1, st.timer / Math.max(1, st.maxTimer || 32)));
+    const sweepA = st.stage === 2 ? (-Math.PI + sp * Math.PI * 3.5) : (st.stage === 1 ? (1.8 - ((sp - 0.33) / 0.34) * 3.6) : (-1.8 + (sp / 0.33) * 3.6));
+    return {
+      active: true, moveType: st.stage === 2 ? 'sdt_sweep360' : 'sdt_cleave',
+      p: sp, phase: 3,
+      swingAngle: sweepA, lungeX: r * 0.36, offY: 0,
+      tremorX: (Math.random() - 0.5) * 1.2, tremorY: 0,
+      scaleX: 1.14, scaleY: 1.0,
+      arcStart: sweepA - 1.35, arcEnd: sweepA + 0.35, arcAlpha: 0.94, stabCount: 0,
+    };
+  }
+
   const rt = fighter._roundTripEntity;
   if (rt && rt.phase === 'charge') {
     const p = 1 - Math.max(0, Math.min(1, (rt.chargeTimer || 0) / Math.max(1, rt.chargeMax || 16)));
@@ -223,14 +306,16 @@ function _computeDanteMeleeKinematics(fighter, r) {
   }
 
   const p = 1 - Math.max(0, Math.min(1, swingT / maxT));
+  const isDT = Boolean(fighter.isDevilTrigger);
 
-  // Stage 3: Million Stab — Rapid piercing stabs (0.12..0.54) -> Wind-Up Coil (0.54..0.68) -> Explosive Thrust Finisher (0.68..0.88)
+  // Stage 3: Million Stab — Rapid piercing stabs (0.12..0.50) -> Wind-Up Coil (0.50..0.67) -> Explosive Thrust Finisher (0.67..0.91)
   if (moveType === 'million_stab') {
+    const dtMult = isDT ? 1.32 : 1.0;
     if (p < 0.12) {
       const wp = Math.sin((p / 0.12) * (Math.PI / 2));
       return {
         active: true, moveType, p, phase: 1,
-        swingAngle: -0.05 * wp, lungeX: -r * 0.24 * wp, offY: r * 0.06 * wp,
+        swingAngle: -0.05 * wp, lungeX: -r * (isDT ? 0.30 : 0.24) * wp, offY: r * 0.06 * wp,
         bladeThrust: -r * 0.12 * wp, thrustCycle: 0, thrustPulse: 0,
         tremorX: 0, tremorY: 0, scaleX: 1, scaleY: 1,
         arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0
@@ -244,19 +329,19 @@ function _computeDanteMeleeKinematics(fighter, r) {
       const jab = localT < 0.35 ? (localT / 0.35) : Math.pow(1 - (localT - 0.35) / 0.65, 1.4);
       const fanAngles = [0.0, -0.10, 0.09, -0.07, 0.11, -0.04];
       const fanOffsetsY = [0, -0.18, 0.16, -0.10, 0.20, -0.06];
-      const ang = fanAngles[cycleIdx % fanAngles.length] || 0;
-      const laneY = (fanOffsetsY[cycleIdx % fanOffsetsY.length] || 0) * r;
+      const ang = (fanAngles[cycleIdx % fanAngles.length] || 0) * (isDT ? 1.25 : 1.0);
+      const laneY = (fanOffsetsY[cycleIdx % fanOffsetsY.length] || 0) * r * (isDT ? 1.20 : 1.0);
       return {
         active: true, moveType, p, phase: 3,
         swingAngle: ang,
-        lungeX: r * (-0.14 + 0.48 * jab),
+        lungeX: r * (-0.14 + 0.48 * jab * dtMult),
         offY: laneY * 0.55,
-        bladeThrust: r * (0.10 + 0.52 * jab),
+        bladeThrust: r * (0.10 + 0.52 * jab) * dtMult,
         thrustCycle: cycleIdx,
         thrustPulse: jab,
-        tremorX: (Math.random() - 0.5) * 1.4,
+        tremorX: (Math.random() - 0.5) * (isDT ? 1.8 : 1.4),
         tremorY: (Math.random() - 0.5) * 1.2,
-        scaleX: 1.0 + 0.12 * jab, scaleY: 1.0 - 0.06 * jab,
+        scaleX: 1.0 + (isDT ? 0.18 : 0.12) * jab, scaleY: 1.0 - 0.06 * jab,
         arcStart: 0, arcEnd: 0, arcAlpha: 0.96, stabCount: 4
       };
     }
@@ -264,36 +349,45 @@ function _computeDanteMeleeKinematics(fighter, r) {
       // Hip-Coil Wind-Up: pull hand & Rebellion straight back to hip while keeping tip aimed forward
       const cp = (p - 0.50) / 0.17;
       const coilEase = Math.sin(cp * (Math.PI / 2));
+      const backPull = isDT ? -0.56 : -0.44;
+      const bladePull = isDT ? -0.74 : -0.60;
       return {
         active: true, moveType, p, phase: 2,
+        chargeLevel: isDT ? coilEase : 0,
         swingAngle: 0,
-        lungeX: -r * 0.44 * coilEase,
+        lungeX: r * backPull * coilEase,
         offY: r * 0.10 * coilEase,
-        bladeThrust: -r * 0.60 * coilEase,
+        bladeThrust: r * bladePull * coilEase,
         thrustCycle: 6,
         thrustPulse: coilEase,
-        tremorX: (Math.random() - 0.5) * 1.0 * coilEase,
+        tremorX: (Math.random() - 0.5) * (isDT ? 1.5 : 1.0) * coilEase,
         tremorY: (Math.random() - 0.5) * 1.0 * coilEase,
         scaleX: 1.0 - 0.06 * coilEase, scaleY: 1.0 + 0.06 * coilEase,
         arcStart: 0, arcEnd: 0, arcAlpha: 0, stabCount: 0
       };
     }
     if (p < 0.91) {
-      // Explosive Straight Forward Thrust Finisher (matches NEUTRAL2FIX.webp Row 4 Col 5-6)
+      // Explosive Straight Forward Thrust Finisher (FORWARDTILT3.webp F1-F15 Devil Stinger in DT)
       const fp = (p - 0.67) / 0.24;
-      const snap = fp < 0.20 ? Math.pow(fp / 0.20, 0.55) : 1.0;
-      const easeOut = 1 - Math.max(0, (fp - 0.20) / 0.80) * 0.35;
+      const snapWin = isDT ? 0.14 : 0.20;
+      const snap = fp < snapWin ? Math.pow(fp / snapWin, isDT ? 0.45 : 0.55) : 1.0;
+      const easeOut = 1 - Math.max(0, (fp - snapWin) / (1 - snapWin)) * (isDT ? 0.22 : 0.35);
+      const startLunge = isDT ? -0.56 : -0.44;
+      const spanLunge = isDT ? 1.15 : 0.88;
+      const startBlade = isDT ? -0.74 : -0.60;
+      const spanBlade = isDT ? 2.48 : 1.85;
       return {
         active: true, moveType, p, phase: 4,
+        finisherProgress: fp,
         swingAngle: 0,
-        lungeX: r * (-0.44 + 0.88 * snap),
+        lungeX: r * (startLunge + spanLunge * snap),
         offY: 0,
-        bladeThrust: r * (-0.60 + 1.85 * snap),
+        bladeThrust: r * (startBlade + spanBlade * snap),
         thrustCycle: 6,
         thrustPulse: easeOut,
-        tremorX: (Math.random() - 0.5) * 1.6 * easeOut,
+        tremorX: (Math.random() - 0.5) * (isDT ? 2.0 : 1.6) * easeOut,
         tremorY: 0,
-        scaleX: 1.0, scaleY: 1.0,
+        scaleX: isDT ? 1.12 : 1.0, scaleY: 1.0,
         arcStart: 0, arcEnd: 0, arcAlpha: 0.98 * easeOut, stabCount: 1, isFinisher: true
       };
     }
@@ -302,8 +396,8 @@ function _computeDanteMeleeKinematics(fighter, r) {
     return {
       active: true, moveType, p, phase: 5,
       swingAngle: -0.32 * (1 - settle),
-      lungeX: r * 0.44 * settle, offY: 0,
-      bladeThrust: r * 1.25 * settle, thrustCycle: 6, thrustPulse: 0,
+      lungeX: r * (isDT ? 0.59 : 0.44) * settle, offY: 0,
+      bladeThrust: r * (isDT ? 1.74 : 1.25) * settle, thrustCycle: 6, thrustPulse: 0,
       tremorX: 0, tremorY: 0, scaleX: 1, scaleY: 1,
       arcStart: 0, arcEnd: 0, arcAlpha: (1 - rp) * 0.40, stabCount: 0
     };
@@ -447,55 +541,74 @@ function _drawMillionStabFlurryVFX(ctx, r, kin, scale, isDT) {
 
   if (kin.isFinisher) {
     const startD = r * 0.35 + thrustOff * 0.35;
-    const endD = r * 3.85 * scale + thrustOff * 0.5;
+    const endD = r * (isDT ? 4.85 : 3.85) * scale + thrustOff * (isDT ? 0.65 : 0.5);
     const midD = startD + (endD - startD) * 0.38;
     const pulse = kin.thrustPulse ?? 1.0;
+    const hasDtStingerSprite = isDT && _isEntryReady(_getVfxEntry('dtStingerThrust'));
 
     ctx.save();
     // 1. Expanding elliptical Mach thrust rings around the piercing lance
-    for (let ring = 0; ring < 2; ring++) {
-      const rx = (5 + ring * 4) * (1.2 - pulse * 0.2);
-      const ry = (15 + ring * 8) * (1.3 - pulse * 0.3);
-      const ringX = startD + r * (0.85 + ring * 0.75);
-      ctx.globalAlpha = (0.78 - ring * 0.25) * kin.arcAlpha;
-      ctx.strokeStyle = ring === 0 ? '#FFFFFF' : (isDT ? '#FEF08A' : '#EF4444');
+    const ringCount = isDT ? 3 : 2;
+    for (let ring = 0; ring < ringCount; ring++) {
+      const rx = (5 + ring * 4) * (1.2 - pulse * 0.2) * (isDT ? 1.25 : 1.0);
+      const ry = (15 + ring * 8) * (1.3 - pulse * 0.3) * (isDT ? 1.32 : 1.0);
+      const ringX = startD + r * (0.85 + ring * 0.72);
+      ctx.globalAlpha = (0.82 - ring * 0.22) * kin.arcAlpha;
+      ctx.strokeStyle = ring === 0 ? '#FFFFFF' : (isDT ? (ring === 1 ? '#EF4444' : '#FEF08A') : '#EF4444');
       ctx.lineWidth = ring === 0 ? 2.6 : 2.0;
       ctx.beginPath();
       ctx.ellipse(ringX, 0, rx, ry, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // 2. Heavy crimson-white piercing lance spearhead
-    ctx.globalAlpha = 0.96 * kin.arcAlpha;
-    ctx.fillStyle = isDT ? '#FEF08A' : '#EF4444';
-    ctx.beginPath();
-    ctx.moveTo(startD, -6.5);
-    ctx.lineTo(midD, -9.0);
-    ctx.lineTo(endD, 0);
-    ctx.lineTo(midD, 9.0);
-    ctx.lineTo(startD, 6.5);
-    ctx.closePath();
-    ctx.fill();
+    // 2. Heavy crimson-white piercing lance spearhead (skipped in DT when dtStingerThrust sprite is active to avoid overlay)
+    if (!hasDtStingerSprite) {
+      const halfBase = isDT ? 9.5 : 6.5;
+      const halfMid = isDT ? 13.5 : 9.0;
+      ctx.globalAlpha = 0.96 * kin.arcAlpha;
+      ctx.fillStyle = '#EF4444';
+      ctx.beginPath();
+      ctx.moveTo(startD, -halfBase);
+      ctx.lineTo(midD, -halfMid);
+      ctx.lineTo(endD, 0);
+      ctx.lineTo(midD, halfMid);
+      ctx.lineTo(startD, halfBase);
+      ctx.closePath();
+      ctx.fill();
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.moveTo(startD + 4, -2.5);
-    ctx.lineTo(midD, -4.0);
-    ctx.lineTo(endD * 0.94, 0);
-    ctx.lineTo(midD, 4.0);
-    ctx.lineTo(startD + 4, 2.5);
-    ctx.closePath();
-    ctx.fill();
+      if (isDT) {
+        ctx.fillStyle = '#FBBF24';
+        ctx.beginPath();
+        ctx.moveTo(startD + 2, -5.0);
+        ctx.lineTo(midD, -7.2);
+        ctx.lineTo(endD * 0.97, 0);
+        ctx.lineTo(midD, 7.2);
+        ctx.lineTo(startD + 2, 5.0);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.moveTo(startD + 4, isDT ? -3.4 : -2.5);
+      ctx.lineTo(midD, isDT ? -5.0 : -4.0);
+      ctx.lineTo(endD * 0.94, 0);
+      ctx.lineTo(midD, isDT ? 5.0 : 4.0);
+      ctx.lineTo(startD + 4, isDT ? 3.4 : 2.5);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
     return;
   }
 
   // Rapid-fire multi-lane piercing thrust spears + Mach thrust rings
+  const lenBoost = isDT ? 1.24 : 1.0;
   const lanes = [
-    { ang: 0.0, y: 0, len: 3.15 },
-    { ang: -0.09, y: -r * 0.28, len: 2.85 },
-    { ang: 0.09, y: r * 0.26, len: 2.95 },
-    { ang: -0.04, y: r * 0.12, len: 2.65 },
+    { ang: 0.0, y: 0, len: 3.15 * lenBoost },
+    { ang: -0.09, y: -r * 0.28, len: 2.85 * lenBoost },
+    { ang: 0.09, y: r * 0.26, len: 2.95 * lenBoost },
+    { ang: -0.04, y: r * 0.12, len: 2.65 * lenBoost },
   ];
   const activeIdx = (kin.thrustCycle || 0) % lanes.length;
   const jab = kin.thrustPulse ?? 0.6;
@@ -657,27 +770,56 @@ function _computeDanteGunKinematics(fighter, r, firingGuns) {
   };
 }
 
+function _drawDanteGunChargeAura(ctx, r, scale = 1.0) {
+  const frameNow = (typeof state !== 'undefined' && state.frameCount !== undefined) ? state.frameCount : 0;
+  const pulse = 0.78 + 0.22 * Math.sin(frameNow * 0.45);
+  const muzzleX = r * 1.02 * scale;
+  const muzzleY = -r * 0.14 * scale;
+  const rad = r * 0.18 * scale * pulse;
+  ctx.save();
+  ctx.translate(muzzleX, muzzleY);
+  ctx.globalAlpha = 0.78;
+  ctx.fillStyle = '#0E0F14';
+  ctx.fillRect(-rad - 1.5, -rad - 1.5, rad * 2 + 3, rad * 2 + 3);
+  ctx.fillStyle = '#EF4444';
+  ctx.fillRect(-rad, -rad, rad * 2, rad * 2);
+  ctx.fillStyle = '#FBBF24';
+  ctx.fillRect(-rad * 0.55, -rad * 0.55, rad * 1.1, rad * 1.1);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(-rad * 0.25, -rad * 0.25, rad * 0.5, rad * 0.5);
+  ctx.restore();
+}
+
 function _drawDanteGunMuzzleFlash(ctx, r, timer, scale = 1.0, isDT = false) {
+  if (isDT) _drawDanteGunChargeAura(ctx, r, scale);
   if (!timer || timer < 2) return;
+  const dtBoost = isDT ? 1.38 : 1.0;
   const muzzleX = r * 1.02 * scale;
   const muzzleY = -r * 0.14 * scale;
   ctx.save();
   ctx.translate(muzzleX, muzzleY);
   if (timer >= 6) {
     const p = (timer - 5) / 5;
-    const len = r * (0.36 + 0.28 * p) * scale;
-    const rad = r * (0.16 + 0.10 * p) * scale;
+    const len = r * (0.36 + 0.28 * p) * scale * dtBoost;
+    const rad = r * (0.16 + 0.10 * p) * scale * dtBoost;
     // 16-bit crimson/gold 4-point muzzle blast (Rule 35 zero shadowBlur)
     ctx.fillStyle = '#0E0F14';
     ctx.fillRect(-2, -rad - 1.5, len + 4, rad * 2 + 3);
     ctx.fillRect(len * 0.18 - 1.5, -rad * 1.45 - 1.5, rad * 1.2 + 3, rad * 2.9 + 3);
-    ctx.fillStyle = isDT ? '#EF4444' : '#F97316';
+    ctx.fillStyle = isDT ? '#DC2626' : '#F97316';
     ctx.fillRect(0, -rad, len, rad * 2);
     ctx.fillRect(len * 0.22, -rad * 1.35, rad * 1.1, rad * 2.7);
     ctx.fillStyle = '#FBBF24';
     ctx.fillRect(1, -rad * 0.65, len * 0.72, rad * 1.3);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(1, -rad * 0.35, len * 0.42, rad * 0.7);
+    if (isDT) {
+      ctx.strokeStyle = '#FBBF24';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.ellipse(len * 0.32, 0, rad * 0.48, rad * 1.35, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   } else {
     // Rising 16-bit post-shot gunsmoke pixel wisps
     const sp = 1 - timer / 6;
@@ -685,7 +827,7 @@ function _drawDanteGunMuzzleFlash(ctx, r, timer, scale = 1.0, isDT = false) {
     ctx.globalAlpha = Math.max(0.15, (1 - sp) * 0.85);
     ctx.fillStyle = '#0E0F14';
     ctx.fillRect(2 + sp * 6, sy - 2, 6, 5);
-    ctx.fillStyle = '#E2E8F0';
+    ctx.fillStyle = isDT ? '#FCA5A5' : '#E2E8F0';
     ctx.fillRect(3 + sp * 6, sy - 1, 4, 3);
   }
   ctx.restore();
@@ -720,20 +862,24 @@ function _computeDanteHandTargets(fighter, r, custom, kin, gunKin, firingGuns) {
   const rawMainX = anchorMainX + (firingGuns ? gunKin.mainOffX : (kin.lungeX + kin.tremorX));
   const rawMainY = Math.max(r * 0.24, anchorMainY + (firingGuns ? gunKin.mainOffY : (kin.offY + kin.tremorY + idleBob)));
 
-  const offRecoilX = kin.active && !firingGuns ? (kin.isFinisher ? -r * 0.26 : -kin.lungeX * 0.45) : 0;
-  const offCounterY = kin.active && !firingGuns ? -kin.offY * 0.40 : -idleBob * 0.7;
+  const offRecoilX = kin.active && !firingGuns
+    ? (kin.isFinisher ? -r * 0.26 : -kin.lungeX * 0.45)
+    : (kin.offHandLunge || 0);
+  const offCounterY = kin.active && !firingGuns
+    ? -kin.offY * 0.40
+    : ((kin.offHandOffY || 0) - idleBob * 0.7);
   const rawOffX = anchorOffX + (firingGuns ? gunKin.offOffX : offRecoilX);
   const rawOffY = Math.max(r * 0.24, anchorOffY + (firingGuns ? gunKin.offOffY : offCounterY));
 
   const phys = _stepDanteHandPhysics(fighter, r, rawMainX, rawMainY, rawOffX, rawOffY, kin.swingAngle);
   const isMillionJab = kin.active && kin.moveType === 'million_stab';
-  const useDirect = isMillionJab || gunKin.directDrive;
+  const useDirect = isMillionJab || gunKin.directDrive || Boolean(kin.offHandLunge) || Boolean(kin.isTransformSpread);
 
   return {
     phys,
     isMillionJab,
     mainPos: _clampHandOrbit(useDirect ? rawMainX : phys.mx, useDirect ? rawMainY : phys.my, anchorMainX, anchorMainY, r * 0.44, r * 0.24),
-    offPos: _clampHandOrbit(gunKin.directDrive ? rawOffX : phys.ox, gunKin.directDrive ? rawOffY : phys.oy, anchorOffX, anchorOffY, r * 0.48, r * 0.24),
+    offPos: _clampHandOrbit(useDirect ? rawOffX : phys.ox, useDirect ? rawOffY : phys.oy, anchorOffX, anchorOffY, r * 0.48, r * 0.24),
   };
 }
 
@@ -777,13 +923,14 @@ function _drawRebellionChargeGlow(ctx, r, scale, chargeLevel) {
   ctx.restore();
 }
 
-function _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, handRadius, targets, kin, gunKin, swEnv, firingGuns) {
-  const isDT = Boolean(fighter.isDevilTrigger);
+function _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, handRadius, targets, kin, gunKin, swEnv, firingGuns, isDevilVisual = false) {
+  const isDT = Boolean(isDevilVisual);
   const isBladeThrown = Boolean(fighter._roundTripEntity && fighter._roundTripEntity.phase !== 'charge');
+  const hideMainWeapon = isBladeThrown || Boolean(kin.isTransformSpread);
 
   ctx.save();
   ctx.translate(targets.mainPos.x, targets.mainPos.y);
-  if (firingGuns) {
+  if (firingGuns && !kin.isTransformSpread) {
     ctx.save();
     if (swEnv.isSwitchingIn) {
       ctx.translate(-r * 0.24 * (1 - swEnv.swEase), r * 0.14 * (1 - swEnv.swEase));
@@ -796,7 +943,7 @@ function _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, hand
     _drawPistolShape(ctx, r, scale * 0.92, false);
     _drawDanteGunMuzzleFlash(ctx, r, gunKin.ebonyT, scale * 0.92, isDT);
     ctx.restore();
-  } else if (!isBladeThrown) {
+  } else if (!hideMainWeapon) {
     ctx.save();
     if (swEnv.isSwitchingIn) {
       ctx.translate(-r * 0.26 * (1 - swEnv.swEase), -r * 0.16 * (1 - swEnv.swEase));
@@ -810,6 +957,7 @@ function _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, hand
       ctx.save();
       ctx.translate(kin.bladeThrust, 0);
       _drawRebellionShape(ctx, r, scale, isDT);
+      if (kin.chargeLevel > 0) _drawRebellionChargeGlow(ctx, r, scale, kin.chargeLevel);
       ctx.restore();
     } else {
       _drawRebellionShape(ctx, r, scale, isDT);
@@ -838,14 +986,19 @@ export function drawDanteWeaponsAndSlashVFX(ctx, fighter, r, facingLeft = false)
   const scale = custom.scale ?? 1.0;
   const handRadius = r * 0.30;
   const isDT = Boolean(fighter.isDevilTrigger);
-  const skinTone = isDT ? '#FCA5A5' : '#FEDBC0';
+  const txTimer = fighter._dtTransformTimer || 0;
+  const txMax = Math.max(1, fighter._dtTransformMaxTimer || 54);
+  const txP = txTimer > 0 ? Math.max(0, Math.min(1, 1 - txTimer / txMax)) : 1;
+  const isDevilVisual = isDT && (txTimer <= 0 || txP >= 0.36);
+  const skinTone = isDevilVisual ? '#3E354C' : '#FEDBC0';
 
   const kin = _computeDanteMeleeKinematics(fighter, r);
-  const firingGuns =
+  const firingGuns = !kin.isTransformSpread && (
     (fighter._gunVisualTimer || 0) > 0 ||
     Boolean(fighter._roundTripEntity && (fighter._roundTripEntity.phase === 'spin' || fighter._roundTripEntity.phase === 'return')) ||
     (fighter._jackpotTimer || 0) > 0 ||
-    (fighter._jackpotFireTimer || 0) > 0;
+    (fighter._jackpotFireTimer || 0) > 0
+  );
   const gunKin = _computeDanteGunKinematics(fighter, r, firingGuns);
   const swEnv = _computeWeaponSwitchEnvelope(fighter);
   const targets = _computeDanteHandTargets(fighter, r, custom, kin, gunKin, firingGuns);
@@ -863,7 +1016,7 @@ export function drawDanteWeaponsAndSlashVFX(ctx, fighter, r, facingLeft = false)
     ctx.restore();
   }
 
-  _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, handRadius, targets, kin, gunKin, swEnv, firingGuns);
+  _drawDanteMainHandWeapon(ctx, fighter, r, custom, scale, skinTone, handRadius, targets, kin, gunKin, swEnv, firingGuns, isDevilVisual);
 }
 
 export function drawDanteWeaponPreview(ctx, x, y, angle, r) {
@@ -878,6 +1031,8 @@ export function drawDanteWeaponPreview(ctx, x, y, angle, r) {
     _drawPistolShape(ctx, r, scale * 1.15, false);
   } else if (part === 'ivory') {
     _drawPistolShape(ctx, r, scale * 1.15, true);
+  } else if (part === 'devil_sword') {
+    _drawRebellionShape(ctx, r, scale, true);
   } else {
     _drawRebellionShape(ctx, r, scale, false);
   }
@@ -937,9 +1092,47 @@ export function drawDanteSprite(ctx, key, x, y, angle, w, h, frameIdx = 0, alpha
 // ── Rule 35 Pre-Baked 16-Bit Pixel Bullet Tracer & Concentric Shockwave Caches ──
 let _danteBulletCanvas = null;
 let _danteCritBulletCanvas = null;
+let _danteChargeBulletCanvas = null;
+let _danteChargeCritBulletCanvas = null;
 const _danteShockwaveRingCache = new Map();
 
-function _getDanteBulletCanvas(isCrit = false) {
+function _bakeDanteChargeBulletCanvas(isCrit = false) {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = isCrit ? 48 : 44;
+  c.height = isCrit ? 20 : 18;
+  const bctx = c.getContext('2d');
+  if (!bctx) return null;
+  bctx.imageSmoothingEnabled = false;
+  const w = c.width;
+  const h = c.height;
+  // Crisp #0E0F14 manga ink sheath
+  bctx.fillStyle = '#0E0F14';
+  bctx.fillRect(6, 2, w - 10, h - 4);
+  bctx.fillRect(2, 4, w - 4, h - 8);
+  // Demonic DT crimson-gold plasma shell
+  bctx.fillStyle = '#DC2626';
+  bctx.fillRect(4, 6, 16, h - 12);
+  bctx.fillStyle = '#EF4444';
+  bctx.fillRect(8, 4, w - 16, h - 8);
+  bctx.fillStyle = isCrit ? '#FBBF24' : '#F59E0B';
+  bctx.fillRect(14, 6, w - 20, h - 12);
+  // White-hot charged nose & lance tip
+  bctx.fillStyle = '#FFFFFF';
+  bctx.fillRect(w - 16, 6, 12, h - 12);
+  bctx.fillRect(w - 8, 4, 4, h - 8);
+  return c;
+}
+
+function _getDanteBulletCanvas(isCrit = false, isChargeShot = false) {
+  if (isChargeShot) {
+    if (isCrit) {
+      if (!_danteChargeCritBulletCanvas) _danteChargeCritBulletCanvas = _bakeDanteChargeBulletCanvas(true);
+      return _danteChargeCritBulletCanvas;
+    }
+    if (!_danteChargeBulletCanvas) _danteChargeBulletCanvas = _bakeDanteChargeBulletCanvas(false);
+    return _danteChargeBulletCanvas;
+  }
   if (isCrit) {
     if (_danteCritBulletCanvas) return _danteCritBulletCanvas;
     if (typeof document === 'undefined') return null;
@@ -1039,24 +1232,40 @@ function _getDanteShockwaveRingCanvas(color = '#EF4444') {
 export function drawDantePixelBullet(ctx, b) {
   if (!ctx || !b) return;
   const isCrit = Boolean(b.isCrit);
-  const cached = _getDanteBulletCanvas(isCrit);
+  const isCharge = Boolean(b.isChargeShot);
+  const cached = _getDanteBulletCanvas(isCrit, isCharge);
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.translate(b.x, b.y);
   ctx.rotate(b.angle || 0);
+  if (isCharge) {
+    // Trailing demonic energy ember pips behind charged round
+    ctx.fillStyle = '#0E0F14';
+    ctx.fillRect(-33, -4, 6, 8);
+    ctx.fillStyle = '#EF4444';
+    ctx.fillRect(-32, -3, 4, 6);
+    ctx.fillStyle = '#FBBF24';
+    ctx.fillRect(-26, -2, 4, 4);
+  }
   if (cached) {
-    if (isCrit) {
+    if (isCharge) {
+      const cw = isCrit ? 48 : 44;
+      const ch = isCrit ? 20 : 18;
+      ctx.drawImage(cached, -cw * 0.56, -ch * 0.5, cw, ch);
+    } else if (isCrit) {
       ctx.drawImage(cached, -20, -7, 36, 14);
     } else {
       ctx.drawImage(cached, -18, -6, 32, 12);
     }
   } else {
+    const len = isCharge ? 30 : 22;
+    const th = isCharge ? 10 : 6;
     ctx.fillStyle = '#0E0F14';
-    ctx.fillRect(-12, -3, 22, 6);
-    ctx.fillStyle = isCrit ? '#EF4444' : '#F59E0B';
-    ctx.fillRect(-10, -2, 18, 4);
+    ctx.fillRect(-len * 0.55, -th * 0.5, len, th);
+    ctx.fillStyle = (isCharge || isCrit) ? '#EF4444' : '#F59E0B';
+    ctx.fillRect(-len * 0.45, -th * 0.35, len * 0.82, th * 0.7);
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(-2, -1, 8, 2);
+    ctx.fillRect(-2, -1.5, 10, 3);
   }
   ctx.restore();
 }
@@ -1220,10 +1429,12 @@ export function drawDanteWeaponVanishVfx(ctx, list) {
   }
 }
 
-export function drawDanteTransientVfx(ctx, list) {
+export function drawDanteTransientVfx(ctx, list, layer = 'all', fighter = null) {
   if (!ctx || !Array.isArray(list) || list.length === 0 || _isVfxDisabled()) return;
   for (let i = 0; i < list.length; i++) {
     const fx = list[i];
+    if (layer === 'back' && !fx.behindBody) continue;
+    if (layer === 'front' && fx.behindBody) continue;
     const p = 1 - Math.max(0, fx.life) / Math.max(1, fx.maxLife);
     const entry = _getVfxEntry(fx.kind);
     if (!_isEntryReady(entry)) continue;
@@ -1232,11 +1443,23 @@ export function drawDanteTransientVfx(ctx, list) {
     const w = fx.w || fx.r * 2.8 || 84;
     const h = fx.h || w * (entry.ch / entry.cw);
 
+    let drawX = fx.x;
+    let drawY = fx.y;
+    let drawAng = fx.angle || 0;
+    if (fx.followFighter && fighter) {
+      drawAng = fighter._sinStingerState?.active
+        ? fighter._sinStingerState.angle
+        : (fx.lockAngle !== undefined ? fx.lockAngle : (fighter.gunAngle ?? drawAng));
+      const fwd = fx.forwardOffset || 0;
+      drawX = (fighter.x || 0) + Math.cos(drawAng) * fwd;
+      drawY = (fighter.y || 0) - (fighter.z || 0) + Math.sin(drawAng) * fwd;
+    }
+
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = Math.max(0, (1 - p * 0.5) * (fx.alpha ?? 0.94));
-    ctx.translate(fx.x, fx.y);
-    if (fx.angle) ctx.rotate(fx.angle);
+    ctx.translate(drawX, drawY);
+    if (drawAng) ctx.rotate(drawAng);
     if (fx.flipY) ctx.scale(1, -1);
     ctx.drawImage(entry.img, frameIdx * entry.cw, 0, entry.cw, entry.ch, -w * 0.5, -h * 0.5, w, h);
     ctx.restore();
@@ -1300,7 +1523,7 @@ export function drawDanteSideSpecialBlade(ctx, fighter) {
   ctx.rotate(rt.spinAngle - 0.62);
   ctx.translate(-r * 0.96 * scale, 0);
   ctx.globalAlpha = 0.36;
-  _drawRebellionShape(ctx, r * 0.92, scale, true);
+  _drawRebellionShape(ctx, r * 0.92, scale, isDT);
   ctx.restore();
 
   ctx.save();
@@ -1311,4 +1534,310 @@ export function drawDanteSideSpecialBlade(ctx, fighter) {
   ctx.restore();
 
   ctx.restore();
+}
+
+// ── Rule 35 Pre-Baked 16-Bit Sin Devil Trigger Obsidian & Magma-Vein Wings ──
+let _dtUpperWingCanvas = null;
+let _dtLowerWingCanvas = null;
+
+function _bakeDanteWingCanvas(isUpper = true) {
+  if (typeof document === 'undefined') return null;
+  const gw = 26;
+  const gh = isUpper ? 16 : 12;
+  const P = 2;
+  const c = document.createElement('canvas');
+  c.width = gw * P;
+  c.height = gh * P;
+  const wctx = c.getContext('2d');
+  if (!wctx) return null;
+  wctx.imageSmoothingEnabled = false;
+
+  const grid = new Map();
+  for (let gx = 1; gx < gw - 1; gx++) {
+    const t = (gx - 1) / (gw - 3);
+    const archY = isUpper
+      ? Math.round(4 - Math.sin(t * Math.PI * 0.72) * 3.5)
+      : Math.round(1 + t * 4.5);
+    const scallop = Math.round(Math.abs(Math.sin(t * Math.PI * 3.0)) * (isUpper ? 2.5 : 1.6));
+    const chord = Math.max(2, Math.round((isUpper ? 11 : 7) * (1 - t * 0.55) - scallop));
+    for (let dy = 0; dy < chord; dy++) {
+      const gy = archY + dy;
+      if (gy < 1 || gy >= gh - 1) continue;
+      let col = '#1E1B26';
+      if (dy === 0) col = '#DC2626';
+      else if (dy === 1 || (gx % 6 === 0 && dy < chord - 1)) col = '#EF4444';
+      else if (gx % 6 === 0 && dy === 2) col = '#F59E0B';
+      else if (dy === chord - 1) col = '#450A0A';
+      grid.set(`${gx},${gy}`, col);
+    }
+  }
+
+  // 4-neighbor #0E0F14 manga ink outline
+  wctx.fillStyle = '#0E0F14';
+  for (const key of grid.keys()) {
+    const [gx, gy] = key.split(',').map(Number);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nb = `${gx + dx},${gy + dy}`;
+      if (!grid.has(nb)) {
+        wctx.fillRect((gx + dx) * P, (gy + dy) * P, P, P);
+      }
+    }
+  }
+  for (const [key, col] of grid.entries()) {
+    const [gx, gy] = key.split(',').map(Number);
+    wctx.fillStyle = col;
+    wctx.fillRect(gx * P, gy * P, P, P);
+  }
+  return c;
+}
+
+function _getDanteWingCanvas(isUpper = true) {
+  if (isUpper) {
+    if (!_dtUpperWingCanvas) _dtUpperWingCanvas = _bakeDanteWingCanvas(true);
+    return _dtUpperWingCanvas;
+  }
+  if (!_dtLowerWingCanvas) _dtLowerWingCanvas = _bakeDanteWingCanvas(false);
+  return _dtLowerWingCanvas;
+}
+
+/**
+ * Draws Dante's 4 Sin Devil Trigger obsidian wings veined with glowing crimson magma (Rule 35).
+ */
+export function drawDanteDevilWings(ctx, r, openFactor = 0.45, frameCount = 0) {
+  if (!ctx) return;
+  const upWing = _getDanteWingCanvas(true);
+  const lowWing = _getDanteWingCanvas(false);
+  if (!upWing || !lowWing) return;
+
+  const o = Math.max(0.25, Math.min(1.1, openFactor));
+  const beat = Math.sin((frameCount || 0) * 0.14) * 0.06;
+  const upW = r * (1.28 + 0.72 * o);
+  const upH = upW * (upWing.height / upWing.width);
+  const lowW = r * (0.98 + 0.54 * o);
+  const lowH = lowW * (lowWing.height / lowWing.width);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  for (const side of [-1, 1]) {
+    // Upper primary wing sweeping upward-outward from shoulder
+    ctx.save();
+    ctx.translate(side * r * 0.36, -r * 0.06);
+    ctx.scale(side, 1);
+    ctx.rotate(-0.48 * o + beat + (1 - o) * 0.34);
+    ctx.drawImage(upWing, -2, -upH * 0.38, upW, upH);
+    ctx.restore();
+
+    // Lower secondary wing sweeping downward-outward
+    ctx.save();
+    ctx.translate(side * r * 0.32, r * 0.24);
+    ctx.scale(side, 1);
+    ctx.rotate(0.42 * o - beat * 0.7);
+    ctx.drawImage(lowWing, -2, -lowH * 0.32, lowW, lowH);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * Renders the FINALSMASH2.webp Devil Form transformation VFX behind Dante's body (rune ring, flame pillar & volcanic dome).
+ */
+export function drawDanteTransformSequenceVfx(ctx, fighter) {
+  if (!ctx || !fighter || !(fighter._dtTransformTimer > 0) || _isVfxDisabled()) return;
+  const maxT = Math.max(1, fighter._dtTransformMaxTimer || 54);
+  const p = Math.max(0, Math.min(1, 1 - fighter._dtTransformTimer / maxT));
+  const r = fighter.r || 30;
+  const x = fighter.x || 0;
+  const y = (fighter.y || 0) - (fighter.z || 0);
+
+  // 12-frame volcanic transformation dome + ember burst sprite strip (drawn behind Dante; fades cleanly as real SDT wings unfurl)
+  const frameIdx = Math.min(11, Math.floor(p * 12));
+  const size = r * 6.8;
+  const alpha = p < 0.50 ? 0.96 : Math.max(0, 0.96 * (1 - (p - 0.50) / 0.36));
+  if (alpha > 0.02) {
+    drawDanteSprite(ctx, 'dtTransform', x, y, 0, size, size, frameIdx, alpha);
+  }
+}
+
+// ── Rule 35 Pre-Baked SDT Summoned Sword & Ombra Demonic Fireball Quads ──
+let _sdtSwordCanvas = null;
+let _sdtOmbraFireballCanvas = null;
+
+function _getDanteSummonedSwordCanvas() {
+  if (_sdtSwordCanvas) return _sdtSwordCanvas;
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 40;
+  c.height = 14;
+  const sctx = c.getContext('2d');
+  if (!sctx) return null;
+  sctx.imageSmoothingEnabled = false;
+  sctx.fillStyle = '#0E0F14';
+  sctx.fillRect(2, 4, 34, 6);
+  sctx.fillRect(10, 2, 4, 10);
+  sctx.fillStyle = '#EF4444';
+  sctx.fillRect(4, 5, 28, 4);
+  sctx.fillStyle = '#FBBF24';
+  sctx.fillRect(10, 3, 2, 8);
+  sctx.fillRect(14, 6, 16, 2);
+  sctx.fillStyle = '#FFFFFF';
+  sctx.fillRect(26, 6, 8, 2);
+  _sdtSwordCanvas = c;
+  return c;
+}
+
+function _getDanteOmbraFireballCanvas() {
+  if (_sdtOmbraFireballCanvas) return _sdtOmbraFireballCanvas;
+  if (typeof document === 'undefined') return null;
+  const size = 36;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const fctx = c.getContext('2d');
+  if (!fctx) return null;
+  fctx.imageSmoothingEnabled = false;
+  const P = 2;
+  const cx = size / (2 * P);
+  for (let gy = 1; gy < size / P - 1; gy++) {
+    for (let gx = 1; gx < size / P - 1; gx++) {
+      const dx = gx - cx + 0.5;
+      const dy = gy - cx + 0.5;
+      const d = Math.hypot(dx * 0.9, dy);
+      if (d > 7.6) continue;
+      if (d >= 6.4) fctx.fillStyle = '#0E0F14';
+      else if (d >= 4.8) fctx.fillStyle = '#DC2626';
+      else if (d >= 3.2) fctx.fillStyle = '#F97316';
+      else if (d >= 1.8) fctx.fillStyle = '#FBBF24';
+      else fctx.fillStyle = '#FFFFFF';
+      fctx.fillRect(gx * P, gy * P, P, P);
+    }
+  }
+  _sdtOmbraFireballCanvas = c;
+  return c;
+}
+
+/**
+ * Renders behind-body Devil Form SDT VFX (Judgment arena-wide flurry slashes so Dante stays cleanly visible).
+ */
+export function drawDanteSdtBackVfx(ctx, fighter) {
+  if (!ctx || !fighter) return;
+  const jst = fighter._judgmentState;
+  if (!jst || !jst.active || !Array.isArray(jst.slashes) || jst.slashes.length === 0) return;
+
+  for (let i = 0; i < jst.slashes.length; i++) {
+    const sl = jst.slashes[i];
+    const alpha = Math.max(0, sl.life / Math.max(1, sl.maxLife));
+    const halfL = (sl.len || 380) * 0.5;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(sl.x, sl.y);
+    ctx.rotate(sl.angle || 0);
+    ctx.fillStyle = '#EF4444';
+    ctx.beginPath();
+    ctx.moveTo(-halfL, 0);
+    ctx.lineTo(0, -14 * alpha);
+    ctx.lineTo(halfL, 0);
+    ctx.lineTo(0, 14 * alpha);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(-halfL * 0.85, 0);
+    ctx.lineTo(0, -4 * alpha);
+    ctx.lineTo(halfL * 0.85, 0);
+    ctx.lineTo(0, 4 * alpha);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+/**
+ * Renders Devil Form SDT active VFX: Lightning Teleport arcs, Sin Stinger whirlwind swords, Ombra fireballs.
+ */
+export function drawDanteSdtVfx(ctx, fighter) {
+  if (!ctx || !fighter) return;
+  const yCenter = (fighter.y || 0) - (fighter.z || 0);
+
+  // 1. Buffed DT Lightning Teleport Dodge Arcs
+  const bolts = fighter._dtTeleportBolts;
+  if (Array.isArray(bolts) && bolts.length > 0) {
+    for (let i = 0; i < bolts.length; i++) {
+      const b = bolts[i];
+      const alpha = Math.max(0, b.life / Math.max(1, b.maxLife));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      for (const pass of [{ w: 5.5, col: '#EF4444' }, { w: 2.2, col: '#FFFFFF' }]) {
+        ctx.beginPath();
+        ctx.moveTo(b.x1, b.y1);
+        for (let seg = 1; seg <= 4; seg++) {
+          const t = seg / 5;
+          const jitter = Math.sin(b.seed + seg * 3.7) * 14;
+          const perpAng = Math.atan2(b.y2 - b.y1, b.x2 - b.x1) + Math.PI * 0.5;
+          ctx.lineTo(b.x1 + (b.x2 - b.x1) * t + Math.cos(perpAng) * jitter, b.y1 + (b.y2 - b.y1) * t + Math.sin(perpAng) * jitter);
+        }
+        ctx.lineTo(b.x2, b.y2);
+        ctx.lineWidth = pass.w;
+        ctx.strokeStyle = pass.col;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // 2. Skill 2: Sin Stinger Whirlwind of Summoned Swords
+  const stinger = fighter._sinStingerState;
+  if (stinger && stinger.active) {
+    const swordCanvas = _getDanteSummonedSwordCanvas();
+    const orbitR = CONFIG.dante?.sinStingerSwordRadius ?? 72;
+    const count = stinger.swordCount || 6;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 3.0;
+    ctx.beginPath();
+    ctx.arc(fighter.x, yCenter, orbitR, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let i = 0; i < count; i++) {
+      const a = stinger.spinAngle + (i / count) * Math.PI * 2;
+      const sx = fighter.x + Math.cos(a) * orbitR;
+      const sy = yCenter + Math.sin(a) * orbitR;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(a + Math.PI * 0.5);
+      if (swordCanvas) {
+        ctx.drawImage(swordCanvas, -20, -7, 40, 14);
+      } else {
+        ctx.fillStyle = '#EF4444';
+        ctx.fillRect(-16, -2, 32, 4);
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // 3. Skill 3: Ombra Demonic Fireballs
+  const fireballs = fighter._ombraFireballs;
+  if (Array.isArray(fireballs) && fireballs.length > 0) {
+    const fbCanvas = _getDanteOmbraFireballCanvas();
+    for (let i = 0; i < fireballs.length; i++) {
+      const fb = fireballs[i];
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(fb.x, fb.y);
+      ctx.rotate(fb.angle || 0);
+      ctx.fillStyle = '#EF4444';
+      ctx.fillRect(-24, -4, 10, 8);
+      ctx.fillStyle = '#FBBF24';
+      ctx.fillRect(-28, -2, 6, 4);
+      if (fbCanvas) {
+        ctx.drawImage(fbCanvas, -18, -18, 36, 36);
+      } else {
+        ctx.fillStyle = '#F97316';
+        ctx.beginPath();
+        ctx.arc(0, 0, fb.radius || 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
 }

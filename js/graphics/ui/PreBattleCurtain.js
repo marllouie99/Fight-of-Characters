@@ -23,12 +23,49 @@ import { GAME_MODES } from '../../core/modeConfig.js';
 
 let _isCurtainActive = false;
 let _curtainTimeoutId = null;
+let _curtainSessionId = 0;
+const _curtainTimerIds = new Set();
+
+function _scheduleCurtainTimeout(fn, delayMs, sessionId) {
+  const id = setTimeout(() => {
+    _curtainTimerIds.delete(id);
+    if (sessionId !== _curtainSessionId) return;
+    fn();
+  }, delayMs);
+  _curtainTimerIds.add(id);
+  return id;
+}
+
+export function cancelPreBattleCurtain() {
+  _curtainSessionId++;
+  _isCurtainActive = false;
+  if (_curtainTimeoutId) {
+    clearTimeout(_curtainTimeoutId);
+    _curtainTimeoutId = null;
+  }
+  for (const id of _curtainTimerIds) {
+    clearTimeout(id);
+  }
+  _curtainTimerIds.clear();
+  if (typeof document !== 'undefined') {
+    const curtain = document.getElementById('prebattle-curtain');
+    if (curtain) {
+      curtain.style.display = 'none';
+      curtain.classList.remove('curtain-closing');
+      curtain.onclick = null;
+      curtain.ontouchend = null;
+    }
+  }
+}
 
 export function isPreBattleCurtainActive() {
   return _isCurtainActive;
 }
 
 export function showPreBattleCurtain(onComplete) {
+  cancelPreBattleCurtain();
+  const sessionId = _curtainSessionId;
+
   if (typeof document === 'undefined') {
     if (typeof onComplete === 'function') onComplete();
     return false;
@@ -68,11 +105,12 @@ export function showPreBattleCurtain(onComplete) {
 
   let finished = false;
   const finishCurtain = () => {
-    if (finished) return;
+    if (finished || sessionId !== _curtainSessionId) return;
     finished = true;
     _isCurtainActive = false;
     if (_curtainTimeoutId) {
       clearTimeout(_curtainTimeoutId);
+      _curtainTimerIds.delete(_curtainTimeoutId);
       _curtainTimeoutId = null;
     }
     curtain.classList.add('curtain-closing');
@@ -81,11 +119,11 @@ export function showPreBattleCurtain(onComplete) {
         audioSystem.playSFX('battleintro_transitions', 0.85);
       } catch (_) {}
     }
-    setTimeout(() => {
+    _scheduleCurtainTimeout(() => {
       curtain.style.display = 'none';
       curtain.classList.remove('curtain-closing');
       if (typeof onComplete === 'function') onComplete();
-    }, 280);
+    }, 280, sessionId);
   };
 
   // Skip trigger on tap or click
@@ -129,7 +167,7 @@ export function showPreBattleCurtain(onComplete) {
     });
 
     // Asynchronous Pre-warming for all 6 fighters
-    setTimeout(() => {
+    _scheduleCurtainTimeout(() => {
       if (finished) return;
       setProgress(40, 'PRE-WARMING GPU SHADERS...');
       const allIndexes = [...team0, ...team1].filter(idx => typeof idx === 'number');
@@ -157,7 +195,7 @@ export function showPreBattleCurtain(onComplete) {
         prewarmMatchAssets(dummyFighters, state.ctx);
       }
 
-      setTimeout(() => {
+      _scheduleCurtainTimeout(() => {
         if (finished) return;
         setProgress(75, 'PRELOADING AUDIO BUFFERS...');
         if (soundPaths.length > 0) {
@@ -165,13 +203,13 @@ export function showPreBattleCurtain(onComplete) {
           preloadSound(unique, { priority: true }).catch(() => {});
         }
 
-        setTimeout(() => {
+        _scheduleCurtainTimeout(() => {
           if (finished) return;
           setProgress(100, 'ROSTER READY');
-          _curtainTimeoutId = setTimeout(finishCurtain, 220);
-        }, 220);
-      }, 200);
-    }, 150);
+          _curtainTimeoutId = _scheduleCurtainTimeout(finishCurtain, 220, sessionId);
+        }, 220, sessionId);
+      }, 200, sessionId);
+    }, 150, sessionId);
 
   } else if (isSurvivor) {
     if (modeBadge) modeBadge.textContent = 'SURVIVAL MODE';
@@ -205,7 +243,7 @@ export function showPreBattleCurtain(onComplete) {
       rightRoster.appendChild(hordeCard);
     }
 
-    setTimeout(() => {
+    _scheduleCurtainTimeout(() => {
       if (finished) return;
       setProgress(45, 'PRE-WARMING COMBAT SHADERS...');
       preloadFighterAssets(playerIdx, true);
@@ -213,7 +251,7 @@ export function showPreBattleCurtain(onComplete) {
         prewarmMatchAssets([state.fighters[0]], state.ctx);
       }
 
-      setTimeout(() => {
+      _scheduleCurtainTimeout(() => {
         if (finished) return;
         setProgress(80, 'PRELOADING SURVIVOR AUDIO...');
         const survivorSounds = [
@@ -229,13 +267,13 @@ export function showPreBattleCurtain(onComplete) {
         ];
         preloadSound(survivorSounds, { priority: true }).catch(() => {});
 
-        setTimeout(() => {
+        _scheduleCurtainTimeout(() => {
           if (finished) return;
           setProgress(100, 'ARENA READY');
-          _curtainTimeoutId = setTimeout(finishCurtain, 220);
-        }, 220);
-      }, 200);
-    }, 150);
+          _curtainTimeoutId = _scheduleCurtainTimeout(finishCurtain, 220, sessionId);
+        }, 220, sessionId);
+      }, 200, sessionId);
+    }, 150, sessionId);
   } else if (is2v2) {
     if (modeBadge) modeBadge.textContent = '2V2 TEAM BATTLE';
     if (subBadge) subBadge.textContent = 'SQUAD ASSET PRE-WARM';
@@ -305,7 +343,7 @@ export function showPreBattleCurtain(onComplete) {
       clearAllPools();
     } catch (_) {}
 
-    setTimeout(() => {
+    _scheduleCurtainTimeout(() => {
       if (finished) return;
       setProgress(35, 'BAKING SPRITES & GPU SHADERS...');
 
@@ -336,7 +374,7 @@ export function showPreBattleCurtain(onComplete) {
         }
       }
 
-      setTimeout(() => {
+      _scheduleCurtainTimeout(() => {
         if (finished) return;
         setProgress(70, 'DECODING COMBAT AUDIO...');
 
@@ -355,13 +393,13 @@ export function showPreBattleCurtain(onComplete) {
           preloadSound(uniqueSounds, { priority: true }).catch(() => {});
         }
 
-        setTimeout(() => {
+        _scheduleCurtainTimeout(() => {
           if (finished) return;
           setProgress(100, 'COMBAT READY • 60 FPS');
-          _curtainTimeoutId = setTimeout(finishCurtain, 180);
-        }, 180);
-      }, 180);
-    }, 120);
+          _curtainTimeoutId = _scheduleCurtainTimeout(finishCurtain, 180, sessionId);
+        }, 180, sessionId);
+      }, 180, sessionId);
+    }, 120, sessionId);
   }
 
   return true;

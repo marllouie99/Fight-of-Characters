@@ -38,6 +38,7 @@ import {
   drawRiftSlashTelegraph,
   drawSwordTunnelVisuals,
   drawRoaringKnightParryVFX,
+  prewarmRoaringKnightVfxCaches,
 } from '../../graphics/weapons/roaringKnightWeaponGraphics.js';
 
 export class RoaringKnightFighter extends Fighter {
@@ -442,8 +443,7 @@ export class RoaringKnightFighter extends Fighter {
 
     this._spawnParryBlockEffects(attacker, opts, { lightweight: isContinuousHit && (this._parrySfxCooldownTimer || 0) > 0 });
     this._applyParryRiposte(attacker, opts);
-    const parryLines = ['futile.', '...too slow.', 'denied.'];
-    triggerFighterSpeech(this, parryLines[(this.parryCount || 0) % parryLines.length], { duration: 80, borderColor: '#18181B', blipSpeed: 0.62 });
+    triggerFighterSpeech(this, '.....', { duration: 70, borderColor: '#18181B', blipSrc: false });
     return true;
   }
 
@@ -686,9 +686,15 @@ export class RoaringKnightFighter extends Fighter {
 
     // 4. AI Combat Decision & Aggressive Steering
     tickFighterIntroAndWinSpeech(this, opponent, {
-      introText: '...the roaring draws near.',
-      winText: '...darkness falls.',
-      speechStyle: { borderColor: '#18181B', blipSpeed: 0.62 },
+      introText: '.....',
+      winText: '.....',
+      speechStyle: { borderColor: '#18181B', blipSrc: false },
+      onSpeak: (kind) => this._playAudio(
+        'roar',
+        'Assets/Sound Effects/RoaringKnightSFX/snd_knightroar.wav',
+        kind === 'win' ? 0.9 : 0.8,
+        kind === 'win' ? 0.92 : 1.0
+      ),
     });
     this._decideAndMove(opponent, arena);
 
@@ -706,7 +712,13 @@ export class RoaringKnightFighter extends Fighter {
     const cfg = this._cfg();
     const movedDist = Math.hypot(this.x - prevX, this.y - prevY);
     const speedMag = Math.hypot(this.vx || 0, this.vy || 0);
-    if (Math.max(movedDist, speedMag) < 0.25) return;
+    const isDashing = Boolean(
+      this._basicRotatingSlash?.stage === 'basic_dash' ||
+      this._rotatingSlashSeq?.stage === 'ult_dash' ||
+      (this.isMeleeSwinging && this.meleePhase === 3)
+    );
+    const minSpeed = isDashing ? 1.5 : (cfg.afterImageMinSpeed ?? 4.4);
+    if (Math.max(movedDist, speedMag) < minSpeed) return;
 
     this._afterImageTick++;
     const interval = Math.max(1, cfg.afterImageInterval ?? 4);
@@ -728,7 +740,7 @@ export class RoaringKnightFighter extends Fighter {
       life,
       maxLife: life,
     });
-    if (this.afterImages.length > 8) {
+    if (this.afterImages.length > 5) {
       this.afterImages.shift();
     }
   }
@@ -3264,7 +3276,7 @@ export class RoaringKnightFighter extends Fighter {
     this.swoonCooldownTimer = cfg.swoonCooldown ?? 0;
     this.skillCastAngle = dashAngle;
     this.gunAngle = dashAngle;
-    triggerFighterSpeech(this, 'SWOON.', { duration: 105, force: true, preserveCase: true, borderColor: '#18181B', blipSpeed: 0.58 });
+    triggerFighterSpeech(this, '.....', { duration: 95, force: true, borderColor: '#18181B', blipSrc: false });
     this.vx = Math.cos(dashAngle) * dashSpeed;
     this.vy = Math.sin(dashAngle) * dashSpeed;
 
@@ -3905,6 +3917,10 @@ export class RoaringKnightFighter extends Fighter {
         t.vy = (t.vy || 0) + ny * pushSign * kb;
       }
     }
+  }
+
+  prewarmAssets(targetCtx = null) {
+    prewarmRoaringKnightVfxCaches(this.r || 28);
   }
 
   /**

@@ -15,6 +15,7 @@ let _gpuWarmupCtx = null;
  */
 export function warmImageOnGpu(img) {
   if (!img || typeof document === 'undefined') return;
+  if (img._gpuWarmed && img._gpuWarmedSrc === img.src) return;
   const upload = () => {
     try {
       if (!_gpuWarmupCanvas) {
@@ -26,6 +27,8 @@ export function warmImageOnGpu(img) {
       if (_gpuWarmupCtx && img.complete && img.naturalWidth > 0) {
         _gpuWarmupCtx.clearRect(0, 0, 2, 2);
         _gpuWarmupCtx.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+        img._gpuWarmed = true;
+        img._gpuWarmedSrc = img.src;
       }
     } catch (e) {}
   };

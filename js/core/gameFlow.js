@@ -44,7 +44,7 @@ import { BossManager, BossEntranceSequence } from '../bosses/index.js';
 import { getFocMapForBoss } from '../maps/index.js';
 import { setViewportOrientation, getArenaConfigForMode } from './viewportManager.js';
 import { getFfaPlusQuadrantSpawns } from '../systems/arenaObstacleSystem.js';
-import { showPreBattleCurtain } from '../graphics/ui/PreBattleCurtain.js';
+import { showPreBattleCurtain, cancelPreBattleCurtain } from '../graphics/ui/PreBattleCurtain.js';
 
 // ─────────────────────────────────────────────
 // ON-DEMAND AUDIO & ASSET STREAMING (LAZY LOADING)
@@ -238,8 +238,15 @@ export function preloadActiveMatchSounds(fighters) {
   prewarmMatchAssets(activeFighters, state.ctx);
 
   // Trigger fighter assets preloading for each active combatant
+  const UNDERTALE_SPEECH_IDS = new Set(['roaring_knight', 'kaizo_knight', 'sans', 'error_sans', 'last_breath_sans', 'jevil']);
   for (const f of activeFighters) {
     if (!f) continue;
+    const cId = String(f.characterId || f.type || f._def?.id || '').toLowerCase();
+    if (UNDERTALE_SPEECH_IDS.has(cId)) {
+      activePaths.push('Assets/Sound Effects/Sans/SansSpeak.ogg');
+    } else if (cId === 'carol' || cId === 'carol_holiday') {
+      activePaths.push('Assets/Sound Effects/CarolSFX/carol_txt.wav');
+    }
     preloadFighterAssets(f, true);
   }
 
@@ -266,6 +273,9 @@ export function _resolveModeFixedHp(fighter, baseFixedHp) {
   }
   if (charId === 'error_sans') {
     return (typeof CONFIG !== 'undefined' && CONFIG.error_sans?.hp !== undefined) ? CONFIG.error_sans.hp : 1;
+  }
+  if (charId === 'last_breath_sans') {
+    return (typeof CONFIG !== 'undefined' && CONFIG.last_breath_sans?.hp !== undefined) ? CONFIG.last_breath_sans.hp : 1;
   }
   if (charId === 'makima') {
     return Math.round(baseFixedHp * (CONFIG.makima?.maxHpRatio ?? 1.0));
@@ -444,6 +454,11 @@ export function reinitFighters(isNewMatch = false) {
   }
 
   const currentDefs = getActiveFighterDefs();
+  if (Array.isArray(state.fighters)) {
+    for (const prevFighter of state.fighters) {
+      try { prevFighter?.interruptAttacks?.(true); } catch (_) {}
+    }
+  }
   state.fighters.length = 0;
   for (const idx of fighterIndexes) {
     const def = currentDefs[idx] || FIGHTER_DEFS[idx] || currentDefs[0];
@@ -1388,6 +1403,7 @@ export function startNextRound() {
 }
 
 export function restartCurrentRound() {
+  cancelPreBattleCurtain();
   state._isChampionLayoutActive = false;
   state.roundEndTimer = 0;
   state.matchEndTimer = 0;
@@ -1411,7 +1427,7 @@ export function restartCurrentRound() {
   }
   state.announcerSubtitle = '';
   const is1v1Mode = (state.mode === '1v1' || state.mode === GAME_MODES.ONE_VS_ONE || state.mode === '1 VS 1' || state.mode === '1v1 Match' || state.mode === GAME_MODES.HORIZONTAL_1V1 || state.mode === '1v1 Widescreen Duel');
-  stopAllSounds(false, 0, 0);
+  stopAllSounds(false, 0, 0, true);
   stopAllLoopingSounds(0, 0, true); // Preserve BGM across round restarts
   clearHealthHud(); // Flush stale fighter-keyed DOM cache before new instances are created
   reinitFighters();
@@ -1498,6 +1514,7 @@ export function startCountdown() {
 }
 
 export function resetMatch(showFaceOff = true) {
+  cancelPreBattleCurtain();
   state._isChampionLayoutActive = false;
   // Mobile GPU In-Canvas HUD: Ensure zero-DOM HUD state is enforced on match startup
   syncMobileDomHudVisibility(isMobileCanvasHudActive());
@@ -1570,7 +1587,7 @@ export function resetMatch(showFaceOff = true) {
   }
 
   // Stop all sounds immediately when resetting match (no fade delay)
-  stopAllSounds(false, 0, 0);
+  stopAllSounds(false, 0, 0, true);
   stopAllLoopingSounds(0, 0);
   stopArenaBgm(true);
   state.activeMatchBgmSrc = null;
@@ -1597,6 +1614,7 @@ export function resetMatch(showFaceOff = true) {
 }
 
 export function goToTitle() {
+  cancelPreBattleCurtain();
   BossManager.reset();
   BossEntranceSequence.finish();
   state.activeFocMap = null;

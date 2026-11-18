@@ -156,15 +156,17 @@ export function startDanteFinisherGunSequence(fighter, cfg) {
 }
 
 /**
- * Fires a single alternating Ebony or Ivory pistol tracer with kickback recoil & gunshot voiceline chance.
+ * Fires a single alternating Ebony or Ivory pistol round (automatically upgraded to a Devil Trigger Charge Shot while DT is active).
  */
 export function fireSingleEbonyIvoryBullet(fighter, cfg, opts = {}) {
   const activeCfg = cfg || CONFIG.dante || {};
   if (!opts.forceSequence && !isSkillEnabled(activeCfg.enableGunfire, true)) return;
 
+  const isChargeShot = Boolean(fighter.isDevilTrigger);
   const baseAng = fighter.gunAngle || 0;
-  const ang = baseAng + (Math.random() - 0.5) * 0.08;
-  const spd = activeCfg.gunShotSpeed ?? 16;
+  const spread = isChargeShot ? 0.04 : 0.08;
+  const ang = baseAng + (Math.random() - 0.5) * spread;
+  const spd = (activeCfg.gunShotSpeed ?? 16) * (isChargeShot ? (activeCfg.dtChargeShotSpeedMultiplier ?? 1.28) : 1.0);
   const r = fighter.r || 30;
   const facingLeft = Math.abs(Math.atan2(Math.sin(baseAng), Math.cos(baseAng))) > Math.PI / 2;
 
@@ -175,7 +177,11 @@ export function fireSingleEbonyIvoryBullet(fighter, cfg, opts = {}) {
 
   const lateralOff = (facingLeft ? -1 : 1) * (useIvory ? -1 : 1) * (r * 0.28);
   const muzzleDist = r + 14;
-  const critRes = fighter.evaluateBasicCrit(activeCfg.gunDamage ?? 8, { isGun: true });
+  const baseGunDmg = activeCfg.gunDamage ?? 8;
+  const rawShotDmg = isChargeShot
+    ? Math.max(1, Math.round(baseGunDmg * (activeCfg.dtChargeShotDamageMultiplier ?? 1.85)))
+    : baseGunDmg;
+  const critRes = fighter.evaluateBasicCrit(rawShotDmg, { isGun: true, isChargeShot });
 
   fighter._bullets.push({
     x: fighter.x + Math.cos(ang) * muzzleDist - Math.sin(ang) * lateralOff,
@@ -185,12 +191,20 @@ export function fireSingleEbonyIvoryBullet(fighter, cfg, opts = {}) {
     angle: ang,
     damage: critRes.damage,
     isCrit: critRes.isCrit,
-    life: 44,
+    isChargeShot,
+    hitRadius: isChargeShot ? (activeCfg.dtChargeShotHitRadius ?? 14) : 8,
+    knockback: isChargeShot ? (activeCfg.dtChargeShotKnockback ?? 8.5) : undefined,
+    hitStun: isChargeShot ? (activeCfg.dtChargeShotHitStun ?? 8) : 0,
+    splashRadius: isChargeShot ? (activeCfg.dtChargeShotSplashRadius ?? 46) : 0,
+    life: isChargeShot ? 52 : 44,
   });
 
   if (!opts.preserveVisualTimer) fighter._gunVisualTimer = Math.max(fighter._gunVisualTimer || 0, 14);
   fighter._syncWeaponSwitch(activeCfg);
   fighter._playSfx('gunshot');
+  if (isChargeShot) {
+    fighter._playSfx('heavyBlast', 0.50);
+  }
   fighter._maybePlayBasicVoice(
     ['voGun1', 'voGun2', 'voGun3', 'voGun4'],
     activeCfg.gunVoicelineChance ?? 0.30,
@@ -273,16 +287,29 @@ function _setupStageAudioAndVfx(fighter, step, aimAng, activeCfg) {
   triggerGlobalScreenShake?.(activeCfg.cleaveSwingShake ?? 3.2, activeCfg.cleaveSwingShakeFrames ?? 5);
 }
 
+function _getMillionStabDtMods(fighter, activeCfg, isStage3 = true) {
+  if (!isStage3 || !fighter.isDevilTrigger) {
+    return { reachBonus: 0, coneBonus: 0, dmgMult: 1.0, isDT: false };
+  }
+  return {
+    reachBonus: activeCfg.dtMillionStabReachBonus ?? 42,
+    coneBonus: activeCfg.dtMillionStabConeBonus ?? 0.24,
+    dmgMult: activeCfg.dtMillionStabDamageMultiplier ?? 1.45,
+    isDT: true,
+  };
+}
+
 function _applyRebellionArcHits(fighter, opponent, step, aimAng, activeCfg) {
+  const dtStab = _getMillionStabDtMods(fighter, activeCfg, step === 2);
   const reach = (activeCfg.swordReach ?? 94) +
     (fighter.isDevilTrigger ? (activeCfg.dtSwordReachBonus ?? 14) : 0) +
-    (step === 2 ? (activeCfg.millionStabReachBonus ?? 22) : (activeCfg.cleaveReachBonus ?? 6));
-  const halfArc = ((activeCfg.swordArcDeg ?? 135) * Math.PI / 180) * (step === 2 ? 0.42 : 0.62);
+    (step === 2 ? (activeCfg.millionStabReachBonus ?? 22) + dtStab.reachBonus : (activeCfg.cleaveReachBonus ?? 6));
+  const halfArc = ((activeCfg.swordArcDeg ?? 135) * Math.PI / 180) * (step === 2 ? 0.42 : 0.62) + dtStab.coneBonus;
   const baseSwordDmg = activeCfg.swordDamage ?? 21;
   const stageDamages = [
     baseSwordDmg,
     activeCfg.cleaveReturnDamage ?? Math.max(6, baseSwordDmg - 6),
-    activeCfg.millionStabInitialDamage ?? Math.max(6, baseSwordDmg - 6),
+    Math.round((activeCfg.millionStabInitialDamage ?? Math.max(6, baseSwordDmg - 6)) * dtStab.dmgMult),
     activeCfg.highTimeDamage ?? Math.max(6, baseSwordDmg + 9),
   ];
   const baseDmg = Math.max(6, stageDamages[step]);
@@ -408,23 +435,48 @@ export function applyDanteMillionStabThrustHit(fighter, enemy, rawDmg, aimAng, d
 export function executeDanteMillionStabFinisher(fighter, opponent, cfg) {
   const activeCfg = cfg || CONFIG.dante || {};
   const aimAng = fighter.gunAngle || 0;
+  const dtStab = _getMillionStabDtMods(fighter, activeCfg, true);
   const reach = (activeCfg.swordReach ?? 94) +
     (fighter.isDevilTrigger ? (activeCfg.dtSwordReachBonus ?? 14) : 0) +
-    (activeCfg.millionStabReachBonus ?? 22) + 14;
-  const lunge = activeCfg.millionStabFinisherLunge ?? 10.5;
+    (activeCfg.millionStabReachBonus ?? 22) + dtStab.reachBonus + 14;
+  const coneMax = 0.72 + dtStab.coneBonus;
+  const lunge = dtStab.isDT
+    ? (activeCfg.dtMillionStabFinisherLunge ?? 18.5)
+    : (activeCfg.millionStabFinisherLunge ?? 10.5);
 
   fighter.vx = Math.cos(aimAng) * lunge;
   fighter.vy = Math.sin(aimAng) * lunge;
   fighter._playSfx('heavyBlast');
   fighter._playSfx('swordSlash');
   fighter._maybePlayBasicVoice(['voFinisher', 'voSlash3'], activeCfg.finisherVoicelineChance ?? 0.75, activeCfg, activeCfg.basicVoiceCooldownFrames ?? 38);
-  fighter._spawnRipple(fighter.x + Math.cos(aimAng) * 42, fighter.y + Math.sin(aimAng) * 42, 62, '#EF4444');
-  fighter._spawnVfx('slashArc', fighter.x + Math.cos(aimAng) * 48, fighter.y + Math.sin(aimAng) * 48, aimAng, 110, 48, 12, 0.96);
-  triggerGlobalScreenShake?.(7.5, 10);
+  fighter._spawnRipple(fighter.x + Math.cos(aimAng) * 42, fighter.y + Math.sin(aimAng) * 42, dtStab.isDT ? 94 : 62, '#EF4444');
+  if (dtStab.isDT) {
+    const fwd = (fighter.r || 30) * 1.85;
+    fighter._spawnVfx(
+      'dtStingerThrust',
+      fighter.x + Math.cos(aimAng) * fwd,
+      fighter.y + Math.sin(aimAng) * fwd,
+      aimAng,
+      168,
+      128,
+      22,
+      0.96,
+      false,
+      { behindBody: true, followFighter: true, forwardOffset: fwd, lockAngle: aimAng }
+    );
+  } else {
+    fighter._spawnVfx('slashArc', fighter.x + Math.cos(aimAng) * 48, fighter.y + Math.sin(aimAng) * 48, aimAng, 110, 48, 12, 0.96);
+  }
+  triggerGlobalScreenShake?.(dtStab.isDT ? 10.5 : 7.5, dtStab.isDT ? 13 : 10);
 
-  const finisherDmg = activeCfg.millionStabFinisherDamage ?? Math.max(12, Math.round((activeCfg.swordDamage ?? 21) * 0.85));
-  const finisherKb = activeCfg.millionStabFinisherKnockback ?? 14.5;
-  const finisherStun = activeCfg.millionStabFinisherStunFrames ?? 16;
+  const rawFinisherDmg = activeCfg.millionStabFinisherDamage ?? Math.max(12, Math.round((activeCfg.swordDamage ?? 21) * 0.85));
+  const finisherDmg = Math.max(1, Math.round(rawFinisherDmg * dtStab.dmgMult));
+  const finisherKb = dtStab.isDT
+    ? (activeCfg.dtMillionStabFinisherKnockback ?? 24.0)
+    : (activeCfg.millionStabFinisherKnockback ?? 14.5);
+  const finisherStun = dtStab.isDT
+    ? (activeCfg.dtMillionStabFinisherStunFrames ?? 24)
+    : (activeCfg.millionStabFinisherStunFrames ?? 16);
   let finisherLanded = false;
 
   for (const enemy of fighter._getHostileTargets(opponent)) {
@@ -432,7 +484,7 @@ export function executeDanteMillionStabFinisher(fighter, opponent, cfg) {
     const dy = enemy.y - fighter.y;
     if (Math.hypot(dx, dy) > reach + (enemy.r || 28)) continue;
     const diff = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - aimAng), Math.cos(Math.atan2(dy, dx) - aimAng)));
-    if (diff > 0.72) continue;
+    if (diff > coneMax) continue;
 
     const { dealt } = fighter._dealBasicAttackDamage(enemy, finisherDmg, {
       angle: aimAng,
@@ -491,19 +543,22 @@ export function stepDanteMillionStab(fighter, opponent, cfg) {
     if (--fighter._millionStabTick <= 0) {
       fighter._millionStabTick = Math.max(1, cfg.millionStabTickInterval ?? 5);
       const aimAng = fighter.gunAngle || 0;
+      const dtStab = _getMillionStabDtMods(fighter, cfg, true);
       const reach = (cfg.swordReach ?? 94) +
         (fighter.isDevilTrigger ? (cfg.dtSwordReachBonus ?? 14) : 0) +
-        (cfg.millionStabReachBonus ?? 22);
-      const tickDmg = cfg.millionStabTickDamage ?? Math.max(5, Math.round((cfg.swordDamage ?? 21) * 0.35));
+        (cfg.millionStabReachBonus ?? 22) + dtStab.reachBonus;
+      const coneMax = 0.65 + dtStab.coneBonus;
+      const rawTickDmg = cfg.millionStabTickDamage ?? Math.max(5, Math.round((cfg.swordDamage ?? 21) * 0.35));
+      const tickDmg = Math.max(1, Math.round(rawTickDmg * dtStab.dmgMult));
       fighter._playSfx('swordSlash');
-      triggerGlobalScreenShake?.(2.8, 4);
+      triggerGlobalScreenShake?.(dtStab.isDT ? 3.8 : 2.8, 4);
 
       for (const enemy of fighter._getHostileTargets(opponent)) {
         const dx = enemy.x - fighter.x;
         const dy = enemy.y - fighter.y;
         if (Math.hypot(dx, dy) > reach + (enemy.r || 28)) continue;
         const diff = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - aimAng), Math.cos(Math.atan2(dy, dx) - aimAng)));
-        if (diff <= 0.65) fighter._applyMillionStabThrustHit(enemy, tickDmg, aimAng, dx, dy, cfg);
+        if (diff <= coneMax) fighter._applyMillionStabThrustHit(enemy, tickDmg, aimAng, dx, dy, cfg);
       }
     }
     return;

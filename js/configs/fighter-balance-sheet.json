@@ -1065,6 +1065,36 @@
         "knockback": 1,
         "cooldown": 1
       }
+    },
+    "last_breath_sans": {
+      "name": "Last Breath Sans",
+      "archetype": "sorcerer",
+      "color": "#EF4444",
+      "hp": 1,
+      "speed": 5.7,
+      "baseRange": 400,
+      "baseDamage": 11,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
+    },
+    "carol": {
+      "name": "Carol",
+      "archetype": "swordsman",
+      "color": "#38BDF8",
+      "hp": 360,
+      "speed": 5.9,
+      "baseRange": 86,
+      "baseDamage": 18,
+      "multipliers": {
+        "damage": 1,
+        "speed": 1,
+        "knockback": 1,
+        "cooldown": 1
+      }
     }
   }
 }

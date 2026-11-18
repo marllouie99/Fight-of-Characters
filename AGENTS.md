@@ -49,7 +49,7 @@ When creating or rendering new characters and model skins, ALWAYS use the approv
 - **Symmetrical Lower-Flank Placement**: Both hands are circular elements (`drawPixelHand`) positioned symmetrically at the lower-left and lower-right flanks of the central body circle in local coordinate space:
   - **Left Hand**: `(x: -r * 0.82, y: +r * 0.38)`
   - **Right Hand**: `(x: +r * 0.82, y: +r * 0.38)`
-- **Hand Radius**: `handRadius = r * 0.30` (or `getHandSize(r * 0.30)`).
+- **Hand Radius (Dante Reference Standard: `js/graphics/weapons/danteWeaponGraphics.js`)**: ALWAYS set `handRadius = r * 0.30` directly when calling `drawPixelHand(ctx, x, y, handRadius, skinTone, '#0E0F14')` for all new characters. **NEVER** wrap `r * 0.30` inside `getHandSize(...)`, as `CONFIG.globalFighter.handSizeMultiplier` (`1.4`) inflates hands to `r * 0.42` and makes fists disproportionately oversized compared to Dante.
 - **Layering & Overlap**: Both hands MUST be rendered on the **front layer** (after rendering the central body circle), overlapping the lower perimeter of the body circle so approximately half of each hand circle overlaps the body edge and half protrudes outward as a distinct side fist.
 - **MANDATORY INSTRUCTION — ALWAYS USE DEFAULT HANDS TO HOLD WEAPONS & NEVER PLACE HANDS ON TOP OF THE HEAD (Use Aizen as Reference: `js/graphics/weapons/aizenWeaponGraphics.js`)**:
   - For all weapon users and dual wielders, weapons MUST ALWAYS be anchored directly at the canonical lower-torso flanks:
@@ -366,6 +366,13 @@ When creating, scaffolding, or tuning any fighter class (`js/entities/fighters/*
 - **Preserve Authentic Arena Ricochet & Rebound Physics**: Fighters MUST move and rebound naturally off arena walls and colliding entities via `super.update(opponent, ownerIndex, arena)` (or `applyMovementPhysics()` + `resolveWallBounce(arena, opponent)`), matching Vergil, Toji, Gojo, and Sukuna.
 - **STRICT PROHIBITION of Per-Frame Homing Velocity Overwrites**: NEVER write a continuous steering loop in `update()` that forces `this.vx` and `this.vy` directly toward the opponent's angle (`this.vx = this.vx * 0.78 + Math.cos(aimAng) * speed * 0.28`), as that cancels wall/body bounce reflections and turns organic arena ricochets into robotic straight-line chasing.
 - **Discrete Impulses Only**: Only override `vx`/`vy` for discrete skill dashes, finisher lunges, or knockback/recoil bursts, and implement `isStationarySkillActive()` for moves that intentionally plant the fighter in place.
+
+## Mandatory Deltarune & Undertale Character Dialogue Authenticity Standard (Rule 38)
+
+Whenever creating, scaffolding, or updating any **Deltarune** or **Undertale** fighter (including fangame/mod variants):
+- **Mandatory Canon / Source Speech Check**: Before wiring `undertaleSpeech.js` (`triggerFighterSpeech`, `tickFighterIntroAndWinSpeech`) or any spoken dialogue bubbles, **ALWAYS** verify whether the character actually speaks in canon (or in the exact source mod being ported).
+  - **Silent / Non-Verbal Characters** (e.g., canon **The Roaring Knight**, **Kris**, silent vessels/bosses): **NEVER** invent spoken dialogue, taunts, or talking voice blips (`blipSrc`). Either omit speech bubbles completely, or use silent non-verbal ellipses (`'.....'` with `blipSrc: false`) paired only with authentic non-verbal SFX (e.g., roars, slashes).
+  - **Speaking Characters & Talkative Mod Variants** (e.g., Sans, Jevil, Carol Holiday, or mods that explicitly have dialogue like *Kaizo Roaring Knight*): May use `undertaleSpeech.js` with source-accurate dialogue and voice blips.
 
 ## Post-Change Suggestions
 

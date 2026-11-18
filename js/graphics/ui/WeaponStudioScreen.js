@@ -16,6 +16,8 @@ import { _getInvertedSpearImage, _getSplitSoulKatanaImage, _getTojiPistolGunImag
 import { _preloadRoaringKnightWeaponSprites } from '../weapons/roaringKnightWeaponGraphics.js';
 import { _preloadKaizoKnightWeaponSprites } from '../weapons/kaizoKnightWeaponGraphics.js';
 import { _preloadErrorSansWeaponSprites } from '../weapons/errorSansWeaponGraphics.js';
+import { _preloadLastBreathSansWeaponSprites } from '../weapons/lastBreathSansWeaponGraphics.js';
+import { _preloadCarolWeaponSprites } from '../weapons/carolWeaponGraphics.js';
 import { _preloadJevilWeaponSprites } from '../weapons/jevilWeaponGraphics.js';
 import { _getVergilWeaponImage } from '../weapons/vergilWeaponGraphics.js';
 import { preloadKashimoVfx } from '../weapons/kashimoWeaponGraphics.js';
@@ -30,6 +32,8 @@ if (typeof window !== 'undefined') {
   _preloadRoaringKnightWeaponSprites?.();
   _preloadKaizoKnightWeaponSprites?.();
   _preloadErrorSansWeaponSprites?.();
+  _preloadLastBreathSansWeaponSprites?.();
+  _preloadCarolWeaponSprites?.();
   _preloadJevilWeaponSprites?.();
   _getVergilWeaponImage?.();
   preloadKashimoVfx?.();
@@ -208,6 +212,12 @@ function initCustomizations() {
   if (!state.weaponCustomizations.error_sans) {
     state.weaponCustomizations.error_sans = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
   }
+  if (!state.weaponCustomizations.last_breath_sans) {
+    state.weaponCustomizations.last_breath_sans = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
+  if (!state.weaponCustomizations.carol) {
+    state.weaponCustomizations.carol = { offsetX: 0, offsetY: 0, scale: 1.0, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
+  }
   if (!state.weaponCustomizations.jevil) {
     state.weaponCustomizations.jevil = { offsetX: 0, offsetY: 0, scale: 1.15, angleOffset: 0, widthScale: 1.0, lengthScale: 1.0 };
   }
@@ -276,7 +286,9 @@ const STUDIO_WEAPONS_ROSTER = [
   { key: 'guts', label: 'GUTS', sub: 'Dragonslayer' },
   { key: 'vergil', label: 'VERGIL', sub: 'Yamato Katana' },
   { key: 'kashimo', label: 'KASHIMO', sub: 'Nyoi Staff' },
-  { key: 'dante', label: 'DANTE', sub: 'Rebellion / E&I (3)' }
+  { key: 'dante', label: 'DANTE', sub: 'Rebellion / E&I (3)' },
+  { key: 'last_breath_sans', label: 'LAST BREATH', sub: 'Gaster Hands & Blasters' },
+  { key: 'carol', label: 'CAROL', sub: 'Glacial Katana' }
 ];
 
 function _selectStudioWeapon(key) {

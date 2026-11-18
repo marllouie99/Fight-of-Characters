@@ -355,9 +355,10 @@ Whenever creating, extracting, formatting, or rendering visual effects, sprite a
 
 ### 3.6 Hand Layering & `drawPixelHand` Engine (Rule 20)
 - Guard with `const shouldHideHands = (typeof state !== 'undefined' && state.showSkinOnly) || fighter.hideHands;`.
-- **Canonical Default Hand Positioning**: In local coordinate space (`(0, 0)` body center, radius `r`):
+- **Canonical Default Hand Positioning & Sizing (Dante Standard — `js/graphics/weapons/danteWeaponGraphics.js`)**: In local coordinate space (`(0, 0)` body center, radius `r`):
   - **Left Hand**: Symmetrically positioned at lower-left flank `(x: -r * 0.82, y: +r * 0.38)` with radius `r * 0.30`.
   - **Right Hand**: Symmetrically positioned at lower-right flank `(x: +r * 0.82, y: +r * 0.38)` with radius `r * 0.30`.
+  - **Mandatory Dante Hand Radius Standard**: ALWAYS pass `handRadius = r * 0.30` directly into `drawPixelHand(ctx, cx, cy, handRadius, skinTone, '#0E0F14')` when creating new characters. **NEVER** wrap `r * 0.30` in `getHandSize(...)` (which multiplies by `CONFIG.globalFighter.handSizeMultiplier = 1.4` and oversizes hands to `r * 0.42`).
   - **Front Layer Overlap**: Both hands MUST be drawn on the **front layer** (after the body circle), overlapping the lower perimeter boundary of the body circle with roughly half of each hand circle overlapping the body and half extending outward.
   - **MANDATORY INSTRUCTION — ALWAYS USE DEFAULT HANDS TO HOLD WEAPONS & NEVER PLACE HANDS ON TOP OF THE HEAD (Use Aizen as Reference: `js/graphics/weapons/aizenWeaponGraphics.js`)**:
     - For all weapon users and dual wielders, weapons MUST ALWAYS anchor directly at the canonical lower-torso flanks (Main/Right Hand at `+r * 0.82, +r * 0.38` to `+r * 0.52`, Off/Left Hand at `-r * 0.82, +r * 0.38`, matching `drawAizenBladeAndSlashVFX` in `js/graphics/weapons/aizenWeaponGraphics.js`).
@@ -531,6 +532,12 @@ When designing, implementing, tuning, or balancing fighters, skills, weapons, or
 - **Clean HUD Card Standard**:
   - HUD cards MUST NEVER display artificial `Crit Rate: 100% (FLOW 1.85x)` or `(EGO CRIT)` indicators for non-crit characters.
   - The HUD stats array must accurately reflect authentic character attributes (Damage, Speed, Kick Speed, Evade, Dribble Control, CDR) without manufactured RPG crit statistics.
+
+### 4.7 Mandatory Deltarune & Undertale Character Dialogue Authenticity Standard (Rule 38)
+Whenever creating, scaffolding, or updating any **Deltarune** or **Undertale** fighter (including fangame/mod variants):
+- **Check Canon / Source Speech First**: Before adding `undertaleSpeech.js` (`triggerFighterSpeech`, `tickFighterIntroAndWinSpeech`) or any spoken text bubbles, ALWAYS verify whether that character actually speaks in canon (or in the specific source mod being ported).
+- **No Invented Dialogue for Silent Characters**: If the character does **not** speak (e.g., canon *Roaring Knight*, *Kris*), **NEVER** invent spoken lines, taunts, or talking voice blips (`blipSrc`). Omit speech bubbles completely, or use silent non-verbal ellipses (`'.....'` with `blipSrc: false`) paired only with authentic non-verbal SFX (such as roars).
+- **Speaking Characters**: Characters that canonically speak (or talkative mod versions like *Kaizo Roaring Knight*) may use `undertaleSpeech.js` with source-accurate lines and blips.
 
 
 

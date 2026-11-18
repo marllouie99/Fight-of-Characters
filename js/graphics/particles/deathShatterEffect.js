@@ -22,7 +22,7 @@ import {
 
 export { spawnChessTroopShatter, spawnTombstoneDeath, updateTombstoneDeathEffects, drawTombstoneDeathEffects, clearTombstoneDeathEffects };
 
-const DELTARUNE_UNDERTALE_IDS = new Set(['sans', 'error_sans', 'roaring_knight', 'kaizo_knight', 'jevil']);
+const DELTARUNE_UNDERTALE_IDS = new Set(['sans', 'error_sans', 'last_breath_sans', 'carol', 'roaring_knight', 'kaizo_knight', 'jevil']);
 
 /**
  * Returns true if the fighter belongs to the Undertale / Deltarune roster
@@ -616,6 +616,8 @@ export function spawnSansHeartShatterDeath(fighter, _attacker = null) {
   let quoteText = null;
   if (victimId === 'sans') quoteText = "welp. i'm going to grillby's.";
   else if (victimId === 'error_sans') quoteText = 'fatal error. crashing...';
+  else if (victimId === 'last_breath_sans') quoteText = 'it was... worth a shot...';
+  else if (victimId === 'carol') quoteText = 'noelle... forgive me...';
   else if (victimId === 'jevil') quoteText = 'bye-bye! chaos, chaos!';
 
   const effect = {

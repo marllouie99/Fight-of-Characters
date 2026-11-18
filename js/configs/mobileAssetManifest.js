@@ -515,6 +515,36 @@ export const MOBILE_ASSET_MANIFEST = {
     256,
     1
   ],
+  "Assets/model/carol/Carol-dagger-aim.png": [
+    480,
+    5,
+    1
+  ],
+  "Assets/model/carol/Carol-dagger-trail.png": [
+    517,
+    29,
+    1
+  ],
+  "Assets/model/carol/Carol-fractal-core.png": [
+    922,
+    30,
+    1
+  ],
+  "Assets/model/carol/Carol-fractal-flash.png": [
+    888,
+    96,
+    1
+  ],
+  "Assets/model/carol/Carol-knife-dmg.png": [
+    480,
+    5,
+    1
+  ],
+  "Assets/model/carol/Carol-permafrost-screen.png": [
+    960,
+    720,
+    1
+  ],
   "Assets/model/chigiri/Chigiri_hair.png": [
     1536,
     1024,
@@ -615,9 +645,29 @@ export const MOBILE_ASSET_MANIFEST = {
     724,
     1
   ],
+  "Assets/model/dante/Dante-devil-sword.png": [
+    560,
+    140,
+    1
+  ],
   "Assets/model/dante/Dante-rebellion.png": [
     560,
     140,
+    1
+  ],
+  "Assets/model/dante/dt-judgment-explosion/dt-judgment-explosion-b.png": [
+    3072,
+    256,
+    1
+  ],
+  "Assets/model/dante/dt-stinger-thrust/dt-stinger-thrust-b.png": [
+    3072,
+    256,
+    1
+  ],
+  "Assets/model/dante/dt-transform/dt-transform-b.png": [
+    3072,
+    256,
     1
   ],
   "Assets/model/denji/Chainsaw Blade Parts/chainsaw-blade-no-teeth-transparent.png": [

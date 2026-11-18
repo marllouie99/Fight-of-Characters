@@ -80,6 +80,8 @@ import { WardenFighter } from '../fighters/WardenFighter.js';
 import { RoaringKnightFighter } from '../fighters/RoaringKnightFighter.js';
 import { KaizoKnightFighter } from '../fighters/KaizoKnightFighter.js';
 import { ErrorSansFighter } from '../fighters/ErrorSansFighter.js';
+import { LastBreathSansFighter } from '../fighters/LastBreathSansFighter.js';
+import { CarolFighter } from '../fighters/CarolFighter.js';
 import { JevilFighter } from '../fighters/JevilFighter.js';
 import { AizenFighter } from '../fighters/AizenFighter.js';
 import { VergilFighter } from '../fighters/VergilFighter.js';
@@ -123,11 +125,19 @@ export const FIGHTER_CLASS_MAP = {
   'kaizoknight':    KaizoKnightFighter,
   'KaizoKnight':    KaizoKnightFighter,
   'KAIZO_KNIGHT':   KaizoKnightFighter,
-  'error_sans':     ErrorSansFighter,
-  'errorsans':      ErrorSansFighter,
-  'ErrorSans':      ErrorSansFighter,
-  'ERROR_SANS':     ErrorSansFighter,
-  'jevil':          JevilFighter,
+  'error_sans':       ErrorSansFighter,
+  'errorsans':        ErrorSansFighter,
+  'ErrorSans':        ErrorSansFighter,
+  'ERROR_SANS':       ErrorSansFighter,
+  'last_breath_sans': LastBreathSansFighter,
+  'lastbreathsans':   LastBreathSansFighter,
+  'LastBreathSans':   LastBreathSansFighter,
+  'LAST_BREATH_SANS': LastBreathSansFighter,
+  'carol':            CarolFighter,
+  'Carol':            CarolFighter,
+  'CAROL':            CarolFighter,
+  'carol_holiday':    CarolFighter,
+  'jevil':            JevilFighter,
   'Jevil':          JevilFighter,
   'JEVIL':          JevilFighter,
   'aizen':          AizenFighter,
